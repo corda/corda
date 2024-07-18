@@ -88,7 +88,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
             registerBridgeControlListener(artemisSession)
             registerBridgeDuplicateChecker(artemisSession)
             // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
-            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
+            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString.of("$P2P_PREFIX#")).queueNames.map { it.toString() })
             log.info("Found inboxes: $validInboundQueues")
             if (active) {
                 _activeChange.onNext(true)
@@ -107,7 +107,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     private fun registerBridgeControlListener(artemisSession: ClientSession) {
         try {
             artemisSession.createQueue(
-                    QueueConfiguration(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
+                    QueueConfiguration.of(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
                             .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
@@ -129,7 +129,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     private fun registerBridgeDuplicateChecker(artemisSession: ClientSession) {
         try {
             artemisSession.createQueue(
-                    QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
+                    QueueConfiguration.of(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
                             .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
@@ -189,11 +189,11 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     }
 
     private fun validateInboxQueueName(queueName: String): Boolean {
-        return queueName.startsWith(P2P_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString(queueName)).isExists
+        return queueName.startsWith(P2P_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString.of(queueName)).isExists
     }
 
     private fun validateBridgingQueueName(queueName: String): Boolean {
-        return queueName.startsWith(PEERS_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString(queueName)).isExists
+        return queueName.startsWith(PEERS_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString.of(queueName)).isExists
     }
 
     private fun processControlMessage(msg: ClientMessage) {

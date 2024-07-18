@@ -279,8 +279,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun InnerState.registerBridgeControl(session: ClientSession, inboxes: List<String>) {
         val bridgeNotifyQueue = "$BRIDGE_NOTIFY.${myIdentity.toStringShort()}"
-        if (!session.queueQuery(SimpleString(bridgeNotifyQueue)).isExists) {
-            session.createQueue(QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
+        if (!session.queueQuery(SimpleString.of(bridgeNotifyQueue)).isExists) {
+            session.createQueue(QueueConfiguration.of(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
                     .setTemporary(true).setDurable(false))
         }
         val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
@@ -316,7 +316,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 node.legalIdentitiesAndCerts.map { partyAndCertificate ->
                     val messagingAddress = NodeAddress(partyAndCertificate.party.owningKey)
                     BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name }, serviceAddress = false)
-                }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
+                }.filter { producerSession!!.queueQuery(SimpleString.of(it.queueName)).isExists }.asSequence()
             }
         }
 
@@ -360,7 +360,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
         }
 
-        val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
+        val queues = session.addressQuery(SimpleString.of("$PEERS_PREFIX#")).queueNames
         knownQueues.clear()
         for (queue in queues) {
             val queueQuery = session.queueQuery(queue)
@@ -604,10 +604,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 sendBridgeCreateMessage()
                 delayStartQueues -= queueName
             } else {
-                val queueQuery = session.queueQuery(SimpleString(queueName))
+                val queueQuery = session.queueQuery(SimpleString.of(queueName))
                 if (!queueQuery.isExists) {
                     log.info("Create fresh queue $queueName bound on same address")
-                    session.createQueue(QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName)
+                    session.createQueue(QueueConfiguration.of(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName)
                             .setDurable(true).setAutoCreated(false)
                             .setMaxConsumers(ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers())
                             .setPurgeOnNoConsumers(ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers())

@@ -70,7 +70,7 @@ class RoundTripObservableSerializerTests {
                 subscriptionMap(id),
                 clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString("clientAddress"))
+                clientAddress = SimpleString.of("clientAddress"))
 
         val serverSerializer = serializationScheme.rpcServerSerializerFactory(serverObservableContext)
 

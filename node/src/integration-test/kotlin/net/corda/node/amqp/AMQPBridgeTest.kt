@@ -62,7 +62,7 @@ class AMQPBridgeTest {
                 putIntProperty(P2PMessagingHeaders.senderUUID, i)
                 writeBodyBufferBytes("Test$i".toByteArray())
                 // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString.of(UUID.randomUUID().toString()))
             }
             artemis.producer.send(sourceQueueName, artemisMessage)
         }
@@ -139,7 +139,7 @@ class AMQPBridgeTest {
             putIntProperty(P2PMessagingHeaders.senderUUID, 3)
             writeBodyBufferBytes("Test3".toByteArray())
             // Use the magic deduplication property built into Artemis as our message identity too
-            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString.of(UUID.randomUUID().toString()))
         }
         artemis.producer.send(sourceQueueName, artemisMessage)
 
@@ -224,7 +224,7 @@ class AMQPBridgeTest {
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
             artemis.session.createQueue(
-                    QueueConfiguration(sourceQueueName).setRoutingType(RoutingType.ANYCAST).setAddress(sourceQueueName).setDurable(true))
+                    QueueConfiguration.of(sourceQueueName).setRoutingType(RoutingType.ANYCAST).setAddress(sourceQueueName).setDurable(true))
             bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(bob.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)

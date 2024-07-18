@@ -192,16 +192,16 @@ data class RPCDriverDSL(
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
             name = "RPCDriver"
-            managementNotificationAddress = SimpleString(NOTIFICATION_ADDRESS)
+            managementNotificationAddress = SimpleString.of(NOTIFICATION_ADDRESS)
             isPopulateValidatedUser = true
             journalBufferSize_NIO = maxFileSize
             journalBufferSize_AIO = maxFileSize
             journalFileSize = maxFileSize
             queueConfigs = listOf(
-                    QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).setAddress(RPCApi.RPC_SERVER_QUEUE_NAME).setDurable(false),
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(NOTIFICATION_ADDRESS)
+                    QueueConfiguration.of(RPCApi.RPC_SERVER_QUEUE_NAME).setAddress(RPCApi.RPC_SERVER_QUEUE_NAME).setDurable(false),
+                    QueueConfiguration.of(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(NOTIFICATION_ADDRESS)
                             .setFilterString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION).setDurable(false),
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(NOTIFICATION_ADDRESS)
+                    QueueConfiguration.of(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(NOTIFICATION_ADDRESS)
                             .setFilterString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION).setDurable(false)
             )
             addressSettings = mapOf(
