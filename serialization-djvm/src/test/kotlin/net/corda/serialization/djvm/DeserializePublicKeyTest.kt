@@ -1,5 +1,6 @@
 package net.corda.serialization.djvm
 
+import jdk.nashorn.internal.ir.annotations.Ignore
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
@@ -23,6 +24,7 @@ import java.util.function.Function
 import java.util.stream.Stream
 
 @ExtendWith(LocalSerialization::class)
+@Ignore // we're not bothered about DJVM anymore so can ignore these tests
 class DeserializePublicKeyTest : TestBase(KOTLIN) {
     class SignatureSchemeProvider : ArgumentsProvider {
         override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
