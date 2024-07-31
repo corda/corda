@@ -1,6 +1,5 @@
 package net.corda.nodeapitests.internal.crypto
 
-
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslProvider
@@ -10,12 +9,10 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
-import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -52,9 +49,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.BasicConstraints
@@ -62,9 +57,6 @@ import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
-import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
-import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -79,13 +71,15 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
-import java.util.*
+import java.security.interfaces.EdECPrivateKey
+import java.util.Date
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -112,21 +106,17 @@ class X509UtilitiesTest {
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_TLS_SIGNATURE_SCHEME),
                 Pair(DEFAULT_IDENTITY_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
-                Pair(ECDSA_SECP256R1_SHA256, SPHINCS256_SHA256),
                 Pair(ECDSA_SECP256K1_SHA256, RSA_SHA256),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256K1_SHA256),
                 Pair(RSA_SHA256, EDDSA_ED25519_SHA512),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256R1_SHA256),
-                Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256)
         )
 
         val schemeToKeyTypes = listOf(
                 // By default, JKS returns SUN EC key.
-                Triple(ECDSA_SECP256R1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
-                Triple(ECDSA_SECP256K1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
-                Triple(EDDSA_ED25519_SHA512, EdDSAPrivateKey::class.java, EdDSAPrivateKey::class.java),
-                // By default, JKS returns SUN RSA key.
-                Triple(SPHINCS256_SHA256, BCSphincs256PrivateKey::class.java, BCSphincs256PrivateKey::class.java)
+                Triple(ECDSA_SECP256R1_SHA256, java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
+                Triple(ECDSA_SECP256K1_SHA256, java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
+                Triple(EDDSA_ED25519_SHA512, EdECPrivateKey::class.java, EdECPrivateKey::class.java),
         )
     }
 
@@ -136,8 +126,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
-                && ( it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { validSelfSignedCertificate(it) }
     }
 
     private fun validSelfSignedCertificate(signatureScheme: SignatureScheme) {
@@ -158,7 +147,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `load and save a PEM file certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { loadSavePEMCert(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach(::loadSavePEMCert)
     }
 
     private fun loadSavePEMCert(signatureScheme: SignatureScheme) {
@@ -172,8 +161,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.filter{ it.first != SPHINCS256_SHA256 }
-                                   .forEach { createValidServerCertChain(it.first, it.second) }
+        certChainSchemeCombinations.forEach { createValidServerCertChain(it.first, it.second) }
     }
 
     private fun createValidServerCertChain(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
@@ -231,7 +219,7 @@ class X509UtilitiesTest {
             val certCrlDistPoint = CRLDistPoint.getInstance(getExtension(Extension.cRLDistributionPoints).parsedValue)
             assertTrue(certCrlDistPoint.distributionPoints.first().distributionPoint.toString().contains(crlDistPoint))
             val certCaAuthorityKeyIdentifier = AuthorityKeyIdentifier.getInstance(getExtension(Extension.authorityKeyIdentifier).parsedValue)
-            assertTrue(Arrays.equals(caSubjectKeyIdentifier.keyIdentifier, certCaAuthorityKeyIdentifier.keyIdentifier))
+            assertThat(caSubjectKeyIdentifier.keyIdentifier).isEqualTo(certCaAuthorityKeyIdentifier.keyIdentifier)
         }
     }
 
@@ -247,7 +235,7 @@ class X509UtilitiesTest {
         val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
         val selfSignCert = X509Utilities.createSelfSignedCACertificate(testName, keyPair)
 
-        assertTrue(Arrays.equals(selfSignCert.publicKey.encoded, keyPair.public.encoded))
+        assertThat(selfSignCert.publicKey.encoded).isEqualTo(keyPair.public.encoded)
 
         // Save the private key with self sign cert in the keystore.
         val keyStore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
@@ -296,8 +284,8 @@ class X509UtilitiesTest {
 
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
-        val signature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverKeyPair.private, testData)
-        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCert.publicKey, signature, testData) }
+        val signature = Crypto.doSign(DEFAULT_TLS_SIGNATURE_SCHEME, serverKeyPair.private, testData)
+        assertTrue { Crypto.isValid(DEFAULT_TLS_SIGNATURE_SCHEME, serverCert.publicKey, signature, testData) }
     }
 
     @Test(timeout=300_000)
@@ -389,7 +377,6 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create server cert and use in OpenSSL channel`() {
-        Assume.assumeTrue(!IS_OPENJ9)
         val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -452,13 +439,11 @@ class X509UtilitiesTest {
         schemeToKeyTypes.forEach { getCorrectKeyFromKeystore(it.first, it.second, it.third) }
     }
 
-    private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
+    private fun <R, S> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, rawClass: Class<R>, supportedClass: Class<S>) {
         val keyPair = generateKeyPair(signatureScheme)
-        val (keyFromKeystore, keyFromKeystoreCasted) = storeAndGetKeysFromKeystore(keyPair)
-        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
-            assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
-        }
-        assertThat(keyFromKeystoreCasted).isInstanceOf(castedClass)
+        val (rawKey, supportedKey) = storeAndGetKeysFromKeystore(keyPair)
+        assertThat(rawKey).isInstanceOf(rawClass)
+        assertThat(supportedKey).isInstanceOf(supportedClass)
     }
 
     private fun storeAndGetKeysFromKeystore(keyPair: KeyPair): Pair<Key, PrivateKey> {
@@ -467,9 +452,9 @@ class X509UtilitiesTest {
         val keyStore = loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
         keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(selfSignCert))
 
-        val keyFromKeystore = keyStore.getKey("Key", "keypassword".toCharArray())
-        val keyFromKeystoreCasted = keyStore.getSupportedKey("Key", "keypassword")
-        return Pair(keyFromKeystore, keyFromKeystoreCasted)
+        val rawKey = keyStore.getKey("Key", "keypassword".toCharArray())
+        val supportedKey = keyStore.getSupportedKey("Key", "keypassword")
+        return Pair(rawKey, supportedKey)
     }
 
     @Test(timeout=300_000)

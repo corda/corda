@@ -15,12 +15,15 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Test
+import java.io.Serializable
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
+
+    private fun interface SerializableLambda2<S, T, R> : (S, T) -> R, Serializable
 
     @Test(timeout = 300_000)
     fun `external async operation`() {
@@ -196,15 +199,15 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
         FlowWithExternalProcess(party) {
-
         @Suspendable
         override fun testCode(): Any {
             val e = createException()
-            return await(ExternalAsyncOperation(serviceHub) { _, _ ->
+
+            return await(ExternalAsyncOperation(serviceHub, (SerializableLambda2 { _, _ ->
                 CompletableFuture<Any>().apply {
                     completeExceptionally(e)
                 }
-            })
+            })))
         }
 
         private fun createException() = when (exceptionType) {
@@ -252,7 +255,6 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
-        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun testCode(): Any {
             return await(ExternalAsyncOperation(serviceHub) { _, _ ->

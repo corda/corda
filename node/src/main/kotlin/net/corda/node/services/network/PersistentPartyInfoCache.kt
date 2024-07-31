@@ -15,17 +15,17 @@ class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMap
                                private val database: CordaPersistence) {
 
     // probably better off using a BiMap here: https://www.baeldung.com/guava-bimap
-    private val cordaX500NameToPartyIdCache = NonInvalidatingCache<CordaX500Name, SecureHash?>(
-                cacheFactory = cacheFactory,
-                name = "RecoveryPartyInfoCache_byCordaX500Name") { key ->
-            database.transaction { queryByCordaX500Name(session, key) }
-        }
+    private val cordaX500NameToPartyIdCache = NonInvalidatingCache<CordaX500Name, SecureHash>(
+            cacheFactory = cacheFactory,
+            name = "RecoveryPartyInfoCache_byCordaX500Name"
+    ) { key -> database.transaction { queryByCordaX500Name(session, key) } }
 
-    private val partyIdToCordaX500NameCache = NonInvalidatingCache<SecureHash, CordaX500Name?>(
-                cacheFactory = cacheFactory,
-                name = "RecoveryPartyInfoCache_byPartyId") { key ->
-            database.transaction { queryByPartyId(session, key) }
-        }
+    private val partyIdToCordaX500NameCache = NonInvalidatingCache<SecureHash, CordaX500Name>(
+            cacheFactory = cacheFactory,
+            name = "RecoveryPartyInfoCache_byPartyId"
+    ) { key ->
+        database.transaction { queryByPartyId(session, key) }
+    }
 
     private lateinit var trackNetworkMapUpdates: Observable<NetworkMapCache.MapChange>
 

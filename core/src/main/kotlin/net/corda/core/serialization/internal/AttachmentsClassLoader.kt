@@ -8,8 +8,8 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
-import net.corda.core.internal.JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_17_CLASS_FILE_MAJOR_VERSION
+import net.corda.core.internal.JAVA_1_2_CLASS_FILE_MAJOR_VERSION
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.PlatformVersionSwitches
@@ -17,6 +17,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.createSimpleCache
+import net.corda.core.internal.entries
 import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY
@@ -48,7 +49,6 @@ import java.util.ServiceLoader
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Function
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -93,41 +93,26 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
          * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
          */
         private fun setOrDecorateURLStreamHandlerFactory() {
-            // Retrieve the `URL.factory` field
-            val factoryField = URL::class.java.getDeclaredField("factory")
-            // Make it accessible
-            factoryField.isAccessible = true
-
-            // Check for preset factory, set directly if missing
-            val existingFactory: URLStreamHandlerFactory? = factoryField.get(null) as URLStreamHandlerFactory?
-            if (existingFactory == null) {
+            try {
                 URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
-            }
-            // Otherwise, decorate the existing and replace via reflection
-            // as calling `URL.setURLStreamHandlerFactory` again will throw an error
-            else {
+            } catch (e: Error) {
                 log.warn("The URLStreamHandlerFactory was already set in the JVM. Please be aware that this is not recommended.")
+                val factoryField = URL::class.java.getDeclaredField("factory").apply { isAccessible = true }
                 // Retrieve the field "streamHandlerLock" of the class URL that
                 // is the lock used to synchronize access to the protocol handlers
-                val lockField = URL::class.java.getDeclaredField("streamHandlerLock")
+                val lockField = URL::class.java.getDeclaredField("streamHandlerLock").apply { isAccessible = true }
                 // It is a private field so we need to make it accessible
-                // Note: this will only work as-is in JDK8.
-                lockField.isAccessible = true
+                val existingFactory = factoryField.get(null) as URLStreamHandlerFactory?
                 // Use the same lock to reset the factory
                 synchronized(lockField.get(null)) {
                     // Reset the value to prevent Error due to a factory already defined
                     factoryField.set(null, null)
                     // Set our custom factory and wrap the current one into it
-                    URL.setURLStreamHandlerFactory(
-                            // Set the factory to a decorator
-                            object : URLStreamHandlerFactory {
-                                // route between our own and the pre-existing factory
-                                override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
-                                    return AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
-                                            ?: existingFactory.createURLStreamHandler(protocol)
-                                }
-                            }
-                    )
+                    URL.setURLStreamHandlerFactory { protocol ->
+                        // route between our own and the pre-existing factory
+                        AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
+                                ?: existingFactory?.createURLStreamHandler(protocol)
+                    }
                 }
             }
         }
@@ -158,9 +143,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         checkAttachments(attachments)
     }
 
-    private class AttachmentHashContext(
-            val txId: SecureHash,
-            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
+    private class AttachmentHashContext(val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
 
     private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
         val md = MessageDigest.getInstance(SecureHash.SHA2_256)
@@ -177,19 +160,13 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     }
 
     private fun containsClasses(attachment: Attachment): Boolean {
-        attachment.openAsJAR().use { jar ->
-            while (true) {
-                val entry = jar.nextJarEntry ?: return false
-                if (entry.name.endsWith(".class", ignoreCase = true)) return true
-            }
-        }
-        return false
+        return attachment.openAsJAR().use { it.entries().any { entry -> entry.name.endsWith(".class", ignoreCase = true) } }
     }
 
     // This function attempts to strike a balance between security and usability when it comes to the no-overlap rule.
     // TODO - investigate potential exploits.
     private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int): Boolean {
-        require(path.toLowerCase() == path)
+        require(path.lowercase() == path)
         require(!path.contains('\\'))
 
         return when {
@@ -206,7 +183,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun checkAttachments(attachments: List<Attachment>) {
-        require(attachments.isNotEmpty()) { "attachments list is empty" }
+        require(attachments.isNotEmpty()) {
+            "Transaction attachments list is empty. This can happen if verifying a legacy transaction (4.11 or older) with " +
+                    "LedgerTransaction.verify(). Try using SignedTransaction.verify() instead."
+        }
 
         // Here is where we enforce the no-overlap and package ownership rules.
         //
@@ -234,7 +214,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // claim their parts of the Java package namespace via registration with the zone operator.
 
         val classLoaderEntries = mutableMapOf<String, SecureHash>()
-        val ctx = AttachmentHashContext(sampleTxId)
+        val ctx = AttachmentHashContext()
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
@@ -270,7 +250,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                     //
                     // Also convert to Unix path separators as all resource/class lookups will expect this.
-                    val path = entry.name.toLowerCase(Locale.US).replace('\\', '/')
+                    val path = entry.name.lowercase(Locale.US).replace('\\', '/')
 
                     // Namespace ownership. We only check class files: resources are loaded relative to a JAR anyway.
                     if (path.endsWith(".class")) {
@@ -285,7 +265,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                         for ((namespace, pubkey) in params.packageOwnership) {
                             // Note that due to the toLowerCase() call above, we'll be comparing against a lowercased
                             // version of the ownership claim.
-                            val ns = namespace.toLowerCase(Locale.US)
+                            val ns = namespace.lowercase(Locale.US)
                             // We need an additional . to avoid matching com.foo.Widget against com.foobar.Zap
                             if (pkgName == ns || pkgName.startsWith("$ns.")) {
                                 if (pubkey !in signers)
@@ -348,7 +328,7 @@ object AttachmentsClassLoaderBuilder {
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
     @Suppress("LongParameterList")
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
+    fun <T> withAttachmentsClassLoaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
@@ -358,12 +338,12 @@ object AttachmentsClassLoaderBuilder {
         val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
-        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
+        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params)) { key ->
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
-                        JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
+                        JAVA_1_2_CLASS_FILE_MAJOR_VERSION..JAVA_17_CLASS_FILE_MAJOR_VERSION)
             } catch (ex: UnsupportedClassVersionError) {
                 throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
             }
@@ -380,9 +360,9 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        })
+        }
 
-        val serializationContext = cachedSerializationContext.withProperties(mapOf<Any, Any>(
+        val serializationContext = cachedSerializationContext.withProperties(mapOf(
                 // Duplicate the SerializationContext from the cache and give
                 // it these extra properties, just for this transaction.
                 // However, keep a strong reference to the cached SerializationContext so we can
@@ -419,7 +399,7 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val uniqueURL = URL(attachmentScheme, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
+        val uniqueURL = URL(attachmentScheme, "", -1, "${attachment.id}?${uniqueness.getAndIncrement()}", AttachmentURLStreamHandler)
         loadedAttachments[uniqueURL] = attachment
         return uniqueURL
     }
@@ -436,12 +416,12 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
         override fun equals(attachmentUrl: URL, otherURL: URL?): Boolean {
             if (attachmentUrl.protocol != otherURL?.protocol) return false
-            if (attachmentUrl.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
+            require(attachmentUrl.protocol == attachmentScheme) { "Cannot handle protocol: ${attachmentUrl.protocol}" }
             return attachmentUrl.file == otherURL?.file
         }
 
         override fun hashCode(url: URL): Int {
-            if (url.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
+            require(url.protocol == attachmentScheme) { "Cannot handle protocol: ${url.protocol}" }
             return url.file.hashCode()
         }
     }
@@ -473,7 +453,10 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
 }
 
 interface AttachmentsClassLoaderCache {
-    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
+    fun computeIfAbsent(
+            key: AttachmentsClassLoaderKey,
+            mappingFunction: (AttachmentsClassLoaderKey) -> SerializationContext
+    ): SerializationContext
 }
 
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
@@ -489,7 +472,6 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
     private val toBeClosed = ConcurrentHashMap.newKeySet<ToBeClosed>()
     private val expiryQueue = ReferenceQueue<SerializationContext>()
 
-    @Suppress("TooGenericExceptionCaught")
     private fun purgeExpiryQueue() {
         // Close the AttachmentsClassLoader for every SerializationContext
         // that has already been garbage-collected.
@@ -522,18 +504,23 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
             }, "AttachmentsClassLoader_cache"
     )
 
-    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+    override fun computeIfAbsent(
+            key: AttachmentsClassLoaderKey,
+            mappingFunction: (AttachmentsClassLoaderKey) -> SerializationContext
+    ): SerializationContext {
         purgeExpiryQueue()
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
 
 class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int) : AttachmentsClassLoaderCache {
-
     private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
             = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(cacheSize).toSynchronised()
 
-    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+    override fun computeIfAbsent(
+            key: AttachmentsClassLoaderKey,
+            mappingFunction: (AttachmentsClassLoaderKey) -> SerializationContext
+    ): SerializationContext {
         return cache.computeIfAbsent(key, mappingFunction)
     }
 }

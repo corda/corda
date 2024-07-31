@@ -32,11 +32,11 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
 import com.opengamma.strata.report.ReportCalculationResults
 import com.opengamma.strata.report.trade.TradeReport
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.toPath
 import java.nio.file.Path
 import java.time.LocalDate
+import kotlin.io.path.Path
+import kotlin.io.path.exists
 
 /**
  * Example to illustrate using the engine to price a swap.
@@ -65,8 +65,8 @@ class SwapPricingCcpExample {
      */
     private val resourcesUri = run {
         // Find src/main/resources by walking up the directory tree starting at a classpath root:
-        var module = javaClass.getResource("/").toPath()
-        val relative = "src" / "main" / "resources"
+        var module = javaClass.getResource("/")!!.toPath()
+        val relative = Path("src", "main", "resources")
         var path: Path
         while (true) {
             path = module.resolve(relative)

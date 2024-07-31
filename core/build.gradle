@@ -1,109 +1,78 @@
-import static org.gradle.api.JavaVersion.VERSION_1_8
-
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-jpa'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda core'
-
-targetCompatibility = VERSION_1_8
 
 sourceSets {
     obfuscator
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    resolvableImplementation.extendsFrom implementation
+
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
+
+    testArtifacts.extendsFrom(testRuntimeClasspath)
 }
 
 dependencies {
-
-    obfuscatorImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    compileOnly project(':opentelemetry')
-    testImplementation sourceSets.obfuscator.output
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testImplementation "junit:junit:$junit_version"
-    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
-    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
-
-    testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
-
-    // Guava: Google test library (collections test suite)
-    testCompile "com.google.guava:guava-testlib:$guava_version"
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-
-    // Hamkrest, for fluent, composable matchers
-    testCompile "com.natpryce:hamkrest:$hamkrest_version"
-
-    // Thread safety annotations
-    compile "com.google.code.findbugs:jsr305:$jsr305_version"
-
-    // SLF4J: commons-logging bindings for a SLF4J back end
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    compile "org.slf4j:slf4j-api:$slf4j_version"
-
-    // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // Guava: Google utilities library.
-    compile "com.google.guava:guava:$guava_version"
-
-    // For caches rather than guava
-    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
-
+    // These are exposed in our public APIs and are thus "api" dependencies
+    api "org.slf4j:slf4j-api:$slf4j_version"
     // RxJava: observable streams of events.
-    compile "io.reactivex:rxjava:$rxjava_version"
-    
-    compile "org.apache.commons:commons-lang3:$commons_lang_version"
+    api "io.reactivex:rxjava:$rxjava_version"
 
-    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    compile "net.i2p.crypto:eddsa:$eddsa_version"
-
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    // SLF4J: commons-logging bindings for a SLF4J back end
+    implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    // Guava: Google utilities library.
+    implementation "com.google.guava:guava:$guava_version"
+    // For caches rather than guava
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     // Bouncy castle support needed for X509 certificate manipulation
-    compile "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
-    compile "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
-
-    // JPA 2.2 annotations.
-    compile "javax.persistence:javax.persistence-api:2.2"
-
+    implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     // required to use @Type annotation
-    compile "org.hibernate:hibernate-core:$hibernate_version"
-
+    implementation "org.hibernate:hibernate-core:$hibernate_version"
     // FastThreadLocal
-    compile "io.netty:netty-common:$netty_version"
+    implementation "io.netty:netty-common:$netty_version"
+    implementation "io.github.classgraph:classgraph:$class_graph_version"
 
-    compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+    testImplementation sourceSets.obfuscator.output
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.apache.commons:commons-fileupload2-jakarta:$fileupload_version"
+    // Guava: Google test library (collections test suite)
+    testImplementation "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    // Hamkrest, for fluent, composable matchers
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
+    // AssertJ: for fluent assertions for testing
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.bouncycastle:bcpkix-lts8on:$bouncycastle_version"
+    testImplementation "org.ow2.asm:asm:$asm_version"
 
-    testCompile "org.ow2.asm:asm:$asm_version"
-
-    // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
+    testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
-    testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
-    testCompile "org.mockito:mockito-core:$mockito_version"
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    testCompile "com.natpryce:hamkrest:$hamkrest_version"
-    testCompile 'org.hamcrest:hamcrest-library:2.1'
-
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito:mockito-core:$mockito_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
+    testImplementation 'org.hamcrest:hamcrest-library:2.1'
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
-task copyQuasarJar(type: Copy) {
+tasks.register('copyQuasarJar', Copy) {
     from configurations.quasar
     into "$project.rootProject.projectDir/lib"
-    rename { filename -> "quasar.jar"}
+    rename { filename -> "quasar.jar" }
 }
 
 jar {
@@ -111,11 +80,6 @@ jar {
     archiveBaseName = 'corda-core'
     archiveClassifier = ''
 }
-
-configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
-}
-
 
 processTestResources {
     inputs.files(jar)
@@ -130,7 +94,8 @@ test {
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 
-task testJar(type: Jar) {
+tasks.register('testJar', Jar) {
+    dependsOn testClasses
     classifier "tests"
     from sourceSets.test.output
 }
@@ -149,7 +114,6 @@ quasar {
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
-            "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
             "org.bouncycastle**",
@@ -165,11 +129,6 @@ quasar {
             "io.opentelemetry.**")
 }
 
-artifacts {
-    testArtifacts testJar
-    publish testJar
-}
-
 scanApi {
     excludeClasses = [
         // Kotlin should probably have declared this class as "synthetic".
@@ -177,13 +136,23 @@ scanApi {
     ]
 }
 
-publish {
-    name jar.baseName
-}
-
 tasks.register("writeTestResources", JavaExec) {
     classpath sourceSets.obfuscator.output
     classpath sourceSets.obfuscator.runtimeClasspath
     main 'net.corda.core.internal.utilities.TestResourceWriter'
     args new File(sourceSets.test.resources.srcDirs.first(), "zip").toString()
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-core'
+            artifact testJar
+            from components.java
+        }
+    }
 }

@@ -1,10 +1,10 @@
 package net.corda.errorUtilities.docsTable
 
 import junit.framework.TestCase.assertEquals
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import java.nio.file.Paths
-import java.util.*
+import java.util.Locale
 
 class DocsTableGeneratorTest {
 
@@ -37,9 +37,11 @@ class DocsTableGeneratorTest {
         assertEquals(irishTable.split("\n").joinToString(System.lineSeparator()), table)
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout = 1000)
+    @Test(timeout = 1000)
     fun `error thrown if unknown directory passed to generator`() {
         val generator = DocsTableGenerator(Paths.get("not/a/directory"), Locale.getDefault())
-        generator.generateMarkdown()
+        assertThatIllegalArgumentException().isThrownBy {
+            generator.generateMarkdown()
+        }
     }
 }
