@@ -9,6 +9,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -918,5 +920,27 @@ class CashTests {
         assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
 
         assertEquals(2, wtx.commands.size)
+    }
+
+    @Test
+    fun performanceTest() {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
+            )
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+        val counts = 1000
+        val loops = 200
+        for (loop in 0 until loops) {
+            val start = System.nanoTime()
+            for (count in 0 until counts) {
+                val wtx = tx.toWireTransaction(ourServices)
+            }
+            val end = System.nanoTime()
+            println("Time per transaction serialize on loop $loop = ${(end - start) / counts} nanoseconds")
+        }
     }
 }
