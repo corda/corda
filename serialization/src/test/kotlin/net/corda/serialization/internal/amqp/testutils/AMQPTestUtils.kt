@@ -63,19 +63,6 @@ class TestSerializationOutput(
         serializerFactory: SerializerFactory = testDefaultFactory())
     : SerializationOutput(serializerFactory) {
 
-    override fun writeSchema(schema: Schema, data: Data) {
-        if (verbose) println(schema)
-        super.writeSchema(schema, data)
-    }
-
-    override fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
-        if(verbose) {
-            println ("Writing Transform Schema")
-            println (transformsSchema)
-        }
-        super.writeTransformSchema(transformsSchema, data)
-    }
-
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {

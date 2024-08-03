@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.LazyPool
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
@@ -8,6 +9,8 @@ import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.byteArrayOutput
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.codec.Data
+import org.apache.qpid.proton.codec.DecoderImpl
+import org.apache.qpid.proton.codec.EncoderImpl
 import java.io.NotSerializableException
 import java.io.OutputStream
 import java.lang.reflect.Type
@@ -73,16 +76,16 @@ open class SerializationOutput constructor(
         schemaHistory.clear()
     }
 
-    internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        val data = Data.Factory.create()
-        data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
-            withList {
-                writeObject(obj, this, context)
-                val schema = Schema(schemaHistory.toList())
-                writeSchema(schema, this)
-                writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
-            }
+    private val encoderPool = LazyPool<EncoderImpl> {
+        EncoderImpl(DecoderImpl()).apply {
+            registerDescribedType(Envelope::class.java, Envelope.DESCRIPTOR)
+            register(CachingDescribedAMQPType(CachingWrapper::class.java, this))
+            register(CachingDescribedAMQPType(Schema::class.java, this))
+            register(CachingDescribedAMQPType(TransformsSchema::class.java, this))
         }
+    }
+
+    internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         return SerializedBytes(byteArrayOutput {
             var stream: OutputStream = it
             try {
@@ -94,7 +97,17 @@ open class SerializationOutput constructor(
                     stream = encoding.wrap(stream)
                 }
                 SectionId.DATA_AND_STOP.writeTo(stream)
-                stream.alsoAsByteBuffer(data.encodedSize().toInt(), data::encode)
+                encoderPool.reentrantRun { encoderImpl ->
+                    val previousBuffer = encoderImpl.buffer
+                    encoderImpl.setByteBuffer(OutputStreamWritableBuffer(stream))
+                    encoderImpl.writeObject(Envelope(CachingWrapper { data ->
+                        writeObject(obj, data, context)
+                    }) {
+                        val schema = Schema(schemaHistory.toList())
+                        schema to TransformsSchema.build(schema, serializerFactory)
+                    })
+                    encoderImpl.setByteBuffer(previousBuffer)
+                }
             } finally {
                 stream.close()
             }
@@ -103,14 +116,6 @@ open class SerializationOutput constructor(
 
     internal fun writeObject(obj: Any, data: Data, context: SerializationContext) {
         writeObject(obj, data, obj.javaClass, context)
-    }
-
-    open fun writeSchema(schema: Schema, data: Data) {
-        data.putObject(schema)
-    }
-
-    open fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
-        data.putObject(transformsSchema)
     }
 
     internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type, context: SerializationContext, debugIndent: Int) {
