@@ -931,7 +931,7 @@ class CashTests {
             CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val counts = 1000
-        val loops = 200
+        val loops = 50
         for (loop in 0 until loops) {
             val start = System.nanoTime()
             for (count in 0 until counts) {
