@@ -104,11 +104,11 @@ class CachingDescribedAMQPType<T : CachingDescribedType>(private val type: Class
     }
 
     override fun getCanonicalEncoding(): TypeEncoding<T> {
-        TODO("Not expecting this to get called")
+        throw UnsupportedOperationException()
     }
 
     override fun getAllEncodings(): MutableCollection<out TypeEncoding<T>> {
-        TODO("Not expecting this to get called")
+        throw UnsupportedOperationException()
     }
 
     override fun write(obj: T) {
