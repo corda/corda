@@ -9,7 +9,6 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException

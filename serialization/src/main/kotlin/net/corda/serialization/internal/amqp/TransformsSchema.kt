@@ -7,7 +7,7 @@ import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
-import java.util.*
+import java.util.EnumMap
 
 // NOTE: We are effectively going to replicate the annotations, we need to do this because
 // we can't instantiate instances of those annotation classes and this code needs to

@@ -9,8 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -937,7 +935,7 @@ class CashTests {
         for (loop in 0 until loops) {
             val start = System.nanoTime()
             for (count in 0 until counts) {
-                val wtx = tx.toWireTransaction(ourServices)
+                tx.toWireTransaction(ourServices)
             }
             val end = System.nanoTime()
             println("Time per transaction serialize on loop $loop = ${(end - start) / counts} nanoseconds")

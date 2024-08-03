@@ -14,12 +14,10 @@ import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.AMQPType
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
-import org.apache.qpid.proton.codec.Encoder
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.apache.qpid.proton.codec.TypeEncoding
 import java.io.NotSerializableException
 import java.lang.reflect.Type
-import java.nio.ByteBuffer
 
 const val DESCRIPTOR_DOMAIN: String = "net.corda"
 val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0))
