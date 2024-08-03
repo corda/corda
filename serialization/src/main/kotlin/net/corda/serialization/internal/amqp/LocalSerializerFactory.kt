@@ -82,6 +82,8 @@ interface LocalSerializerFactory {
      * when serialising and deserialising.
      */
     fun isSuitableForObjectReference(type: Type): Boolean
+
+    fun getCachedSchema(types: List<TypeNotation>): Pair<Schema, TransformsSchema>
 }
 
 /**
@@ -277,4 +279,21 @@ class DefaultLocalSerializerFactory(
         }
     }
 
+    private val schemaCache = ConcurrentHashMap<Set<TypeNotation>, Pair<Schema, TransformsSchema>>()
+
+    override fun getCachedSchema(types: List<TypeNotation>): Pair<Schema, TransformsSchema> {
+        val cacheKey = CachingSet(types)
+        return schemaCache.computeIfAbsent(cacheKey) { types ->
+            val schema = Schema(types.toList())
+            schema to TransformsSchema.build(schema, this)
+        }
+    }
+
+    private class CachingSet<T>(exisitingSet: List<T>) : HashSet<T>(exisitingSet) {
+        override val size: Int = super.size
+        private val hashCode = super.hashCode()
+        override fun hashCode(): Int {
+            return hashCode
+        }
+    }
 }

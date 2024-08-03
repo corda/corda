@@ -16,6 +16,7 @@ import java.io.OutputStream
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashSet
 
 data class BytesAndSchemas<T : Any>(
@@ -38,7 +39,7 @@ open class SerializationOutput constructor(
 
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
-    internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
+    internal val schemaHistory: MutableList<TypeNotation> = ArrayList()
 
     /**
      * Serialize the given object to AMQP, wrapped in our [Envelope] wrapper which carries an AMQP 1.0 schema, and prefixed
@@ -103,8 +104,7 @@ open class SerializationOutput constructor(
                     encoderImpl.writeObject(Envelope(CachingWrapper { data ->
                         writeObject(obj, data, context)
                     }) {
-                        val schema = Schema(schemaHistory.toList())
-                        schema to TransformsSchema.build(schema, serializerFactory)
+                        serializerFactory.getCachedSchema(schemaHistory)
                     })
                     encoderImpl.setByteBuffer(previousBuffer)
                 }

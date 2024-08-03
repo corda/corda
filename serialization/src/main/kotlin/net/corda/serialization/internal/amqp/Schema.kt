@@ -291,6 +291,16 @@ data class CompositeType(
 
     override fun getDescribed(): Any = listOf(name, label, provides, descriptor, fields)
 
+    private val hashCode = descriptor.hashCode()
+    override fun hashCode(): Int {
+        return hashCode
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is TypeNotation) return false
+        return descriptor.equals(other.descriptor)
+    }
+
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"composite\" name=\"$name\"")
         if (!label.isNullOrBlank()) {
@@ -339,6 +349,16 @@ data class RestrictedType(override val name: String,
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, source, descriptor, choices)
+
+    private val hashCode = descriptor.hashCode()
+    override fun hashCode(): Int {
+        return hashCode
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is TypeNotation) return false
+        return descriptor.equals(other.descriptor)
+    }
 
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"restricted\" name=\"$name\"")
