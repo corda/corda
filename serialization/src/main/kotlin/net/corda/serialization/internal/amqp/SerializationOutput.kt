@@ -39,7 +39,7 @@ open class SerializationOutput constructor(
 
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
-    internal val schemaHistory: MutableList<TypeNotation> = ArrayList()
+    internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
 
     /**
      * Serialize the given object to AMQP, wrapped in our [Envelope] wrapper which carries an AMQP 1.0 schema, and prefixed
