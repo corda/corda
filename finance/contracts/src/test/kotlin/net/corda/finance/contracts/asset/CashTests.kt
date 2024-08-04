@@ -920,7 +920,7 @@ class CashTests {
         assertEquals(2, wtx.commands.size)
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun performanceTest() {
         val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {

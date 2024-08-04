@@ -9,6 +9,7 @@ import java.nio.ByteBuffer
  * This class is just a wrapper around an [OutputStream] for Proton-J Encoder.  Only the methods
  * we are actively using are implemented and tested.
  */
+@Suppress("MagicNumber")
 class OutputStreamWritableBuffer(private val stream: OutputStream) : WritableBuffer {
     private val writeBuffer = ByteArray(8)
 
