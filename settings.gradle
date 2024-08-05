@@ -75,8 +75,8 @@ include 'core-test-utils'
 ['test-common', 'core-test-utils', 'test-utils', 'test-cli', 'test-db', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
-include 'tools:explorer'
-include 'tools:explorer:capsule'
+//include 'tools:explorer'
+//include 'tools:explorer:capsule'
 //include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
