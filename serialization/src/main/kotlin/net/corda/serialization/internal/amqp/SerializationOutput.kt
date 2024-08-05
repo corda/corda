@@ -33,6 +33,15 @@ open class SerializationOutput constructor(
 ) {
     companion object {
         private val logger = contextLogger()
+
+        private val encoderPool = LazyPool<EncoderImpl> {
+            EncoderImpl(DecoderImpl()).apply {
+                registerDescribedType(Envelope::class.java, Envelope.DESCRIPTOR)
+                register(CachingDescribedAMQPType(CachingWrapper::class.java, this))
+                register(CachingDescribedAMQPType(Schema::class.java, this))
+                register(CachingDescribedAMQPType(TransformsSchema::class.java, this))
+            }
+        }
     }
 
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
@@ -73,15 +82,6 @@ open class SerializationOutput constructor(
         objectHistory.clear()
         serializerHistory.clear()
         schemaHistory.clear()
-    }
-
-    private val encoderPool = LazyPool<EncoderImpl> {
-        EncoderImpl(DecoderImpl()).apply {
-            registerDescribedType(Envelope::class.java, Envelope.DESCRIPTOR)
-            register(CachingDescribedAMQPType(CachingWrapper::class.java, this))
-            register(CachingDescribedAMQPType(Schema::class.java, this))
-            register(CachingDescribedAMQPType(TransformsSchema::class.java, this))
-        }
     }
 
     internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
