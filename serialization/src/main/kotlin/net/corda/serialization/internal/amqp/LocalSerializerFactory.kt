@@ -286,8 +286,8 @@ class DefaultLocalSerializerFactory(
 
     override fun getCachedSchema(types: Set<TypeNotation>): Pair<Schema, TransformsSchema> {
         val cacheKey = CachingSet(types)
-        return schemaCache.computeIfAbsent(cacheKey) { key ->
-            val schema = Schema(key.toList())
+        return schemaCache.getOrPut(cacheKey) {
+            val schema = Schema(cacheKey.toList())
             schema to TransformsSchema.build(schema, this)
         }
     }
