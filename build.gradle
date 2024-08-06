@@ -197,7 +197,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.allopen' apply false
     id 'org.jetbrains.kotlin.plugin.jpa' apply false
     id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
-    id "org.ajoberstar.grgit" version "4.1.1"
+    id "org.ajoberstar.grgit" version "4.0.0"
     id 'corda.root-publish'
     id "org.jetbrains.dokka" version "1.8.20"
 }
