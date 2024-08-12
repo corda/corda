@@ -1,0 +1,29 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-library'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+}
+
+description 'OpenTelemetry SDK Bundle'
+
+// This driver is required by core, so must always be 1.8. See core build.gradle.
+targetCompatibility = VERSION_1_8
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation platform("io.opentelemetry:opentelemetry-bom:$open_telemetry_version")
+    implementation "io.opentelemetry:opentelemetry-sdk"
+    implementation "io.opentelemetry:opentelemetry-exporter-otlp"
+    implementation "io.opentelemetry:opentelemetry-semconv:$open_telemetry_sem_conv_version"
+    implementation ("com.squareup.okhttp3:okhttp:$okhttp_version") {
+        force = true
+    }
+}
+
+publish {
+    name  'corda-opentelemetry'
+}
+

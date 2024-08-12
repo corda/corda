@@ -24,7 +24,7 @@ import net.corda.nodeapi.internal.namedThreadPoolExecutor
 import net.corda.nodeapi.internal.revocation.CordaRevocationChecker
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Primitive
-import org.bouncycastle.asn1.DERIA5String
+import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.DEROctetString
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.CRLDistPoint
@@ -96,7 +96,7 @@ fun X509Certificate.distributionPoints(): Map<URI, List<X500Principal>?> {
         }
         for (generalName in GeneralNames.getInstance(distributionPointName.name).names) {
             if (generalName.tagNo == GeneralName.uniformResourceIdentifier) {
-                val uri = URI(DERIA5String.getInstance(generalName.name).string)
+                val uri = URI(ASN1IA5String.getInstance(generalName.name).string)
                 dpMap[uri] = issuerNames
             }
         }

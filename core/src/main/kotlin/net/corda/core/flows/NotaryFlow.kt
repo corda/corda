@@ -5,7 +5,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.BackpressureAwareTimedFlow
@@ -174,8 +173,7 @@ class NotaryFlow {
          * same transaction.
          */
         private fun generateRequestSignature(): NotarisationRequestSignature {
-            // TODO: This is not required any more once our AMQP serialization supports turning off object referencing.
-            val notarisationRequest = NotarisationRequest(stx.inputs.map { it.copy(txhash = SecureHash.create(it.txhash.toString())) }, stx.id)
+            val notarisationRequest = NotarisationRequest(stx.inputs, stx.id)
             return notarisationRequest.generateSignature(serviceHub)
         }
     }

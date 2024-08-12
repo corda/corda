@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
@@ -7,6 +8,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.utilities.Internable
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
@@ -119,7 +122,16 @@ data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstra
         return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
             log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
             false
-        }
-        else true
+        } else true
+    }
+
+    companion object : Internable<SignatureAttachmentConstraint> {
+        @CordaInternal
+        override val interner = PrivateInterner<SignatureAttachmentConstraint>()
+
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
+        fun create(key: PublicKey) = interner.intern(SignatureAttachmentConstraint(key))
     }
 }
