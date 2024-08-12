@@ -186,7 +186,7 @@ class NotaryCertificateRotationTest(private val validating: Boolean) {
         }
 
         // Start notary with new identity and restart nodes.
-        val notary2 = mockNet.createNode(InternalMockNodeParameters(
+        mockNet.createNode(InternalMockNodeParameters(
                 legalName = DUMMY_NOTARY_NAME,
                 configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary }
         ))
