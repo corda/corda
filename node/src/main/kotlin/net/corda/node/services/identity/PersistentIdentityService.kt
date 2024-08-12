@@ -398,7 +398,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 if (candidate != null && candidate != party) {
                     // Party doesn't match existing well-known party: check that the key is registered, otherwise return null.
                     require(party.name == candidate.name) { "Candidate party $candidate does not match expected $party" }
-                    keyToParty[party.owningKey.toStringShort()]?.let { candidate }
+                    if (party in notaryIdentityCache) {
+                        candidate
+                    }
+                    else {
+                        keyToParty[party.owningKey.toStringShort()]?.let { candidate }
+                    }
                 } else {
                     // Party is a well-known party or well-known party doesn't exist: skip checks.
                     // If the notary is not in the network map cache, try getting it from the network parameters
