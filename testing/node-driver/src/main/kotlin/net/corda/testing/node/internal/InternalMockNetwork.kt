@@ -506,6 +506,18 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         return node
     }
 
+    fun hideNode(
+            node: TestStartedNode
+    ) {
+        _nodes.remove(node.internals)
+    }
+
+    fun unhideNode(
+            node: TestStartedNode
+    ) {
+        _nodes.add(node.internals)
+    }
+
     fun restartNode(
             node: TestStartedNode,
             parameters: InternalMockNodeParameters = InternalMockNodeParameters(),

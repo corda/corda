@@ -1,7 +1,11 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.pushToLoggingContext
@@ -46,8 +50,8 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
-            checkParameterHash(it.networkParametersHash)
             subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord))
+            checkParameterHash(it.networkParametersHash)
             logger.info("Transaction dependencies resolution completed.")
             try {
                 it.verify(serviceHub, checkSufficientSignatures)
