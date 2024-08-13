@@ -1,6 +1,5 @@
 package net.corda.core.node
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
@@ -10,9 +9,11 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
-import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
@@ -28,7 +29,6 @@ import javax.persistence.EntityManager
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
-@DeleteForDJVM
 @DoNotImplement
 interface ServicesForResolution {
     /**
@@ -89,6 +89,7 @@ interface ServicesForResolution {
  * Controls whether the transaction is sent to the vault at all, and if so whether states have to be relevant
  * or not in order to be recorded. Used in [ServiceHub.recordTransactions]
  */
+@CordaSerializable
 enum class StatesToRecord {
     /** The received transaction is not sent to the vault at all. This is used within transaction resolution. */
     NONE,
@@ -116,7 +117,6 @@ enum class StatesToRecord {
  *
  * In unit test environments, some of those services may be missing or mocked out.
  */
-@DeleteForDJVM
 interface ServiceHub : ServicesForResolution {
     // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
     // their internal state from being serialized in checkpoints.
@@ -204,6 +204,12 @@ interface ServiceHub : ServicesForResolution {
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing if [notifyVault] is true. This is expected to be run within a database transaction.
      *
+     * As of platform version [TWO_PHASE_FINALITY] also performs signature verification and will throw an
+     * [IllegalStateException] with details of the cause of error upon failure.
+     * Of course, you should not be recording transactions to the ledger that are not fully signed.
+     * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
+     *
      * @param txs The transactions to record.
      * @param notifyVault indicate if the vault should be notified for the update.
      */
@@ -214,6 +220,12 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing if [notifyVault] is true. This is expected to be run within a database transaction.
+     *
+     * As of platform version [TWO_PHASE_FINALITY] also performs signature verification and will throw an
+     * [IllegalStateException] with details of the cause of error upon failure.
+     * Of course, you should not be recording transactions to the ledger that are not fully signed.
+     * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      */
     fun recordTransactions(notifyVault: Boolean, first: SignedTransaction, vararg remaining: SignedTransaction) {
         recordTransactions(notifyVault, listOf(first, *remaining))
@@ -224,6 +236,12 @@ interface ServiceHub : ServicesForResolution {
      * further processing if [statesToRecord] is not [StatesToRecord.NONE].
      * This is expected to be run within a database transaction.
      *
+     * As of platform version [TWO_PHASE_FINALITY] also performs signature verification and will throw an
+     * [IllegalStateException] with details of the cause of error upon failure.
+     * Of course, you should not be recording transactions to the ledger that are not fully signed.
+     * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
+     *
      * @param txs The transactions to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
      */
@@ -232,6 +250,13 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
+     *
+     * As of platform version [TWO_PHASE_FINALITY] also performs signature verification and will throw an
+     * [IllegalStateException] with details of the cause of error upon failure.
+     * Of course, you should not be recording transactions to the ledger that are not fully signed.
+     * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
+     *
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
         recordTransactions(listOf(first, *remaining))
@@ -240,6 +265,13 @@ interface ServiceHub : ServicesForResolution {
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
+     *
+     * As of platform version [TWO_PHASE_FINALITY] also performs signature verification and will throw an
+     * [IllegalStateException] with details of the cause of error upon failure.
+     * Of course, you should not be recording transactions to the ledger that are not fully signed.
+     * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
+     *
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
         recordTransactions(StatesToRecord.ONLY_RELEVANT, txs)

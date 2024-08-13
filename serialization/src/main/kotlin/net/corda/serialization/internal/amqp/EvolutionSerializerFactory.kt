@@ -20,8 +20,6 @@ interface EvolutionSerializerFactory {
 
     /**
      * A mapping between Java object types and their equivalent Java primitive types.
-     * Predominantly for the sake of the DJVM sandbox where e.g. `char` will map to
-     * sandbox.java.lang.Character instead of java.lang.Character.
      */
     val primitiveTypes: Map<Class<*>, Class<*>>
 }

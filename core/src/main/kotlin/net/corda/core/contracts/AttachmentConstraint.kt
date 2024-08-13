@@ -2,7 +2,6 @@ package net.corda.core.contracts
 
 import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
@@ -38,7 +37,6 @@ interface AttachmentConstraint {
 }
 
 /** An [AttachmentConstraint] where [isSatisfiedBy] always returns true. */
-@KeepForDJVM
 object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment) = true
 }
@@ -48,7 +46,6 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
  * The state protected by this constraint can only be used in a transaction created with that version of the jar.
  * And a receiving node will only accept it if a cordapp with that hash has (is) been deployed on the node.
  */
-@KeepForDJVM
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     companion object {
         val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
@@ -69,7 +66,6 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
  * It allows for centralized control over the cordapps that can be used.
  */
-@KeepForDJVM
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
@@ -83,7 +79,6 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     }
 }
 
-@KeepForDJVM
 @Deprecated(
         "The name is no longer valid as multiple constraints were added.",
         replaceWith = ReplaceWith("AutomaticPlaceholderConstraint"),
@@ -102,7 +97,6 @@ object AutomaticHashConstraint : AttachmentConstraint {
  * The resolution occurs in [TransactionBuilder.toWireTransaction] and is based on the input states and the attachments.
  * If the [Contract] was not annotated with [NoConstraintPropagation], then the platform will ensure the correct constraint propagation.
  */
-@KeepForDJVM
 object AutomaticPlaceholderConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticPlaceholderConstraint placeholder.")
@@ -115,7 +109,6 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
  *
  * @property key A [PublicKey] that must be fulfilled by the owning keys of the attachment's signing parties.
  */
-@KeepForDJVM
 data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         log.debug("Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}")

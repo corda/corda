@@ -99,12 +99,17 @@ class ResolveTransactionsFlowTest {
     // DOCEND 1
 
     @Test(timeout=300_000)
-	fun `dependency with an error`() {
-        val stx = makeTransactions(signFirstTX = false).second
-        val p = TestFlow(setOf(stx.id), megaCorp)
-        val future = miniCorpNode.startFlow(p)
-        mockNet.runNetwork()
-        assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
+	fun `dependency with an error fails fast upon prior attempt to record transaction with missing signature`() {
+        val exception = assertFailsWith(IllegalStateException::class) {
+            val stx = makeTransactions(signFirstTX = false).second
+            // fails fast in above operation
+            // prior to platform version 13, same failure would occur upon transaction resolution
+            val p = TestFlow(setOf(stx.id), megaCorp)
+            val future = miniCorpNode.startFlow(p)
+            mockNet.runNetwork()
+            future.getOrThrow()
+        }
+        assertTrue(exception.cause.toString().contains("SignaturesMissingException"))
     }
 
     @Test(timeout=300_000)
