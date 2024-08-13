@@ -34,6 +34,10 @@ pipeline {
         // in the name
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Nightly to Artifactory"
                 .replaceAll("/", " :: ")
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
+        USE_CACHE = 'corda-remotes'
         DOCKER_URL = "https://index.docker.io/v1/"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }

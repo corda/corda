@@ -75,8 +75,8 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             val stx = resolvePayload(payload)
             stx.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
-            checkParameterHash(stx.networkParametersHash)
             subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
+            checkParameterHash(stx.networkParametersHash)
             logger.info("Transaction dependencies resolution completed.")
             verifyTx(stx, checkSufficientSignatures)
             if (checkSufficientSignatures) {
