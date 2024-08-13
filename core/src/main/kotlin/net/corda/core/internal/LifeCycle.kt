@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 
@@ -10,7 +9,6 @@ import kotlin.concurrent.withLock
  *
  * @param initial The initial state.
  */
-@DeleteForDJVM
 class LifeCycle<S : Enum<S>>(initial: S) {
     private val lock = ReentrantReadWriteLock()
     private var state = initial

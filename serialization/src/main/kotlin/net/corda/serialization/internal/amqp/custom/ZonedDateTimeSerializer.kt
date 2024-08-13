@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.lang.reflect.Method
@@ -48,6 +47,5 @@ class ZonedDateTimeSerializer(
             proxy.zone
     ) as ZonedDateTime
 
-    @KeepForDJVM
     data class ZonedDateTimeProxy(val dateTime: LocalDateTime, val offset: ZoneOffset, val zone: ZoneId)
 }

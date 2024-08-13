@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -22,7 +21,6 @@ import kotlin.concurrent.withLock
  * val ii = state.locked { i }
  * ```
  */
-@DeleteForDJVM
 class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()) {
     inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
     inline fun <R> alreadyLocked(body: T.() -> R): R {

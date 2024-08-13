@@ -7,14 +7,6 @@ node-api        @rick-r3
 node/src/main/kotlin/net/corda/node/internal    @rick-r3
 node/src/main/kotlin/net/corda/node/services    @rick-r3
 
-# Determinstic components
-core-deterministic      @rick-r3
-jdk8u-deterministic     @rick-r3
-node/djvm       @rick-r3
-serialization-deterministic     @rick-r3
-serialization-djvm      @rick-r3
-serialization-tests     @rick-r3
-
 # Demobench defaults to Chris, but Viktor for the main code
 tools/demobench @rick-r3
 

@@ -1,11 +1,8 @@
 package net.corda.core.crypto
 
-import net.corda.core.KeepForDJVM
-
 /**
  * Interface for injecting custom digest implementation bypassing JCA.
  */
-@KeepForDJVM
 interface DigestAlgorithm {
     /**
      * Algorithm identifier.

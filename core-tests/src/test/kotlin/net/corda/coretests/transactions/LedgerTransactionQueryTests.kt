@@ -80,7 +80,7 @@ class LedgerTransactionQueryTests {
                         .addOutputState(dummyState, DummyContract.PROGRAM_ID)
                         .addCommand(dummyCommand())
         )
-        services.recordTransactions(fakeIssueTx)
+        services.recordTransactions(fakeIssueTx, disableSignatureVerification = true)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
         return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), dummyStateRef)
     }

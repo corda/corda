@@ -1,11 +1,8 @@
 @file:Suppress("TooManyFunctions", "MagicNumber")
-@file:KeepForDJVM
 package net.corda.core.crypto
 
 import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
@@ -13,7 +10,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -23,7 +19,6 @@ import java.util.function.Supplier
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
-@KeepForDJVM
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -39,9 +34,10 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             return true
         }
 
-        // This is an efficient hashCode, because there is no point in performing a hash calculation on a cryptographic hash.
-        // It just takes the first 4 bytes and transforms them into an Int.
-        override fun hashCode() = ByteBuffer.wrap(bytes).int
+        override fun hashCode(): Int {
+            // Hash code not overridden on purpose (super class impl will do), but don't delete or have to deal with detekt and API checker.
+            return super.hashCode()
+        }
 
         /**
          * Convert the hash value to an uppercase hexadecimal [String].
@@ -62,7 +58,10 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
-        override fun hashCode() = ByteBuffer.wrap(bytes).int
+        override fun hashCode(): Int {
+            // Hash code not overridden on purpose (super class impl will do), but don't delete or have to deal with detekt and API checker.
+            return super.hashCode()
+        }
 
         override fun toString(): String {
             return "$algorithm$DELIMITER${toHexString()}"
@@ -288,14 +287,12 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Generates a random SHA-256 value.
          */
-        @DeleteForDJVM
         @JvmStatic
         fun randomSHA256() = sha256(secureRandomBytes(32))
 
         /**
          * Generates a random hash value.
          */
-        @DeleteForDJVM
         @JvmStatic
         fun random(algorithm: String): SecureHash {
             return if (algorithm == SHA2_256) {

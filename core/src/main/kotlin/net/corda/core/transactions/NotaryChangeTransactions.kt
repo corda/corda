@@ -1,8 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
@@ -27,7 +25,6 @@ import java.security.PublicKey
  * on the fly.
  */
 @CordaSerializable
-@KeepForDJVM
 data class NotaryChangeWireTransaction(
         /**
          * Contains all of the transaction components in serialized form.
@@ -90,7 +87,6 @@ data class NotaryChangeWireTransaction(
     }
 
     /** Resolves input states and network parameters and builds a [NotaryChangeLedgerTransaction]. */
-    @DeleteForDJVM
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
         val hashToResolve = networkParametersHash ?: services.networkParametersService.defaultHash
@@ -100,7 +96,6 @@ data class NotaryChangeWireTransaction(
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    @DeleteForDJVM
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
 
     /**
@@ -134,7 +129,6 @@ data class NotaryChangeWireTransaction(
  * signatures are checked against the signers specified by input states' *participants* fields, so full resolution is
  * needed for signature verification.
  */
-@KeepForDJVM
 class NotaryChangeLedgerTransaction
 private constructor(
         override val inputs: List<StateAndRef<ContractState>>,

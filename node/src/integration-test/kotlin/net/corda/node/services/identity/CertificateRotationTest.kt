@@ -42,7 +42,9 @@ class CertificateRotationTest {
 
     @After
     fun tearDown() {
-        mockNet.stopNodes()
+        if (::mockNet.isInitialized) {
+            mockNet.stopNodes()
+        }
     }
 
     @Test(timeout = 300_000)

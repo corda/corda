@@ -10,6 +10,7 @@ import java.time.Duration
 import java.time.Instant
 
 @JvmOverloads
+@Suppress("LongParameterList")
 fun testNetworkParameters(
         notaries: List<NotaryInfo> = emptyList(),
         minimumPlatformVersion: Int = 1,
@@ -20,7 +21,9 @@ fun testNetworkParameters(
         whitelistedContractImplementations: Map<String, List<AttachmentId>> = emptyMap(),
         epoch: Int = 1,
         eventHorizon: Duration = 30.days,
-        packageOwnership: Map<String, PublicKey> = emptyMap()
+        packageOwnership: Map<String, PublicKey> = emptyMap(),
+        recoveryMaximumBackupInterval: Duration = 30.days,
+        confidentialIdentityMinimumBackupInterval: Duration = 30.days
 ): NetworkParameters {
     return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,
@@ -31,7 +34,9 @@ fun testNetworkParameters(
             epoch = epoch,
             whitelistedContractImplementations = whitelistedContractImplementations,
             eventHorizon = eventHorizon,
-            packageOwnership = packageOwnership
+            packageOwnership = packageOwnership,
+            recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+            confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
     )
 }
 
