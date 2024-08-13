@@ -190,9 +190,7 @@ buildscript {
             }
             gradlePluginPortal()
             mavenCentral()
-            maven {
-                url "${publicArtifactURL}/jcenter-backup"
-            }
+            jcenter()
         }
     }
     dependencies {
@@ -456,9 +454,7 @@ allprojects {
                 }
             }
             mavenCentral()
-            maven {
-                url "${publicArtifactURL}/jcenter-backup"
-            }
+            jcenter()
         }
     }
 

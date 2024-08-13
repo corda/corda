@@ -9,9 +9,7 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven {
-            url "${publicArtifactURL}/jcenter-backup"
-        }
+        jcenter()
     }
 
     dependencies {
@@ -22,9 +20,7 @@ buildscript {
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url "${publicArtifactURL}/jcenter-backup"
-    }
+    jcenter()
 }
 
 apply plugin: 'kotlin'
