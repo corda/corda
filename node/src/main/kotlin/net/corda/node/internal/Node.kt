@@ -7,8 +7,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
-import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.cliutils.ShellConstants
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
@@ -16,9 +16,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -36,9 +34,6 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -65,8 +60,6 @@ import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
-import net.corda.common.logging.errorReporting.NodeDatabaseErrors
-import net.corda.node.internal.classloading.scanForCustomSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -74,6 +67,10 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -81,6 +78,8 @@ import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.verifier.loadCustomSerializationScheme
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.h2.jdbc.JdbcSQLNonTransientConnectionException
 import org.slf4j.Logger
@@ -91,12 +90,12 @@ import java.lang.Long.max
 import java.lang.Long.min
 import java.net.BindException
 import java.net.InetAddress
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
+import kotlin.io.path.div
 import kotlin.system.exitProcess
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
@@ -170,7 +169,7 @@ open class Node(configuration: NodeConfiguration,
 
         fun isInvalidJavaVersion(): Boolean {
             if (!hasMinimumJavaVersion()) {
-                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
+                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 17.")
                 println("Corda will now exit...")
                 return true
             }
@@ -178,22 +177,11 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private fun hasMinimumJavaVersion(): Boolean {
-            // JDK 11: review naming convention and checking of 'minUpdateVersion' and 'distributionType` (OpenJDK, Oracle, Zulu, AdoptOpenJDK, Cornetto)
-            return try {
-                if (SystemUtils.IS_JAVA_11)
-                    return true
-                else {
-                    val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
-                    (SystemUtils.IS_JAVA_1_8 && update >= 171)
-                }
-            } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
-                false
-            }
+            return SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_17)
         }
     }
 
     override val log: Logger get() = staticLog
-    override val transactionVerifierWorkerCount: Int get() = 4
 
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var rpcBroker: ArtemisBroker? = null
@@ -296,7 +284,7 @@ open class Node(configuration: NodeConfiguration,
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
-        rpcServerAddresses?.let {
+        rpcServerAddresses.let {
             internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
@@ -352,22 +340,18 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
-        return with(configuration) {
-            rpcOptions.address.let {
-                val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
-                with(rpcOptions) {
-                    rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
-                    } else {
-                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
-                    }
-                }
-                rpcBroker!!.addresses
+    private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses {
+        val rpcBrokerDirectory = configuration.baseDirectory / "brokers" / "rpc"
+        with(configuration.rpcOptions) {
+            rpcBroker = if (useSsl) {
+                ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
+                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell())
+            } else {
+                ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
+                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell())
             }
         }
+        return rpcBroker!!.addresses
     }
 
     override fun myAddresses(): List<NetworkHostAndPort> = listOf(getAdvertisedAddress()) + configuration.additionalP2PAddresses
@@ -391,7 +375,7 @@ open class Node(configuration: NodeConfiguration,
      * machine's public IP address to be used instead by looking through the network interfaces.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
-        return if (host.toLowerCase() == "localhost") {
+        return if (host.lowercase() == "localhost") {
             log.warn("p2pAddress specified as localhost. Trying to autodetect a suitable public address to advertise in network map." +
                     "To disable autodetect set detectPublicIp = false in the node.conf, or consider using messagingServerAddress and messagingServerExternal")
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
@@ -530,6 +514,7 @@ open class Node(configuration: NodeConfiguration,
         when (configuration.jmxReporterType) {
             JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
             JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
+            null -> log.info("JMX Reeporter not registered")
         }
     }
 
@@ -570,7 +555,7 @@ open class Node(configuration: NodeConfiguration,
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
         val customScheme = System.getProperty("experimental.corda.customSerializationScheme")?.let {
-            scanForCustomSerializationScheme(it, classloader)
+            loadCustomSerializationScheme(it, classloader)
         }
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {

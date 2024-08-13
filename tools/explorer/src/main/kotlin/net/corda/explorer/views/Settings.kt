@@ -1,7 +1,6 @@
 package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.control.CheckBox
@@ -10,7 +9,6 @@ import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import net.corda.client.jfx.model.objectProperty
 import net.corda.client.jfx.model.observableList
-import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.IssuerModel
 import net.corda.explorer.model.SettingsModel
@@ -61,9 +59,6 @@ class Settings : CordaView() {
             getModel<SettingsModel>().commit()
             clientPane.isDisable = true
         }
-        save.visibleProperty().bind(clientPane.disableProperty().map { !it })
-        editCancel.textProperty().bind(clientPane.disableProperty().map { if (!it) "Cancel" else "Edit" })
-        editCancel.graphicProperty().bind(clientPane.disableProperty()
-                .map { if (!it) FontAwesomeIconView(FontAwesomeIcon.TIMES) else FontAwesomeIconView(FontAwesomeIcon.EDIT) })
+        clientPane.disableProperty()
     }
 }

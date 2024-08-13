@@ -8,15 +8,20 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.millis
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
 import net.corda.finance.contracts.asset.Cash
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
-import java.util.*
+import java.util.Currency
+import java.util.ServiceLoader
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -31,8 +36,8 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
     companion object {
         val instance = AtomicReference<AbstractCashSelection>()
 
-        fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
-            return instance.get() ?: {
+        fun getInstance(metadata: () -> DatabaseMetaData): AbstractCashSelection {
+            return instance.get() ?: run {
                 val metadataLocal = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java, this::class.java.classLoader).toList()
                 val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(metadataLocal) }
@@ -42,7 +47,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
                         "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
                         "\nAvailable implementations: $cashSelectionAlgos")
-            }.invoke()
+            }
         }
 
         private val log = contextLogger()
@@ -139,19 +144,20 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                    stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
+                    @Suppress("UNCHECKED_CAST")
+                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
                 }
 
                 val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity
                 if (success) {
                     // we should have a minimum number of states to satisfy our selection `amount` criteria
-                    log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+                    log.trace { "Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs" }
 
                     // With the current single threaded state machine available states are guaranteed to lock.
                     // TODO However, we will have to revisit these methods in the future multi-threaded.
                     services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
                 } else {
-                    log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                    log.trace { "Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}" }
                 }
                 success
             }

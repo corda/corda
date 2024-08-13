@@ -26,9 +26,8 @@ object Instances {
     private val signatureFactory: SignatureFactory = CachingSignatureFactory()
 
     // The provider itself is a very bad key class as hashCode() is expensive and contended.  So use name and version instead.
-    private data class SignatureKey(val algorithm: String, val providerName: String?, val providerVersion: Double?) {
-        constructor(algorithm: String, provider: Provider?) : this(algorithm, provider?.name,
-                @Suppress("DEPRECATION") provider?.version) // JDK11: should replace with getVersionStr() (since 9)
+    private data class SignatureKey(val algorithm: String, val providerName: String?, val providerVersion: String?) {
+        constructor(algorithm: String, provider: Provider?) : this(algorithm, provider?.name, provider?.versionStr)
     }
 
     private class CachingSignatureFactory : SignatureFactory {

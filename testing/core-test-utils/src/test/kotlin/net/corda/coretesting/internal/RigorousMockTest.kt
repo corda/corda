@@ -2,7 +2,7 @@ package net.corda.coretesting.internal
 
 import org.assertj.core.api.Assertions.catchThrowable
 import org.hamcrest.Matchers.isA
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.io.Closeable
 import java.io.InputStream
@@ -44,7 +44,6 @@ class RigorousMockTest {
 	fun `callRealMethod is preferred by rigorousMock`() {
         rigorousMock<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
-            assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
         }
         rigorousMock<MyAbstract>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)

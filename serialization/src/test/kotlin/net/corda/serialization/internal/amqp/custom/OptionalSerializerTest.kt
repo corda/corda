@@ -3,10 +3,10 @@ package net.corda.serialization.internal.amqp.custom
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.nullValue
-import org.junit.Assert.assertThat
 import org.junit.Test
 import org.mockito.Mockito
 import java.util.*
+import org.hamcrest.MatcherAssert.assertThat
 
 class OptionalSerializerTest {
     @Test(timeout=300_000)

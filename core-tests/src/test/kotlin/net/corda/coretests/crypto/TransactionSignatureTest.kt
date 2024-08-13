@@ -1,7 +1,17 @@
 package net.corda.coretests.crypto
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.MerkleTreeException
+import net.corda.core.crypto.PartialMerkleTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
 import net.corda.testing.core.SerializationEnvironmentRule
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
@@ -39,12 +49,14 @@ class TransactionSignatureTest {
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
-    @Test(expected = SignatureException::class,timeout=300_000)
+    @Test(timeout=300_000)
     fun `Signature metadata full failure clearData has changed`() {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = keyPair.sign(signableData)
-        Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
+        assertThatExceptionOfType(SignatureException::class.java).isThrownBy {
+            Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
+        }
     }
 
     @Test(timeout=300_000)

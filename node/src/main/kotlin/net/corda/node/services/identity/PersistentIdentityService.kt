@@ -57,7 +57,6 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import kotlin.streams.toList
 
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
