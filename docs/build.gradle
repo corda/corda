@@ -58,7 +58,10 @@ dokkaJavadoc {
                 url.set(new URL("https://docs.oracle.com/javafx/2/api/"))
             }
             externalDocumentationLink {
-                url.set(new URL("https://www.bouncycastle.org/docs/docs1.5on/"))
+                url.set(new URL("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/"))
+            }
+            externalDocumentationLink {
+                url.set(new URL("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/"))
             }
         }
     }
