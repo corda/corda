@@ -183,6 +183,7 @@ class ArtemisMessagingTest {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
         assertNull(receivedMessages.poll(200, MILLISECONDS))
+        this.messagingClient = null
     }
 
     @Test(timeout=300_000)
@@ -232,7 +233,9 @@ class ArtemisMessagingTest {
                     MetricRegistry(),
                     TestingNamedCacheFactory(),
                     isDrainingModeOn = { false },
-                    drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>()).apply {
+                    drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>(),
+                    terminateOnConnectionError = false,
+                    timeoutConfig = P2PMessagingClient.TimeoutConfig(10.seconds, 10.seconds, 10.seconds)).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

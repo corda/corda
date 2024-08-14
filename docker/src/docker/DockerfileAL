@@ -1,11 +1,10 @@
-FROM amazonlinux:2
+FROM amazoncorretto:8u382-al2
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
-RUN amazon-linux-extras enable corretto8 && \
-    yum -y install java-1.8.0-amazon-corretto-devel  && \
-    yum -y install bash && \
+RUN yum -y install bash && \
     yum -y install curl && \
     yum -y install unzip && \
+    yum -y install shadow-utils.x86_64 && \
     yum clean all && \
     rm -rf /var/cache/yum && \
     mkdir -p /opt/corda/cordapps && \

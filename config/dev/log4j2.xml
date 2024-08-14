@@ -135,7 +135,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="${diagnostic-log-name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -159,7 +159,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="checkpoints_agent*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -202,7 +202,15 @@
             <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
-        <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
+        <Logger name="org.apache.activemq.artemis.core.server" level="warn" additivity="false">
+            <Filters>
+                <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+            </Filters>
+            <AppenderRef ref="Console-ErrorCode-Selector"/>
+            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        </Logger>
+        <Logger name="org.apache.activemq.audit" level="error" additivity="false">
             <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>

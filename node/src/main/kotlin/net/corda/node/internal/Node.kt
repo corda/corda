@@ -566,6 +566,11 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
+    override fun clearNetworkMapCache() {
+        initialiseSerialization()
+        super.clearNetworkMapCache()
+    }
+
     override fun runDatabaseMigrationScripts(
             updateCoreSchemas: Boolean,
             updateAppSchemas: Boolean,

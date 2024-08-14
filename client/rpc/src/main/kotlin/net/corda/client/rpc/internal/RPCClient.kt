@@ -98,6 +98,8 @@ class RPCClient<I : RPCOps>(
                 // By default RoundRobinConnectionLoadBalancingPolicy is used that picks first endpoint from the pool
                 // at random. This may be undesired and non-deterministic. For more information, see [RoundRobinConnectionPolicy]
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
+                // Without this any type of "send" time failures will not be delivered back to the client
+                isBlockOnNonDurableSend = true
             }
             val sessionId = Trace.SessionId.newInstance()
             val distributionMux = DistributionMux(listeners, username)

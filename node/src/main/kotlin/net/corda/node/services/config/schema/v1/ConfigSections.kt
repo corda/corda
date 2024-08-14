@@ -40,13 +40,14 @@ import net.corda.node.services.config.schema.parsers.toProperties
 import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
 import net.corda.node.services.config.schema.parsers.validValue
+import net.corda.node.services.config.shell.SSHDConfiguration
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.tools.shell.SSHDConfiguration
+import java.util.Properties
 
 internal object UserSpec : Configuration.Specification<User>("User") {
     private val username by string().optional()
@@ -67,9 +68,32 @@ internal object UserSpec : Configuration.Specification<User>("User") {
 internal object SecurityConfigurationSpec : Configuration.Specification<SecurityConfiguration>("SecurityConfiguration") {
     private object AuthServiceSpec : Configuration.Specification<SecurityConfiguration.AuthService>("AuthService") {
         private object DataSourceSpec : Configuration.Specification<SecurityConfiguration.AuthService.DataSource>("DataSource") {
+            fun Properties.enablePasswordMasking(): Properties {
+                class PwMasking : Properties() {
+                    fun maskPassword(): Properties {
+                        if (!containsKey("password")) return this
+                        val propsNoPassword = Properties()
+                        // if the properties are passed in to the constructor as defaults
+                        // they don't get printed so adding all keys explicitly
+                        propsNoPassword.putAll(this)
+                        propsNoPassword.setProperty("password", "***")
+                        return propsNoPassword
+                    }
+
+                    override fun toString(): String {
+                        val props = maskPassword()
+                        return props.toString()
+                    }
+                }
+
+                val masker = PwMasking()
+                masker.putAll(this)
+                return masker
+            }
+
             private val type by enum(AuthDataSourceType::class)
             private val passwordEncryption by enum(PasswordEncryption::class).optional().withDefaultValue(SecurityConfiguration.AuthService.DataSource.Defaults.passwordEncryption)
-            private val connection by nestedObject(sensitive = true).map(::toProperties).optional()
+            private val connection by nestedObject(sensitive = true).map{ toProperties(it).enablePasswordMasking() }.optional()
             private val users by nested(UserSpec).list().optional()
 
             override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.DataSource> {

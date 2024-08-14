@@ -306,8 +306,9 @@ object CheckpointHook : ClassFileTransformer {
                             (input.total() >= minimumSize) &&
                             (input.total() <= maximumSize))) {
                 val sb = StringBuilder()
-                if (checkpointId != null)
+                if (checkpointId != null) {
                     sb.append("Checkpoint id: $checkpointId\n")
+                }
                 prettyStatsTree(0, StatsInfo("", Any::class.java), readTree(list, 0).second, sb)
 
                 log.info("[READ] $clazz\n$sb")
@@ -329,7 +330,7 @@ object CheckpointHook : ClassFileTransformer {
     @JvmStatic
     fun writeExit(output: Output, obj: Any) {
         val (list, count) = events[-Strand.currentStrand().id]!!
-        list.add(StatsEvent.Exit(obj.javaClass.name, output.total(), null))
+        list.add(StatsEvent.Exit(obj.javaClass.name, output.total(), obj))
         log.debug { "writeExit: clazz[${obj.javaClass.name}], strandId[${Strand.currentStrand().id}], eventCount[$count]" }
         if (count.decrementAndGet() == 0) {
             // always log diagnostics for explicit checkpoint ids (eg. set dumpCheckpoints)
@@ -338,6 +339,9 @@ object CheckpointHook : ClassFileTransformer {
                             (output.total() >= minimumSize) &&
                             (output.total() <= maximumSize))) {
                 val sb = StringBuilder()
+                if (checkpointId != null) {
+                    sb.append("Checkpoint id: $checkpointId\n")
+                }
                 prettyStatsTree(0, StatsInfo("", Any::class.java), readTree(list, 0).second, sb)
                 log.info("[WRITE] $obj\n$sb")
                 checkpointId = null
@@ -433,7 +437,7 @@ fun readTree(events: List<StatsEvent>, index: Int, idMap: IdentityHashMap<Any, I
             if (idMap.containsKey(exit.value)) {
                 val identityInfo = idMap[exit.value]!!
                 idMap[exit.value] = IdentityInfo(identityInfo.tree, identityInfo.refCount + 1)
-                log.debug { "Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value!!.hashCode()}) (count:${idMap[exit.value]?.refCount})" }
+                log.debug { "Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value?.hashCode()}) (count:${idMap[exit.value]?.refCount})" }
             } else idMap[exit.value] = IdentityInfo(tree, 1)
             return Pair(nextIndex + 1, idMap[exit.value]!!)
         }

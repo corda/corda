@@ -47,6 +47,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     companion object {
         private const val CORDA_AMQP_FRAME_SIZE_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpMaxFrameSize"
         private const val CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpIdleTimeout"
+        private const val CREATE_ADDRESS_PERMISSION_ERROR = "AMQ229032"
 
         private val MAX_FRAME_SIZE = Integer.getInteger(CORDA_AMQP_FRAME_SIZE_PROP_NAME, 128 * 1024)
         private val IDLE_TIMEOUT = Integer.getInteger(CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME, 10 * 1000)
@@ -350,11 +351,32 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
 
     override fun onLinkRemoteClose(e: Event) {
         val link = e.link
-        if(link.remoteCondition != null) {
-            logWarnWithMDC("Connection closed due to error on remote side: `${link.remoteCondition.description}`")
+        if (link.remoteCondition != null) {
+            val remoteConditionDescription = link.remoteCondition.description
+            logWarnWithMDC("Connection closed due to error on remote side: `$remoteConditionDescription`")
+            // Description normally looks as follows:
+            // "AMQ229032: User: SystemUsers/Peer does not have permission='CREATE_ADDRESS' on address p2p.inbound.Test"
+            if (remoteConditionDescription.contains(CREATE_ADDRESS_PERMISSION_ERROR)) {
+                handleRemoteCreatePermissionError(e)
+            }
+
             transport.condition = link.condition
             transport.close_tail()
             transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
+        }
+    }
+
+    /**
+     * If an the artemis channel does not exist on the counterparty, then a create permission error is returned in the [event].
+     * Do not retry messages to this channel as it will result in an infinite loop of retries.
+     * Log the error, mark the messages as acknowledged and clear them from the message queue.
+     */
+    private fun handleRemoteCreatePermissionError(event: Event) {
+        val remoteP2PAddress = event.sender.source.address
+        logWarnWithMDC("Address does not exist on peer: $remoteP2PAddress. Marking messages sent to this address as Acknowledged.")
+        messageQueues[remoteP2PAddress]?.apply {
+            forEach { it.doComplete(MessageStatus.Acknowledged) }
+            clear()
         }
     }
 

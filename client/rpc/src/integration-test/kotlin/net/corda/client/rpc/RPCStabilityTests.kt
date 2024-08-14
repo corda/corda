@@ -30,6 +30,7 @@ import net.corda.testing.node.internal.rpcTestUser
 import net.corda.testing.node.internal.startRandomRpcClient
 import net.corda.testing.node.internal.startRpcClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -551,7 +552,11 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createTemporaryQueue(myQueue, ActiveMQDefaultConfiguration.getDefaultRoutingType(), myQueue)
+            session.createQueue(QueueConfiguration(myQueue)
+                    .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
+                    .setAddress(myQueue)
+                    .setTemporary(true)
+                    .setDurable(false))
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
                 Thread.sleep(5000) // Needs to be slower than one per second to get kicked.
@@ -588,7 +593,11 @@ class RPCStabilityTests {
             // Construct an RPC client session manually
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createTemporaryQueue(myQueue, ActiveMQDefaultConfiguration.getDefaultRoutingType(), myQueue)
+            session.createQueue(QueueConfiguration(myQueue)
+                    .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
+                    .setAddress(myQueue)
+                    .setTemporary(true)
+                    .setDurable(false))
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             val replies = ArrayList<Any>()
             consumer.setMessageHandler {

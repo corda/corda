@@ -18,6 +18,7 @@ import net.corda.node.internal.artemis.SecureArtemisConfiguration
 import net.corda.node.internal.artemis.UserValidationPlugin
 import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
@@ -41,7 +42,6 @@ import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
-import java.io.IOException
 import java.lang.Long.max
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
@@ -107,21 +107,21 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
-            // Throw any exceptions which are detected during startup
-            registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { log.debug { "Queue Created: $it" } }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         try {
-            activeMQServer.start()
-        } catch (e: IOException) {
+            activeMQServer.startSynchronously()
+        } catch (e: Throwable) {
             log.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
             } else {
+                log.error("Unexpected error starting message broker", e)
                 throw e
             }
         }

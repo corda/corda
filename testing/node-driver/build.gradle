@@ -27,6 +27,8 @@ sourceSets {
 dependencies {
     compile project(':test-utils')
 
+    compile group: 'org.apache.sshd', name: 'sshd-common', version: '2.9.2'
+
     // Integration test helpers
     testCompile "org.assertj:assertj-core:$assertj_version"
     integrationTestImplementation "junit:junit:$junit_version"

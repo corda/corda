@@ -17,7 +17,9 @@ dependencies {
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     compile "org.apache.commons:commons-collections4:${commons_collections_version}"
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
-    compile "org.apache.activemq:artemis-core-client:${artemis_version}"
+    compile("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
 
     compile "io.netty:netty-handler-proxy:$netty_version"
@@ -65,6 +67,7 @@ dependencies {
     compile ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
+        exclude group: 'org.jgroups', module: 'jgroups'
     }
 }
 

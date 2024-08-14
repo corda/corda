@@ -53,7 +53,7 @@ class ArtemisTcpTransport {
             keyStore?.let {
                 with (it) {
                     path.requireOnDefaultFileSystem()
-                    options[TransportConstants.KEYSTORE_PROVIDER_PROP_NAME] = "JKS"
+                    options[TransportConstants.KEYSTORE_TYPE_PROP_NAME] = "JKS"
                     options[TransportConstants.KEYSTORE_PATH_PROP_NAME] = path
                     options[TransportConstants.KEYSTORE_PASSWORD_PROP_NAME] = get().password
                 }
@@ -61,7 +61,7 @@ class ArtemisTcpTransport {
             trustStore?.let {
                 with (it) {
                     path.requireOnDefaultFileSystem()
-                    options[TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME] = "JKS"
+                    options[TransportConstants.TRUSTSTORE_TYPE_PROP_NAME] = "JKS"
                     options[TransportConstants.TRUSTSTORE_PATH_PROP_NAME] = path
                     options[TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME] = get().password
                 }
@@ -72,13 +72,13 @@ class ArtemisTcpTransport {
 
         private fun ClientRpcSslOptions.toTransportOptions() = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to trustStoreProvider,
+                TransportConstants.TRUSTSTORE_TYPE_PROP_NAME to trustStoreProvider,
                 TransportConstants.TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
                 TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to trustStorePassword)
 
         private fun BrokerRpcSslOptions.toTransportOptions() = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                TransportConstants.KEYSTORE_TYPE_PROP_NAME to "JKS",
                 TransportConstants.KEYSTORE_PATH_PROP_NAME to keyStorePath,
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to keyStorePassword,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to false)
@@ -186,10 +186,7 @@ class ArtemisTcpTransport {
             options[TransportConstants.HANDSHAKE_TIMEOUT] = 0
             if (trustManagerFactory != null) {
                 // NettyAcceptor only creates default TrustManagerFactorys with the provided trust store details. However, we need to use
-                // more customised instances which use our revocation checkers, which we pass directly into NodeNettyAcceptorFactory.
-                //
-                // This, however, requires copying a lot of code from NettyAcceptor into NodeNettyAcceptor. The version of Artemis in
-                // Corda 4.9 solves this problem by introducing a "trustManagerFactoryPlugin" config option.
+                // more customised instances which use our revocation checkers, so we pass them in, to be picked up by Node(Open)SSLContextFactory.
                 options[TRUST_MANAGER_FACTORY_NAME] = trustManagerFactory
             }
             return createTransport(
@@ -211,6 +208,10 @@ class ArtemisTcpTransport {
                                              threadPoolName: String,
                                              trace: Boolean,
                                              remotingThreads: Int?): TransportConfiguration {
+            if (enableSSL) {
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+            }
             return createTransport(
                     CordaNettyConnectorFactory::class.java.name,
                     hostAndPort,

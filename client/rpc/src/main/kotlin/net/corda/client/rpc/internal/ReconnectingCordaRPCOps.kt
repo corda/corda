@@ -393,10 +393,11 @@ class ReconnectingCordaRPCOps private constructor(
                     initialFeed.copy(updates = observable)
                 }
                 FlowHandleWithClientId::class.java -> {
-                    val initialHandle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args,
+                    // initialHandle can be null. See @CordaRPCOps.reattachFlowWithClientId.
+                    val initialHandle: FlowHandleWithClientId<Any?>? = uncheckedCast(doInvoke(method, args,
                             reconnectingRPCConnection.gracefulReconnect.maxAttempts))
 
-                    val initialFuture = initialHandle.returnValue
+                    val initialFuture = initialHandle?.returnValue ?: return null
                     // This is the future that is returned to the client. It will get carried until we reconnect to the node.
                     val returnFuture = openFuture<Any?>()
 
