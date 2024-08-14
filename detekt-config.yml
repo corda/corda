@@ -77,17 +77,6 @@ empty-blocks:
 exceptions:
   active: true
   excludes: "**/buildSrc/**"
-  TooGenericExceptionCaught:
-    active: true
-    exceptionNames:
-      - ArrayIndexOutOfBoundsException
-      - Error
-      - Exception
-      - IllegalMonitorStateException
-      - NullPointerException
-      - IndexOutOfBoundsException
-      - RuntimeException
-      - Throwable
   TooGenericExceptionThrown:
     active: true
     exceptionNames:

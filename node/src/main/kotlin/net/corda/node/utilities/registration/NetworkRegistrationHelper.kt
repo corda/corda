@@ -3,7 +3,10 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.isEquivalentTo
+import net.corda.core.internal.safeSymbolicRead
+import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
@@ -19,14 +22,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
-import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.net.URL
 import java.nio.file.Path
@@ -35,6 +37,12 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import javax.naming.ServiceUnavailableException
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.useLines
+import kotlin.io.path.writeLines
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -90,7 +98,7 @@ open class NetworkRegistrationHelper(
         certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
-        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+        val certStore: CertificateStore = if (cryptoService is DefaultCryptoService) cryptoService.certificateStore else certificateStore
 
         // SELF_SIGNED_PRIVATE_KEY is used as progress indicator.
         if (certStore.contains(nodeCaKeyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
@@ -113,8 +121,11 @@ open class NetworkRegistrationHelper(
         requestIdStore.deleteIfExists()
     }
 
-    private fun generateKeyPairAndCertificate(keyAlias: String, legalName: CordaX500Name, certificateRole: CertRole, certStore: CertificateStore): Pair<PublicKey, List<X509Certificate>> {
-        val entityPublicKey = loadOrGenerateKeyPair(keyAlias)
+    private fun generateKeyPairAndCertificate(keyAlias: String,
+                                              legalName: CordaX500Name,
+                                              certificateRole: CertRole,
+                                              certStore: CertificateStore): Pair<PublicKey, List<X509Certificate>> {
+        val entityPublicKey = loadOrGenerateKeyPair(keyAlias, certificateRole)
 
         val requestId = submitOrResumeCertificateSigningRequest(entityPublicKey, legalName, certificateRole, cryptoService.getSigner(keyAlias))
 
@@ -161,7 +172,7 @@ open class NetworkRegistrationHelper(
         certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
-        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+        val certStore: CertificateStore = if (cryptoService is DefaultCryptoService) cryptoService.certificateStore else certificateStore
 
         if (!certStore.contains(nodeCaKeyAlias)) {
             logProgress("Node CA key doesn't exist, program will now terminate...")
@@ -201,11 +212,16 @@ open class NetworkRegistrationHelper(
         logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
     }
 
-    private fun loadOrGenerateKeyPair(keyAlias: String): PublicKey {
+    private fun loadOrGenerateKeyPair(keyAlias: String, certificateRole: CertRole): PublicKey {
         return if (cryptoService.containsKey(keyAlias)) {
             cryptoService.getPublicKey(keyAlias)!!
         } else {
-            cryptoService.generateKeyPair(keyAlias, cryptoService.defaultTLSSignatureScheme())
+            val signatureScheme = if (certificateRole == CertRole.SERVICE_IDENTITY) {
+                cryptoService.defaultIdentitySignatureScheme()
+            } else {
+                cryptoService.defaultTLSSignatureScheme()
+            }
+            cryptoService.generateKeyPair(keyAlias, signatureScheme)
         }
     }
 
@@ -330,7 +346,7 @@ open class NetworkRegistrationHelper(
                 logProgress("Successfully submitted request to Corda certificate signing server, request ID: $requestId.")
                 requestId
             } else {
-                val requestId = requestIdStore.readLines { it.findFirst().get() }
+                val requestId = requestIdStore.useLines { it.first() }
                 logProgress("Resuming from previous certificate signing request, request ID: $requestId.")
                 requestId
             }
@@ -366,7 +382,7 @@ class NodeRegistrationConfiguration(
             tlsCertCrlDistPoint = config.tlsCertCrlDistPoint,
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
-            cryptoService = BCCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
+            cryptoService = DefaultCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
             certificateStore = config.signingCertificateStore.get(true),
             notaryServiceConfig = config.notary?.let {
                 // Validation of the presence of the notary service legal name is only done here and not in the top level configuration
@@ -380,7 +396,7 @@ class NodeRegistrationConfiguration(
                 require(it.serviceLegalName != config.myLegalName) {
                     "The notary service legal name must be different from the node legal name"
                 }
-                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName!!)
+                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName)
             }
     )
 }
@@ -511,7 +527,7 @@ private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: 
 
     private var counter = times
 
-    override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
+    override fun invoke(previousPeriod: Duration?): Duration? {
         synchronized(this) {
             return if (counter-- > 0) period else null
         }

@@ -8,9 +8,9 @@ import java.nio.ByteBuffer
 class OrdinalBits(private val ordinal: Int) {
     interface OrdinalWriter {
         val bits: OrdinalBits
-        @JvmDefault val encodedSize: Int get() = 1
-        @JvmDefault fun writeTo(stream: OutputStream) = stream.write(bits.ordinal)
-        @JvmDefault fun putTo(buffer: ByteBuffer) = buffer.put(bits.ordinal.toByte())!!
+        val encodedSize: Int get() = 1
+        fun writeTo(stream: OutputStream) = stream.write(bits.ordinal)
+        fun putTo(buffer: ByteBuffer) = buffer.put(bits.ordinal.toByte())!!
     }
 
     init {

@@ -6,10 +6,6 @@ import net.corda.core.internal.CertRole
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
-import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
@@ -26,12 +22,16 @@ import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.json.simple.JSONObject
 import org.junit.Test
-import java.util.*
+import java.util.LinkedList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledExecutorService
-import kotlin.streams.toList
+import kotlin.io.path.div
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.useLines
 import kotlin.test.assertEquals
 
 class DriverTests {
@@ -99,8 +99,8 @@ class DriverTests {
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
         )) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
-            val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
-            val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
+            val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).useDirectoryEntries { it.single { a -> a.isRegularFile() && a.name.startsWith("node") } }
+            val debugLinesPresent = logFile.useLines { lines -> lines.any { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
         }
     }
@@ -185,5 +185,5 @@ class DriverTests {
         testFuture.getOrThrow()
     }
 
-    private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
+    private fun DriverDSL.newNode(name: CordaX500Name): () -> CordaFuture<NodeHandle> = { startNode(NodeParameters(providedName = name)) }
 }

@@ -3,15 +3,14 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.0.7' apply false
 }
 
-if (JavaVersion.current().isJava9Compatible()) {
-    apply plugin: 'org.openjfx.javafxplugin'
-    javafx {
-        version = "11.0.2"
-        modules = ['javafx.controls',
-                   'javafx.fxml',
-                   'javafx.swing'
-        ]
-    }
+apply plugin: 'org.openjfx.javafxplugin'
+javafx {
+    version = "11.0.2"
+    modules = [
+        'javafx.controls',
+        'javafx.fxml',
+        'javafx.swing'
+    ]
 }
 
 ext {
@@ -28,8 +27,7 @@ ext {
     pkg_macosxKeyUserName = 'R3CEV'
 }
 
-apply plugin: 'java'
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
 evaluationDependsOn(':tools:explorer:capsule')
@@ -42,52 +40,62 @@ applicationDefaultJvmArgs = [
 ]
 
 configurations {
-    compile {
+    implementation {
         // We don't need Hibernate just for its @Type annotation.
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }
 }
 
 dependencies {
-    compile project(':client:rpc')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
-    compile project(':tools:worldmap')
+    implementation project(':core')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+    implementation project(':client:rpc')
+
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
+    implementation project(':tools:worldmap')
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile "no.tornado:tornadofx:$tornadofx_version"
+    implementation "no.tornado:tornadofx:$tornadofx_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
-    compile "org.controlsfx:controlsfx:$controlsfx_version"
+    implementation "org.controlsfx:controlsfx:$controlsfx_version"
 
-    compile "com.h2database:h2:$h2_version"
-    compile "net.java.dev.jna:jna-platform:$jna_version"
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.h2database:h2:$h2_version"
+    implementation "net.java.dev.jna:jna-platform:$jna_version"
+    implementation "com.google.guava:guava:$guava_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
 
-    compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
-    compile "com.typesafe:config:$typesafe_config_version"
+    implementation "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "com.typesafe:config:$typesafe_config_version"
 
     // FontAwesomeFX: icons in the form of a font.
-    compile "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
-    compile "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
+    implementation "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
+    implementation "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
 
-    compile "org.jetbrains.jediterm:jediterm-pty:$jediterm_version"
-    compile("org.jetbrains.pty4j:pty4j:$pty4j_version") {
+    implementation "org.jetbrains.jediterm:jediterm-pty:$jediterm_version"
+    implementation("org.jetbrains.pty4j:pty4j:$pty4j_version") {
         exclude group: 'log4j'
     }
 
-    testCompile project(':test-utils')
-    testCompile project(':testing:testserver')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    testImplementation project(':testing:testserver')
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "junit:junit:$junit_version"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -102,7 +110,9 @@ jar {
             'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
         )
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
 
 test {
     systemProperty 'java.util.logging.config.class', 'net.corda.demobench.config.LoggingConfig'
@@ -145,7 +155,8 @@ distributions {
  * Bundles the application using JavaPackager,
  * using the ZIP distribution as source.
  */
-task javapackage(dependsOn: distZip) {
+tasks.register('javapackage') {
+    dependsOn distZip
 
     doLast {
         delete([pkg_source, pkg_outDir])
@@ -179,15 +190,14 @@ task javapackage(dependsOn: distZip) {
                 include '**/*.manifest'
             }
             filter { line ->
-                line.replaceAll('@pkg_version@', pkg_version)
-                    .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
+                line.replaceAll('@pkg_version@', pkg_version).replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
             }
             into "$pkg_source/package"
         }
 
         ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+                resource: 'com/sun/javafx/tools/ant/antlib.xml',
+                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {

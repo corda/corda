@@ -52,13 +52,14 @@ class AbstractPartyDescriptor(private val wellKnownPartyFromX500Name: (CordaX500
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <X : Any> unwrap(value: AbstractParty?, type: Class<X>, options: WrapperOptions): X? {
         return if (value != null) {
             if (AbstractParty::class.java.isAssignableFrom(type)) {
                 return uncheckedCast(value)
             }
             if (String::class.java.isAssignableFrom(type)) {
-                return uncheckedCast(toString(value))
+                return toString(value) as X?
             }
             throw unknownUnwrap(type)
         } else {

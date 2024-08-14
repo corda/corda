@@ -1,8 +1,8 @@
 package net.corda.core.internal
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import org.assertj.core.api.Assertions.assertThat
@@ -89,10 +89,10 @@ open class InternalUtilsTest {
 
     @Test(timeout=300_000)
 	fun `Stream toTypedArray works`() {
-        val a: Array<String> = Stream.of("one", "two").toTypedArray()
+        val a: Array<String> = uncheckedCast(Stream.of("one", "two").toTypedArray())
         assertEquals(Array<String>::class.java, a.javaClass)
         assertArrayEquals(arrayOf("one", "two"), a)
-        val b: Array<String?> = Stream.of("one", "two", null).toTypedArray()
+        val b: Array<String?> = uncheckedCast(Stream.of("one", "two", null).toTypedArray())
         assertEquals(Array<String?>::class.java, b.javaClass)
         assertArrayEquals(arrayOf("one", "two", null), b)
     }
@@ -100,10 +100,11 @@ open class InternalUtilsTest {
     @Test(timeout=300_000)
 	fun kotlinObjectInstance() {
         assertThat(PublicObject::class.java.kotlinObjectInstance).isSameAs(PublicObject)
-        assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
         assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
+        assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
         assertThat(TimeWindow::class.java.kotlinObjectInstance).isNull()
         assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
+
     }
 
     @Test(timeout=300_000)
