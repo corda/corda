@@ -518,7 +518,8 @@ class FinalityFlowTests : WithFinality {
         @Suspendable
         override fun call() {
             val handleNotaryError = otherSide.receive<Boolean>().unwrap { it }
-            subFlow(ReceiveFinalityFlow(otherSide, handlePropagatedNotaryError = handleNotaryError))
+            val stx = subFlow(ReceiveFinalityFlow(otherSide, handlePropagatedNotaryError = handleNotaryError))
+            stx.verify(serviceHub)
         }
     }
 

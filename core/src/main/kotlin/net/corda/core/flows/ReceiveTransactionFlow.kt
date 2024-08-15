@@ -127,6 +127,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
                 (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
             }
+            return stx + notarySignatures
         } catch (e: NotaryException) {
             logger.info("Peer received notary error.")
             val overrideHandlePropagatedNotaryError = handlePropagatedNotaryError
