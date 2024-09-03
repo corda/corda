@@ -532,10 +532,10 @@ open class TransactionBuilder(
         }
 
         // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
-        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, selectedAttachment.currentAttachment, serviceHub)
+        val (defaultOutputConstraint, constraintAttachment) = selectDefaultOutputConstraintAndConstraintAttachment(contractClassName,
+                inputStates, selectedAttachment.currentAttachment, serviceHub)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(selectedAttachment.currentAttachment, contractClassName, serviceHub.networkParameters.whitelistedContractImplementations)
         require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
             "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachment"
         }
@@ -557,6 +557,27 @@ open class TransactionBuilder(
         }
 
         return Pair(selectedAttachment, resolvedOutputStates)
+    }
+
+    private fun selectDefaultOutputConstraintAndConstraintAttachment( contractClassName: ContractClassName,
+                                               inputStates: List<TransactionState<ContractState>>?,
+                                               attachmentToUse: ContractAttachment,
+                                               services: ServicesForResolution): Pair<AttachmentConstraint, AttachmentWithContext> {
+
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+
+        // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
+        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+
+        // Sanity check that the selected attachment actually passes.
+
+        if (!defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
+            // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
+            if (defaultOutputConstraint is SignatureAttachmentConstraint && RotatedKeysRegister.rotatedKeys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
+                return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
+            }
+        }
+        return Pair(defaultOutputConstraint, constraintAttachment)
     }
 
     /**

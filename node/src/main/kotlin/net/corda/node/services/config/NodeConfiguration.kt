@@ -86,6 +86,8 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
+    val rotatedCordappSignerKeys: List<RotatedSignerKeyConfiguration>
+
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
     val networkParametersPath: Path
@@ -221,6 +223,8 @@ data class TelemetryConfiguration(
         val spanStartEndEventsEnabled: Boolean,
         val copyBaggageToTags: Boolean
 )
+
+data class RotatedSignerKeyConfiguration(val rotatedKeys: List<String>)
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 

@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.RotatedKeysRegister
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -430,8 +431,16 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
             if (HashAttachmentConstraint.disableHashConstraints && constraint is HashAttachmentConstraint)
                 logger.warnOnce("Skipping hash constraints verification.")
-            else if (!constraint.isSatisfiedBy(constraintAttachment))
-                throw ContractConstraintRejection(ltx.id, contract)
+            else if (!constraint.isSatisfiedBy(constraintAttachment)) {
+                // constraint can be one an input constraint so we manually have to rotate to updated constraint
+                if (constraint is SignatureAttachmentConstraint && RotatedKeysRegister.rotatedKeys.canBeTransitioned(constraint.key, constraintAttachment.signerKeys)) {
+                    val constraintWithRotatedKeys =  SignatureAttachmentConstraint.create(CompositeKey.Builder().addKeys(constraintAttachment.signerKeys).build())
+                    if (!constraintWithRotatedKeys.isSatisfiedBy(constraintAttachment)) throw ContractConstraintRejection(ltx.id, contract)
+                }
+                else {
+                    throw ContractConstraintRejection(ltx.id, contract)
+                }
+            }
         }
     }
 }

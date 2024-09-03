@@ -7,6 +7,7 @@ import io.github.classgraph.ScanResult
 import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.RotatedKeysRegister
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -217,7 +218,7 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {
             val legacySigners = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
             val nonLegacySigners = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
-            check(legacySigners == nonLegacySigners) {
+            check(RotatedKeysRegister.rotatedKeys.canBeTransitioned(legacySigners, nonLegacySigners)) {
                 "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
                         "'${legacyCordapp.jarFile}' signers."
             }

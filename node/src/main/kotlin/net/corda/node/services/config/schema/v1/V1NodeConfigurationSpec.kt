@@ -60,6 +60,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
+    private val rotatedCordappSignerKeys by nested(RotatedSignerKeySpec).listOrEmpty()
     private val blacklistedAttachmentSigningKeys by string().list().optional().withDefaultValue(Defaults.blacklistedAttachmentSigningKeys)
     private val networkParameterAcceptanceSettings by nested(NetworkParameterAcceptanceSettingsSpec)
             .optional()
@@ -138,7 +139,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     flowExternalOperationThreadPoolSize = config[flowExternalOperationThreadPoolSize],
                     quasarExcludePackages = config[quasarExcludePackages],
                     reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend],
-                    networkParametersPath = networkParametersPath
+                    networkParametersPath = networkParametersPath,
+                    rotatedCordappSignerKeys = config[rotatedCordappSignerKeys]
             ))
         } catch (e: Exception) {
             return when (e) {

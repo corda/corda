@@ -83,7 +83,7 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
 
         // The SignatureAttachmentConstraint allows migration from a Signature constraint with the same key.
         // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key.
-        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> input.key == output.key
+        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> RotatedKeysRegister.rotatedKeys.canBeTransitioned(input.key, output.key)
 
         // HashAttachmentConstraint can be transformed to a SignatureAttachmentConstraint when hash constraint verification checking disabled.
         HashAttachmentConstraint.disableHashConstraints && input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> true
