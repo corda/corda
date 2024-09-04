@@ -1,7 +1,7 @@
 package net.corda.node.verification
 
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.RotatedKeysRegister
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.copyTo
@@ -239,7 +239,7 @@ class ExternalVerifierHandleImpl(
                     serializationWhitelistClassNames = cordapps.serializationWhitelists.mapToSet { it.javaClass.name },
                     System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
                     serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize(),
-                    serializedRotatedKeys = RotatedKeysRegister.rotatedKeys.serialize()
+                    serializedRotatedKeys = RotatedKeys.keys.serialize()
             )
             channel.writeCordaSerializable(initialisation)
         }

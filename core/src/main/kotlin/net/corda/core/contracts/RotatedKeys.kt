@@ -8,23 +8,25 @@ import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
-
-object RotatedKeysRegister {
-    lateinit var rotatedKeys: RotatedKeys
-    fun setup(rotatedKeys: RotatedKeys) {
-        if (this::rotatedKeys.isInitialized && this.rotatedKeys.rotatedSigningKeys.isNotEmpty()) {
-            if (this.rotatedKeys != rotatedKeys) {
-                throw IllegalStateException("RotatedKeysRegister already initialised with different rotated keys")
-            }
-        }
-        this.rotatedKeys = rotatedKeys
-    }
-}
-
 @CordaSerializable
 data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()) {
     private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
     private val rotateMap: ConcurrentHashMap<SecureHash, SecureHash> = ConcurrentHashMap()
+
+    companion object {
+        @Volatile
+        private var initialKeys: RotatedKeys? = null
+
+        val keys by lazy {
+            initialKeys?.let { initialKeys } ?: RotatedKeys()
+        }
+
+        @Synchronized fun initialise(rotatedKeys: RotatedKeys) {
+            if (initialKeys == null) {
+                initialKeys = rotatedKeys
+            }
+        }
+    }
 
     init {
         rotatedSigningKeys.forEach { rotatedKeyList ->

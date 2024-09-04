@@ -13,7 +13,6 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.RotatedKeys
-import net.corda.core.contracts.RotatedKeysRegister
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
@@ -243,7 +242,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                     "Please remove the --allow-hibernate-to-manage-app-schema command line flag and provide schema migration scripts for your CorDapps."
             )
         }
-        makeRotatedKeysService(configuration).also { RotatedKeysRegister.setup(it) }
+        makeRotatedKeysService(configuration).also { RotatedKeys.initialise(it) }
     }
 
     private val notaryLoader = configuration.notary?.let {

@@ -12,7 +12,7 @@ import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.NetworkParameters
-import net.corda.core.contracts.RotatedKeysRegister
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
@@ -117,7 +117,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
         attachmentFixups.load(appClassLoader)
 
         currentNetworkParameters = initialisation.currentNetworkParameters
-        RotatedKeysRegister.setup(initialisation.rotatedKeys)
+        RotatedKeys.initialise(initialisation.rotatedKeys)
         networkParametersMap.put(initialisation.serializedCurrentNetworkParameters.hash, Optional.of(currentNetworkParameters))
 
         log.info("External verifier initialised")

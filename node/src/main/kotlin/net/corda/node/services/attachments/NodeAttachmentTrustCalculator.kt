@@ -2,7 +2,7 @@ package net.corda.node.services.attachments
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.RotatedKeysRegister
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
@@ -65,12 +65,18 @@ class NodeAttachmentTrustCalculator(
     private fun calculateTrustUsingRotatedKeys(attachment: Attachment): Boolean {
         getTrustedAttachments().use { trustedAttachments ->
             for ((_, trustedAttachmentFromDB) in trustedAttachments) {
-                trustedAttachmentFromDB.signerKeys.forEach { signerKeyFromDB ->
-                    attachment.signerKeys.forEach { signer ->
-                        if (RotatedKeysRegister.rotatedKeys.canBeTransitioned(signerKeyFromDB, signer)) {
-                            return true
-                        }
-                    }
+                if (canTrustedAttachmentAndAttachmentBeTransitioned(trustedAttachmentFromDB, attachment))
+                    return true
+            }
+        }
+        return false
+    }
+
+    private fun canTrustedAttachmentAndAttachmentBeTransitioned(trustedAttachmentFromDB: Attachment, attachment: Attachment): Boolean {
+        trustedAttachmentFromDB.signerKeys.forEach { signerKeyFromDB ->
+            attachment.signerKeys.forEach { signer ->
+                if (RotatedKeys.keys.canBeTransitioned(signerKeyFromDB, signer)) {
+                    return true
                 }
             }
         }

@@ -573,7 +573,7 @@ open class TransactionBuilder(
 
         if (!defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
             // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
-            if (defaultOutputConstraint is SignatureAttachmentConstraint && RotatedKeysRegister.rotatedKeys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
+            if (defaultOutputConstraint is SignatureAttachmentConstraint && RotatedKeys.keys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
                 return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
             }
         }

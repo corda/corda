@@ -1,5 +1,6 @@
 package net.corda.node
 
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -81,11 +82,12 @@ class ContractWithRotatedKeyTest {
         val supportedPublicKey1 = Crypto.toSupportedPublicKey(packageOwnerKey1)
         val supportedPublicKey2 = Crypto.toSupportedPublicKey(packageOwnerKey2)
 
-        val keyHash1String = supportedPublicKey1.hash.sha256().toString()
-        val keyHash2String = supportedPublicKey2.hash.sha256().toString()
+        val keyHash1String = supportedPublicKey1.hash.sha256()
+        val keyHash2String = supportedPublicKey2.hash.sha256()
 
+        RotatedKeys.initialise(RotatedKeys(listOf(listOf(keyHash1String, keyHash2String))))
         val configOverrides = { conf: NodeConfiguration ->
-            val rotatedKeys = listOf(RotatedSignerKeyConfiguration(listOf(keyHash1String, keyHash2String )))
+            val rotatedKeys = listOf(RotatedSignerKeyConfiguration(listOf(keyHash1String.toString(), keyHash2String.toString() )))
             doReturn(rotatedKeys).whenever(conf).rotatedCordappSignerKeys
         }
 
