@@ -57,30 +57,30 @@ class NodeAttachmentTrustCalculator(
                     uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
                 )
                 (attachmentStorage.queryAttachments(queryCriteria).isNotEmpty() ||
-                    calculateTrustUsingRotatedKeys(attachment))
+                    calculateTrustUsingRotatedKeys(signer))
             }!!
         }
     }
 
-    private fun calculateTrustUsingRotatedKeys(attachment: Attachment): Boolean {
-        getTrustedAttachments().use { trustedAttachments ->
-            for ((_, trustedAttachmentFromDB) in trustedAttachments) {
-                if (canTrustedAttachmentAndAttachmentBeTransitioned(trustedAttachmentFromDB, attachment))
-                    return true
-            }
+    private fun calculateTrustUsingRotatedKeys(signer: PublicKey): Boolean {
+        val db = checkNotNull(database) {
+            // This should never be hit, except for tests that have not been setup correctly to test internal code
+            "CordaPersistence has not been set"
         }
-        return false
-    }
-
-    private fun canTrustedAttachmentAndAttachmentBeTransitioned(trustedAttachmentFromDB: Attachment, attachment: Attachment): Boolean {
-        trustedAttachmentFromDB.signerKeys.forEach { signerKeyFromDB ->
-            attachment.signerKeys.forEach { signer ->
-                if (RotatedKeys.keys.canBeTransitioned(signerKeyFromDB, signer)) {
-                    return true
+        return db.transaction {
+            getTrustedAttachments().use { trustedAttachments ->
+                for ((_, trustedAttachmentFromDB) in trustedAttachments) {
+                    if (canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB, signer)) {
+                        return@transaction true
+                    }
                 }
             }
+            return@transaction false
         }
-        return false
+    }
+
+    private fun canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB: Attachment, signer: PublicKey): Boolean {
+        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> RotatedKeys.keys.canBeTransitioned(signerKeyFromDB, signer) }
     }
 
     override fun calculateAllTrustInfo(): List<AttachmentTrustInfo> {
