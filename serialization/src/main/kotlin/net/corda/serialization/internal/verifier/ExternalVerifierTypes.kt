@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.verifier
 
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
@@ -24,7 +24,7 @@ import kotlin.math.min
 import kotlin.reflect.KClass
 
 typealias SerializedNetworkParameters = SerializedBytes<NetworkParameters>
-typealias SerializedRotatedKeys = SerializedBytes<RotatedKeys>
+typealias SerializedRotatedKeys = SerializedBytes<RotatedKeysData>
 
 @CordaSerializable
 sealed class ExternalVerifierInbound {
@@ -36,7 +36,7 @@ sealed class ExternalVerifierInbound {
             val serializedRotatedKeys: SerializedRotatedKeys
     ) : ExternalVerifierInbound() {
         val currentNetworkParameters: NetworkParameters by lazy { serializedCurrentNetworkParameters.deserialize() }
-        val rotatedKeys: RotatedKeys by lazy { serializedRotatedKeys.deserialize() }
+        val rotatedKeys: RotatedKeysData by lazy { serializedRotatedKeys.deserialize() }
 
         override fun toString(): String {
             return "Initialisation(" +

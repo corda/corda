@@ -1,6 +1,8 @@
 package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -75,6 +77,7 @@ class JarScanningCordappLoaderTest {
         val currentFinanceWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
 
         init {
+            RotatedKeys.initialise(RotatedKeysData())
             LogHelper.setLevel(JarScanningCordappLoaderTest::class)
         }
     }

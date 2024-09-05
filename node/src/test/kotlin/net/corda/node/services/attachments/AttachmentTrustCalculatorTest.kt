@@ -1,6 +1,8 @@
 package net.corda.node.services.attachments
 
 import com.codahale.metrics.MetricRegistry
+import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.AttachmentTrustInfo
@@ -230,6 +232,7 @@ class AttachmentTrustCalculatorTest {
     @Test(timeout=300_000)
 	fun `jar with inherited trust does not grant trust to other jars (no chain of trust)`() {
         tempFolder.root.toPath().let { path ->
+            RotatedKeys.initialise(RotatedKeysData())
             val aliasA = "Daredevil"
             val aliasB = "The Punisher"
             val aliasC = "Jessica Jones"
@@ -271,6 +274,7 @@ class AttachmentTrustCalculatorTest {
     @Test(timeout=300_000)
 	fun `jar not trusted if different key but same contract`() {
         tempFolder.root.toPath().let { path ->
+            RotatedKeys.initialise(RotatedKeysData())
             val alias = "testAlias"
             val password = "testPassword"
             val jarV1 = ContractJarTestUtils.makeTestContractJar(path, "foo.bar.DummyContract")

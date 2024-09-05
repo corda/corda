@@ -13,6 +13,7 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
@@ -875,8 +876,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeRotatedKeysService( configuration: NodeConfiguration ): RotatedKeys {
-        return RotatedKeys(configuration.rotatedCordappSignerKeys.map { rotatedKeysConfiguration ->
+    private fun makeRotatedKeysService( configuration: NodeConfiguration ): RotatedKeysData {
+        return RotatedKeysData(configuration.rotatedCordappSignerKeys.map { rotatedKeysConfiguration ->
             parseSecureHashConfiguration(rotatedKeysConfiguration.rotatedKeys) { "Error while parsing rotated keys $it"}
         }.toList())
     }

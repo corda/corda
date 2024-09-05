@@ -8,25 +8,26 @@ import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
-@CordaSerializable
-data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()) {
-    private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
-    private val rotateMap: ConcurrentHashMap<SecureHash, SecureHash> = ConcurrentHashMap()
-
-    companion object {
-        @Volatile
-        private var initialKeys: RotatedKeys? = null
-
-        val keys by lazy {
-            initialKeys?.let { initialKeys } ?: RotatedKeys()
-        }
-
-        @Synchronized fun initialise(rotatedKeys: RotatedKeys) {
-            if (initialKeys == null) {
-                initialKeys = rotatedKeys
+object RotatedKeys {
+    @Volatile
+    lateinit var keys: RotatedKeysData
+    fun initialise(rotatedKeysData: RotatedKeysData) {
+        if (this::keys.isInitialized) {
+            if (rotatedKeysData.rotatedSigningKeys.isNotEmpty() && this.keys != rotatedKeysData) {
+                throw IllegalStateException("RotatedKeys already initialised with different rotated keys")
             }
         }
+        else {
+            // TODO: add in the r3 default keys
+            this.keys = rotatedKeysData
+        }
     }
+}
+
+@CordaSerializable
+data class RotatedKeysData(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()) {
+    private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
+    private val rotateMap: ConcurrentHashMap<SecureHash, SecureHash> = ConcurrentHashMap()
 
     init {
         rotatedSigningKeys.forEach { rotatedKeyList ->
@@ -59,7 +60,6 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
     fun canBeTransitioned(inputKey: PublicKey, outputKey: PublicKey): Boolean {
         // Need to handle if inputKey and outputKey are composite keys. They could be if part of SignatureConstraints
         return canBeTransitionedMap.getOrPut(Pair(inputKey, outputKey)) {
-            //isRotated(inputKey, outputKey)
             when {
                 (inputKey is CompositeKey && outputKey is CompositeKey) -> compareKeys(inputKey, outputKey)
                 (inputKey is CompositeKey && outputKey !is CompositeKey) -> compareKeys(inputKey, outputKey)
