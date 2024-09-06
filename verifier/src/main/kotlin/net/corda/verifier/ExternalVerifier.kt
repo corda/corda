@@ -13,7 +13,6 @@ import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.NetworkParameters
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
