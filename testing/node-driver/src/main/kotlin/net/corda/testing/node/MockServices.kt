@@ -485,7 +485,7 @@ open class MockServices private constructor(
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val telemetryService: TelemetryServiceImpl get() = throw java.lang.UnsupportedOperationException()
-    override val rotatedKeysData: RotatedKeysData get() = throw java.lang.UnsupportedOperationException()
+    override val rotatedKeysData: RotatedKeysData get() = RotatedKeysData()
     override val clock: TestClock get() = TestClock(Clock.systemUTC())
     override val myInfo: NodeInfo
         get() {
