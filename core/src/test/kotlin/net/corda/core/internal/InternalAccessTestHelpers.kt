@@ -6,7 +6,7 @@ import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
@@ -51,7 +51,7 @@ fun createLedgerTransaction(
         isAttachmentTrusted: (Attachment) -> Boolean,
         attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
         digestService: DigestService = DigestService.default,
-        rotatedKeysData: RotatedKeysData = RotatedKeysData()
+        rotatedKeys: RotatedKeys = RotatedKeys()
 ): LedgerTransaction {
     return LedgerTransaction.create(
             inputs,
@@ -71,7 +71,7 @@ fun createLedgerTransaction(
             ::PassthroughVerifier,
             attachmentsClassLoaderCache,
             digestService,
-            rotatedKeysData
+            rotatedKeys
     )
 }
 
@@ -83,7 +83,7 @@ fun createContractRejection(txId: SecureHash, contract: Contract, cause: Throwab
  *
  * Note, this is not secure!
  */
-private class PassthroughVerifier(ltx: LedgerTransaction, context: SerializationContext,rotatedKeysData: RotatedKeysData) : AbstractVerifier(ltx, context.deserializationClassLoader, rotatedKeysData) {
+private class PassthroughVerifier(ltx: LedgerTransaction, context: SerializationContext,rotatedKeys: RotatedKeys) : AbstractVerifier(ltx, context.deserializationClassLoader, rotatedKeys) {
     override val transaction: Supplier<LedgerTransaction>
         get() = Supplier { ltx }
 }

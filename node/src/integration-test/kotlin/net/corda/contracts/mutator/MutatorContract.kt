@@ -4,7 +4,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
@@ -96,7 +96,7 @@ class MutatorContract : Contract {
         }
     }
 
-    private class ExtraSpecialise(private val ltx: LedgerTransaction, private val ctx: SerializationContext, @Suppress("UNUSED_PARAMETER") rotatedKeysData: RotatedKeysData) : Verifier {
+    private class ExtraSpecialise(private val ltx: LedgerTransaction, private val ctx: SerializationContext, @Suppress("UNUSED_PARAMETER") rotatedKeys: RotatedKeys) : Verifier {
         override fun verify() {
             ltx.inputStates.forEach(::println)
             println(ctx.deserializationClassLoader)

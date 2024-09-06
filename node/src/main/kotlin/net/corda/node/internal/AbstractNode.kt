@@ -12,7 +12,7 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
@@ -247,8 +247,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val notaryLoader = configuration.notary?.let {
         NotaryLoader(it, versionInfo)
     }
-    val rotatedKeysData = makeRotatedKeysService(configuration)
-    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo, rotatedKeysData).closeOnStop(false)
+    val rotatedKeys = makeRotatedKeysService(configuration).tokenize()
+    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo, rotatedKeys).closeOnStop(false)
     val telemetryService: TelemetryServiceImpl = TelemetryServiceImpl().also {
         val openTelemetryComponent = OpenTelemetryComponent(configuration.myLegalName.toString(), configuration.telemetry.spanStartEndEventsEnabled, configuration.telemetry.copyBaggageToTags)
         if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
@@ -292,7 +292,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         database,
         configuration.devMode
     ).tokenize()
-    val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database, rotatedKeysData)
+    val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database, rotatedKeys)
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -844,7 +844,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             unfinishedSchedules = busyNodeLatch
     ).tokenize()
 
-    private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo, rotatedKeysData: RotatedKeysData): CordappLoader {
+    private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo, rotatedKeys: RotatedKeys): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
         notaryLoader?.builtInNotary?.let { notaryImpl ->
             generatedCordapps += notaryImpl
@@ -861,7 +861,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 versionInfo,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys,
-                rotatedKeysData = rotatedKeysData
+                rotatedKeys = rotatedKeys
         )
     }
 
@@ -876,8 +876,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeRotatedKeysService( configuration: NodeConfiguration ): RotatedKeysData {
-        return RotatedKeysData(configuration.rotatedCordappSignerKeys.map { rotatedKeysConfiguration ->
+    private fun makeRotatedKeysService( configuration: NodeConfiguration ): RotatedKeys {
+        return RotatedKeys(configuration.rotatedCordappSignerKeys.map { rotatedKeysConfiguration ->
             parseSecureHashConfiguration(rotatedKeysConfiguration.rotatedKeys) { "Error while parsing rotated keys $it"}
         }.toList())
     }
@@ -885,7 +885,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun makeAttachmentTrustCalculator(
         configuration: NodeConfiguration,
         database: CordaPersistence,
-        rotatedKeysData: RotatedKeysData
+        rotatedKeys: RotatedKeys
     ): AttachmentTrustCalculator {
         val blacklistedAttachmentSigningKeys: List<SecureHash> =
             parseSecureHashConfiguration(configuration.blacklistedAttachmentSigningKeys) { "Error while adding signing key $it to blacklistedAttachmentSigningKeys" }
@@ -894,7 +894,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             database = database,
             cacheFactory = cacheFactory,
             blacklistedAttachmentSigningKeys = blacklistedAttachmentSigningKeys,
-            rotatedKeysData = rotatedKeysData
+            rotatedKeys = rotatedKeys
         ).tokenize()
     }
 
@@ -1203,7 +1203,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
         override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
         override val telemetryService: TelemetryService get() = this@AbstractNode.telemetryService
-        override val rotatedKeysData: RotatedKeysData get() = this@AbstractNode.rotatedKeysData
+        override val rotatedKeys: RotatedKeys get() = this@AbstractNode.rotatedKeys
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

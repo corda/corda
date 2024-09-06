@@ -2,7 +2,7 @@ package net.corda.verifier
 
 import com.github.benmanes.caffeine.cache.Cache
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.loadClassOfType
@@ -71,7 +71,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
 
     private lateinit var appClassLoader: ClassLoader
     private lateinit var currentNetworkParameters: NetworkParameters
-    private lateinit var rotatedKeysData: RotatedKeysData
+    private lateinit var rotatedKeys: RotatedKeys
 
     init {
         val cacheFactory = ExternalVerifierNamedCacheFactory()
@@ -119,7 +119,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
 
         currentNetworkParameters = initialisation.currentNetworkParameters
         networkParametersMap.put(initialisation.serializedCurrentNetworkParameters.hash, Optional.of(currentNetworkParameters))
-        rotatedKeysData = initialisation.rotatedKeysData
+        rotatedKeys = initialisation.rotatedKeys
         log.info("External verifier initialised")
     }
 
@@ -135,7 +135,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
     @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this,
-                request.ctxInputsAndReferences, rotatedKeysData)
+                request.ctxInputsAndReferences, rotatedKeys)
         val result: Try<Unit> = try {
             val ctx = request.ctx
             when (ctx) {

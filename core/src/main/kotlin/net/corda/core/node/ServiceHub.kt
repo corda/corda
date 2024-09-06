@@ -171,7 +171,7 @@ interface ServiceHub : ServicesForResolution {
      */
     val telemetryService: TelemetryService
 
-    val rotatedKeysData: RotatedKeysData
+    val rotatedKeys: RotatedKeys
 
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the

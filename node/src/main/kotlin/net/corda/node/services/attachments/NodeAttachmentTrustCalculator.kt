@@ -2,7 +2,7 @@ package net.corda.node.services.attachments
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
@@ -32,16 +32,16 @@ class NodeAttachmentTrustCalculator(
     private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
     private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
-    private val rotatedKeysData: RotatedKeysData = RotatedKeysData()
+    private val rotatedKeys: RotatedKeys = RotatedKeys()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting
     constructor(
-        attachmentStorage: AttachmentStorageInternal,
-        cacheFactory: NamedCacheFactory,
-        blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
-        rotatedKeysData: RotatedKeysData = RotatedKeysData()
-    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeysData)
+            attachmentStorage: AttachmentStorageInternal,
+            cacheFactory: NamedCacheFactory,
+            blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
+            rotatedKeys: RotatedKeys = RotatedKeys()
+    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeys)
 
     // A cache for caching whether a signing key is trusted
     private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>("NodeAttachmentTrustCalculator_trustedKeysCache")
@@ -82,7 +82,7 @@ class NodeAttachmentTrustCalculator(
     }
 
     private fun canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB: Attachment, signer: PublicKey): Boolean {
-        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> rotatedKeysData.canBeTransitioned(signerKeyFromDB, signer) }
+        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> rotatedKeys.canBeTransitioned(signerKeyFromDB, signer) }
     }
 
     override fun calculateAllTrustInfo(): List<AttachmentTrustInfo> {

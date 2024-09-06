@@ -6,7 +6,7 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.HashAttachmentConstraint
-import net.corda.core.contracts.RotatedKeysData
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -62,7 +62,7 @@ interface Verifier {
 abstract class AbstractVerifier(
     protected val ltx: LedgerTransaction,
     protected val transactionClassLoader: ClassLoader,
-    protected val rotatedKeysData: RotatedKeysData
+    protected val rotatedKeys: RotatedKeys
 ) : Verifier {
     protected abstract val transaction: Supplier<LedgerTransaction>
 
@@ -80,7 +80,7 @@ abstract class AbstractVerifier(
      */
     final override fun verify() {
         try {
-            TransactionVerifier(transactionClassLoader, rotatedKeysData).apply(transaction)
+            TransactionVerifier(transactionClassLoader, rotatedKeys).apply(transaction)
         } catch (e: TransactionVerificationException) {
             logger.error("Error validating transaction ${ltx.id}.", e.cause)
             throw e
@@ -92,7 +92,7 @@ abstract class AbstractVerifier(
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val rotatedKeysData: RotatedKeysData) {
+private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map(StateAndRef<ContractState>::state) + ltx.outputs
 
@@ -379,7 +379,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
             outputConstraints.forEach { outputConstraint ->
                 inputConstraints.forEach { inputConstraint ->
-                    if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachment, rotatedKeysData))) {
+                    if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachment, rotatedKeys))) {
                         throw ConstraintPropagationRejection(
                                 ltx.id,
                                 contractClassName,
@@ -441,7 +441,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
     private fun verifyConstraintUsingRotatedKeys(constraint: AttachmentConstraint, constraintAttachment: AttachmentWithContext, contract: ContractClassName ) {
         // constraint could be an input constraint so we manually have to rotate to updated constraint
-        if (constraint is SignatureAttachmentConstraint && rotatedKeysData.canBeTransitioned(constraint.key, constraintAttachment.signerKeys)) {
+        if (constraint is SignatureAttachmentConstraint && rotatedKeys.canBeTransitioned(constraint.key, constraintAttachment.signerKeys)) {
             val constraintWithRotatedKeys =  SignatureAttachmentConstraint.create(CompositeKey.Builder().addKeys(constraintAttachment.signerKeys).build())
             if (!constraintWithRotatedKeys.isSatisfiedBy(constraintAttachment)) throw ContractConstraintRejection(ltx.id, contract)
         }
@@ -455,7 +455,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
  * Verify the given [LedgerTransaction]. This includes validating
  * its contents, as well as executing all of its smart contracts.
  */
-class TransactionVerifier(private val transactionClassLoader: ClassLoader, private val rotatedKeysData: RotatedKeysData) : Function<Supplier<LedgerTransaction>, Unit> {
+class TransactionVerifier(private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) : Function<Supplier<LedgerTransaction>, Unit> {
     // Loads the contract class from the transactionClassLoader.
     private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
         return try {
@@ -480,7 +480,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader, priva
     }
 
     private fun validateTransaction(ltx: LedgerTransaction) {
-        Validator(ltx, transactionClassLoader, rotatedKeysData).validate()
+        Validator(ltx, transactionClassLoader, rotatedKeys).validate()
     }
 
     override fun apply(transactionFactory: Supplier<LedgerTransaction>) {

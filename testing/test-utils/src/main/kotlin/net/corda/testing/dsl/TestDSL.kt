@@ -112,7 +112,7 @@ data class TestTransactionDSLInterpreter private constructor(
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
-                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory(), rotatedKeysData = rotatedKeysData)
+                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory(), rotatedKeys = rotatedKeys)
             }
 
         override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =
@@ -132,7 +132,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
-        override val rotatedKeysData: RotatedKeysData = RotatedKeysData()
+        override val rotatedKeys: RotatedKeys = RotatedKeys()
 
         override fun loadContractAttachment(stateRef: StateRef): Attachment {
             return ledgerInterpreter.services.loadContractAttachment(stateRef)
