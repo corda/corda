@@ -108,6 +108,8 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
+        override val rotatedKeys: RotatedKeys = ledgerInterpreter.services.rotatedKeys
+
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
@@ -131,8 +133,6 @@ data class TestTransactionDSLInterpreter private constructor(
         override val notaryService: NotaryService? = null
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
-
-        override val rotatedKeys: RotatedKeys = RotatedKeys()
 
         override fun loadContractAttachment(stateRef: StateRef): Attachment {
             return ledgerInterpreter.services.loadContractAttachment(stateRef)
