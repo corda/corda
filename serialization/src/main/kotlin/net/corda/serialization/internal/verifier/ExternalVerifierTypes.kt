@@ -36,7 +36,7 @@ sealed class ExternalVerifierInbound {
             val serializedRotatedKeys: SerializedRotatedKeys
     ) : ExternalVerifierInbound() {
         val currentNetworkParameters: NetworkParameters by lazy { serializedCurrentNetworkParameters.deserialize() }
-        val rotatedKeys: RotatedKeysData by lazy { serializedRotatedKeys.deserialize() }
+        val rotatedKeysData: RotatedKeysData by lazy { serializedRotatedKeys.deserialize() }
 
         override fun toString(): String {
             return "Initialisation(" +
@@ -44,7 +44,7 @@ sealed class ExternalVerifierInbound {
                     "serializationWhitelistClassNames=$serializationWhitelistClassNames, " +
                     "customSerializationSchemeClassName=$customSerializationSchemeClassName, " +
                     "currentNetworkParameters=$currentNetworkParameters, " +
-                    "rotatedKeys=$rotatedKeys)"
+                    "rotatedKeys=$rotatedKeysData)"
         }
     }
 

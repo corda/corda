@@ -2,6 +2,7 @@ package net.corda.node.services.api
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
@@ -191,8 +192,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
 
-    override fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
-        return NoDbAccessVerifier(defaultVerifier(ltx, serializationContext))
+    override fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeysData: RotatedKeysData): Verifier {
+        return NoDbAccessVerifier(defaultVerifier(ltx, serializationContext, rotatedKeysData))
     }
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =

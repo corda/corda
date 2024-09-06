@@ -547,7 +547,7 @@ open class TransactionBuilder(
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment)) {
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment, serviceHub.rotatedKeysData)) {
                         "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}"
                     }
                 }
@@ -573,7 +573,7 @@ open class TransactionBuilder(
 
         if (!defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
             // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
-            if (defaultOutputConstraint is SignatureAttachmentConstraint && RotatedKeys.keys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
+            if (defaultOutputConstraint is SignatureAttachmentConstraint && services.toVerifyingServiceHub().rotatedKeysData.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
                 return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
             }
         }

@@ -1,6 +1,7 @@
 package net.corda.core.internal.verification
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -24,6 +25,8 @@ interface VerificationSupport {
 
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache? get() = null
 
+    val rotatedKeysData: RotatedKeysData
+
     // TODO Use SequencedCollection if upgraded to Java 21
     fun getParties(keys: Collection<PublicKey>): List<Party?>
 
@@ -44,7 +47,7 @@ interface VerificationSupport {
 
     fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>): Set<SecureHash>
 
-    fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
-        return defaultVerifier(ltx, serializationContext)
+    fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeysData: RotatedKeysData): Verifier {
+        return defaultVerifier(ltx, serializationContext, rotatedKeysData)
     }
 }

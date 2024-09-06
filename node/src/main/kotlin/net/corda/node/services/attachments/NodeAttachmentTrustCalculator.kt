@@ -2,7 +2,7 @@ package net.corda.node.services.attachments
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
@@ -31,15 +31,17 @@ class NodeAttachmentTrustCalculator(
     private val attachmentStorage: AttachmentStorageInternal,
     private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
-    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
+    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
+    private val rotatedKeysData: RotatedKeysData = RotatedKeysData()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting
     constructor(
         attachmentStorage: AttachmentStorageInternal,
         cacheFactory: NamedCacheFactory,
-        blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
-    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys)
+        blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
+        rotatedKeysData: RotatedKeysData = RotatedKeysData()
+    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeysData)
 
     // A cache for caching whether a signing key is trusted
     private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>("NodeAttachmentTrustCalculator_trustedKeysCache")
@@ -80,7 +82,7 @@ class NodeAttachmentTrustCalculator(
     }
 
     private fun canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB: Attachment, signer: PublicKey): Boolean {
-        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> RotatedKeys.keys.canBeTransitioned(signerKeyFromDB, signer) }
+        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> rotatedKeysData.canBeTransitioned(signerKeyFromDB, signer) }
     }
 
     override fun calculateAllTrustInfo(): List<AttachmentTrustInfo> {

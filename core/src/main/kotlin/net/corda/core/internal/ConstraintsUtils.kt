@@ -57,7 +57,7 @@ val ContractState.requiredContractClassName: String? get() {
  *    JAR are required to sign in the future.
  *
  */
-fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
+fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment, rotatedKeysData: RotatedKeysData): Boolean {
     val output = this
 
     @Suppress("DEPRECATION")
@@ -83,7 +83,7 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
 
         // The SignatureAttachmentConstraint allows migration from a Signature constraint with the same key.
         // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key.
-        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> RotatedKeys.keys.canBeTransitioned(input.key, output.key)
+        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> rotatedKeysData.canBeTransitioned(input.key, output.key)
 
         // HashAttachmentConstraint can be transformed to a SignatureAttachmentConstraint when hash constraint verification checking disabled.
         HashAttachmentConstraint.disableHashConstraints && input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> true

@@ -7,7 +7,7 @@ import io.github.classgraph.ScanResult
 import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -78,7 +78,8 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                                private val legacyContractJars: Set<Path> = emptySet(),
                                private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                private val extraCordapps: List<CordappImpl> = emptyList(),
-                               private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()) : CordappLoader {
+                               private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                               private val rotatedKeysData: RotatedKeysData = RotatedKeysData()) : CordappLoader {
     companion object {
         private val logger = contextLogger()
 
@@ -94,14 +95,15 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                             legacyContractsDir: Path? = null,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
-                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()): JarScanningCordappLoader {
+                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                            rotatedKeysData: RotatedKeysData = RotatedKeysData()): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.toSet().joinToString(", ", "[", "]")}")
             val cordappJars = cordappDirs
                     .asSequence()
                     .flatMap { if (it.exists()) it.listDirectoryEntries("*.jar") else emptyList() }
                     .toSet()
             val legacyContractJars = legacyContractsDir?.useDirectoryEntries("*.jar") { it.toSet() } ?: emptySet()
-            return JarScanningCordappLoader(cordappJars, legacyContractJars, versionInfo, extraCordapps, signerKeyFingerprintBlacklist)
+            return JarScanningCordappLoader(cordappJars, legacyContractJars, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, rotatedKeysData)
         }
     }
 
@@ -218,7 +220,7 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {
             val legacySigners = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
             val nonLegacySigners = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
-            check(RotatedKeys.keys.canBeTransitioned(legacySigners, nonLegacySigners)) {
+            check(rotatedKeysData.canBeTransitioned(legacySigners, nonLegacySigners)) {
                 "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
                         "'${legacyCordapp.jarFile}' signers."
             }

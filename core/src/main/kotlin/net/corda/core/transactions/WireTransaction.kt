@@ -11,6 +11,7 @@ import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionResolutionException
@@ -181,6 +182,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             override val appClassLoader: ClassLoader get() = throw AbstractMethodError()
             override fun getTrustedClassAttachments(className: String) = throw AbstractMethodError()
             override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>) = throw AbstractMethodError()
+            override val rotatedKeysData: RotatedKeysData get() = throw AbstractMethodError()
         })
     }
 
@@ -251,7 +253,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 verificationSupport::isAttachmentTrusted,
                 verificationSupport::createVerifier,
                 verificationSupport.attachmentsClassLoaderCache,
-                digestService
+                digestService,
+                verificationSupport.rotatedKeysData
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

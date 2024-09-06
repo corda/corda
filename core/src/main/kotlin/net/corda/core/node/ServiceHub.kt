@@ -171,6 +171,8 @@ interface ServiceHub : ServicesForResolution {
      */
     val telemetryService: TelemetryService
 
+    val rotatedKeysData: RotatedKeysData
+
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
      * clock so the current time can be controlled during unit testing.

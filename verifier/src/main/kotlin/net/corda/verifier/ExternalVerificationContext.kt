@@ -1,6 +1,7 @@
 package net.corda.verifier
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.RotatedKeysData
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -14,7 +15,8 @@ class ExternalVerificationContext(
         override val appClassLoader: ClassLoader,
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
         private val externalVerifier: ExternalVerifier,
-        private val transactionInputsAndReferences: Map<StateRef, SerializedTransactionState>
+        private val transactionInputsAndReferences: Map<StateRef, SerializedTransactionState>,
+        override val rotatedKeysData: RotatedKeysData
 ) : VerificationSupport {
     override val isInProcess: Boolean get() = false
 
