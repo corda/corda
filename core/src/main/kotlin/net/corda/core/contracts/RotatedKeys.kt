@@ -8,22 +8,6 @@ import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
-object RotatedKeys {
-    @Volatile
-    lateinit var keys: RotatedKeysData
-    fun initialise(rotatedKeysData: RotatedKeysData) {
-        if (this::keys.isInitialized) {
-            if (rotatedKeysData.rotatedSigningKeys.isNotEmpty() && this.keys != rotatedKeysData) {
-                throw IllegalStateException("RotatedKeys already initialised with different rotated keys")
-            }
-        }
-        else {
-            // TODO: add in the r3 default keys
-            this.keys = rotatedKeysData
-        }
-    }
-}
-
 @CordaSerializable
 data class RotatedKeysData(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()) {
     private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
