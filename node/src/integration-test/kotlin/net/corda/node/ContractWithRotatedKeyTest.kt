@@ -29,6 +29,7 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.apache.commons.io.FileUtils.deleteDirectory
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.whenever
@@ -42,11 +43,17 @@ class ContractWithRotatedKeyTest {
 
     private lateinit var mockNet: InternalMockNetwork
 
+    @Before
+    fun setup() {
+        mockNet = InternalMockNetwork(initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 8), notarySpecs = listOf(MockNetworkNotarySpec(
+        DUMMY_NOTARY_NAME,
+        validating = false
+        )))
+    }
+
     @After
-    fun tearDown() {
-        if (::mockNet.isInitialized) {
-            mockNet.stopNodes()
-        }
+    fun shutdown() {
+        mockNet.stopNodes()
     }
 
     private fun restartNodeAndDeleteOldCorDapps(network: InternalMockNetwork,
@@ -88,11 +95,6 @@ class ContractWithRotatedKeyTest {
             val rotatedKeys = listOf(RotatedSignerKeyConfiguration(listOf(keyHash1String.toString(), keyHash2String.toString() )))
             doReturn(rotatedKeys).whenever(conf).rotatedCordappSignerKeys
         }
-
-        val mockNet = InternalMockNetwork(initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 8), notarySpecs = listOf(MockNetworkNotarySpec(
-                DUMMY_NOTARY_NAME,
-                validating = false
-        )))
 
         val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = listOf(signedFinanceCorDapp1), configOverrides = configOverrides))
         val bob = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = listOf(signedFinanceCorDapp1), configOverrides = configOverrides))
