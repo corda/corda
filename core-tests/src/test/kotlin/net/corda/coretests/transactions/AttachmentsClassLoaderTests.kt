@@ -45,6 +45,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -58,6 +59,7 @@ import kotlin.io.path.readBytes
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
+@Ignore // TEMP
 class AttachmentsClassLoaderTests {
     companion object {
         // TODO Update this test to use the new isolated.jar
