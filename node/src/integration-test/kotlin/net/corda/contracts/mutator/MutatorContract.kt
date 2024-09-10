@@ -4,7 +4,6 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
