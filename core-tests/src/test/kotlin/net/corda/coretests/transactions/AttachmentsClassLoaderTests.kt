@@ -59,7 +59,6 @@ import kotlin.io.path.readBytes
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
-
 @Ignore // TEMP
 class AttachmentsClassLoaderTests {
     companion object {
@@ -116,7 +115,7 @@ class AttachmentsClassLoaderTests {
     @Before
     fun setup() {
         storage = MockAttachmentStorage()
-        attachmentTrustCalculator = @(storage.toInternal(), cacheFactory)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage.toInternal(), cacheFactory)
     }
 
     @Test(timeout=300_000)
