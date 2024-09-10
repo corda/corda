@@ -192,8 +192,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
 
-    override fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeys: RotatedKeys): Verifier {
-        return NoDbAccessVerifier(defaultVerifier(ltx, serializationContext, rotatedKeys))
+    override fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        return NoDbAccessVerifier(defaultVerifier(ltx, serializationContext))
     }
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =

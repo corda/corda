@@ -61,8 +61,7 @@ interface Verifier {
 // This class allows us unit-test transaction verification more easily.
 abstract class AbstractVerifier(
     protected val ltx: LedgerTransaction,
-    protected val transactionClassLoader: ClassLoader,
-    protected val rotatedKeys: RotatedKeys
+    protected val transactionClassLoader: ClassLoader
 ) : Verifier {
     protected abstract val transaction: Supplier<LedgerTransaction>
 
@@ -80,7 +79,7 @@ abstract class AbstractVerifier(
      */
     final override fun verify() {
         try {
-            TransactionVerifier(transactionClassLoader, rotatedKeys).apply(transaction)
+            TransactionVerifier(transactionClassLoader).apply(transaction)
         } catch (e: TransactionVerificationException) {
             logger.error("Error validating transaction ${ltx.id}.", e.cause)
             throw e
@@ -455,7 +454,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
  * Verify the given [LedgerTransaction]. This includes validating
  * its contents, as well as executing all of its smart contracts.
  */
-class TransactionVerifier(private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) : Function<Supplier<LedgerTransaction>, Unit> {
+class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
     // Loads the contract class from the transactionClassLoader.
     private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
         return try {
@@ -480,7 +479,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader, priva
     }
 
     private fun validateTransaction(ltx: LedgerTransaction) {
-        Validator(ltx, transactionClassLoader, rotatedKeys).validate()
+        Validator(ltx, transactionClassLoader, ltx.rotatedKeys).validate()
     }
 
     override fun apply(transactionFactory: Supplier<LedgerTransaction>) {

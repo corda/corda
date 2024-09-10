@@ -9,6 +9,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
+object CordaRotatedKeys {
+    val keys = RotatedKeys()
+}
 @CordaSerializable
 data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()): SingletonSerializeAsToken() {
     private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()

@@ -2,6 +2,7 @@ package net.corda.node.services.attachments
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AbstractAttachment
@@ -32,7 +33,7 @@ class NodeAttachmentTrustCalculator(
     private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
     private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
-    private val rotatedKeys: RotatedKeys = RotatedKeys()
+    private val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting
@@ -40,7 +41,7 @@ class NodeAttachmentTrustCalculator(
             attachmentStorage: AttachmentStorageInternal,
             cacheFactory: NamedCacheFactory,
             blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
-            rotatedKeys: RotatedKeys = RotatedKeys()
+            rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
     ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeys)
 
     // A cache for caching whether a signing key is trusted

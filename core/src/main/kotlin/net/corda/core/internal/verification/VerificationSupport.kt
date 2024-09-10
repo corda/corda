@@ -47,7 +47,7 @@ interface VerificationSupport {
 
     fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>): Set<SecureHash>
 
-    fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeys: RotatedKeys): Verifier {
-        return defaultVerifier(ltx, serializationContext, rotatedKeys)
+    fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        return defaultVerifier(ltx, serializationContext)
     }
 }

@@ -7,9 +7,9 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.NoConstraintPropagation
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint
@@ -342,14 +342,14 @@ class ConstraintsPropagationTests {
 
         // propagation check
         // TODO - enable once the logic to transition has been added.
-        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentSigned, RotatedKeys()))
+        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentSigned, CordaRotatedKeys.keys))
     }
 
     @Test(timeout=300_000)
 	fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
         // signed attachment (for signature constraint)
-        val rotatedKeys = RotatedKeys()
+        val rotatedKeys = CordaRotatedKeys.keys
         val attachment = mock<ContractAttachment>()
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
         whenever(attachment.allContracts).thenReturn(setOf(propagatingContractClassName))

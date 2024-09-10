@@ -7,6 +7,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
@@ -92,7 +93,7 @@ private constructor(
         private val serializedInputs: List<SerializedStateAndRef>?,
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
-        private val verifierFactory: (LedgerTransaction, SerializationContext, RotatedKeys) -> Verifier,
+        private val verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
         val digestService: DigestService,
         val rotatedKeys: RotatedKeys
@@ -102,6 +103,29 @@ private constructor(
      * Old version of [LedgerTransaction] constructor for ABI compatibility.
      */
     @DeprecatedConstructorForDeserialization(1)
+    private constructor(
+        inputs: List<StateAndRef<ContractState>>,
+        outputs: List<TransactionState<ContractState>>,
+        commands: List<CommandWithParties<CommandData>>,
+        attachments: List<Attachment>,
+        id: SecureHash,
+        notary: Party?,
+        timeWindow: TimeWindow?,
+        privacySalt: PrivacySalt,
+        networkParameters: NetworkParameters?,
+        references: List<StateAndRef<ContractState>>,
+        componentGroups: List<ComponentGroup>?,
+        serializedInputs: List<SerializedStateAndRef>?,
+        serializedReferences: List<SerializedStateAndRef>?,
+        isAttachmentTrusted: (Attachment) -> Boolean,
+        verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
+        attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+    ) : this(
+            inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
+            networkParameters, references, componentGroups, serializedInputs, serializedReferences,
+            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256, CordaRotatedKeys.keys)
+
+    @DeprecatedConstructorForDeserialization(2)
     private constructor(
             inputs: List<StateAndRef<ContractState>>,
             outputs: List<TransactionState<ContractState>>,
@@ -117,12 +141,13 @@ private constructor(
             serializedInputs: List<SerializedStateAndRef>?,
             serializedReferences: List<SerializedStateAndRef>?,
             isAttachmentTrusted: (Attachment) -> Boolean,
-            verifierFactory: (LedgerTransaction, SerializationContext, RotatedKeys) -> Verifier,
-            attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+            verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
+            attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
+            digestService: DigestService
     ) : this(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
-            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256, RotatedKeys())
+            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, digestService, CordaRotatedKeys.keys)
 
     companion object {
         private val logger = contextLogger()
@@ -155,7 +180,7 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean,
-                verifierFactory: (LedgerTransaction, SerializationContext, RotatedKeys) -> Verifier,
+                verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
                 attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                 digestService: DigestService,
                 rotatedKeys: RotatedKeys
@@ -279,7 +304,7 @@ private constructor(
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
             // NOTE: The Verifier creates the copies of the LedgerTransaction object now.
-            verifierFactory(this, serializationContext, rotatedKeys)
+            verifierFactory(this, serializationContext)
         }
         verifier.verify()
     }
@@ -297,7 +322,7 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, SerializationContext, RotatedKeys) -> Verifier): LedgerTransaction = LedgerTransaction(
+    fun specialise(alternateVerifier: (LedgerTransaction, SerializationContext) -> Verifier): LedgerTransaction = LedgerTransaction(
         inputs = inputs,
         outputs = outputs,
         commands = commands,
@@ -821,8 +846,8 @@ private constructor(
 
 @CordaInternal
 @JvmSynthetic
-fun defaultVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeys: RotatedKeys): Verifier {
-    return DefaultVerifier(ltx, serializationContext, rotatedKeys)
+fun defaultVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+    return DefaultVerifier(ltx, serializationContext)
 }
 
 /**
@@ -833,9 +858,8 @@ fun defaultVerifier(ltx: LedgerTransaction, serializationContext: SerializationC
  */
 private class DefaultVerifier(
     ltx: LedgerTransaction,
-    private val serializationContext: SerializationContext,
-    rotatedKeys: RotatedKeys
-) : AbstractVerifier(ltx, serializationContext.deserializationClassLoader, rotatedKeys) {
+    private val serializationContext: SerializationContext
+) : AbstractVerifier(ltx, serializationContext.deserializationClassLoader) {
 
     init {
         // This is a sanity check: We should only instantiate this
@@ -883,7 +907,7 @@ private class DefaultVerifier(
                     networkParameters = ltx.networkParameters,
                     references = deserializedReferences,
                     digestService = ltx.digestService,
-                    rotatedKeys = rotatedKeys
+                    rotatedKeys = ltx.rotatedKeys
                 )
             }
         }
@@ -896,7 +920,7 @@ private class DefaultVerifier(
  * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
  */
 @Suppress("unused_parameter")
-private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext, rotatedKeys: RotatedKeys) : Verifier {
+private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext) : Verifier {
     // Invoking LedgerTransaction.verify() from Contract.verify(LedgerTransaction)
     // will execute this function. But why would anyone do that?!
     override fun verify() {}

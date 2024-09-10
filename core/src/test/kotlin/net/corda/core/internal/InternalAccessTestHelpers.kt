@@ -83,7 +83,7 @@ fun createContractRejection(txId: SecureHash, contract: Contract, cause: Throwab
  *
  * Note, this is not secure!
  */
-private class PassthroughVerifier(ltx: LedgerTransaction, context: SerializationContext,rotatedKeys: RotatedKeys) : AbstractVerifier(ltx, context.deserializationClassLoader, rotatedKeys) {
+private class PassthroughVerifier(ltx: LedgerTransaction, context: SerializationContext) : AbstractVerifier(ltx, context.deserializationClassLoader) {
     override val transaction: Supplier<LedgerTransaction>
         get() = Supplier { ltx }
 }

@@ -59,7 +59,7 @@ import kotlin.io.path.readBytes
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
-@Ignore // TEMP
+
 class AttachmentsClassLoaderTests {
     companion object {
         // TODO Update this test to use the new isolated.jar
