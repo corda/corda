@@ -6,7 +6,6 @@ import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
@@ -50,8 +49,7 @@ fun createLedgerTransaction(
         serializedReferences: List<SerializedStateAndRef>? = null,
         isAttachmentTrusted: (Attachment) -> Boolean,
         attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
-        digestService: DigestService = DigestService.default,
-        rotatedKeys: RotatedKeys = RotatedKeys()
+        digestService: DigestService = DigestService.default
 ): LedgerTransaction {
     return LedgerTransaction.create(
             inputs,
@@ -70,8 +68,7 @@ fun createLedgerTransaction(
             isAttachmentTrusted,
             ::PassthroughVerifier,
             attachmentsClassLoaderCache,
-            digestService,
-            rotatedKeys
+            digestService
     )
 }
 
