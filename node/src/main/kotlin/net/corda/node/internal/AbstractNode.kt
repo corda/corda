@@ -305,7 +305,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = makeNetworkMapUpdater()
 
-    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory).tokenize()
+    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory, rotatedKeys).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")

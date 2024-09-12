@@ -253,8 +253,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 verificationSupport::isAttachmentTrusted,
                 verificationSupport::createVerifier,
                 verificationSupport.attachmentsClassLoaderCache,
-                digestService,
-                verificationSupport.rotatedKeys
+                digestService
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

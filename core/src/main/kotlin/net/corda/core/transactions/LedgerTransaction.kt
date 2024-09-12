@@ -33,6 +33,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderForRotatedKeysOnlyImpl
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
@@ -95,9 +96,10 @@ private constructor(
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-        val digestService: DigestService,
-        val rotatedKeys: RotatedKeys
+        val digestService: DigestService
 ) : FullTransaction() {
+
+    val rotatedKeys = attachmentsClassLoaderCache?.rotatedKeys ?: CordaRotatedKeys.keys
 
     /**
      * Old version of [LedgerTransaction] constructor for ABI compatibility.
@@ -123,31 +125,7 @@ private constructor(
     ) : this(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
-            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256, CordaRotatedKeys.keys)
-
-    @DeprecatedConstructorForDeserialization(2)
-    private constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?,
-            references: List<StateAndRef<ContractState>>,
-            componentGroups: List<ComponentGroup>?,
-            serializedInputs: List<SerializedStateAndRef>?,
-            serializedReferences: List<SerializedStateAndRef>?,
-            isAttachmentTrusted: (Attachment) -> Boolean,
-            verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
-            attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-            digestService: DigestService
-    ) : this(
-            inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
-            networkParameters, references, componentGroups, serializedInputs, serializedReferences,
-            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, digestService, CordaRotatedKeys.keys)
+            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
 
     companion object {
         private val logger = contextLogger()
@@ -182,8 +160,7 @@ private constructor(
                 isAttachmentTrusted: (Attachment) -> Boolean,
                 verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
                 attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-                digestService: DigestService,
-                rotatedKeys: RotatedKeys
+                digestService: DigestService
         ): LedgerTransaction {
             return LedgerTransaction(
                     inputs = inputs,
@@ -202,8 +179,7 @@ private constructor(
                     isAttachmentTrusted = isAttachmentTrusted,
                     verifierFactory = verifierFactory,
                     attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                    digestService = digestService,
-                    rotatedKeys = rotatedKeys
+                    digestService = digestService
             )
         }
 
@@ -242,9 +218,8 @@ private constructor(
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
                 verifierFactory = ::NoOpVerifier,
-                attachmentsClassLoaderCache = null,
-                digestService = digestService,
-                rotatedKeys = rotatedKeys
+                attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl(rotatedKeys),
+                digestService = digestService
                 // This check accesses input states and must run on the LedgerTransaction
                 // instance that is verified, not on the outer LedgerTransaction shell.
                 // All states must also deserialize using the correct SerializationContext.
@@ -343,8 +318,7 @@ private constructor(
             alternateVerifier
         },
         attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-        digestService = digestService,
-        rotatedKeys = rotatedKeys
+        digestService = digestService
     )
 
     // Read network parameters with backwards compatibility goo.
@@ -805,8 +779,7 @@ private constructor(
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = digestService,
-                rotatedKeys = rotatedKeys
+                digestService = digestService
         )
     }
 
@@ -838,8 +811,7 @@ private constructor(
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = digestService,
-                rotatedKeys = rotatedKeys
+                digestService = digestService
         )
     }
 }

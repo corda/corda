@@ -569,7 +569,7 @@ open class MockServices private constructor(
                 cacheFactory = TestingNamedCacheFactory(), rotatedKeys = mockServices.rotatedKeys
         )
 
-        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
+        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory(), mockServices.rotatedKeys)
 
         override val cordappProvider: CordappProviderInternal get() = mockServices.mockCordappProvider
 
