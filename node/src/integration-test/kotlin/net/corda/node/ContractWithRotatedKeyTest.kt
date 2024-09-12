@@ -135,5 +135,8 @@ class ContractWithRotatedKeyTest {
         assertEquals(0.POUNDS, alice2.services.getCashBalance(GBP))
         assertEquals(0.DOLLARS, bob2.services.getCashBalance(USD))
         assertEquals(1300.POUNDS, bob2.services.getCashBalance(GBP))
+
+        keyStoreDir1.close()
+        keyStoreDir2.close()
     }
 }
