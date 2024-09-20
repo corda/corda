@@ -56,10 +56,10 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
             url = new URL("https://docs.oracle.com/javafx/2/api/")
         }
         externalDocumentationLink {
-            url = new URL("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk15to18-javadoc/")
+            url = new URL("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/")
         }
         externalDocumentationLink {
-            url = new URL("https://downloads.bouncycastle.org/java/docs/bcprov-jdk15to18-javadoc/")
+            url = new URL("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/")
         }
         internalPackagePrefixes.collect { packagePrefix ->
             perPackageOption {

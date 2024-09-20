@@ -15,6 +15,9 @@ cordapp {
 }
 
 dependencies {
+    if (System.getProperty('excludeShell') == null) {
+        cordaDriver "net.corda:corda-shell:$corda_release_version"
+    }
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaCompile project(':client:rpc')
     // Corda integration dependencies

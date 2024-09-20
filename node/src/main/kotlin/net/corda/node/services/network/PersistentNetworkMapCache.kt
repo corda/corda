@@ -17,6 +17,7 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -34,6 +35,9 @@ import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
 import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
@@ -60,6 +64,18 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     @Volatile
     private lateinit var rotatedNotaries: Set<CordaX500Name>
+
+    @Entity
+    @javax.persistence.Table(name = "node_named_identities")
+    data class PersistentPartyToPublicKeyHash(
+            @Id
+            @Suppress("MagicNumber") // database column width
+            @Column(name = "name", length = 128, nullable = false)
+            var name: String = "",
+
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
+            var publicKeyHash: String? = ""
+    )
 
     // Notary whitelist may contain multiple identities with the same X.500 name after certificate rotation.
     // Exclude duplicated entries, which are not present in the network map.
@@ -294,12 +310,19 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)
+                archiveNamedIdentity(node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
         // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
         invalidateIdentityServiceCaches(node)
         logger.debug { "Done removing node with info: $node" }
+    }
+
+    private fun archiveNamedIdentity(nodeInfo: NodeInfo) {
+        nodeInfo.legalIdentities.forEach { party ->
+            identityService.archiveNamedIdentity(party.name.toString(), party.owningKey.toStringShort())
+        }
     }
 
     override val allNodes: List<NodeInfo>
@@ -428,7 +451,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         database.transaction {
             val result = getAllNodeInfos(session)
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
-            for (nodeInfo in result) session.remove(nodeInfo)
+            for (nodeInfo in result) {
+                session.remove(nodeInfo)
+                archiveNamedIdentity(nodeInfo.toNodeInfo())
+            }
         }
     }
 

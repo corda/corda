@@ -46,14 +46,19 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.*
+import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
+import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 import kotlin.streams.toList
 import kotlin.test.*
 
@@ -785,6 +790,32 @@ class NodeAttachmentServiceTest {
         extraFilesJAR.standardVerifyJar()
         assertFailsWith(SecurityException::class) {
             NodeAttachmentService.checkIsAValidJAR(extraFilesJAR.openStream())
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `attachments containing jar entries whose names expose malicious directory traversal are prevented`() {
+
+        fun createJarWithJarEntryTraversalAttack(jarEntryName: String): InputStream {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            JarOutputStream(byteArrayOutputStream, Manifest()).apply {
+                putNextEntry(JarEntry(jarEntryName))
+                write("some-text".toByteArray())
+                closeEntry()
+                close()
+            }
+            return ByteArrayInputStream(byteArrayOutputStream.toByteArray())
+        }
+
+        val traversalAttackJarWin = createJarWithJarEntryTraversalAttack("..\\attack")
+        val traversalAttackJarUnix = createJarWithJarEntryTraversalAttack("../attack")
+
+        assertFailsWith(IllegalArgumentException::class) {
+            NodeAttachmentService.checkIsAValidJAR(traversalAttackJarWin)
+        }
+
+        assertFailsWith(IllegalArgumentException::class) {
+            NodeAttachmentService.checkIsAValidJAR(traversalAttackJarUnix)
         }
     }
 

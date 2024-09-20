@@ -18,7 +18,15 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.internal.LifecycleSupport
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
@@ -31,12 +39,15 @@ import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
@@ -48,15 +59,26 @@ import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.FailoverEventType
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Collections
+import java.util.Timer
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import javax.annotation.concurrent.ThreadSafe
@@ -72,15 +94,17 @@ import kotlin.concurrent.timer
  * executor through into Artemis and from there, back through to senders.
  *
  * An implementation of [CordaRPCOps] can be provided. If given, clients using the CordaMQClient RPC library can
- * invoke methods on the provided implementation. There is more documentation on this in the docsite and the
+ * invoke methods on the provided implementation. There is more documentation on this in the doc-site and the
  * CordaRPCClient class.
  *
  * @param config The configuration of the node, which is used for controlling the message redelivery options.
  * @param versionInfo All messages from the node carry the version info and received messages are checked against this for compatibility.
  * @param serverAddress The host and port of the Artemis broker.
  * @param nodeExecutor The received messages are marshalled onto the server executor to prevent Netty buffers leaking during fiber suspends.
- * @param database The nodes database, which is used to deduplicate messages.
+ * @param database The node's database, which is used to deduplicate messages.
+ * @param terminateOnConnectionError whether the process should be terminated forcibly if connection with the broker fails.
  */
+@Suppress("LongParameterList")
 @ThreadSafe
 class P2PMessagingClient(val config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
@@ -94,7 +118,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
                          private val threadPoolName: String = "P2PClient",
-                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)
+                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log),
+                         private val terminateOnConnectionError: Boolean = true,
+                         private val timeoutConfig: TimeoutConfig = TimeoutConfig.default()
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
@@ -125,6 +151,21 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
+    }
+
+    /**
+     * @property callTimeout the time a blocking call (e.g. message send) from a client waits for a response until it times out.
+     * @property serverConnectionTtl the time the server waits for a packet/heartbeat from a client before it announces the connection dead and cleans it up.
+     * @property clientConnectionTtl the time the client waits for a packet/heartbeat from a client before it announces the connection dead and cleans it up.
+     */
+    data class TimeoutConfig(val callTimeout: Duration, val serverConnectionTtl: Duration, val clientConnectionTtl: Duration) {
+        companion object {
+            /**
+             * Some sensible defaults, aligned with defaults of Artemis
+             */
+            @Suppress("MagicNumber")
+            fun default() = TimeoutConfig(30.seconds, 60.seconds, 30.seconds)
+        }
     }
 
     /** A registration to handle messages of different types */
@@ -167,15 +208,21 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions, threadPoolName = threadPoolName)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-                connectionTTL = 60000
-                clientFailureCheckPeriod = 30000
+                callTimeout = timeoutConfig.callTimeout.toMillis()
+                connectionTTL = timeoutConfig.serverConnectionTtl.toMillis()
+                clientFailureCheckPeriod = timeoutConfig.clientConnectionTtl.toMillis()
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-            sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+
+            sessionFactory = if (terminateOnConnectionError) {
+                locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+            } else {
+                locator!!.createSessionFactory()
+            }
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
-            // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
+            // Note that the acknowledgement of messages is not flushed to the Artemis journal until the default buffer
             // size of 1MB is acknowledged.
             val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
@@ -233,7 +280,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun InnerState.registerBridgeControl(session: ClientSession, inboxes: List<String>) {
         val bridgeNotifyQueue = "$BRIDGE_NOTIFY.${myIdentity.toStringShort()}"
         if (!session.queueQuery(SimpleString(bridgeNotifyQueue)).isExists) {
-            session.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+            session.createQueue(QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
+                    .setTemporary(true).setDurable(false))
         }
         val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
         bridgeNotifyConsumer = bridgeConsumer
@@ -265,8 +313,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         log.info("Updating bridges on network map change: ${change::class.simpleName} ${change.node}")
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return state.locked {
-                node.legalIdentitiesAndCerts.map {
-                    val messagingAddress = NodeAddress(it.party.owningKey)
+                node.legalIdentitiesAndCerts.map { partyAndCertificate ->
+                    val messagingAddress = NodeAddress(partyAndCertificate.party.owningKey)
                     BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name }, serviceAddress = false)
                 }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
             }
@@ -404,12 +452,15 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     internal fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
-            if (!deduplicator.isDuplicate(cordaMessage)) {
+            val outcome = deduplicator.checkDuplicate(cordaMessage)
+            if (outcome == P2PMessageDeduplicator.Outcome.NEW) {
                 deduplicator.signalMessageProcessStart(cordaMessage)
                 deliver(cordaMessage, artemisMessage)
-            } else {
-                log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
+            } else if (outcome == P2PMessageDeduplicator.Outcome.DUPLICATE) {
+                log.debug { "Acknowledge duplicate message id: ${cordaMessage.uniqueMessageId} senderUUID: ${cordaMessage.senderUUID} senderSeqNo: ${cordaMessage.senderSeqNo} isSessionInit: ${cordaMessage.isSessionInit}" }
                 messagingExecutor!!.acknowledge(artemisMessage)
+            } else {
+                log.debug { "Discard in-flight message id: ${cordaMessage.uniqueMessageId} senderUUID: ${cordaMessage.senderUUID} senderSeqNo: ${cordaMessage.senderSeqNo} isSessionInit: ${cordaMessage.isSessionInit}" }
             }
         }
     }
@@ -463,8 +514,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             running = false
             stateHelper.active = false
             networkChangeSubscription?.unsubscribe()
-            require(p2pConsumer != null, { "stop can't be called twice" })
-            require(producer != null, { "stop can't be called twice" })
+            require(p2pConsumer != null) { "stop can't be called twice" }
+            require(producer != null) { "stop can't be called twice" }
 
             close(p2pConsumer)
             p2pConsumer = null
@@ -524,7 +575,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // If we are sending to ourselves then route the message directly to our P2P queue.
             RemoteInboxAddress(myIdentity).queueName
         } else {
-            // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
+            // Otherwise, we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
@@ -556,9 +607,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 val queueQuery = session.queueQuery(SimpleString(queueName))
                 if (!queueQuery.isExists) {
                     log.info("Create fresh queue $queueName bound on same address")
-                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, null, true, false,
-                            ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers(),
-                            ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers(), exclusive, null)
+                    session.createQueue(QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName)
+                            .setDurable(true).setAutoCreated(false)
+                            .setMaxConsumers(ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers())
+                            .setPurgeOnNoConsumers(ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers())
+                            .setExclusive(exclusive)
+                            .setLastValue(null)
+                    )
                     sendBridgeCreateMessage()
                 }
             }
@@ -567,7 +622,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     override fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration {
-        require(!topic.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
+        require(topic.isNotBlank()) { "Topic must not be blank, as the empty topic is a special case." }
         handlers.compute(topic) { _, handler ->
             if (handler != null) {
                 throw IllegalStateException("Cannot add another acking handler for $topic, there is already an acking one")

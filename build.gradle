@@ -13,6 +13,7 @@ buildscript {
     ext.baseVersion = constants.getProperty("cordaVersion")
     ext.versionSuffix = constants.getProperty("versionSuffix")
 
+    ext.corda_build_edition = System.getenv("CORDA_BUILD_EDITION")?.trim() ?: "Corda Open Source"
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -60,11 +61,11 @@ buildscript {
     ext.capsule_version = '1.0.3'
 
     ext.asm_version = '7.1'
-    ext.artemis_version = '2.6.2'
-    // TODO Upgrade to Jackson Kotlin 2.10+ only when corda is using kotlin 1.3.10
+    ext.artemis_version = '2.19.1'
+    // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
     ext.jackson_version = '2.17.2'
     ext.jackson_kotlin_version = '2.9.7'
-    ext.jetty_version = '9.4.19.v20190610'
+    ext.jetty_version = '9.4.53.v20231009'
     ext.jersey_version = '2.25'
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
@@ -80,7 +81,7 @@ buildscript {
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
     ext.netty_version = '4.1.77.Final'
-    ext.tcnative_version = '2.0.48.Final'
+    ext.tcnative_version = constants.getProperty("tcnativeVersion")
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
     ext.kryo_version = '4.0.2'
@@ -106,7 +107,6 @@ buildscript {
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.4'
-    ext.crash_version = '1.7.6'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.10.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -130,6 +130,8 @@ buildscript {
     ext.controlsfx_version = '8.40.15'
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
+    ext.commons_configuration2_version = "2.10.1"
+    ext.commons_text_version = "1.10.0"
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = '8.15'
         ext.fontawesomefx_fontawesome_version = '4.7.0-5'
@@ -364,7 +366,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Corda-Vendor': corda_build_edition)
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
             attributes('Corda-Docs-Link': corda_docs_link)
         }
@@ -413,6 +415,12 @@ allprojects {
 
     repositories {
         mavenLocal()
+        // Prevents cache giving use the wrong artemis
+        mavenCentral {
+            content {
+                includeGroup 'org.apache.activemq'
+            }
+        }
         // Use system environment to activate caching with Artifactory,
         // because it is actually easier to pass that during parallel build.
         // NOTE: it has to be a name of a virtual repository with all
@@ -455,6 +463,12 @@ allprojects {
                     includeGroup 'com.github.detro'
                 }
             }
+            maven {
+                url "${publicArtifactURL}/corda-releases"
+                content {
+                    includeModule('net.corda', 'corda-shell')
+                }
+            }
             mavenCentral()
             maven {
                 url "${publicArtifactURL}/jcenter-backup"
@@ -473,7 +487,9 @@ allprojects {
                 // Force dependencies to use the same version of Guava as Corda.
                 force "com.google.guava:guava:$guava_version"
 
-                // Demand that everything uses our given version of Netty.
+                // Demand that everything uses our given versions of:
+                // * Netty
+                // * Apache commons-configuration2
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
                         if (details.requested.name.startsWith('netty-tcnative')){
@@ -483,6 +499,13 @@ allprojects {
                         }
                     }
 
+                    if (details.requested.group == 'org.apache.commons') {
+                        if (details.requested.name == "commons-configuration2") {
+                            details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-text") {
+                            details.useVersion commons_text_version
+                        }
+                    }
                     if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
                         details.useVersion snake_yaml_version
                     }

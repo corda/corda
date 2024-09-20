@@ -1,5 +1,6 @@
 package net.corda.node.services.identity
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
@@ -22,6 +23,7 @@ import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.network.NotaryUpdateListener
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.PublicKeyHashToExternalId
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -46,6 +48,8 @@ import java.security.cert.CollectionCertStoreParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
@@ -139,6 +143,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
         private fun mapToKey(party: PartyAndCertificate) = party.owningKey.toStringShort()
     }
+
+    val archiveIdentityExecutor: ExecutorService = Executors.newCachedThreadPool(ThreadFactoryBuilder().setNameFormat("archive-named-identity-thread-%d").build())
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
@@ -312,7 +318,76 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = database.transaction {
-        nameToParty[name]?.orElse(null)
+        if (nameToParty[name]?.isPresent == true) {
+            nameToParty[name]?.get()
+        }
+        else {
+            retrievePartyFromArchive(name)
+        }
+    }
+
+    private fun retrievePartyFromArchive(name: CordaX500Name): Party? {
+        val hashKey = database.transaction {
+            val query = session.criteriaBuilder.createQuery(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            val queryRoot = query.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            query.where(session.criteriaBuilder.equal(queryRoot.get<String>("name"), name.toString()))
+            val resultList = session.createQuery(query).resultList
+            if (resultList.isNotEmpty()) {
+                resultList?.first()?.publicKeyHash
+            }
+            else {
+                retrieveHashKeyAndCacheParty(name)
+            }
+        }
+        return hashKey?.let { keyToPartyAndCert[it]?.party }
+    }
+
+    private fun retrieveHashKeyAndCacheParty(name: CordaX500Name): String? {
+        return database.transaction {
+            val cb = session.criteriaBuilder
+            val query = cb.createQuery(PersistentPublicKeyHashToParty::class.java)
+            val root = query.from(PersistentPublicKeyHashToParty::class.java)
+            val isNotConfidentialIdentity = cb.equal(root.get<String>("publicKeyHash"), root.get<String>("owningKeyHash"))
+            val matchName = cb.equal(root.get<String>("name"), name.toString())
+            query.select(root).where(cb.and(matchName, isNotConfidentialIdentity))
+            val resultList = session.createQuery(query).resultList
+            var hashKey: String? = if (resultList.isNotEmpty()) {
+                if (resultList.size == 1) {
+                    resultList?.single()?.owningKeyHash
+                }
+                else {
+                    selectIdentityHash(session, resultList.mapNotNull { it.publicKeyHash }, name)
+                }
+            } else {
+                null
+            }
+            archiveNamedIdentity(name.toString(), hashKey)
+            hashKey
+        }
+    }
+
+    private fun selectIdentityHash(session: Session, hashList: List<String>, name: CordaX500Name): String? {
+        val cb = session.criteriaBuilder
+        val query = cb.createQuery(PersistentPublicKeyHashToCertificate::class.java)
+        val root = query.from(PersistentPublicKeyHashToCertificate::class.java)
+        query.select(root).where(root.get<String>("publicKeyHash").`in`(hashList))
+        val resultList = session.createQuery(query).resultList
+        resultList.sortWith(compareBy { PartyAndCertificate(X509CertificateFactory().delegate.generateCertPath(it.identity.inputStream())).certificate.notBefore })
+        log.warn("Retrieving identity hash for removed identity '${name}', more that one hash found, returning last one according to notBefore validity of certificate." +
+                 " Hash returned is ${resultList.last().publicKeyHash}")
+        return resultList.last().publicKeyHash
+    }
+
+    override fun archiveNamedIdentity(name:String, publicKeyHash: String?) {
+        archiveIdentityExecutor.submit {
+            database.transaction {
+                val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+                val queryRoot = deleteQuery.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+                deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("name"), name))
+                session.createQuery(deleteQuery).executeUpdate()
+                session.save(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash(name, publicKeyHash))
+            }
+        }.get()
     }
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
@@ -323,7 +398,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 if (candidate != null && candidate != party) {
                     // Party doesn't match existing well-known party: check that the key is registered, otherwise return null.
                     require(party.name == candidate.name) { "Candidate party $candidate does not match expected $party" }
-                    keyToParty[party.owningKey.toStringShort()]?.let { candidate }
+                    // If the party is a whitelisted notary, then it was just a rotated notary key
+                    if (party in notaryIdentityCache) {
+                        candidate
+                    } else {
+                        keyToParty[party.owningKey.toStringShort()]?.let { candidate }
+                    }
                 } else {
                     // Party is a well-known party or well-known party doesn't exist: skip checks.
                     // If the notary is not in the network map cache, try getting it from the network parameters
