@@ -150,8 +150,6 @@ class DriverDSLImpl(
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
         val cordappsForAllNodes: Collection<TestCordappInternal>?,
-        val djvmBootstrapSource: Path?,
-        val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
         val allowHibernateToManageAppSchema: Boolean = true,
         val premigrateH2Database: Boolean = true,
@@ -353,7 +351,7 @@ class DriverDSLImpl(
                         baseDirectory = baseDirectory,
                         allowMissingConfig = true,
                         configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
-                ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
+                )
         ).checkAndOverrideForInMemoryDB()
     }
 
@@ -757,7 +755,7 @@ class DriverDSLImpl(
                     debugPort,
                     bytemanJarPath,
                     bytemanPort,
-                    systemProperties,
+                    systemProperties + parameters.systemProperties,
                     parameters.maximumHeapSize,
                     parameters.logLevelOverride,
                     identifier,
@@ -892,24 +890,6 @@ class DriverDSLImpl(
                 CORDAPP_WORKFLOW_VERSION
         ))
 
-        /**
-         * Add the DJVM's sources to the node's configuration file.
-         * These will all be ignored unless devMode is also true.
-         */
-        private fun Config.withDJVMConfig(bootstrapSource: Path?, cordaSource: List<Path>): Config {
-            return if (hasPath("devMode")) {
-                if (getBoolean("devMode")) {
-                    withOptionalValue("devModeOptions.djvm.bootstrapSource", bootstrapSource) { path ->
-                        valueFor(path.toString())
-                    }.withValue("devModeOptions.djvm.cordaSource", valueFor(cordaSource.map(Path::toString)))
-                } else {
-                    withoutPath("devModeOptions")
-                }
-            } else {
-                this
-            }
-        }
-
         private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
             return if (obj == null) {
                 this
@@ -989,13 +969,13 @@ class DriverDSLImpl(
             val excludePackagePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
                     "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
                     "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
-                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.corda.djvm**;djvm.**;net.bytebuddy**;" +
+                    "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;" +
                     "net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
-            val excludeClassloaderPattern = "l(net.corda.djvm.**;net.corda.core.serialization.internal.**)"
+            val excludeClassloaderPattern = "l(net.corda.core.serialization.internal.**)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePackagePattern$excludeClassloaderPattern"
 
@@ -1328,8 +1308,6 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                         notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                         inMemoryDB = defaultParameters.inMemoryDB,
                         cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
-                        djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
-                        djvmCordaSource = defaultParameters.djvmCordaSource,
                         environmentVariables = defaultParameters.environmentVariables,
                         allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
                         premigrateH2Database = defaultParameters.premigrateH2Database,
@@ -1428,8 +1406,6 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
-        djvmBootstrapSource: Path? = null,
-        djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         allowHibernateToManageAppSchema: Boolean = true,
         premigrateH2Database: Boolean = true,
@@ -1454,8 +1430,6 @@ fun <A> internalDriver(
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
                     cordappsForAllNodes = cordappsForAllNodes,
-                    djvmBootstrapSource = djvmBootstrapSource,
-                    djvmCordaSource = djvmCordaSource,
                     environmentVariables = environmentVariables,
                     allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
                     premigrateH2Database = premigrateH2Database,

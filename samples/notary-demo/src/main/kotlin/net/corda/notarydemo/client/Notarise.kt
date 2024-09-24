@@ -2,10 +2,8 @@ package net.corda.notarydemo.client
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -32,7 +30,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
 
     /** A dummy identity. */
     private val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
-    private val counterparty = Party(BOB_NAME, Crypto.generateKeyPair(Crypto.DEFAULT_SIGNATURE_SCHEME).public)
+    private val counterparty = rpc.wellKnownPartyFromX500Name(BOB_NAME) ?: throw IllegalArgumentException("Couldn't find Bob Plc party")
 
     /** Makes calls to the node rpc to start transaction notarisation. */
     fun notarise(count: Int) {
