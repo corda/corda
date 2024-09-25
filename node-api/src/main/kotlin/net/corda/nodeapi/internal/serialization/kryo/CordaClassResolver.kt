@@ -13,7 +13,6 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.utilities.PrivateInterner
-import net.corda.core.internal.writer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -28,8 +27,8 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
 import java.nio.file.StandardOpenOption.WRITE
-import java.util.ArrayList
 import java.util.Collections
+import kotlin.io.path.writer
 
 /**
  * Corda specific class resolver which enables extra customisation for the purposes of serialization using Kryo
@@ -93,7 +92,10 @@ class CordaClassResolver(serializationContext: CheckpointSerializationContext) :
             val serializer = when {
                 objectInstance != null -> KotlinObjectSerializer(objectInstance)
                 kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
-                    FieldSerializer<Any>(kryo, targetType).apply { setIgnoreSyntheticFields(false) }
+                    FieldSerializer<Any>(kryo, targetType).apply {
+                        fieldSerializerConfig.ignoreSyntheticFields = false
+                        updateFields()
+                    }
                 Throwable::class.java.isAssignableFrom(targetType) -> ThrowableSerializer(kryo, targetType)
                 else -> maybeWrapForInterning(kryo.getDefaultSerializer(targetType), targetType)
             }
@@ -114,12 +116,12 @@ class CordaClassResolver(serializationContext: CheckpointSerializationContext) :
 
     // Trivial Serializer which simply returns the given instance, which we already know is a Kotlin object
     private class KotlinObjectSerializer(private val objectInstance: Any) : Serializer<Any>() {
-        override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = objectInstance
+        override fun read(kryo: Kryo, input: Input, type: Class<out Any>): Any = objectInstance
         override fun write(kryo: Kryo, output: Output, obj: Any) = Unit
     }
 
     private class InterningSerializer(private val delegate: Serializer<Any>, private val interner: PrivateInterner<Any>) : Serializer<Any>() {
-        override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = interner.intern(delegate.read(kryo, input, type))
+        override fun read(kryo: Kryo, input: Input, type: Class<out Any>): Any = interner.intern(delegate.read(kryo, input, type))
         override fun write(kryo: Kryo, output: Output, obj: Any) = delegate.write(kryo, output, obj)
     }
 

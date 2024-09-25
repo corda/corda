@@ -4,8 +4,11 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
+import net.corda.nodeapi.internal.crypto.addOrReplaceKey
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -17,10 +20,20 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyStore
-import javax.net.ssl.*
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLParameters
+import javax.net.ssl.SSLServerSocket
+import javax.net.ssl.SSLServerSocketFactory
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManagerFactory
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
-import kotlin.test.*
+import kotlin.io.path.div
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Various tests for mixed-scheme mutual TLS authentication, such as:

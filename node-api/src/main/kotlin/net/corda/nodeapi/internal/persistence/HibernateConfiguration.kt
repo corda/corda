@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.persistence
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.castIfPossible
 import net.corda.core.schemas.MappedSchema
@@ -54,7 +53,7 @@ class HibernateConfiguration(
 
     val sessionFactoryFactory = findSessionFactoryFactory(jdbcUrl, customClassLoader)
 
-    private val sessionFactories = cacheFactory.buildNamed<Set<MappedSchema>, SessionFactory>(Caffeine.newBuilder(), "HibernateConfiguration_sessionFactories")
+    private val sessionFactories = cacheFactory.buildNamed<Set<MappedSchema>, SessionFactory>("HibernateConfiguration_sessionFactories")
 
     val sessionFactoryForRegisteredSchemas = schemas.let {
         logger.info("Init HibernateConfiguration for schemas: $it")

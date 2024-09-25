@@ -19,13 +19,13 @@ import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.hash
-import net.corda.core.internal.inputStream
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.toInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -37,14 +37,12 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -55,14 +53,16 @@ import java.io.InputStream
 import java.net.URL
 import java.nio.file.Path
 import java.security.PublicKey
+import kotlin.io.path.inputStream
+import kotlin.io.path.readBytes
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 class AttachmentsClassLoaderTests {
     companion object {
         // TODO Update this test to use the new isolated.jar
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("old-isolated.jar")
-        val ISOLATED_CONTRACTS_JAR_PATH_V4: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("old-isolated.jar")!!
+        val ISOLATED_CONTRACTS_JAR_PATH_V4: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar")!!
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
@@ -87,7 +87,6 @@ class AttachmentsClassLoaderTests {
     val testSerialization = SerializationEnvironmentRule()
 
     private lateinit var storage: MockAttachmentStorage
-    private lateinit var internalStorage: InternalMockAttachmentStorage
     private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
     private val cacheFactory = TestingNamedCacheFactory(1)
@@ -114,8 +113,7 @@ class AttachmentsClassLoaderTests {
     @Before
     fun setup() {
         storage = MockAttachmentStorage()
-        internalStorage = InternalMockAttachmentStorage(storage)
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage, cacheFactory)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage.toInternal(), cacheFactory)
     }
 
     @Test(timeout=300_000)
@@ -128,8 +126,6 @@ class AttachmentsClassLoaderTests {
     @Test(timeout=300_000)
     fun `test contracts have no permissions for protection domain`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
-        assertNull(System.getSecurityManager())
-
         createClassloader(isolatedId).use { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val protectionDomain = contractClass.protectionDomain ?: fail("Protection Domain missing")
@@ -451,7 +447,7 @@ class AttachmentsClassLoaderTests {
         val keyPairB = Crypto.generateKeyPair()
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-            InternalMockAttachmentStorage(storage),
+            storage.toInternal(),
             cacheFactory,
             blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
         )
@@ -488,7 +484,7 @@ class AttachmentsClassLoaderTests {
         val keyPairA = Crypto.generateKeyPair()
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-            InternalMockAttachmentStorage(storage),
+            storage.toInternal(),
             cacheFactory,
             blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
         )
@@ -614,7 +610,7 @@ class AttachmentsClassLoaderTests {
 
     private fun createAttachments(contractJarPath: Path) : List<Attachment> {
 
-        val attachment = object : AbstractAttachment({contractJarPath.inputStream().readBytes()}, uploader = "app") {
+        val attachment = object : AbstractAttachment(contractJarPath::readBytes, uploader = "app") {
             @Suppress("OverridingDeprecatedMember")
             @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
             override val signers: List<Party> = emptyList()

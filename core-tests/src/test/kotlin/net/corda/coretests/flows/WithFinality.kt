@@ -13,6 +13,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
@@ -26,9 +27,7 @@ interface WithFinality : WithMockNet {
         return startFlowAndRunNetwork(FinalityInvoker(stx, recipients.toSet(), emptySet()))
     }
 
-    fun TestStartedNode.getValidatedTransaction(stx: SignedTransaction): SignedTransaction {
-        return services.validatedTransactions.getTransaction(stx.id)!!
-    }
+    fun TestStartedNode.getValidatedTransaction(stx: SignedTransaction): SignedTransaction = services.getRequiredTransaction(stx.id)
 
     fun CordaRPCOps.finalise(stx: SignedTransaction, vararg recipients: Party): FlowHandle<SignedTransaction> {
         return startFlow(WithFinality::FinalityInvoker, stx, recipients.toSet(), emptySet()).andRunNetwork()

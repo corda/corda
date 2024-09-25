@@ -7,6 +7,7 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.mapToSet
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
@@ -28,7 +29,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.sql.Connection
 import java.sql.Statement
-import java.util.*
+import java.util.Properties
 import kotlin.test.assertFailsWith
 
 /*
@@ -286,7 +287,7 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
     }
 
     init {
-        require(users.map { it.username }.toSet().size == users.size) {
+        require(users.mapToSet { it.username }.size == users.size) {
             "Duplicate username in input"
         }
         connection = DataSourceFactory.createDataSource(Properties().apply {

@@ -75,9 +75,10 @@ open class MappedSchema(schemaFamily: Class<*>,
  * A super class for all mapped states exported to a schema that ensures the [StateRef] appears on the database row.  The
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
+@Suppress("RedundantModalityModifier")   // Because the external verifier uses Kotlin 1.2
 @MappedSuperclass
 @CordaSerializable
-class PersistentState(@EmbeddedId override var stateRef: PersistentStateRef? = null) : DirectStatePersistable
+open class PersistentState(@EmbeddedId override var stateRef: PersistentStateRef? = null) : DirectStatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.

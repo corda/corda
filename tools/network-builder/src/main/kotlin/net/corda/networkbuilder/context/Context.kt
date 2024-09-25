@@ -5,12 +5,13 @@ import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.nodes.NodeInstanceRequest
 import org.apache.activemq.artemis.utils.collections.ConcurrentHashSet
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 class Context(val networkName: String, val backendType: Backend.BackendType, backendOptions: Map<String, String> = emptyMap()) {
 
     @Volatile
-    var safeNetworkName: String = networkName.replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "").toLowerCase()
+    var safeNetworkName: String = networkName.replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "").lowercase(Locale.getDefault())
 
     @Volatile
     var nodes: MutableMap<String, ConcurrentHashSet<PersistableNodeInstance>> = ConcurrentHashMap()

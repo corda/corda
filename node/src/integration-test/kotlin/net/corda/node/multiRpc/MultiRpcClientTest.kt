@@ -1,9 +1,9 @@
 package net.corda.node.multiRpc
 
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.ext.MultiRPCClient
 import net.corda.client.rpc.ext.RPCConnectionListener
