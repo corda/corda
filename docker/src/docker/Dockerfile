@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk:17.0.8.1
+FROM azul/zulu-openjdk:17.0.12
 
 ## Remove Azul Zulu repo, as it is gone by now
 RUN rm -rf /etc/apt/sources.list.d/zulu.list
