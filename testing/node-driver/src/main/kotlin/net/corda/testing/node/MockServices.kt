@@ -27,6 +27,7 @@ import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.VerifyingServiceHub
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -485,7 +486,6 @@ open class MockServices private constructor(
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val telemetryService: TelemetryServiceImpl get() = throw java.lang.UnsupportedOperationException()
-    override val rotatedKeys: RotatedKeys get() = RotatedKeys()
     override val clock: TestClock get() = TestClock(Clock.systemUTC())
     override val myInfo: NodeInfo
         get() {
@@ -566,10 +566,10 @@ open class MockServices private constructor(
     private class VerifyingView(private val mockServices: MockServices) : VerifyingServiceHub, ServiceHub by mockServices {
         override val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
                 attachmentStorage = mockServices.attachments.toInternal(),
-                cacheFactory = TestingNamedCacheFactory(), rotatedKeys = mockServices.rotatedKeys
+                cacheFactory = TestingNamedCacheFactory(), rotatedKeys = mockServices.toVerifyingServiceHub().rotatedKeys
         )
 
-        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory(), mockServices.rotatedKeys)
+        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory(), mockServices.toVerifyingServiceHub().rotatedKeys)
 
         override val cordappProvider: CordappProviderInternal get() = mockServices.mockCordappProvider
 
@@ -582,7 +582,7 @@ open class MockServices private constructor(
         override val externalVerifierHandle: ExternalVerifierHandle
             get() = throw UnsupportedOperationException("`Verification of legacy transactions is not supported by MockServices. Use MockNode instead.")
 
-        override val rotatedKeys: RotatedKeys = mockServices.rotatedKeys
+        override val rotatedKeys: RotatedKeys = mockServices.toVerifyingServiceHub().rotatedKeys
     }
 
 

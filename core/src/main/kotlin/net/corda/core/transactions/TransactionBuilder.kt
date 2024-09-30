@@ -547,7 +547,7 @@ open class TransactionBuilder(
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment, serviceHub.rotatedKeys)) {
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment, serviceHub.toVerifyingServiceHub().rotatedKeys)) {
                         "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}"
                     }
                 }

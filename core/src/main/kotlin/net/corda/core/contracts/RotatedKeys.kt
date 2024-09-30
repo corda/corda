@@ -11,6 +11,19 @@ import java.util.concurrent.ConcurrentHashMap
 object CordaRotatedKeys {
     val keys = RotatedKeys()
 }
+
+/**
+ * This class represents the rotated keys known by this node. A public key in this class is identified by its SHA-256 hash of the public key. A
+ * single rotated key is identified by an ordered list of 2 or more hashes. An entry in the list means the key has been rotated to the next
+ * entry in the list. For the purposes of SignatureConstraints this means we treat all entries in the list as equivalent.
+ * A single rotated key is a list of hashes. To determine if two hashes come from the same rotated list, we first retrieve the last entry in
+ * list the hash is part of. This is done for both hashes. Then if the last entry is the same for both hashes you know the hashes came from
+ * the same list.
+ * This class supports multiple rotated keys which can be configured.
+ * @param rotatedSigningKeys A List of rotated keys. With a rotated key being represented by a list of hashes. This list comes from
+ * node.conf.
+ *
+ */
 @CordaSerializable
 data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()): SingletonSerializeAsToken() {
     private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
@@ -39,7 +52,7 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
                 (inputKey is CompositeKey && outputKey is CompositeKey) -> compareKeys(inputKey, outputKey)
                 (inputKey is CompositeKey && outputKey !is CompositeKey) -> compareKeys(inputKey, outputKey)
                 (inputKey !is CompositeKey && outputKey is CompositeKey) -> compareKeys(inputKey, outputKey)
-                else -> isRotated(inputKey, outputKey)
+                else -> isRotatedEquals(inputKey, outputKey)
             }
         }
     }
@@ -48,7 +61,7 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
         return rotateMap[key] ?: key
     }
 
-    private fun isRotated(inputKey: PublicKey, outputKey: PublicKey): Boolean {
+    private fun isRotatedEquals(inputKey: PublicKey, outputKey: PublicKey): Boolean {
         return when {
             inputKey == outputKey -> true
             rotate(inputKey.hash) == rotate(outputKey.hash) -> true

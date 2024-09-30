@@ -528,13 +528,9 @@ class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int, override val rotated
     }
 }
 
-const val CACHE_SIZE = 16
 class AttachmentsClassLoaderForRotatedKeysOnlyImpl(override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : AttachmentsClassLoaderCache {
-    companion object {
-        private val attachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE, CordaRotatedKeys.keys)
-    }
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: (AttachmentsClassLoaderKey) -> SerializationContext): SerializationContext {
-        return attachmentsClassLoaderCache.computeIfAbsent(key, mappingFunction)
+        throw NotImplementedError("AttachmentsClassLoaderForRotatedKeysOnlyImpl.computeIfAbsent should never be called. Should be replaced by the fallback cache")
     }
 }
 
