@@ -87,11 +87,11 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
     /**
-     * Represents a list of rotated signing key configurations. This supports being able to specify multiple rotations in the node. For
-     * example key A rotated to Key B represents one RotatedSignerKeyConfiguration and for example key X rotated to key Y rotated to key Z
-     * represents a second RotatedSignerKeyConfiguration.
+     * Represents a list of rotated CorDapp attachment JAR signing key configurations.  Each configuration describes a set of equivalent
+     * keys.  Logically there should be no overlap between configurations, since that would mean they should be one combined list,
+     * and this is enforced.
      */
-    val rotatedCordappSignerKeys: List<RotatedSignerKeyConfiguration>
+    val rotatedCordappSignerKeys: List<RotatedCorDappSignerKeyConfiguration>
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
@@ -230,13 +230,11 @@ data class TelemetryConfiguration(
 )
 
 /**
- * Represents a list of rotated attachment signing keys.
+ * Represents a list of rotated CorDapp attachment signing keys.
  *
- * @param rotatedKeys This is a list of public key hashes (SHA-256) that have been rotated and are therefore all equivalent, i.e.
- * public key hash at position 0 has been rotated to public key hash at position 1, public key hash at position 1 has been rotated to
- * public key hash at position 2 and so on.
+ * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
  */
-data class RotatedSignerKeyConfiguration(val rotatedKeys: List<String>)
+data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 

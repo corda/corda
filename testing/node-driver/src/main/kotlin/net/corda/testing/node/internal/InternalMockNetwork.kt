@@ -42,7 +42,7 @@ import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.RotatedSignerKeyConfiguration
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.TelemetryConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
@@ -671,7 +671,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
         doReturn(false).whenever(it).reloadCheckpointAfterSuspend
-        doReturn(emptyList<RotatedSignerKeyConfiguration>()).whenever(it).rotatedCordappSignerKeys
+        doReturn(emptyList<RotatedCorDappSignerKeyConfiguration>()).whenever(it).rotatedCordappSignerKeys
     }
 }
 

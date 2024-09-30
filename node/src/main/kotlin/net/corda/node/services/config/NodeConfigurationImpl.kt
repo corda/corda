@@ -80,7 +80,7 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = Defaults.jmxReporterType,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val rotatedCordappSignerKeys: List<RotatedSignerKeyConfiguration> = Defaults.rotatedCordappSignerKeys,
+        override val rotatedCordappSignerKeys: List<RotatedCorDappSignerKeyConfiguration> = Defaults.rotatedCordappSignerKeys,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings? =
                 Defaults.networkParameterAcceptanceSettings,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
@@ -123,7 +123,7 @@ data class NodeConfigurationImpl(
         val flowMonitorSuspensionLoggingThresholdMillis: Duration = NodeConfiguration.DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
         val jmxReporterType: JmxReporterType = NodeConfiguration.defaultJmxReporterType
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
-        val rotatedCordappSignerKeys: List<RotatedSignerKeyConfiguration> = emptyList()
+        val rotatedCordappSignerKeys: List<RotatedCorDappSignerKeyConfiguration> = emptyList()
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1

@@ -7,32 +7,34 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 object CordaRotatedKeys {
     val keys = RotatedKeys()
 }
 
 /**
- * This class represents the rotated keys known by this node. A public key in this class is identified by its SHA-256 hash of the public key. A
- * single rotated key is identified by an ordered list of 2 or more hashes. An entry in the list means the key has been rotated to the next
- * entry in the list. For the purposes of SignatureConstraints this means we treat all entries in the list as equivalent.
- * A single rotated key is a list of hashes. To determine if two hashes come from the same rotated list, we first retrieve the last entry in
- * list the hash is part of. This is done for both hashes. Then if the last entry is the same for both hashes you know the hashes came from
- * the same list.
- * This class supports multiple rotated keys which can be configured.
+ * This class represents the rotated CorDapp signing keys known by this node.
+ *
+ * A public key in this class is identified by its SHA-256 hash of the public key encoded bytes (@see PublicKey.getEncoded()).
+ * A sequence of rotated keys is represented by a list of hashes of those public keys.  The list of those lists represents
+ * each unrelated set of rotated keys.  A key should not appear more than once, either in the same list of in multiple lists.
+ *
+ * For the purposes of SignatureConstraints this means we treat all entries in a list of key hashes as equivalent.
+ * For two keys to be equivalent, they must be equal, or they must appear in the same list of hashes.
+ *
  * @param rotatedSigningKeys A List of rotated keys. With a rotated key being represented by a list of hashes. This list comes from
  * node.conf.
  *
  */
 @CordaSerializable
 data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()): SingletonSerializeAsToken() {
-    private val canBeTransitionedMap: ConcurrentHashMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
-    private val rotateMap: ConcurrentHashMap<SecureHash, SecureHash> = ConcurrentHashMap()
-
-    init {
+    private val canBeTransitionedMap: ConcurrentMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
+    private val rotateMap: Map<SecureHash, SecureHash> = HashMap<SecureHash, SecureHash>().apply {
         rotatedSigningKeys.forEach { rotatedKeyList ->
             rotatedKeyList.forEach { key ->
-                rotateMap[key] = rotatedKeyList.last()
+                if (this.containsKey(key)) throw IllegalStateException("The key with hash $key appears in the rotated keys configuration more than once.")
+                this[key] = rotatedKeyList.last()
             }
         }
     }

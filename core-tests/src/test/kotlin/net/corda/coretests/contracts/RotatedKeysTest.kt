@@ -255,4 +255,23 @@ class RotatedKeysTest {
             assertFalse(rotatedKeys.canBeTransitioned(compositeKeyInput, compositeKeyOutput))
         }
     }
+
+    @Test(timeout = 300_000, expected = IllegalStateException::class)
+    fun `when key is repeated in rotated list, throws exception`() {
+        SelfCleaningDir().use { file ->
+            val publicKeyA = file.path.generateKey(alias = "AAAA")
+            val publicKeyB = file.path.generateKey(alias = "BBBB")
+            RotatedKeys(listOf(listOf(publicKeyA.hash, publicKeyB.hash, publicKeyA.hash)))
+        }
+    }
+
+    @Test(timeout = 300_000, expected = IllegalStateException::class)
+    fun `when key is repeated across rotated lists, throws exception`() {
+        SelfCleaningDir().use { file ->
+            val publicKeyA = file.path.generateKey(alias = "AAAA")
+            val publicKeyB = file.path.generateKey(alias = "BBBB")
+            val publicKeyC = file.path.generateKey(alias = "CCCC")
+            RotatedKeys(listOf(listOf(publicKeyA.hash, publicKeyB.hash), listOf(publicKeyC.hash, publicKeyA.hash)))
+        }
+    }
 }

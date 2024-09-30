@@ -1,11 +1,8 @@
 package net.corda.node
 
-import net.corda.core.utilities.getOrThrow
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.core.internal.hash
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
 import net.corda.finance.POUNDS
@@ -14,9 +11,11 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.RotatedSignerKeyConfiguration
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.node.MockNetworkNotarySpec
@@ -24,6 +23,7 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MockNodeArgs
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.startFlow
 import org.apache.commons.io.FileUtils.deleteDirectory
 import org.junit.After
@@ -84,7 +84,7 @@ class ContractWithRotatedKeyTest {
         val signedFinanceCorDapp2 = unsignedFinanceCorDapp2.signed( keyStoreDir2.path )
 
         val configOverrides = { conf: NodeConfiguration ->
-            val rotatedKeys = listOf(RotatedSignerKeyConfiguration(listOf(packageOwnerKey1.hash.toString(), packageOwnerKey2.hash.toString())))
+            val rotatedKeys = listOf(RotatedCorDappSignerKeyConfiguration(listOf(packageOwnerKey1.hash.toString(), packageOwnerKey2.hash.toString())))
             doReturn(rotatedKeys).whenever(conf).rotatedCordappSignerKeys
         }
 

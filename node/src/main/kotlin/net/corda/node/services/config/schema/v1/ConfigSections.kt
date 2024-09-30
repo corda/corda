@@ -27,7 +27,7 @@ import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.RotatedSignerKeyConfiguration
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.TelemetryConfiguration
@@ -226,11 +226,11 @@ internal object TelemetryConfigurationSpec : Configuration.Specification<Telemet
     }
 }
 
-internal object RotatedSignerKeySpec : Configuration.Specification<RotatedSignerKeyConfiguration>("RotatedSignerKeyConfiguration") {
+internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
     private val rotatedKeys by string().listOrEmpty()
-    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedSignerKeyConfiguration> {
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
         val config = configuration.withOptions(options)
-        return valid(RotatedSignerKeyConfiguration(config[rotatedKeys]))
+        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
     }
 }
 
