@@ -664,7 +664,11 @@ class DriverDSLImpl(
     }
 
     override fun baseDirectory(nodeName: CordaX500Name): Path {
-        val nodeDirectoryName = nodeName.organisation.filter { !it.isWhitespace() }
+        val nodeDirectoryName = if (nodeName.organisationUnit != null) {
+            "${nodeName.organisation}-${nodeName.organisationUnit}"
+        } else {
+            nodeName.organisation
+        }.filter { !it.isWhitespace() }
         return driverDirectory / nodeDirectoryName
     }
 
@@ -1149,11 +1153,16 @@ private class NetworkVisibilityController {
 
     fun register(name: CordaX500Name): VisibilityHandle {
         val handle = VisibilityHandle()
+        val handleName = if (name.organisationUnit != null) {
+            "${name.organisation}-${name.organisationUnit}"
+        } else {
+            name.organisation
+        }
         nodeVisibilityHandles.locked {
-            require(name.organisation !in keys) {
-                "Node with organisation name ${name.organisation} is already started or starting"
+            require(handleName !in keys) {
+                "Node with the organisation name (+ unit name) \"$handleName\" is already started or starting"
             }
-            put(name.organisation, handle)
+            put(handleName, handle)
         }
         return handle
     }
