@@ -2,6 +2,7 @@ package net.corda.coretests.contracts
 
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.hash
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
@@ -43,7 +44,7 @@ class RotatedKeysTest {
         SelfCleaningDir().use { file ->
             val publicKeyA = file.path.generateKey("AAAA")
             val publicKeyB = file.path.generateKey("BBBB")
-            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash, publicKeyB.hash))))
+            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256()))))
             assertTrue(rotatedKeys.canBeTransitioned(publicKeyA, listOf(publicKeyB)))
         }
     }
@@ -62,7 +63,7 @@ class RotatedKeysTest {
         SelfCleaningDir().use { file ->
             val publicKeyA = file.path.generateKey(alias = "AAAA")
             val publicKeyB = file.path.generateKey(alias = "BBBB")
-            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash, publicKeyB.hash))))
+            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256()))))
             assertTrue(rotatedKeys.canBeTransitioned(listOf(publicKeyA), listOf(publicKeyB)))
         }
     }
@@ -82,7 +83,7 @@ class RotatedKeysTest {
         SelfCleaningDir().use { file ->
             val publicKeyA = file.path.generateKey(alias = "AAAA")
             val publicKeyB = file.path.generateKey(alias = "BBBB")
-            val rotatedKeysData = listOf((listOf(publicKeyA.hash, publicKeyB.hash)))
+            val rotatedKeysData = listOf((listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256())))
             val rotatedKeys = RotatedKeys(rotatedKeysData)
             assertTrue(rotatedKeys.canBeTransitioned(publicKeyA, publicKeyB))
         }
@@ -95,8 +96,8 @@ class RotatedKeysTest {
             val publicKeyB = file.path.generateKey(alias = "BBBB")
             val publicKeyC = file.path.generateKey(alias = "CCCC")
             val publicKeyD = file.path.generateKey(alias = "DDDD")
-            val rotatedKeysData = listOf(listOf(publicKeyA.hash, publicKeyB.hash),
-                                         listOf(publicKeyC.hash, publicKeyD.hash))
+            val rotatedKeysData = listOf(listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256()),
+                                         listOf(publicKeyC.hash.sha256(), publicKeyD.hash.sha256()))
             val rotatedKeys = RotatedKeys(rotatedKeysData)
             assertTrue(rotatedKeys.canBeTransitioned(publicKeyA, publicKeyB))
         }
@@ -109,8 +110,8 @@ class RotatedKeysTest {
             val publicKeyB = file.path.generateKey(alias = "BBBB")
             val publicKeyC = file.path.generateKey(alias = "CCCC")
             val publicKeyD = file.path.generateKey(alias = "DDDD")
-            val rotatedKeysData = listOf(listOf(publicKeyA.hash, publicKeyC.hash),
-                    listOf(publicKeyB.hash, publicKeyD.hash))
+            val rotatedKeysData = listOf(listOf(publicKeyA.hash.sha256(), publicKeyC.hash.sha256()),
+                    listOf(publicKeyB.hash.sha256(), publicKeyD.hash.sha256()))
             val rotatedKeys = RotatedKeys(rotatedKeysData)
             val compositeKeyInput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyB).build()
             val compositeKeyOutput = CompositeKey.Builder().addKeys(publicKeyC, publicKeyD).build()
@@ -125,9 +126,10 @@ class RotatedKeysTest {
             val publicKeyB = file.path.generateKey(alias = "BBBB")
             val publicKeyC = file.path.generateKey(alias = "CCCC")
             val publicKeyD = file.path.generateKey(alias = "DDDD")
-            val rotatedKeysData = listOf(listOf(publicKeyA.hash, publicKeyC.hash),
-                    listOf(publicKeyB.hash, publicKeyD.hash))
+            val rotatedKeysData = listOf(listOf(publicKeyA.hash.sha256(), publicKeyC.hash.sha256()),
+                    listOf(publicKeyB.hash.sha256(), publicKeyD.hash.sha256()))
             val rotatedKeys = RotatedKeys(rotatedKeysData)
+
             val compositeKeyInput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyB).build()
             val compositeKeyOutput = CompositeKey.Builder().addKeys(publicKeyD, publicKeyC).build()
             assertTrue(rotatedKeys.canBeTransitioned(compositeKeyInput, compositeKeyOutput))
@@ -166,7 +168,7 @@ class RotatedKeysTest {
             val publicKeyC = file.path.generateKey(alias = "CCCC")
             val compositeKeyInput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyB).build()
             val compositeKeyOutput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyC).build()
-            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyB.hash, publicKeyC.hash))))
+            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyB.hash.sha256(), publicKeyC.hash.sha256()))))
             assertTrue(rotatedKeys.canBeTransitioned(compositeKeyInput, compositeKeyOutput))
         }
     }
@@ -179,7 +181,7 @@ class RotatedKeysTest {
             val publicKeyC = file.path.generateKey(alias = "CCCC")
             val compositeKeyInput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyB).build()
             val compositeKeyOutput = CompositeKey.Builder().addKeys(publicKeyA, publicKeyC).build()
-            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash, publicKeyC.hash))))
+            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyA.hash.sha256(), publicKeyC.hash.sha256()))))
             assertFalse(rotatedKeys.canBeTransitioned(compositeKeyInput, compositeKeyOutput))
         }
     }
@@ -229,7 +231,7 @@ class RotatedKeysTest {
             val compositeKeyInput = CompositeKey.Builder().addKeys(compositeKeyA, compositeKeyB).build()
             val compositeKeyOutput = CompositeKey.Builder().addKeys(compositeKeyA, compositeKeyC).build()
 
-            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyD.hash, publicKeyE.hash))))
+            val rotatedKeys = RotatedKeys(listOf((listOf(publicKeyD.hash.sha256(), publicKeyE.hash.sha256()))))
             assertTrue(rotatedKeys.canBeTransitioned(compositeKeyInput, compositeKeyOutput))
         }
     }
@@ -261,7 +263,7 @@ class RotatedKeysTest {
         SelfCleaningDir().use { file ->
             val publicKeyA = file.path.generateKey(alias = "AAAA")
             val publicKeyB = file.path.generateKey(alias = "BBBB")
-            RotatedKeys(listOf(listOf(publicKeyA.hash, publicKeyB.hash, publicKeyA.hash)))
+            RotatedKeys(listOf(listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256(), publicKeyA.hash.sha256())))
         }
     }
 
@@ -271,7 +273,7 @@ class RotatedKeysTest {
             val publicKeyA = file.path.generateKey(alias = "AAAA")
             val publicKeyB = file.path.generateKey(alias = "BBBB")
             val publicKeyC = file.path.generateKey(alias = "CCCC")
-            RotatedKeys(listOf(listOf(publicKeyA.hash, publicKeyB.hash), listOf(publicKeyC.hash, publicKeyA.hash)))
+            RotatedKeys(listOf(listOf(publicKeyA.hash.sha256(), publicKeyB.hash.sha256()), listOf(publicKeyC.hash.sha256(), publicKeyA.hash.sha256())))
         }
     }
 }

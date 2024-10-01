@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.hash
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -33,10 +34,14 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
     private val rotateMap: Map<SecureHash, SecureHash> = HashMap<SecureHash, SecureHash>().apply {
         rotatedSigningKeys.forEach { rotatedKeyList ->
             rotatedKeyList.forEach { key ->
-                if (this.containsKey(key)) throw IllegalStateException("The key with hash $key appears in the rotated keys configuration more than once.")
+                if (this.containsKey(key)) throw IllegalStateException("The key with sha256(hash) $key appears in the rotated keys configuration more than once.")
                 this[key] = rotatedKeyList.last()
             }
         }
+        this[SecureHash.create("CA8986C9F49451C58724A8670E6E7E060528EA285DCAA18D8EE3DB8B9D9B6E79")] = SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")
+        this[SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")] = SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")
+        this[SecureHash.create("6F6696296C3F58B55FB6CA865A025A3A6CC27AD17C4AFABA1E8EF062E0A82739")] = SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")
+        this[SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")] = SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")
     }
 
     fun canBeTransitioned(inputKey: PublicKey, outputKeys: List<PublicKey>): Boolean {
@@ -66,7 +71,7 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
     private fun isRotatedEquals(inputKey: PublicKey, outputKey: PublicKey): Boolean {
         return when {
             inputKey == outputKey -> true
-            rotate(inputKey.hash) == rotate(outputKey.hash) -> true
+            rotate(inputKey.hash.sha256()) == rotate(outputKey.hash.sha256()) -> true
             else -> false
         }
     }

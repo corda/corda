@@ -1,5 +1,6 @@
 package net.corda.node
 
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.hash
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -84,7 +85,7 @@ class ContractWithRotatedKeyTest {
         val signedFinanceCorDapp2 = unsignedFinanceCorDapp2.signed( keyStoreDir2.path )
 
         val configOverrides = { conf: NodeConfiguration ->
-            val rotatedKeys = listOf(RotatedCorDappSignerKeyConfiguration(listOf(packageOwnerKey1.hash.toString(), packageOwnerKey2.hash.toString())))
+            val rotatedKeys = listOf(RotatedCorDappSignerKeyConfiguration(listOf(packageOwnerKey1.hash.sha256().toString(), packageOwnerKey2.hash.sha256().toString())))
             doReturn(rotatedKeys).whenever(conf).rotatedCordappSignerKeys
         }
 
