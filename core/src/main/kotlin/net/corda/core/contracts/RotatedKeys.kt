@@ -14,6 +14,21 @@ object CordaRotatedKeys {
     val keys = RotatedKeys()
 }
 
+// The current development CorDapp code signing public key hash
+const val DEV_CORDAPP_CODE_SIGNING_STR = "AA59D829F2CA8FDDF5ABEA40D815F937E3E54E572B65B93B5C216AE6594E7D6B"
+// The non production CorDapp code signing public key hash
+const val NEW_NON_PROD_CORDAPP_CODE_SIGNING_STR = "B710A80780A12C52DF8A0B4C2247E08907CCA5D0F19AB1E266FE7BAEA9036790"
+// The production CorDapp code signing public key hash
+const val PROD_CORDAPP_CODE_SIGNING_STR = "EB4989E7F861FEBEC242E6C24CF0B51C41E108D2C4479D296C5570CB8DAD3EE0"
+// The new production CorDapp code signing public key hash
+const val NEW_PROD_CORDAPP_CODE_SIGNING_STR = "01EFA14B42700794292382C1EEAC9788A26DAFBCCC98992C01D5BC30EEAACD28"
+
+// Rotations used by Corda
+private val CORDA_SIGNING_KEY_ROTATIONS = listOf(
+    listOf(SecureHash.create(DEV_CORDAPP_CODE_SIGNING_STR).sha256(), SecureHash.create(NEW_NON_PROD_CORDAPP_CODE_SIGNING_STR).sha256()),
+    listOf(SecureHash.create(PROD_CORDAPP_CODE_SIGNING_STR).sha256(), SecureHash.create(NEW_PROD_CORDAPP_CODE_SIGNING_STR).sha256())
+)
+
 /**
  * This class represents the rotated CorDapp signing keys known by this node.
  *
@@ -32,16 +47,12 @@ object CordaRotatedKeys {
 data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()): SingletonSerializeAsToken() {
     private val canBeTransitionedMap: ConcurrentMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
     private val rotateMap: Map<SecureHash, SecureHash> = HashMap<SecureHash, SecureHash>().apply {
-        rotatedSigningKeys.forEach { rotatedKeyList ->
+        (rotatedSigningKeys + CORDA_SIGNING_KEY_ROTATIONS).forEach { rotatedKeyList ->
             rotatedKeyList.forEach { key ->
                 if (this.containsKey(key)) throw IllegalStateException("The key with sha256(hash) $key appears in the rotated keys configuration more than once.")
                 this[key] = rotatedKeyList.last()
             }
         }
-        this[SecureHash.create("CA8986C9F49451C58724A8670E6E7E060528EA285DCAA18D8EE3DB8B9D9B6E79")] = SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")
-        this[SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")] = SecureHash.create("7B5E1D11737CC84A17C350BFA2D9CCA38D34C238833EEC9F6082D5718B3B3CF9")
-        this[SecureHash.create("6F6696296C3F58B55FB6CA865A025A3A6CC27AD17C4AFABA1E8EF062E0A82739")] = SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")
-        this[SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")] = SecureHash.create("632AC4D0EF641E2FFCADBF2B7F315555F5D36107BB9A5338278FDB4A812D2360")
     }
 
     fun canBeTransitioned(inputKey: PublicKey, outputKeys: List<PublicKey>): Boolean {
