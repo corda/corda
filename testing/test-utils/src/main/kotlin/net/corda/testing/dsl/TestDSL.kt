@@ -10,9 +10,11 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.notary.NotaryService
+
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
@@ -104,17 +106,20 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
+        override val rotatedKeys: RotatedKeys = ledgerInterpreter.services.rotatedKeys
+
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
                 NodeAttachmentTrustCalculator(
-                    attachmentStorage = if (it is MockAttachmentStorage) {
-                        InternalMockAttachmentStorage(it)
-                    } else {
-                        it as AttachmentStorageInternal
-                    },
-                    cacheFactory = TestingNamedCacheFactory()
+                        attachmentStorage = if (it is MockAttachmentStorage) {
+                            InternalMockAttachmentStorage(it)
+                        } else {
+                            it as AttachmentStorageInternal
+                        },
+                        cacheFactory = TestingNamedCacheFactory(),
+                        rotatedKeys = rotatedKeys
                 )
             }
 

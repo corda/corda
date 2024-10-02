@@ -3,6 +3,7 @@ package net.corda.testing.node
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
@@ -91,8 +92,8 @@ open class MockServices private constructor(
 ) : ServiceHub {
 
     companion object {
-        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo)
+        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, rotatedKeys: RotatedKeys = RotatedKeys()): CordappLoader {
+            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo, rotatedKeys = rotatedKeys)
         }
 
         /**
@@ -459,6 +460,7 @@ open class MockServices private constructor(
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+    override val rotatedKeys: RotatedKeys = RotatedKeys()
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(

@@ -85,6 +85,13 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
+    /**
+     * Represents a list of rotated CorDapp attachment JAR signing key configurations.  Each configuration describes a set of equivalent
+     * keys.  Logically there should be no overlap between configurations, since that would mean they should be one combined list,
+     * and this is enforced.
+     */
+    val rotatedCordappSignerKeys: List<RotatedCorDappSignerKeyConfiguration>
+
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
     val networkParametersPath: Path
@@ -219,6 +226,13 @@ data class FlowTimeoutConfiguration(
         val maxRestartCount: Int,
         val backoffBase: Double
 )
+
+/**
+ * Represents a list of rotated CorDapp attachment signing keys.
+ *
+ * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
+ */
+data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 

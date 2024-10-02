@@ -28,6 +28,7 @@ import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
@@ -221,6 +222,14 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FlowTimeoutConfiguration> {
         val config = configuration.withOptions(options)
         return valid(FlowTimeoutConfiguration(config[timeout], config[maxRestartCount], config[backoffBase]))
+    }
+}
+
+internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
+    private val rotatedKeys by string().listOrEmpty()
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
     }
 }
 

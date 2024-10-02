@@ -6,6 +6,7 @@ import io.github.classgraph.ScanResult
 import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -49,7 +50,8 @@ import kotlin.streams.toList
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                                    extraCordapps: List<CordappImpl>,
-                                                   private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()) : CordappLoaderTemplate() {
+                                                   private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                                                   private val rotatedKeys: RotatedKeys = RotatedKeys()) : CordappLoaderTemplate() {
     init {
         if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
@@ -75,10 +77,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         fun fromDirectories(cordappDirs: Collection<Path>,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
-                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()): JarScanningCordappLoader {
+                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                            rotatedKeys: RotatedKeys = RotatedKeys()): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, rotatedKeys)
         }
 
         /**

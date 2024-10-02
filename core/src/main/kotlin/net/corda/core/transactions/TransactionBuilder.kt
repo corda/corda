@@ -523,11 +523,13 @@ open class TransactionBuilder(
         require(automaticConstraintPropagation) { "Contract $contractClassName was marked with @NoConstraintPropagation, which means the constraint of the output states has to be set explicitly." }
 
         // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
-        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+        val (defaultOutputConstraint, constraintAttachment) = selectDefaultOutputConstraintAndConstraintAttachment(contractClassName,
+                inputStates, selectedAttachment.currentAttachment, serviceHub)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
-        require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) { "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachmentId" }
+        require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
+            "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachment"
+        }
 
         val resolvedOutputStates = outputStates.map {
             val outputConstraint = it.constraint
@@ -536,7 +538,9 @@ open class TransactionBuilder(
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, attachmentToUse)) { "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}" }
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment, serviceHub.toVerifyingServiceHub().rotatedKeys)) {
+                        "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}"
+                    }
                 }
                 require(outputConstraint.isSatisfiedBy(constraintAttachment)) { "Output state constraint check fails. $outputConstraint" }
                 it
@@ -544,6 +548,27 @@ open class TransactionBuilder(
         }
 
         return Pair(selectedAttachmentId, resolvedOutputStates)
+    }
+
+    private fun selectDefaultOutputConstraintAndConstraintAttachment( contractClassName: ContractClassName,
+                                               inputStates: List<TransactionState<ContractState>>?,
+                                               attachmentToUse: ContractAttachment,
+                                               services: ServicesForResolution): Pair<AttachmentConstraint, AttachmentWithContext> {
+
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+
+        // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
+        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+
+        // Sanity check that the selected attachment actually passes.
+
+        if (!defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
+            // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
+            if (defaultOutputConstraint is SignatureAttachmentConstraint && services.toVerifyingServiceHub().rotatedKeys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
+                return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
+            }
+        }
+        return Pair(defaultOutputConstraint, constraintAttachment)
     }
 
     /**
