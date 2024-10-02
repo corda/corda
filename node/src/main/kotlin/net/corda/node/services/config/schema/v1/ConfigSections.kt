@@ -27,6 +27,7 @@ import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.TelemetryConfiguration
@@ -222,6 +223,14 @@ internal object TelemetryConfigurationSpec : Configuration.Specification<Telemet
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<TelemetryConfiguration> {
         val config = configuration.withOptions(options)
         return valid(TelemetryConfiguration(config[openTelemetryEnabled], config[simpleLogTelemetryEnabled], config[spanStartEndEventsEnabled], config[copyBaggageToTags]))
+    }
+}
+
+internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
+    private val rotatedKeys by string().listOrEmpty()
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
     }
 }
 

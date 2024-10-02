@@ -11,6 +11,7 @@ import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionResolutionException
@@ -181,6 +182,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             override val appClassLoader: ClassLoader get() = throw AbstractMethodError()
             override fun getTrustedClassAttachments(className: String) = throw AbstractMethodError()
             override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>) = throw AbstractMethodError()
+            override val rotatedKeys: RotatedKeys get() = throw AbstractMethodError()
         })
     }
 
