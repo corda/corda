@@ -374,7 +374,7 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue")
+        artemis.session.createQueue(QueueConfiguration.of("queue")
                 .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
@@ -404,7 +404,7 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue")
+        artemis.session.createQueue(QueueConfiguration.of("queue")
                 .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
 

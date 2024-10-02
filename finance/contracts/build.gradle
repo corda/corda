@@ -64,6 +64,7 @@ publishing {
         maven(MavenPublication) {
             artifactId 'corda-finance-contracts'
             from components.cordapp
+            artifact javadocJar
         }
     }
 }

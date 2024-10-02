@@ -1,6 +1,8 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda common-configuration-parsing module'
+
 dependencies {
     implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 

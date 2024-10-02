@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
@@ -128,8 +129,8 @@ open class MockServices private constructor(
         )
 ) : ServiceHub {
     companion object {
-        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-            return JarScanningCordappLoader(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo = versionInfo)
+        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, rotatedKeys: RotatedKeys = RotatedKeys()): CordappLoader {
+            return JarScanningCordappLoader(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo = versionInfo, rotatedKeys = rotatedKeys)
         }
 
         /**
@@ -500,6 +501,7 @@ open class MockServices private constructor(
     protected val servicesForResolution: ServicesForResolution get() = verifyingView
 
     private val verifyingView: VerifyingServiceHub by lazy { VerifyingView(this) }
+    val rotatedKeys: RotatedKeys = RotatedKeys()
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(
@@ -564,10 +566,10 @@ open class MockServices private constructor(
     private class VerifyingView(private val mockServices: MockServices) : VerifyingServiceHub, ServiceHub by mockServices {
         override val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
                 attachmentStorage = mockServices.attachments.toInternal(),
-                cacheFactory = TestingNamedCacheFactory()
+                cacheFactory = TestingNamedCacheFactory(), rotatedKeys = mockServices.rotatedKeys
         )
 
-        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
+        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory(), mockServices.rotatedKeys)
 
         override val cordappProvider: CordappProviderInternal get() = mockServices.mockCordappProvider
 
@@ -579,6 +581,8 @@ open class MockServices private constructor(
 
         override val externalVerifierHandle: ExternalVerifierHandle
             get() = throw UnsupportedOperationException("`Verification of legacy transactions is not supported by MockServices. Use MockNode instead.")
+
+        override val rotatedKeys: RotatedKeys = mockServices.rotatedKeys
     }
 
 

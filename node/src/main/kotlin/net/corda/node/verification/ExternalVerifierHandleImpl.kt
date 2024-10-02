@@ -237,7 +237,8 @@ class ExternalVerifierHandleImpl(
                     customSerializerClassNames = cordapps.customSerializers.mapToSet { it.javaClass.name },
                     serializationWhitelistClassNames = cordapps.serializationWhitelists.mapToSet { it.javaClass.name },
                     System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
-                    serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize()
+                    serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize(),
+                    serializedRotatedKeys = verificationSupport.rotatedKeys.serialize()
             )
             channel.writeCordaSerializable(initialisation)
         }

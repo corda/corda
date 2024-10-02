@@ -1,6 +1,8 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda common-validation module'
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }

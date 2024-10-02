@@ -14,6 +14,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.verification.ExternalVerifierHandle
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -108,11 +109,13 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
+        override val rotatedKeys: RotatedKeys = ledgerInterpreter.services.toVerifyingServiceHub().rotatedKeys
+
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
-                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory())
+                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory(), rotatedKeys = rotatedKeys)
             }
 
         override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =

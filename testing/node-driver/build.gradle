@@ -5,6 +5,8 @@ apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 apply plugin: 'corda.api-scanner'
 
+description 'Corda Node Driver module'
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestImplementation.extendsFrom testImplementation

@@ -39,7 +39,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         queueConfigs = queueConfigurations()
 
-        managementNotificationAddress = SimpleString(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
+        managementNotificationAddress = SimpleString.of(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
         addressSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                     maxSizeBytes = 5L * maxMessageSize
@@ -51,7 +51,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         globalMaxSize = Runtime.getRuntime().maxMemory() / 8
         initialiseSettings(maxMessageSize, journalBufferTimeout)
 
-        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true, false, false)
 
         val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(INTERNAL_SHELL_USER) else emptyList()
         val rolesAdderOnLogin = RolesAdderOnLogin(addRPCRoleToUsers) { username ->
@@ -127,12 +127,12 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     }
 
     private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): QueueConfiguration {
-        return QueueConfiguration(name).setAddress(address).setFilterString(filter).setDurable(durable)
+        return QueueConfiguration.of(name).setAddress(address).setFilterString(filter).setDurable(durable)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
-        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
+        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue, false, false)
     }
 }

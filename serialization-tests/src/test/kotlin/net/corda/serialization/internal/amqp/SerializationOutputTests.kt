@@ -1276,7 +1276,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
 
-        val obj = SimpleString("Bob")
+        val obj = SimpleString.of("Bob")
         serdes(obj, factory, factory2)
     }
 

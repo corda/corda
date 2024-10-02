@@ -1,6 +1,7 @@
 package net.corda.core.internal.verification
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -23,6 +24,8 @@ interface VerificationSupport {
     val appClassLoader: ClassLoader
 
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache? get() = null
+
+    val rotatedKeys: RotatedKeys
 
     // TODO Use SequencedCollection if upgraded to Java 21
     fun getParties(keys: Collection<PublicKey>): List<Party?>

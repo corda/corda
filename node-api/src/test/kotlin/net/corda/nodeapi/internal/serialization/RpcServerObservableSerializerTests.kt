@@ -49,7 +49,7 @@ class RpcServerObservableSerializerTests {
                 subscriptionMap(),
                 clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString("clientAddress"))
+                clientAddress = SimpleString.of("clientAddress"))
 
         val newContext = RpcServerObservableSerializer.createContext(serializationContext, observable)
 
@@ -65,7 +65,7 @@ class RpcServerObservableSerializerTests {
                 subscriptionMap(),
                 clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString(testClientAddress))
+                clientAddress = SimpleString.of(testClientAddress))
 
         val sf = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())
