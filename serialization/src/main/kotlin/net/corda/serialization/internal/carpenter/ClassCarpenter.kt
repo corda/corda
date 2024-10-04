@@ -14,7 +14,6 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
-import java.lang.reflect.Method
 
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
