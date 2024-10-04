@@ -8,13 +8,13 @@ net.corda.testing.contracts.DummyContract:
     - net.corda.core.contracts.Contract
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Object
-    copy:
+    copy(Object):
       annotations:
         - NotNull
       default: false
@@ -25,7 +25,7 @@ net.corda.testing.contracts.DummyContract:
           annotation:
             - Nullable
           type: Object
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -35,8 +35,9 @@ net.corda.testing.contracts.DummyContract:
           annotation:
             - Nullable
           type: Object
-    generateInitial:
-      annotations:
+    ? generateInitial(int, net.corda.core.identity.Party, net.corda.core.contracts.PartyAndReference,
+      net.corda.core.contracts.PartyAndReference[])
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -57,25 +58,26 @@ net.corda.testing.contracts.DummyContract:
           annotation:
             - NotNull
           type: "net.corda.core.contracts.PartyAndReference[]"
-    getBlank:
+    getBlank():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Object
-    getPROGRAM_ID:
+    getPROGRAM_ID():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    move:
-      annotations:
+    ? move(java.util.List<net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -89,13 +91,29 @@ net.corda.testing.contracts.DummyContract:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    toString:
+    ? move(net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.core.transactions.TransactionBuilder
+      params:
+        prior:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>
+        newOwner:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.AbstractParty
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    verify:
+    verify(net.corda.core.transactions.LedgerTransaction):
       annotations: []
       default: false
       type: public
@@ -145,8 +163,9 @@ net.corda.testing.contracts.DummyContract$Companion:
   implements: []
   interface: false
   methods:
-    generateInitial:
-      annotations:
+    ? generateInitial(int, net.corda.core.identity.Party, net.corda.core.contracts.PartyAndReference,
+      net.corda.core.contracts.PartyAndReference[])
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -167,8 +186,9 @@ net.corda.testing.contracts.DummyContract$Companion:
           annotation:
             - NotNull
           type: "net.corda.core.contracts.PartyAndReference[]"
-    move:
-      annotations:
+    ? move(java.util.List<net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -182,6 +202,22 @@ net.corda.testing.contracts.DummyContract$Companion:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
+    ? move(net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.TransactionBuilder
+      params:
+        prior:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContract$SingleOwnerState>
+        newOwner:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.AbstractParty
 net.corda.testing.contracts.DummyContract$MultiOwnerState:
   annotations: []
   type: public static final class
@@ -190,18 +226,18 @@ net.corda.testing.contracts.DummyContract$MultiOwnerState:
     - net.corda.testing.contracts.DummyContract$State
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    copy:
+    copy(int, java.util.List<? extends net.corda.core.identity.AbstractParty>):
       annotations:
         - NotNull
       default: false
@@ -215,7 +251,7 @@ net.corda.testing.contracts.DummyContract$MultiOwnerState:
           annotation:
             - NotNull
           type: java.util.List<? extends net.corda.core.identity.AbstractParty>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -225,29 +261,29 @@ net.corda.testing.contracts.DummyContract$MultiOwnerState:
           annotation:
             - Nullable
           type: Object
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public
       returnType: int
-    getOwners:
+    getOwners():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    getParticipants:
+    getParticipants():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -262,18 +298,18 @@ net.corda.testing.contracts.DummyContract$SingleOwnerState:
     - net.corda.testing.contracts.DummyContract$State
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.AbstractParty
-    copy:
+    copy(int, net.corda.core.identity.AbstractParty):
       annotations:
         - NotNull
       default: false
@@ -287,7 +323,7 @@ net.corda.testing.contracts.DummyContract$SingleOwnerState:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -297,35 +333,35 @@ net.corda.testing.contracts.DummyContract$SingleOwnerState:
           annotation:
             - Nullable
           type: Object
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public
       returnType: int
-    getOwner:
+    getOwner():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.identity.AbstractParty
-    getParticipants:
+    getParticipants():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withNewOwner:
+    withNewOwner(net.corda.core.identity.AbstractParty):
       annotations:
         - NotNull
       default: false
@@ -343,7 +379,7 @@ net.corda.testing.contracts.DummyContract$State:
     - net.corda.core.contracts.ContractState
   interface: true
   methods:
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public abstract
@@ -356,20 +392,21 @@ net.corda.testing.contracts.DummyContractV2:
     - net.corda.core.contracts.UpgradedContractWithLegacyConstraint
   interface: false
   methods:
-    getLegacyContract:
+    getLegacyContract():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getLegacyContractConstraint:
+    getLegacyContractConstraint():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.contracts.AttachmentConstraint
-    move:
-      annotations:
+    ? move(java.util.List<net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -383,7 +420,23 @@ net.corda.testing.contracts.DummyContractV2:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    upgrade:
+    ? move(net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.core.transactions.TransactionBuilder
+      params:
+        prior:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>
+        newOwner:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.AbstractParty
+    upgrade(net.corda.testing.contracts.DummyContract$State):
       annotations:
         - NotNull
       default: false
@@ -394,7 +447,7 @@ net.corda.testing.contracts.DummyContractV2:
           annotation:
             - NotNull
           type: net.corda.testing.contracts.DummyContract$State
-    verify:
+    verify(net.corda.core.transactions.LedgerTransaction):
       annotations: []
       default: false
       type: public
@@ -444,8 +497,9 @@ net.corda.testing.contracts.DummyContractV2$Companion:
   implements: []
   interface: false
   methods:
-    move:
-      annotations:
+    ? move(java.util.List<net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -459,6 +513,22 @@ net.corda.testing.contracts.DummyContractV2$Companion:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
+    ? move(net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>,
+      net.corda.core.identity.AbstractParty)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.TransactionBuilder
+      params:
+        prior:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateAndRef<net.corda.testing.contracts.DummyContractV2$State>
+        newOwner:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.AbstractParty
 net.corda.testing.contracts.DummyContractV2$State:
   annotations: []
   type: public static final class
@@ -467,18 +537,18 @@ net.corda.testing.contracts.DummyContractV2$State:
     - net.corda.core.contracts.ContractState
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    copy:
+    copy(int, java.util.List<? extends net.corda.core.identity.AbstractParty>):
       annotations:
         - NotNull
       default: false
@@ -492,7 +562,7 @@ net.corda.testing.contracts.DummyContractV2$State:
           annotation:
             - NotNull
           type: java.util.List<? extends net.corda.core.identity.AbstractParty>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -502,35 +572,35 @@ net.corda.testing.contracts.DummyContractV2$State:
           annotation:
             - Nullable
           type: Object
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getOwners:
+    getOwners():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    getParticipants:
+    getParticipants():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withNewOwner:
+    withNewOwner(net.corda.core.identity.AbstractParty):
       annotations:
         - NotNull
       default: false
@@ -550,19 +620,19 @@ net.corda.testing.contracts.DummyContractV3:
     - net.corda.core.contracts.UpgradedContractWithLegacyConstraint
   interface: false
   methods:
-    getLegacyContract:
+    getLegacyContract():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getLegacyContractConstraint:
+    getLegacyContractConstraint():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.contracts.AttachmentConstraint
-    upgrade:
+    upgrade(net.corda.testing.contracts.DummyContractV2$State):
       annotations:
         - NotNull
       default: false
@@ -573,7 +643,7 @@ net.corda.testing.contracts.DummyContractV3:
           annotation:
             - NotNull
           type: net.corda.testing.contracts.DummyContractV2$State
-    verify:
+    verify(net.corda.core.transactions.LedgerTransaction):
       annotations: []
       default: false
       type: public
@@ -631,18 +701,18 @@ net.corda.testing.contracts.DummyContractV3$State:
     - net.corda.core.contracts.ContractState
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    copy:
+    copy(int, java.util.List<? extends net.corda.core.identity.AbstractParty>):
       annotations:
         - NotNull
       default: false
@@ -656,7 +726,7 @@ net.corda.testing.contracts.DummyContractV3$State:
           annotation:
             - NotNull
           type: java.util.List<? extends net.corda.core.identity.AbstractParty>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -666,29 +736,29 @@ net.corda.testing.contracts.DummyContractV3$State:
           annotation:
             - Nullable
           type: Object
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getOwners:
+    getOwners():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    getParticipants:
+    getParticipants():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -703,18 +773,28 @@ net.corda.testing.contracts.DummyState:
     - net.corda.core.contracts.ContractState
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    copy:
+    copy(int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.contracts.DummyState
+      params:
+        magicNumber:
+          annotation: []
+          type: int
+    copy(int, java.util.List<? extends net.corda.core.identity.AbstractParty>):
       annotations:
         - NotNull
       default: false
@@ -728,7 +808,7 @@ net.corda.testing.contracts.DummyState:
           annotation:
             - NotNull
           type: java.util.List<? extends net.corda.core.identity.AbstractParty>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -738,23 +818,23 @@ net.corda.testing.contracts.DummyState:
           annotation:
             - Nullable
           type: Object
-    getMagicNumber:
+    getMagicNumber():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getParticipants:
+    getParticipants():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<net.corda.core.identity.AbstractParty>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -779,25 +859,25 @@ net.corda.testing.core.Expect:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: Class<T>
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "kotlin.jvm.functions.Function1<T, Boolean>"
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "kotlin.jvm.functions.Function1<T, kotlin.Unit>"
-    copy:
+    copy(Class<T>, kotlin.jvm.functions.Function1<? super T, Boolean>, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>):
       annotations:
         - NotNull
       default: false
@@ -816,7 +896,7 @@ net.corda.testing.core.Expect:
           annotation:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super T, kotlin.Unit>"
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -826,30 +906,30 @@ net.corda.testing.core.Expect:
           annotation:
             - Nullable
           type: Object
-    getClazz:
+    getClazz():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: Class<T>
-    getExpectClosure:
+    getExpectClosure():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "kotlin.jvm.functions.Function1<T, kotlin.Unit>"
-    getMatch:
+    getMatch():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "kotlin.jvm.functions.Function1<T, Boolean>"
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -869,7 +949,7 @@ net.corda.testing.core.ExpectCompose$Parallel:
   implements: []
   interface: false
   methods:
-    getParallel:
+    getParallel():
       annotations:
         - NotNull
       default: false
@@ -882,7 +962,7 @@ net.corda.testing.core.ExpectCompose$Sequential:
   implements: []
   interface: false
   methods:
-    getSequence:
+    getSequence():
       annotations:
         - NotNull
       default: false
@@ -895,7 +975,7 @@ net.corda.testing.core.ExpectCompose$Single:
   implements: []
   interface: false
   methods:
-    getExpect:
+    getExpect():
       annotations:
         - NotNull
       default: false
@@ -908,7 +988,7 @@ net.corda.testing.core.ExpectComposeState$Companion:
   implements: []
   interface: false
   methods:
-    fromExpectCompose:
+    fromExpectCompose(net.corda.testing.core.ExpectCompose<? extends E>):
       annotations:
         - NotNull
       default: false
@@ -926,13 +1006,13 @@ net.corda.testing.core.ExpectComposeState$Finished:
   implements: []
   interface: false
   methods:
-    getExpectedEvents:
+    getExpectedEvents():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<Class<E>>
-    nextState:
+    nextState(E):
       annotations:
         - Nullable
       default: false
@@ -950,25 +1030,25 @@ net.corda.testing.core.ExpectComposeState$Parallel:
   implements: []
   interface: false
   methods:
-    getExpectedEvents:
+    getExpectedEvents():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<Class<? extends E>>
-    getParallel:
+    getParallel():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.core.ExpectCompose$Parallel<E>
-    getStates:
+    getStates():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.core.ExpectComposeState<E>>
-    nextState:
+    nextState(E):
       annotations:
         - Nullable
       default: false
@@ -986,30 +1066,30 @@ net.corda.testing.core.ExpectComposeState$Sequential:
   implements: []
   interface: false
   methods:
-    getExpectedEvents:
+    getExpectedEvents():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<Class<? extends E>>
-    getIndex:
+    getIndex():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getSequential:
+    getSequential():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.core.ExpectCompose$Sequential<E>
-    getState:
+    getState():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.core.ExpectComposeState<E>
-    nextState:
+    nextState(E):
       annotations:
         - Nullable
       default: false
@@ -1027,19 +1107,19 @@ net.corda.testing.core.ExpectComposeState$Single:
   implements: []
   interface: false
   methods:
-    getExpectedEvents:
+    getExpectedEvents():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.util.List<Class<T>>
-    getSingle:
+    getSingle():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "net.corda.testing.core.ExpectCompose$Single<E, T>"
-    nextState:
+    nextState(E):
       annotations:
         - Nullable
       default: false
@@ -1057,7 +1137,26 @@ net.corda.testing.core.ExpectKt:
   implements: []
   interface: false
   methods:
-    expect:
+    expect(Class<E>, kotlin.jvm.functions.Function1<? super E, Boolean>, kotlin.jvm.functions.Function1<? super E, kotlin.Unit>):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.testing.core.ExpectCompose<E>
+      params:
+        klass:
+          annotation:
+            - NotNull
+          type: Class<E>
+        match:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super E, Boolean>"
+        expectClosure:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super E, kotlin.Unit>"
+    expect(E, kotlin.jvm.functions.Function1<? super E, kotlin.Unit>):
       annotations: []
       default: false
       type: public static final synthetic
@@ -1066,8 +1165,18 @@ net.corda.testing.core.ExpectKt:
         "null":
           annotation: []
           type: "kotlin.jvm.functions.Function1<? super E, kotlin.Unit>"
-    expectEvents:
+    expect(kotlin.jvm.functions.Function1<? super E, Boolean>, kotlin.jvm.functions.Function1<? super E, kotlin.Unit>):
       annotations: []
+      default: false
+      type: public static final synthetic
+      returnType: net.corda.testing.core.ExpectCompose<E>
+      params:
+        "null":
+          annotation: []
+          type: "kotlin.jvm.functions.Function1<? super E, kotlin.Unit>"
+    ? expectEvents(Iterable<? extends E>, boolean, kotlin.jvm.functions.Function0<?
+      extends net.corda.testing.core.ExpectCompose<? extends E>>)
+    : annotations: []
       default: false
       type: public static final
       returnType: void
@@ -1084,8 +1193,30 @@ net.corda.testing.core.ExpectKt:
             - NotNull
           type: kotlin.jvm.functions.Function0<? extends net.corda.testing.core.ExpectCompose<?
             extends E>>
-    genericExpectEvents:
-      annotations: []
+    ? expectEvents(rx.Observable<E>, boolean, kotlin.jvm.functions.Function0<? extends
+      net.corda.testing.core.ExpectCompose<? extends E>>)
+    : annotations: []
+      default: false
+      type: public static final
+      returnType: void
+      params:
+        $this$expectEvents:
+          annotation:
+            - NotNull
+          type: rx.Observable<E>
+        isStrict:
+          annotation: []
+          type: boolean
+        expectCompose:
+          annotation:
+            - NotNull
+          type: kotlin.jvm.functions.Function0<? extends net.corda.testing.core.ExpectCompose<?
+            extends E>>
+    ? genericExpectEvents(S, boolean, kotlin.jvm.functions.Function2<? super S, ?
+      super kotlin.jvm.functions.Function1<? super E, kotlin.Unit>, kotlin.Unit>,
+      kotlin.jvm.functions.Function0<? extends net.corda.testing.core.ExpectCompose<?
+      extends E>>)
+    : annotations: []
       default: false
       type: public static final
       returnType: void
@@ -1106,7 +1237,7 @@ net.corda.testing.core.ExpectKt:
             - NotNull
           type: kotlin.jvm.functions.Function0<? extends net.corda.testing.core.ExpectCompose<?
             extends E>>
-    parallel:
+    parallel(java.util.List<? extends net.corda.testing.core.ExpectCompose<? extends E>>):
       annotations:
         - NotNull
       default: false
@@ -1118,7 +1249,18 @@ net.corda.testing.core.ExpectKt:
             - NotNull
           type: java.util.List<? extends net.corda.testing.core.ExpectCompose<? extends
             E>>
-    replicate:
+    parallel(net.corda.testing.core.ExpectCompose<? extends E>[]):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.testing.core.ExpectCompose<E>
+      params:
+        expectations:
+          annotation:
+            - NotNull
+          type: "net.corda.testing.core.ExpectCompose<? extends E>[]"
+    replicate(int, kotlin.jvm.functions.Function1<? super Integer, ? extends net.corda.testing.core.ExpectCompose<? extends E>>):
       annotations:
         - NotNull
       default: false
@@ -1133,7 +1275,7 @@ net.corda.testing.core.ExpectKt:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super Integer, ? extends net.corda.testing.core.ExpectCompose<?\
             \ extends E>>"
-    sequence:
+    sequence(java.util.List<? extends net.corda.testing.core.ExpectCompose<? extends E>>):
       annotations:
         - NotNull
       default: false
@@ -1145,6 +1287,17 @@ net.corda.testing.core.ExpectKt:
             - NotNull
           type: java.util.List<? extends net.corda.testing.core.ExpectCompose<? extends
             E>>
+    sequence(net.corda.testing.core.ExpectCompose<? extends E>[]):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.testing.core.ExpectCompose<E>
+      params:
+        expectations:
+          annotation:
+            - NotNull
+          type: "net.corda.testing.core.ExpectCompose<? extends E>[]"
 net.corda.testing.core.SerializationEnvironmentRule:
   annotations: []
   type: public final class
@@ -1153,7 +1306,7 @@ net.corda.testing.core.SerializationEnvironmentRule:
     - org.junit.rules.TestRule
   interface: false
   methods:
-    apply:
+    apply(org.junit.runners.model.Statement, org.junit.runner.Description):
       annotations:
         - NotNull
       default: false
@@ -1168,7 +1321,7 @@ net.corda.testing.core.SerializationEnvironmentRule:
           annotation:
             - NotNull
           type: org.junit.runner.Description
-    getSerializationFactory:
+    getSerializationFactory():
       annotations:
         - NotNull
       default: false
@@ -1193,7 +1346,7 @@ net.corda.testing.core.TestConstants:
   implements: []
   interface: false
   methods:
-    dummyCommand:
+    dummyCommand(java.security.PublicKey[]):
       annotations:
         - NotNull
       default: false
@@ -1252,7 +1405,7 @@ net.corda.testing.core.TestIdentity:
   implements: []
   interface: false
   methods:
-    fresh:
+    fresh(String):
       annotations:
         - NotNull
       default: false
@@ -1263,37 +1416,52 @@ net.corda.testing.core.TestIdentity:
           annotation:
             - NotNull
           type: String
-    getIdentity:
+    fresh(String, net.corda.core.crypto.SignatureScheme):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.testing.core.TestIdentity
+      params:
+        organisation:
+          annotation:
+            - NotNull
+          type: String
+        signatureScheme:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SignatureScheme
+    getIdentity():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.PartyAndCertificate
-    getKeyPair:
+    getKeyPair():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.security.KeyPair
-    getName:
+    getName():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    getParty:
+    getParty():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.Party
-    getPublicKey:
+    getPublicKey():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.security.PublicKey
-    ref:
+    ref(byte[]):
       annotations:
         - NotNull
       default: false
@@ -1316,7 +1484,7 @@ net.corda.testing.core.TestIdentity$Companion:
   implements: []
   interface: false
   methods:
-    fresh:
+    fresh(String):
       annotations:
         - NotNull
       default: false
@@ -1327,6 +1495,21 @@ net.corda.testing.core.TestIdentity$Companion:
           annotation:
             - NotNull
           type: String
+    fresh(String, net.corda.core.crypto.SignatureScheme):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.core.TestIdentity
+      params:
+        organisation:
+          annotation:
+            - NotNull
+          type: String
+        signatureScheme:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SignatureScheme
 net.corda.testing.core.TestUtils:
   annotations: []
   type: public final class
@@ -1334,8 +1517,10 @@ net.corda.testing.core.TestUtils:
   implements: []
   interface: false
   methods:
-    createCRL:
-      annotations:
+    ? createCRL(net.corda.nodeapi.internal.crypto.CertificateAndKeyPair, java.util.List<?
+      extends java.security.cert.X509Certificate>, java.net.URI, java.time.Instant,
+      java.time.Instant, boolean, java.time.Instant, int, String)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -1375,8 +1560,9 @@ net.corda.testing.core.TestUtils:
           annotation:
             - NotNull
           type: String
-    executeTest:
-      annotations: []
+    ? executeTest(java.time.Duration, kotlin.jvm.functions.Function0<kotlin.Unit>,
+      java.time.Duration, kotlin.jvm.functions.Function0<? extends T>)
+    : annotations: []
       default: false
       type: public static final
       returnType: T
@@ -1397,24 +1583,24 @@ net.corda.testing.core.TestUtils:
           annotation:
             - NotNull
           type: kotlin.jvm.functions.Function0<? extends T>
-    freeLocalHostAndPort:
+    freeLocalHostAndPort():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    freePort:
+    freePort():
       annotations: []
       default: false
       type: public static final
       returnType: int
-    generateStateRef:
+    generateStateRef():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.core.contracts.StateRef
-    getFreeLocalPorts:
+    getFreeLocalPorts(String, int):
       annotations:
         - NotNull
       default: false
@@ -1428,7 +1614,7 @@ net.corda.testing.core.TestUtils:
         numberToAlloc:
           annotation: []
           type: int
-    getTestPartyAndCertificate:
+    getTestPartyAndCertificate(net.corda.core.identity.CordaX500Name, java.security.PublicKey):
       annotations:
         - NotNull
       default: false
@@ -1443,7 +1629,18 @@ net.corda.testing.core.TestUtils:
           annotation:
             - NotNull
           type: java.security.PublicKey
-    makeUnique:
+    getTestPartyAndCertificate(net.corda.core.identity.Party):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: net.corda.core.identity.PartyAndCertificate
+      params:
+        party:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+    makeUnique(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -1454,7 +1651,7 @@ net.corda.testing.core.TestUtils:
           annotation:
             - NotNull
           type: net.corda.core.identity.CordaX500Name
-    singleIdentity:
+    singleIdentity(net.corda.core.node.NodeInfo):
       annotations:
         - NotNull
       default: false
@@ -1465,7 +1662,7 @@ net.corda.testing.core.TestUtils:
           annotation:
             - NotNull
           type: net.corda.core.node.NodeInfo
-    singleIdentityAndCert:
+    singleIdentityAndCert(net.corda.core.node.NodeInfo):
       annotations:
         - NotNull
       default: false

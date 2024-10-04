@@ -7,8 +7,9 @@ net.corda.testing.driver.Driver:
   implements: []
   interface: false
   methods:
-    driver:
-      annotations: []
+    ? driver(net.corda.testing.driver.DriverParameters, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.driver.DriverDSL, ? extends A>)
+    : annotations: []
       default: false
       type: public static final
       returnType: A
@@ -22,7 +23,7 @@ net.corda.testing.driver.Driver:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.driver.DriverDSL,\
             \ ? extends A>"
-    logFile:
+    logFile(net.corda.testing.driver.NodeHandle):
       annotations:
         - NotNull
       default: false
@@ -39,7 +40,7 @@ net.corda.testing.driver.DriverDSL:
   extends: []
   interface: true
   methods:
-    baseDirectory:
+    baseDirectory(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -50,37 +51,56 @@ net.corda.testing.driver.DriverDSL:
           annotation:
             - NotNull
           type: net.corda.core.identity.CordaX500Name
-    getDefaultNotaryHandle:
+    getDefaultNotaryHandle():
       annotations:
         - NotNull
       default: true
       type: public
       returnType: net.corda.testing.driver.NotaryHandle
-    getDefaultNotaryIdentity:
+    getDefaultNotaryIdentity():
       annotations:
         - NotNull
       default: true
       type: public
       returnType: net.corda.core.identity.Party
-    getDefaultNotaryNode:
+    getDefaultNotaryNode():
       annotations:
         - NotNull
       default: true
       type: public
       returnType: net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle>
-    getNotaryHandles:
+    getNotaryHandles():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.testing.driver.NotaryHandle>
-    nextPort:
+    nextPort():
       annotations: []
       default: true
       type: public
       returnType: int
-    startNode:
+    startNode():
       annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle>
+    startNode(net.corda.testing.driver.NodeParameters):
+      annotations:
+        - NotNull
+      default: false
+      type: public abstract
+      returnType: net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle>
+      params:
+        parameters:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.NodeParameters
+    ? startNode(net.corda.testing.driver.NodeParameters, net.corda.core.identity.CordaX500Name,
+      java.util.List<net.corda.testing.node.User>, net.corda.testing.driver.VerifierType,
+      java.util.Map<String, ?>, Boolean, String)
+    : annotations:
         - NotNull
       default: true
       type: public
@@ -114,7 +134,59 @@ net.corda.testing.driver.DriverDSL:
           annotation:
             - NotNull
           type: String
-    startWebserver:
+    ? startNode(net.corda.testing.driver.NodeParameters, net.corda.core.identity.CordaX500Name,
+      java.util.List<net.corda.testing.node.User>, net.corda.testing.driver.VerifierType,
+      java.util.Map<String, ?>, Boolean, String, String)
+    : annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle>
+      params:
+        defaultParameters:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.NodeParameters
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+        logLevelOverride:
+          annotation:
+            - Nullable
+          type: String
+    startWebserver(net.corda.testing.driver.NodeHandle):
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.WebserverHandle>
+      params:
+        handle:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.NodeHandle
+    startWebserver(net.corda.testing.driver.NodeHandle, String):
       annotations:
         - NotNull
       default: false
@@ -136,115 +208,386 @@ net.corda.testing.driver.DriverParameters:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component10:
+    component10():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<String>
-    component11:
+    component11():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.JmxPolicy
-    component12:
+    component12():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NetworkParameters
-    component13:
+    component13():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, Object>"
-    component14:
+    component14():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component15:
+    component15():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    component16:
+    component16():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    component17:
+    component17():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component18:
+    component18():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component19:
+    component19():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.time.Duration
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.nio.file.Path
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    component4:
+    component4():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    component5:
+    component5():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    component6:
+    component6():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component7:
+    component7():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component8:
+    component8():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component9:
+    component9():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.NotarySpec>
-    copy:
-      annotations:
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.DriverParameters
+      params:
+        isDebug:
+          annotation: []
+          type: boolean
+        driverDirectory:
+          annotation:
+            - NotNull
+          type: java.nio.file.Path
+        portAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        debugPortAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        useTestClock:
+          annotation: []
+          type: boolean
+        startNodesInProcess:
+          annotation: []
+          type: boolean
+        waitForAllNodesToFinish:
+          annotation: []
+          type: boolean
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.NotarySpec>
+        extraCordappPackagesToScan:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        jmxPolicy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.JmxPolicy
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters,
+      java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.DriverParameters
+      params:
+        isDebug:
+          annotation: []
+          type: boolean
+        driverDirectory:
+          annotation:
+            - NotNull
+          type: java.nio.file.Path
+        portAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        debugPortAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        useTestClock:
+          annotation: []
+          type: boolean
+        startNodesInProcess:
+          annotation: []
+          type: boolean
+        waitForAllNodesToFinish:
+          annotation: []
+          type: boolean
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.NotarySpec>
+        extraCordappPackagesToScan:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        jmxPolicy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.JmxPolicy
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        notaryCustomOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        inMemoryDB:
+          annotation: []
+          type: boolean
+        cordappsForAllNodes:
+          annotation:
+            - Nullable
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters,
+      java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>,
+      java.util.Map<String, String>, boolean)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.DriverParameters
+      params:
+        isDebug:
+          annotation: []
+          type: boolean
+        driverDirectory:
+          annotation:
+            - NotNull
+          type: java.nio.file.Path
+        portAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        debugPortAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        useTestClock:
+          annotation: []
+          type: boolean
+        startNodesInProcess:
+          annotation: []
+          type: boolean
+        waitForAllNodesToFinish:
+          annotation: []
+          type: boolean
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.NotarySpec>
+        extraCordappPackagesToScan:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        jmxPolicy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.JmxPolicy
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        notaryCustomOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        inMemoryDB:
+          annotation: []
+          type: boolean
+        cordappsForAllNodes:
+          annotation:
+            - Nullable
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        environmentVariables:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        allowHibernateToManageAppSchema:
+          annotation: []
+          type: boolean
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters,
+      java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>,
+      java.util.Map<String, String>, boolean, boolean)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.DriverParameters
+      params:
+        isDebug:
+          annotation: []
+          type: boolean
+        driverDirectory:
+          annotation:
+            - NotNull
+          type: java.nio.file.Path
+        portAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        debugPortAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        useTestClock:
+          annotation: []
+          type: boolean
+        startNodesInProcess:
+          annotation: []
+          type: boolean
+        waitForAllNodesToFinish:
+          annotation: []
+          type: boolean
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.NotarySpec>
+        extraCordappPackagesToScan:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        jmxPolicy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.JmxPolicy
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        notaryCustomOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        inMemoryDB:
+          annotation: []
+          type: boolean
+        cordappsForAllNodes:
+          annotation:
+            - Nullable
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        environmentVariables:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        allowHibernateToManageAppSchema:
+          annotation: []
+          type: boolean
+        premigrateH2Database:
+          annotation: []
+          type: boolean
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters,
+      java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>,
+      java.util.Map<String, String>, boolean, boolean, java.time.Duration)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -319,7 +662,65 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: java.time.Duration
-    equals:
+    ? copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation,
+      java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>,
+      java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters,
+      java.util.Set<? extends net.corda.testing.node.TestCordapp>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.DriverParameters
+      params:
+        isDebug:
+          annotation: []
+          type: boolean
+        driverDirectory:
+          annotation:
+            - NotNull
+          type: java.nio.file.Path
+        portAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        debugPortAllocation:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.PortAllocation
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+        useTestClock:
+          annotation: []
+          type: boolean
+        startNodesInProcess:
+          annotation: []
+          type: boolean
+        waitForAllNodesToFinish:
+          annotation: []
+          type: boolean
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.NotarySpec>
+        extraCordappPackagesToScan:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        jmxPolicy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.JmxPolicy
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        cordappsForAllNodes:
+          annotation:
+            - Nullable
+          type: java.util.Set<? extends net.corda.testing.node.TestCordapp>
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -329,125 +730,125 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - Nullable
           type: Object
-    getAllowHibernateToManageAppSchema:
+    getAllowHibernateToManageAppSchema():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getCordappsForAllNodes:
+    getCordappsForAllNodes():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    getDebugPortAllocation:
+    getDebugPortAllocation():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    getDriverDirectory:
+    getDriverDirectory():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.nio.file.Path
-    getEnvironmentVariables:
+    getEnvironmentVariables():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    getExtraCordappPackagesToScan:
+    getExtraCordappPackagesToScan():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<String>
-    getInMemoryDB:
+    getInMemoryDB():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getJmxPolicy:
+    getJmxPolicy():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.JmxPolicy
-    getNetworkParameters:
+    getNetworkParameters():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NetworkParameters
-    getNotaryCustomOverrides:
+    getNotaryCustomOverrides():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, Object>"
-    getNotaryHandleTimeout:
+    getNotaryHandleTimeout():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.time.Duration
-    getNotarySpecs:
+    getNotarySpecs():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.NotarySpec>
-    getPortAllocation:
+    getPortAllocation():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    getPremigrateH2Database:
+    getPremigrateH2Database():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getStartNodesInProcess:
+    getStartNodesInProcess():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getSystemProperties:
+    getSystemProperties():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    getUseTestClock:
+    getUseTestClock():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getWaitForAllNodesToFinish:
+    getWaitForAllNodesToFinish():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    isDebug:
+    isDebug():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withAllowHibernateToManageAppSchema:
+    withAllowHibernateToManageAppSchema(boolean):
       annotations:
         - NotNull
       default: false
@@ -457,7 +858,7 @@ net.corda.testing.driver.DriverParameters:
         value:
           annotation: []
           type: boolean
-    withCordappsForAllNodes:
+    withCordappsForAllNodes(java.util.Collection<? extends net.corda.testing.node.TestCordapp>):
       annotations:
         - NotNull
       default: false
@@ -468,7 +869,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - Nullable
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    withDebugPortAllocation:
+    withDebugPortAllocation(net.corda.testing.driver.PortAllocation):
       annotations:
         - NotNull
       default: false
@@ -479,7 +880,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: net.corda.testing.driver.PortAllocation
-    withDriverDirectory:
+    withDriverDirectory(java.nio.file.Path):
       annotations:
         - NotNull
       default: false
@@ -490,7 +891,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: java.nio.file.Path
-    withEnvironmentVariables:
+    withEnvironmentVariables(java.util.Map<String, String>):
       annotations:
         - NotNull
       default: false
@@ -501,7 +902,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    withExtraCordappPackagesToScan:
+    withExtraCordappPackagesToScan(java.util.List<String>):
       annotations:
         - NotNull
       default: false
@@ -512,7 +913,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: java.util.List<String>
-    withInMemoryDB:
+    withInMemoryDB(boolean):
       annotations:
         - NotNull
       default: false
@@ -522,7 +923,7 @@ net.corda.testing.driver.DriverParameters:
         inMemoryDB:
           annotation: []
           type: boolean
-    withIsDebug:
+    withIsDebug(boolean):
       annotations:
         - NotNull
       default: false
@@ -532,7 +933,7 @@ net.corda.testing.driver.DriverParameters:
         isDebug:
           annotation: []
           type: boolean
-    withJmxPolicy:
+    withJmxPolicy(net.corda.testing.driver.JmxPolicy):
       annotations:
         - NotNull
       default: false
@@ -543,7 +944,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: net.corda.testing.driver.JmxPolicy
-    withNetworkParameters:
+    withNetworkParameters(net.corda.core.node.NetworkParameters):
       annotations:
         - NotNull
       default: false
@@ -554,7 +955,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: net.corda.core.node.NetworkParameters
-    withNotaryCustomOverrides:
+    withNotaryCustomOverrides(java.util.Map<String, ?>):
       annotations:
         - NotNull
       default: false
@@ -565,7 +966,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: "java.util.Map<String, ?>"
-    withNotaryHandleTimeout:
+    withNotaryHandleTimeout(java.time.Duration):
       annotations:
         - NotNull
       default: false
@@ -576,7 +977,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: java.time.Duration
-    withNotarySpecs:
+    withNotarySpecs(java.util.List<net.corda.testing.node.NotarySpec>):
       annotations:
         - NotNull
       default: false
@@ -587,7 +988,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: java.util.List<net.corda.testing.node.NotarySpec>
-    withPortAllocation:
+    withPortAllocation(net.corda.testing.driver.PortAllocation):
       annotations:
         - NotNull
       default: false
@@ -598,7 +999,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: net.corda.testing.driver.PortAllocation
-    withStartNodesInProcess:
+    withStartNodesInProcess(boolean):
       annotations:
         - NotNull
       default: false
@@ -608,7 +1009,7 @@ net.corda.testing.driver.DriverParameters:
         startNodesInProcess:
           annotation: []
           type: boolean
-    withSystemProperties:
+    withSystemProperties(java.util.Map<String, String>):
       annotations:
         - NotNull
       default: false
@@ -619,7 +1020,7 @@ net.corda.testing.driver.DriverParameters:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    withUseTestClock:
+    withUseTestClock(boolean):
       annotations:
         - NotNull
       default: false
@@ -629,7 +1030,7 @@ net.corda.testing.driver.DriverParameters:
         useTestClock:
           annotation: []
           type: boolean
-    withWaitForAllNodesToFinish:
+    withWaitForAllNodesToFinish(boolean):
       annotations:
         - NotNull
       default: false
@@ -646,61 +1047,61 @@ net.corda.testing.driver.InProcess:
     - net.corda.testing.driver.NodeHandle
   interface: true
   methods:
-    getBaseDirectory:
+    getBaseDirectory():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.nio.file.Path
-    getJmxAddress:
+    getJmxAddress():
       annotations:
         - Nullable
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getNodeInfo:
+    getNodeInfo():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.node.NodeInfo
-    getP2pAddress:
+    getP2pAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpc:
+    getRpc():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.messaging.CordaRPCOps
-    getRpcAddress:
+    getRpcAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcAdminAddress:
+    getRpcAdminAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcUsers:
+    getRpcUsers():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.testing.node.User>
-    getServices:
+    getServices():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.node.ServiceHub
-    registerInitiatedFlow:
+    registerInitiatedFlow(Class<T>):
       annotations:
         - NotNull
       default: false
@@ -711,7 +1112,7 @@ net.corda.testing.driver.InProcess:
           annotation:
             - NotNull
           type: Class<T>
-    startFlow:
+    startFlow(net.corda.core.flows.FlowLogic<? extends T>):
       annotations:
         - NotNull
       default: true
@@ -722,7 +1123,7 @@ net.corda.testing.driver.InProcess:
           annotation:
             - NotNull
           type: net.corda.core.flows.FlowLogic<? extends T>
-    stop:
+    stop():
       annotations: []
       default: false
       type: public abstract
@@ -734,18 +1135,18 @@ net.corda.testing.driver.JmxPolicy:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    copy:
+    copy(boolean, net.corda.testing.driver.PortAllocation):
       annotations:
         - NotNull
       default: false
@@ -759,13 +1160,13 @@ net.corda.testing.driver.JmxPolicy:
           annotation:
             - NotNull
           type: net.corda.testing.driver.PortAllocation
-    defaultEnabled:
+    defaultEnabled():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.testing.driver.JmxPolicy
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -775,23 +1176,23 @@ net.corda.testing.driver.JmxPolicy:
           annotation:
             - Nullable
           type: Object
-    getJmxHttpServerPortAllocation:
+    getJmxHttpServerPortAllocation():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.PortAllocation
-    getStartJmxHttpServer:
+    getStartJmxHttpServer():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -809,7 +1210,7 @@ net.corda.testing.driver.JmxPolicy$Companion:
   implements: []
   interface: false
   methods:
-    defaultEnabled:
+    defaultEnabled():
       annotations:
         - NotNull
       default: false
@@ -822,55 +1223,55 @@ net.corda.testing.driver.NodeHandle:
     - java.lang.AutoCloseable
   interface: true
   methods:
-    getBaseDirectory:
+    getBaseDirectory():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.nio.file.Path
-    getJmxAddress:
+    getJmxAddress():
       annotations:
         - Nullable
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getNodeInfo:
+    getNodeInfo():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.node.NodeInfo
-    getP2pAddress:
+    getP2pAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpc:
+    getRpc():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.messaging.CordaRPCOps
-    getRpcAddress:
+    getRpcAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcAdminAddress:
+    getRpcAdminAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcUsers:
+    getRpcUsers():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.testing.node.User>
-    stop:
+    stop():
       annotations: []
       default: false
       type: public abstract
@@ -882,81 +1283,319 @@ net.corda.testing.driver.NodeParameters:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    component10:
+    component10():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    component11:
+    component11():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    component12:
+    component12():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.User>
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.VerifierType
-    component4:
+    component4():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, Object>"
-    component5:
+    component5():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Boolean
-    component6:
+    component6():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    component7:
+    component7():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    component8:
+    component8():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
         \ Class<? extends net.corda.core.flows.FlowLogic<?>>>"
-    component9:
+    component9():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    copy:
-      annotations:
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.NodeParameters
+      params:
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.util.Map<?
+      extends Class<? extends net.corda.core.flows.FlowLogic<?>>, ? extends Class<?
+      extends net.corda.core.flows.FlowLogic<?>>>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.NodeParameters
+      params:
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+        additionalCordapps:
+          annotation:
+            - NotNull
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        flowOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
+            \ ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>"
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.util.Map<?
+      extends Class<? extends net.corda.core.flows.FlowLogic<?>>, ? extends Class<?
+      extends net.corda.core.flows.FlowLogic<?>>>, String)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.NodeParameters
+      params:
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+        additionalCordapps:
+          annotation:
+            - NotNull
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        flowOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
+            \ ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>"
+        logLevelOverride:
+          annotation:
+            - Nullable
+          type: String
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.util.Map<?
+      extends Class<? extends net.corda.core.flows.FlowLogic<?>>, ? extends Class<?
+      extends net.corda.core.flows.FlowLogic<?>>>, String, net.corda.core.utilities.NetworkHostAndPort)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.NodeParameters
+      params:
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+        additionalCordapps:
+          annotation:
+            - NotNull
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        flowOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
+            \ ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>"
+        logLevelOverride:
+          annotation:
+            - Nullable
+          type: String
+        rpcAddress:
+          annotation:
+            - Nullable
+          type: net.corda.core.utilities.NetworkHostAndPort
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.util.Map<?
+      extends Class<? extends net.corda.core.flows.FlowLogic<?>>, ? extends Class<?
+      extends net.corda.core.flows.FlowLogic<?>>>, String, net.corda.core.utilities.NetworkHostAndPort,
+      java.util.Map<String, String>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.driver.NodeParameters
+      params:
+        providedName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        customOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, ?>"
+        startInSameProcess:
+          annotation:
+            - Nullable
+          type: Boolean
+        maximumHeapSize:
+          annotation:
+            - NotNull
+          type: String
+        additionalCordapps:
+          annotation:
+            - NotNull
+          type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
+        flowOverrides:
+          annotation:
+            - NotNull
+          type: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
+            \ ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>"
+        logLevelOverride:
+          annotation:
+            - Nullable
+          type: String
+        rpcAddress:
+          annotation:
+            - Nullable
+          type: net.corda.core.utilities.NetworkHostAndPort
+        systemProperties:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+    ? copy(net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.util.Map<?
+      extends Class<? extends net.corda.core.flows.FlowLogic<?>>, ? extends Class<?
+      extends net.corda.core.flows.FlowLogic<?>>>, String, net.corda.core.utilities.NetworkHostAndPort,
+      java.util.Map<String, String>, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -1011,7 +1650,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1021,91 +1660,91 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - Nullable
           type: Object
-    getAdditionalCordapps:
+    getAdditionalCordapps():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    getCustomOverrides:
+    getCustomOverrides():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, Object>"
-    getFlowOverrides:
+    getFlowOverrides():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<? extends Class<? extends net.corda.core.flows.FlowLogic<?>>,\
         \ Class<? extends net.corda.core.flows.FlowLogic<?>>>"
-    getLegacyContracts:
+    getLegacyContracts():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    getLogLevelOverride:
+    getLogLevelOverride():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    getMaximumHeapSize:
+    getMaximumHeapSize():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    getProvidedName:
+    getProvidedName():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    getRpcAddress:
+    getRpcAddress():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcUsers:
+    getRpcUsers():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.User>
-    getStartInSameProcess:
+    getStartInSameProcess():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Boolean
-    getSystemProperties:
+    getSystemProperties():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    getVerifierType:
+    getVerifierType():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.VerifierType
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withAdditionalCordapps:
+    withAdditionalCordapps(java.util.Set<? extends net.corda.testing.node.TestCordapp>):
       annotations:
         - NotNull
       default: false
@@ -1116,7 +1755,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: java.util.Set<? extends net.corda.testing.node.TestCordapp>
-    withCustomOverrides:
+    withCustomOverrides(java.util.Map<String, ?>):
       annotations:
         - NotNull
       default: false
@@ -1127,8 +1766,9 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: "java.util.Map<String, ?>"
-    withFlowOverrides:
-      annotations:
+    ? withFlowOverrides(java.util.Map<Class<? extends net.corda.core.flows.FlowLogic<?>>,
+      ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -1139,7 +1779,7 @@ net.corda.testing.driver.NodeParameters:
             - NotNull
           type: "java.util.Map<Class<? extends net.corda.core.flows.FlowLogic<?>>,\
             \ ? extends Class<? extends net.corda.core.flows.FlowLogic<?>>>"
-    withLegacyContracts:
+    withLegacyContracts(java.util.Collection<? extends net.corda.testing.node.TestCordapp>):
       annotations:
         - NotNull
       default: false
@@ -1150,7 +1790,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    withLogLevelOverride:
+    withLogLevelOverride(String):
       annotations:
         - NotNull
       default: false
@@ -1161,7 +1801,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - Nullable
           type: String
-    withMaximumHeapSize:
+    withMaximumHeapSize(String):
       annotations:
         - NotNull
       default: false
@@ -1172,7 +1812,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: String
-    withProvidedName:
+    withProvidedName(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -1183,7 +1823,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - Nullable
           type: net.corda.core.identity.CordaX500Name
-    withRpcAddress:
+    withRpcAddress(net.corda.core.utilities.NetworkHostAndPort):
       annotations:
         - NotNull
       default: false
@@ -1194,7 +1834,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - Nullable
           type: net.corda.core.utilities.NetworkHostAndPort
-    withRpcUsers:
+    withRpcUsers(java.util.List<net.corda.testing.node.User>):
       annotations:
         - NotNull
       default: false
@@ -1205,7 +1845,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: java.util.List<net.corda.testing.node.User>
-    withStartInSameProcess:
+    withStartInSameProcess(Boolean):
       annotations:
         - NotNull
       default: false
@@ -1216,7 +1856,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - Nullable
           type: Boolean
-    withSystemProperties:
+    withSystemProperties(java.util.Map<String, String>):
       annotations:
         - NotNull
       default: false
@@ -1227,7 +1867,7 @@ net.corda.testing.driver.NodeParameters:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    withVerifierType:
+    withVerifierType(net.corda.testing.driver.VerifierType):
       annotations:
         - NotNull
       default: false
@@ -1245,25 +1885,25 @@ net.corda.testing.driver.NotaryHandle:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.Party
-    component2:
+    component2():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.concurrent.CordaFuture<java.util.List<net.corda.testing.driver.NodeHandle>>
-    copy:
-      annotations:
+    ? copy(net.corda.core.identity.Party, boolean, net.corda.core.concurrent.CordaFuture<java.util.List<net.corda.testing.driver.NodeHandle>>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -1280,7 +1920,7 @@ net.corda.testing.driver.NotaryHandle:
           annotation:
             - NotNull
           type: net.corda.core.concurrent.CordaFuture<java.util.List<net.corda.testing.driver.NodeHandle>>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1290,29 +1930,29 @@ net.corda.testing.driver.NotaryHandle:
           annotation:
             - Nullable
           type: Object
-    getIdentity:
+    getIdentity():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.Party
-    getNodeHandles:
+    getNodeHandles():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.concurrent.CordaFuture<java.util.List<net.corda.testing.driver.NodeHandle>>
-    getValidating:
+    getValidating():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -1325,61 +1965,61 @@ net.corda.testing.driver.OutOfProcess:
     - net.corda.testing.driver.NodeHandle
   interface: true
   methods:
-    getBaseDirectory:
+    getBaseDirectory():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.nio.file.Path
-    getJmxAddress:
+    getJmxAddress():
       annotations:
         - Nullable
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getNodeInfo:
+    getNodeInfo():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.node.NodeInfo
-    getP2pAddress:
+    getP2pAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getProcess:
+    getProcess():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: Process
-    getRpc:
+    getRpc():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.messaging.CordaRPCOps
-    getRpcAddress:
+    getRpcAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcAdminAddress:
+    getRpcAdminAddress():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getRpcUsers:
+    getRpcUsers():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.testing.node.User>
-    stop:
+    stop():
       annotations: []
       default: false
       type: public abstract
@@ -1391,19 +2031,19 @@ net.corda.testing.driver.PortAllocation:
   implements: []
   interface: false
   methods:
-    getDefaultAllocator:
+    getDefaultAllocator():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.testing.driver.PortAllocation
-    nextHostAndPort:
+    nextHostAndPort():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    nextPort:
+    nextPort():
       annotations: []
       default: false
       type: public abstract
@@ -1428,7 +2068,7 @@ net.corda.testing.driver.PortAllocation$Companion:
   implements: []
   interface: false
   methods:
-    getDefaultAllocator:
+    getDefaultAllocator():
       annotations:
         - NotNull
       default: false
@@ -1441,25 +2081,25 @@ net.corda.testing.driver.PortAllocation$Incremental:
   implements: []
   interface: false
   methods:
-    getDefaultAllocator:
+    getDefaultAllocator():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.testing.driver.PortAllocation
-    getPortCounter:
+    getPortCounter():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.concurrent.atomic.AtomicInteger
-    nextHostAndPort:
+    nextHostAndPort():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    nextPort:
+    nextPort():
       annotations: []
       default: false
       type: public
@@ -1484,19 +2124,19 @@ net.corda.testing.driver.SharedMemoryIncremental:
   implements: []
   interface: false
   methods:
-    getDefaultAllocator:
+    getDefaultAllocator():
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: net.corda.testing.driver.PortAllocation
-    nextHostAndPort:
+    nextHostAndPort():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    nextPort:
+    nextPort():
       annotations: []
       default: false
       type: public
@@ -1516,13 +2156,13 @@ net.corda.testing.driver.VerifierType:
   implements: []
   interface: false
   methods:
-    getEntries:
+    getEntries():
       annotations:
         - NotNull
       default: false
       type: public static
       returnType: kotlin.enums.EnumEntries<net.corda.testing.driver.VerifierType>
-    valueOf:
+    valueOf(String):
       annotations: []
       default: false
       type: public static
@@ -1531,7 +2171,7 @@ net.corda.testing.driver.VerifierType:
         value:
           annotation: []
           type: String
-    values:
+    values():
       annotations: []
       default: false
       type: public static
@@ -1543,19 +2183,19 @@ net.corda.testing.driver.WebserverHandle:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: Process
-    copy:
+    copy(net.corda.core.utilities.NetworkHostAndPort, Process):
       annotations:
         - NotNull
       default: false
@@ -1570,7 +2210,7 @@ net.corda.testing.driver.WebserverHandle:
           annotation:
             - NotNull
           type: Process
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1580,24 +2220,24 @@ net.corda.testing.driver.WebserverHandle:
           annotation:
             - Nullable
           type: Object
-    getListenAddress:
+    getListenAddress():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.NetworkHostAndPort
-    getProcess:
+    getProcess():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: Process
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -1610,7 +2250,38 @@ net.corda.testing.flows.FlowTestsUtilsKt:
   implements: []
   interface: false
   methods:
-    from:
+    from(T, net.corda.core.flows.FlowSession):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "kotlin.Pair<net.corda.core.flows.FlowSession, T>"
+      params:
+        $this$from:
+          annotation:
+            - NotNull
+          type: T
+        session:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowSession
+    ? from(java.util.Map<net.corda.core.flows.FlowSession, ? extends net.corda.core.utilities.UntrustworthyData<?>>,
+      net.corda.core.flows.FlowSession)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: R
+      params:
+        $this$from:
+          annotation:
+            - NotNull
+          type: "java.util.Map<net.corda.core.flows.FlowSession, ? extends net.corda.core.utilities.UntrustworthyData<?>>"
+        session:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowSession
+    from(kotlin.reflect.KClass<T>, net.corda.core.flows.FlowSession):
       annotations:
         - NotNull
       default: false
@@ -1625,7 +2296,55 @@ net.corda.testing.flows.FlowTestsUtilsKt:
           annotation:
             - NotNull
           type: net.corda.core.flows.FlowSession
-    receiveAll:
+    receiveAll(net.corda.core.flows.FlowLogic<?>, Class<R>, net.corda.core.flows.FlowSession, net.corda.core.flows.FlowSession[]):
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public static final
+      returnType: java.util.List<net.corda.core.utilities.UntrustworthyData<R>>
+      params:
+        $this$receiveAll:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowLogic<?>
+        receiveType:
+          annotation:
+            - NotNull
+          type: Class<R>
+        session:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowSession
+        sessions:
+          annotation:
+            - NotNull
+          type: "net.corda.core.flows.FlowSession[]"
+    ? receiveAll(net.corda.core.flows.FlowLogic<?>, kotlin.Pair<? extends net.corda.core.flows.FlowSession,
+      ? extends Class<?>>, kotlin.Pair<? extends net.corda.core.flows.FlowSession,
+      ? extends Class<?>>[])
+    : annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "java.util.Map<net.corda.core.flows.FlowSession, net.corda.core.utilities.UntrustworthyData<Object>>"
+      params:
+        $this$receiveAll:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowLogic<?>
+        session:
+          annotation:
+            - NotNull
+          type: "kotlin.Pair<? extends net.corda.core.flows.FlowSession, ? extends\
+            \ Class<?>>"
+        sessions:
+          annotation:
+            - NotNull
+          type: "kotlin.Pair<? extends net.corda.core.flows.FlowSession, ? extends\
+            \ Class<?>>[]"
+    receiveAll(net.corda.core.flows.FlowLogic<?>, net.corda.core.flows.FlowSession, net.corda.core.flows.FlowSession[]):
       annotations:
         - Suspendable
       default: false
@@ -1635,8 +2354,10 @@ net.corda.testing.flows.FlowTestsUtilsKt:
         "null":
           annotation: []
           type: "net.corda.core.flows.FlowSession[]"
-    registerCordappFlowFactory:
-      annotations: []
+    ? registerCordappFlowFactory(net.corda.testing.node.internal.TestStartedNode,
+      kotlin.reflect.KClass<? extends net.corda.core.flows.FlowLogic<?>>, int, kotlin.jvm.functions.Function1<?
+      super net.corda.core.flows.FlowSession, ? extends P>)
+    : annotations: []
       default: false
       type: public static final synthetic
       returnType: net.corda.core.concurrent.CordaFuture<P>
@@ -1645,8 +2366,10 @@ net.corda.testing.flows.FlowTestsUtilsKt:
           annotation: []
           type: "kotlin.jvm.functions.Function1<? super net.corda.core.flows.FlowSession,\
             \ ? extends P>"
-    registerCoreFlowFactory:
-      annotations:
+    ? registerCoreFlowFactory(net.corda.testing.node.internal.TestStartedNode, Class<?
+      extends net.corda.core.flows.FlowLogic<?>>, Class<T>, kotlin.jvm.functions.Function1<?
+      super net.corda.core.flows.FlowSession, ? extends T>, boolean)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -1672,7 +2395,7 @@ net.corda.testing.flows.FlowTestsUtilsKt:
         track:
           annotation: []
           type: boolean
-    waitForAllFlowsToComplete:
+    waitForAllFlowsToComplete(net.corda.testing.driver.NodeHandle, int, long):
       annotations: []
       default: false
       type: public static final
@@ -1695,7 +2418,7 @@ net.corda.testing.node.ClusterSpec:
   implements: []
   interface: false
   methods:
-    getClusterSize:
+    getClusterSize():
       annotations: []
       default: false
       type: public abstract
@@ -1707,12 +2430,12 @@ net.corda.testing.node.ClusterSpec$Raft:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    copy:
+    copy(int):
       annotations:
         - NotNull
       default: false
@@ -1722,7 +2445,7 @@ net.corda.testing.node.ClusterSpec$Raft:
         clusterSize:
           annotation: []
           type: int
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1732,17 +2455,17 @@ net.corda.testing.node.ClusterSpec$Raft:
           annotation:
             - Nullable
           type: Object
-    getClusterSize:
+    getClusterSize():
       annotations: []
       default: false
       type: public
       returnType: int
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -1755,7 +2478,7 @@ net.corda.testing.node.DatabaseSnapshot:
   implements: []
   interface: false
   methods:
-    copyDatabaseSnapshot:
+    copyDatabaseSnapshot(java.nio.file.Path):
       annotations: []
       default: false
       type: public final
@@ -1765,7 +2488,7 @@ net.corda.testing.node.DatabaseSnapshot:
           annotation:
             - NotNull
           type: java.nio.file.Path
-    databaseFilename:
+    databaseFilename(java.nio.file.Path):
       annotations: []
       default: false
       type: public final
@@ -1788,25 +2511,25 @@ net.corda.testing.node.InMemoryMessagingNetwork:
   implements: []
   interface: false
   methods:
-    getEndpointsExternal:
+    getEndpointsExternal():
       annotations:
         - NotNull
       default: false
       type: public final synchronized
       returnType: java.util.List<net.corda.testing.node.InMemoryMessagingNetwork$MockMessagingService>
-    getReceivedMessages:
+    getReceivedMessages():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: rx.Observable<net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer>
-    getSentMessages:
+    getSentMessages():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: rx.Observable<net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer>
-    pumpSend:
+    pumpSend(boolean):
       annotations:
         - Nullable
       default: false
@@ -1816,7 +2539,7 @@ net.corda.testing.node.InMemoryMessagingNetwork:
         block:
           annotation: []
           type: boolean
-    stop:
+    stop():
       annotations: []
       default: false
       type: public final
@@ -1842,13 +2565,13 @@ net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle:
     - net.corda.core.messaging.MessageRecipientGroup
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.Party
-    copy:
+    copy(net.corda.core.identity.Party):
       annotations:
         - NotNull
       default: false
@@ -1859,7 +2582,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle:
           annotation:
             - NotNull
           type: net.corda.core.identity.Party
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1869,18 +2592,18 @@ net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle:
           annotation:
             - Nullable
           type: Object
-    getParty:
+    getParty():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.Party
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -1892,7 +2615,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$LatencyCalculator:
   extends: []
   interface: true
   methods:
-    between:
+    between(net.corda.core.messaging.SingleMessageRecipient, net.corda.core.messaging.SingleMessageRecipient):
       annotations:
         - NotNull
       default: false
@@ -1915,25 +2638,25 @@ net.corda.testing.node.InMemoryMessagingNetwork$MessageTransfer:
   implements: []
   interface: false
   methods:
-    getMessageData:
+    getMessageData():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.utilities.ByteSequence
-    getRecipients:
+    getRecipients():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.messaging.MessageRecipients
-    getSender:
+    getSender():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.InMemoryMessagingNetwork$PeerHandle
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -1958,7 +2681,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$MockMessagingService:
   implements: []
   interface: false
   methods:
-    pumpReceive:
+    pumpReceive(boolean):
       annotations:
         - Nullable
       default: false
@@ -1989,18 +2712,18 @@ net.corda.testing.node.InMemoryMessagingNetwork$PeerHandle:
     - net.corda.core.messaging.SingleMessageRecipient
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: int
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    copy:
+    copy(int, net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -2014,7 +2737,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$PeerHandle:
           annotation:
             - NotNull
           type: net.corda.core.identity.CordaX500Name
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -2024,23 +2747,23 @@ net.corda.testing.node.InMemoryMessagingNetwork$PeerHandle:
           annotation:
             - Nullable
           type: Object
-    getId:
+    getId():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getName:
+    getName():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -2053,7 +2776,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy:
   implements: []
   interface: false
   methods:
-    pickNext:
+    pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, java.util.List<? extends A>):
       annotations: []
       default: false
       type: public abstract
@@ -2074,13 +2797,13 @@ net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$Ra
   implements: []
   interface: false
   methods:
-    getRandom:
+    getRandom():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.SplittableRandom
-    pickNext:
+    pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, java.util.List<? extends A>):
       annotations: []
       default: false
       type: public
@@ -2101,7 +2824,7 @@ net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$Ro
   implements: []
   interface: false
   methods:
-    pickNext:
+    pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, java.util.List<? extends A>):
       annotations: []
       default: false
       type: public
@@ -2122,17 +2845,17 @@ net.corda.testing.node.MockNetFlowTimeOut:
   implements: []
   interface: false
   methods:
-    getBackoffBase:
+    getBackoffBase():
       annotations: []
       default: false
       type: public final
       returnType: double
-    getMaxRestartCount:
+    getMaxRestartCount():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getTimeout:
+    getTimeout():
       annotations:
         - NotNull
       default: false
@@ -2145,25 +2868,25 @@ net.corda.testing.node.MockNetNotaryConfig:
   implements: []
   interface: false
   methods:
-    getClassName:
+    getClassName():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    getExtraConfig:
+    getExtraConfig():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: com.typesafe.config.Config
-    getServiceLegalName:
+    getServiceLegalName():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    getValidating:
+    getValidating():
       annotations: []
       default: false
       type: public final
@@ -2175,7 +2898,7 @@ net.corda.testing.node.MockNetwork:
   implements: []
   interface: false
   methods:
-    baseDirectory:
+    baseDirectory(int):
       annotations:
         - NotNull
       default: false
@@ -2185,13 +2908,13 @@ net.corda.testing.node.MockNetwork:
         nodeId:
           annotation: []
           type: int
-    createNode:
+    createNode():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.StartedMockNode
-    createPartyNode:
+    createNode(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -2202,91 +2925,260 @@ net.corda.testing.node.MockNetwork:
           annotation:
             - Nullable
           type: net.corda.core.identity.CordaX500Name
-    createUnstartedNode:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.testing.node.UnstartedMockNode
-    getCordappPackages:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.util.List<String>
-    getDefaultNotaryIdentity:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.identity.Party
-    getDefaultNotaryNode:
+    createNode(net.corda.core.identity.CordaX500Name, Integer):
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.StartedMockNode
-    getDefaultParameters:
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+    createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.StartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+        entropyRoot:
+          annotation:
+            - NotNull
+          type: java.math.BigInteger
+    ? createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger,
+      net.corda.testing.node.MockNodeConfigOverrides)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.StartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+        entropyRoot:
+          annotation:
+            - NotNull
+          type: java.math.BigInteger
+        configOverrides:
+          annotation:
+            - Nullable
+          type: net.corda.testing.node.MockNodeConfigOverrides
+    createNode(net.corda.testing.node.MockNodeParameters):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.StartedMockNode
+      params:
+        parameters:
+          annotation:
+            - NotNull
+          type: net.corda.testing.node.MockNodeParameters
+    createPartyNode(net.corda.core.identity.CordaX500Name):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.StartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+    createUnstartedNode():
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+    createUnstartedNode(net.corda.core.identity.CordaX500Name):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+    createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+    createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+        entropyRoot:
+          annotation:
+            - NotNull
+          type: java.math.BigInteger
+    ? createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger,
+      net.corda.testing.node.MockNodeConfigOverrides)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+      params:
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+        entropyRoot:
+          annotation:
+            - NotNull
+          type: java.math.BigInteger
+        configOverrides:
+          annotation:
+            - Nullable
+          type: net.corda.testing.node.MockNodeConfigOverrides
+    createUnstartedNode(net.corda.testing.node.MockNodeParameters):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.UnstartedMockNode
+      params:
+        parameters:
+          annotation:
+            - NotNull
+          type: net.corda.testing.node.MockNodeParameters
+    getCordappPackages():
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: java.util.List<String>
+    getDefaultNotaryIdentity():
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.identity.Party
+    getDefaultNotaryNode():
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.StartedMockNode
+    getDefaultParameters():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.MockNetworkParameters
-    getNetworkParameters:
+    getNetworkParameters():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NetworkParameters
-    getNetworkSendManuallyPumped:
+    getNetworkSendManuallyPumped():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getNextNodeId:
+    getNextNodeId():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getNotaryNodes:
+    getNotaryNodes():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.StartedMockNode>
-    getNotarySpecs:
+    getNotarySpecs():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.MockNetworkNotarySpec>
-    getServicePeerAllocationStrategy:
+    getServicePeerAllocationStrategy():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
-    getThreadPerNode:
+    getThreadPerNode():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    runNetwork:
+    runNetwork():
       annotations: []
       default: false
       type: public final
       returnType: void
-    startNodes:
+    runNetwork(int):
       annotations: []
       default: false
       type: public final
       returnType: void
-    stopNodes:
+      params:
+        rounds:
+          annotation: []
+          type: int
+    startNodes():
       annotations: []
       default: false
       type: public final
       returnType: void
-    waitQuiescent:
+    stopNodes():
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+    waitQuiescent():
       annotations: []
       default: false
       type: public final
@@ -2298,18 +3190,18 @@ net.corda.testing.node.MockNetworkNotarySpec:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    component2:
+    component2():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    copy:
+    copy(net.corda.core.identity.CordaX500Name, boolean):
       annotations:
         - NotNull
       default: false
@@ -2323,7 +3215,7 @@ net.corda.testing.node.MockNetworkNotarySpec:
         validating:
           annotation: []
           type: boolean
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -2333,29 +3225,29 @@ net.corda.testing.node.MockNetworkNotarySpec:
           annotation:
             - Nullable
           type: Object
-    getClassName:
+    getClassName():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    getName:
+    getName():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    getValidating:
+    getValidating():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    setClassName:
+    setClassName(String):
       annotations: []
       default: false
       type: public final
@@ -2365,7 +3257,7 @@ net.corda.testing.node.MockNetworkNotarySpec:
           annotation:
             - Nullable
           type: String
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -2378,42 +3270,70 @@ net.corda.testing.node.MockNetworkParameters:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component2:
+    component2():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
-    component4:
+    component4():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.MockNetworkNotarySpec>
-    component5:
+    component5():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NetworkParameters
-    component6:
+    component6():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    copy:
-      annotations:
+    ? copy(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy,
+      java.util.List<net.corda.testing.node.MockNetworkNotarySpec>, net.corda.core.node.NetworkParameters)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.MockNetworkParameters
+      params:
+        networkSendManuallyPumped:
+          annotation: []
+          type: boolean
+        threadPerNode:
+          annotation: []
+          type: boolean
+        servicePeerAllocationStrategy:
+          annotation:
+            - NotNull
+          type: net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
+        notarySpecs:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.MockNetworkNotarySpec>
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+    ? copy(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy,
+      java.util.List<net.corda.testing.node.MockNetworkNotarySpec>, net.corda.core.node.NetworkParameters,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -2441,7 +3361,7 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -2451,52 +3371,52 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - Nullable
           type: Object
-    getCordappsForAllNodes:
+    getCordappsForAllNodes():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    getNetworkParameters:
+    getNetworkParameters():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NetworkParameters
-    getNetworkSendManuallyPumped:
+    getNetworkSendManuallyPumped():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getNotarySpecs:
+    getNotarySpecs():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.MockNetworkNotarySpec>
-    getServicePeerAllocationStrategy:
+    getServicePeerAllocationStrategy():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
-    getThreadPerNode:
+    getThreadPerNode():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withCordappsForAllNodes:
+    withCordappsForAllNodes(java.util.Collection<? extends net.corda.testing.node.TestCordapp>):
       annotations:
         - NotNull
       default: false
@@ -2507,7 +3427,7 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    withNetworkParameters:
+    withNetworkParameters(net.corda.core.node.NetworkParameters):
       annotations:
         - NotNull
       default: false
@@ -2518,7 +3438,7 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - NotNull
           type: net.corda.core.node.NetworkParameters
-    withNetworkSendManuallyPumped:
+    withNetworkSendManuallyPumped(boolean):
       annotations:
         - NotNull
       default: false
@@ -2528,7 +3448,7 @@ net.corda.testing.node.MockNetworkParameters:
         networkSendManuallyPumped:
           annotation: []
           type: boolean
-    withNotarySpecs:
+    withNotarySpecs(java.util.List<net.corda.testing.node.MockNetworkNotarySpec>):
       annotations:
         - NotNull
       default: false
@@ -2539,7 +3459,7 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - NotNull
           type: java.util.List<net.corda.testing.node.MockNetworkNotarySpec>
-    withServicePeerAllocationStrategy:
+    withServicePeerAllocationStrategy(net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy):
       annotations:
         - NotNull
       default: false
@@ -2550,7 +3470,7 @@ net.corda.testing.node.MockNetworkParameters:
           annotation:
             - NotNull
           type: net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
-    withThreadPerNode:
+    withThreadPerNode(boolean):
       annotations:
         - NotNull
       default: false
@@ -2567,19 +3487,19 @@ net.corda.testing.node.MockNodeConfigOverrides:
   implements: []
   interface: false
   methods:
-    getExtraDataSourceProperties:
+    getExtraDataSourceProperties():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    getFlowTimeout:
+    getFlowTimeout():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.testing.node.MockNetFlowTimeOut
-    getNotary:
+    getNotary():
       annotations:
         - Nullable
       default: false
@@ -2592,38 +3512,62 @@ net.corda.testing.node.MockNodeParameters:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Integer
-    component2:
+    component2():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.math.BigInteger
-    component4:
+    component4():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.testing.node.MockNodeConfigOverrides
-    component5:
+    component5():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    copy:
+    copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, net.corda.testing.node.MockNodeConfigOverrides):
       annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.MockNodeParameters
+      params:
+        forcedID:
+          annotation:
+            - Nullable
+          type: Integer
+        legalName:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        entropyRoot:
+          annotation:
+            - NotNull
+          type: java.math.BigInteger
+        configOverrides:
+          annotation:
+            - NotNull
+          type: net.corda.testing.node.MockNodeConfigOverrides
+    ? copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, net.corda.testing.node.MockNodeConfigOverrides,
+      java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -2649,7 +3593,7 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -2659,48 +3603,48 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - Nullable
           type: Object
-    getAdditionalCordapps:
+    getAdditionalCordapps():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Collection<net.corda.testing.node.TestCordapp>
-    getConfigOverrides:
+    getConfigOverrides():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.testing.node.MockNodeConfigOverrides
-    getEntropyRoot:
+    getEntropyRoot():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.math.BigInteger
-    getForcedID:
+    getForcedID():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: Integer
-    getLegalName:
+    getLegalName():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    withAdditionalCordapps:
+    withAdditionalCordapps(java.util.Collection<? extends net.corda.testing.node.TestCordapp>):
       annotations:
         - NotNull
       default: false
@@ -2711,7 +3655,7 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - NotNull
           type: java.util.Collection<? extends net.corda.testing.node.TestCordapp>
-    withConfigOverrides:
+    withConfigOverrides(net.corda.testing.node.MockNodeConfigOverrides):
       annotations:
         - NotNull
       default: false
@@ -2722,7 +3666,7 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - NotNull
           type: net.corda.testing.node.MockNodeConfigOverrides
-    withEntropyRoot:
+    withEntropyRoot(java.math.BigInteger):
       annotations:
         - NotNull
       default: false
@@ -2733,7 +3677,7 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - NotNull
           type: java.math.BigInteger
-    withForcedID:
+    withForcedID(Integer):
       annotations:
         - NotNull
       default: false
@@ -2744,7 +3688,7 @@ net.corda.testing.node.MockNodeParameters:
           annotation:
             - Nullable
           type: Integer
-    withLegalName:
+    withLegalName(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -2763,7 +3707,7 @@ net.corda.testing.node.MockServices:
     - net.corda.core.node.ServiceHub
   interface: false
   methods:
-    addMockCordapp:
+    addMockCordapp(String):
       annotations: []
       default: false
       type: public final
@@ -2773,7 +3717,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: String
-    cordaService:
+    cordaService(Class<T>):
       annotations:
         - NotNull
       default: false
@@ -2784,7 +3728,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: Class<T>
-    cordaTelemetryComponent:
+    cordaTelemetryComponent(Class<T>):
       annotations:
         - NotNull
       default: false
@@ -2795,109 +3739,115 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: Class<T>
-    getAttachments:
+    getAttachments():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.services.MockAttachmentStorage
-    getClock:
+    getClock():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.testing.node.TestClock
-    getContractUpgradeService:
+    getContractUpgradeService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.ContractUpgradeService
-    getCordappClassloader:
+    getCordappClassloader():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: ClassLoader
-    getCordappProvider:
+    getCordappProvider():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.cordapp.CordappProvider
-    getDiagnosticsService:
+    getDiagnosticsService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.diagnostics.DiagnosticsService
-    getIdentityService:
+    getIdentityService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.IdentityService
-    getKeyManagementService:
+    getKeyManagementService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.KeyManagementService
-    getMyInfo:
+    getMyInfo():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.NodeInfo
-    getNetworkMapCache:
+    getNetworkMapCache():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.NetworkMapCache
-    getNetworkParameters:
+    getNetworkParameters():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.NetworkParameters
-    getNetworkParametersService:
+    getNetworkParametersService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.NetworkParametersService
-    getServicesForResolution:
+    getRotatedKeys():
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.contracts.RotatedKeys
+    getServicesForResolution():
       annotations:
         - NotNull
       default: false
       type: protected final
       returnType: net.corda.core.node.ServicesForResolution
-    getTelemetryService:
+    getTelemetryService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.internal.telemetry.TelemetryServiceImpl
-    getValidatedTransactions:
+    getValidatedTransactions():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.TransactionStorage
-    getVaultService:
+    getVaultService():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.node.services.VaultService
-    jdbcSession:
+    jdbcSession():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.sql.Connection
-    loadContractAttachment:
+    loadContractAttachment(net.corda.core.contracts.StateRef):
       annotations:
         - NotNull
       default: false
@@ -2908,7 +3858,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    loadState:
+    loadState(net.corda.core.contracts.StateRef):
       annotations:
         - NotNull
       default: false
@@ -2919,7 +3869,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    loadStates:
+    loadStates(java.util.Set<net.corda.core.contracts.StateRef>):
       annotations:
         - NotNull
       default: false
@@ -2930,7 +3880,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: java.util.Set<net.corda.core.contracts.StateRef>
-    makeTestDataSourceProperties:
+    makeTestDataSourceProperties(String):
       annotations:
         - NotNull
       default: false
@@ -2941,8 +3891,9 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: String
-    makeTestDatabaseAndMockServices:
-      annotations:
+    ? makeTestDatabaseAndMockServices(java.util.List<String>, net.corda.core.node.services.IdentityService,
+      net.corda.testing.core.TestIdentity, java.security.KeyPair[])
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -2965,8 +3916,39 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: "java.security.KeyPair[]"
-    makeTestDatabaseAndPersistentServices:
-      annotations:
+    ? makeTestDatabaseAndMockServices(java.util.List<String>, net.corda.core.node.services.IdentityService,
+      net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters,
+      java.security.KeyPair[])
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        identityService:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.services.IdentityService
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: "java.security.KeyPair[]"
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      java.util.Set<java.security.KeyPair>, java.util.Set<net.corda.core.identity.PartyAndCertificate>)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -2989,7 +3971,71 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
-    recordTransactions:
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      net.corda.core.node.NetworkParameters, java.util.Set<java.security.KeyPair>,
+      java.util.Set<net.corda.core.identity.PartyAndCertificate>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: java.util.Set<java.security.KeyPair>
+        moreIdentities:
+          annotation:
+            - NotNull
+          type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      net.corda.core.node.NetworkParameters, java.util.Set<java.security.KeyPair>,
+      java.util.Set<net.corda.core.identity.PartyAndCertificate>, net.corda.testing.internal.TestingNamedCacheFactory)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: java.util.Set<java.security.KeyPair>
+        moreIdentities:
+          annotation:
+            - NotNull
+          type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
+        cacheFactory:
+          annotation:
+            - NotNull
+          type: net.corda.testing.internal.TestingNamedCacheFactory
+    recordTransactions(Iterable<net.corda.core.transactions.SignedTransaction>, boolean):
       annotations: []
       default: false
       type: public final
@@ -3002,7 +4048,34 @@ net.corda.testing.node.MockServices:
         disableSignatureVerification:
           annotation: []
           type: boolean
-    registerUnloadHandler:
+    recordTransactions(net.corda.core.node.StatesToRecord, Iterable<net.corda.core.transactions.SignedTransaction>):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        statesToRecord:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.StatesToRecord
+        txs:
+          annotation:
+            - NotNull
+          type: Iterable<net.corda.core.transactions.SignedTransaction>
+    recordTransactions(net.corda.core.transactions.SignedTransaction, boolean):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        txn:
+          annotation:
+            - NotNull
+          type: net.corda.core.transactions.SignedTransaction
+        disableSignatureVerification:
+          annotation: []
+          type: boolean
+    registerUnloadHandler(kotlin.jvm.functions.Function0<kotlin.Unit>):
       annotations:
         - NotNull
       default: false
@@ -3013,7 +4086,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: kotlin.jvm.functions.Function0<kotlin.Unit>
-    setNetworkParametersService:
+    setNetworkParametersService(net.corda.core.node.services.NetworkParametersService):
       annotations: []
       default: false
       type: public
@@ -3023,7 +4096,7 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: net.corda.core.node.services.NetworkParametersService
-    withEntityManager:
+    withEntityManager(java.util.function.Consumer<javax.persistence.EntityManager>):
       annotations: []
       default: false
       type: public
@@ -3033,6 +4106,17 @@ net.corda.testing.node.MockServices:
           annotation:
             - NotNull
           type: java.util.function.Consumer<javax.persistence.EntityManager>
+    withEntityManager(kotlin.jvm.functions.Function1<? super javax.persistence.EntityManager, ? extends T>):
+      annotations: []
+      default: false
+      type: public
+      returnType: T
+      params:
+        block:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super javax.persistence.EntityManager,\
+            \ ? extends T>"
   fields:
     Companion:
       annotation:
@@ -3045,7 +4129,7 @@ net.corda.testing.node.MockServices$Companion:
   implements: []
   interface: false
   methods:
-    makeTestDataSourceProperties:
+    makeTestDataSourceProperties(String):
       annotations:
         - NotNull
       default: false
@@ -3056,8 +4140,9 @@ net.corda.testing.node.MockServices$Companion:
           annotation:
             - NotNull
           type: String
-    makeTestDatabaseAndMockServices:
-      annotations:
+    ? makeTestDatabaseAndMockServices(java.util.List<String>, net.corda.core.node.services.IdentityService,
+      net.corda.testing.core.TestIdentity, java.security.KeyPair[])
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -3080,8 +4165,39 @@ net.corda.testing.node.MockServices$Companion:
           annotation:
             - NotNull
           type: "java.security.KeyPair[]"
-    makeTestDatabaseAndPersistentServices:
-      annotations:
+    ? makeTestDatabaseAndMockServices(java.util.List<String>, net.corda.core.node.services.IdentityService,
+      net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters,
+      java.security.KeyPair[])
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        identityService:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.services.IdentityService
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: "java.security.KeyPair[]"
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      java.util.Set<java.security.KeyPair>, java.util.Set<net.corda.core.identity.PartyAndCertificate>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -3104,6 +4220,70 @@ net.corda.testing.node.MockServices$Companion:
           annotation:
             - NotNull
           type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      net.corda.core.node.NetworkParameters, java.util.Set<java.security.KeyPair>,
+      java.util.Set<net.corda.core.identity.PartyAndCertificate>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: java.util.Set<java.security.KeyPair>
+        moreIdentities:
+          annotation:
+            - NotNull
+          type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
+    ? makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity,
+      net.corda.core.node.NetworkParameters, java.util.Set<java.security.KeyPair>,
+      java.util.Set<net.corda.core.identity.PartyAndCertificate>, net.corda.testing.internal.TestingNamedCacheFactory)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: "kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence,\
+        \ net.corda.testing.node.MockServices>"
+      params:
+        cordappPackages:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        initialIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.testing.core.TestIdentity
+        networkParameters:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.NetworkParameters
+        moreKeys:
+          annotation:
+            - NotNull
+          type: java.util.Set<java.security.KeyPair>
+        moreIdentities:
+          annotation:
+            - NotNull
+          type: java.util.Set<net.corda.core.identity.PartyAndCertificate>
+        cacheFactory:
+          annotation:
+            - NotNull
+          type: net.corda.testing.internal.TestingNamedCacheFactory
 net.corda.testing.node.MockServicesKt:
   annotations: []
   type: public final class
@@ -3111,8 +4291,9 @@ net.corda.testing.node.MockServicesKt:
   implements: []
   interface: false
   methods:
-    createMockCordaService:
-      annotations:
+    ? createMockCordaService(net.corda.testing.node.MockServices, kotlin.jvm.functions.Function1<?
+      super net.corda.core.node.AppServiceHub, ? extends T>)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -3127,7 +4308,7 @@ net.corda.testing.node.MockServicesKt:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.core.node.AppServiceHub,\
             \ ? extends T>"
-    makeTestIdentityService:
+    makeTestIdentityService(net.corda.core.identity.PartyAndCertificate[]):
       annotations:
         - NotNull
       default: false
@@ -3145,8 +4326,10 @@ net.corda.testing.node.NodeTestUtils:
   implements: []
   interface: false
   methods:
-    ledger:
-      annotations:
+    ? ledger(net.corda.core.node.ServiceHub, kotlin.jvm.functions.Function1<? super
+      net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,
+      net.corda.testing.dsl.TestLedgerDSLInterpreter>, kotlin.Unit>)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -3162,7 +4345,30 @@ net.corda.testing.node.NodeTestUtils:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,\
             \ net.corda.testing.dsl.TestLedgerDSLInterpreter>, kotlin.Unit>"
-    testActor:
+    ? ledger(net.corda.core.node.ServiceHub, net.corda.core.identity.Party, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,
+      net.corda.testing.dsl.TestLedgerDSLInterpreter>, kotlin.Unit>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,\
+        \ net.corda.testing.dsl.TestLedgerDSLInterpreter>"
+      params:
+        $this$ledger:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.ServiceHub
+        notary:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        script:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,\
+            \ net.corda.testing.dsl.TestLedgerDSLInterpreter>, kotlin.Unit>"
+    testActor(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -3173,7 +4379,7 @@ net.corda.testing.node.NodeTestUtils:
           annotation:
             - NotNull
           type: net.corda.core.identity.CordaX500Name
-    testContext:
+    testContext(net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -3184,8 +4390,10 @@ net.corda.testing.node.NodeTestUtils:
           annotation:
             - NotNull
           type: net.corda.core.identity.CordaX500Name
-    transaction:
-      annotations:
+    ? transaction(net.corda.core.node.ServiceHub, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.TransactionDSL<? extends net.corda.testing.dsl.TransactionDSLInterpreter>,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public static final
@@ -3202,6 +4410,30 @@ net.corda.testing.node.NodeTestUtils:
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
             \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
             \ net.corda.testing.dsl.EnforceVerifyOrFail>"
+    ? transaction(net.corda.core.node.ServiceHub, net.corda.core.identity.Party, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.TransactionDSL<? extends net.corda.testing.dsl.TransactionDSLInterpreter>,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: "net.corda.testing.dsl.LedgerDSL<net.corda.testing.dsl.TestTransactionDSLInterpreter,\
+        \ net.corda.testing.dsl.TestLedgerDSLInterpreter>"
+      params:
+        $this$transaction:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.ServiceHub
+        notary:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        script:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
+            \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
+            \ net.corda.testing.dsl.EnforceVerifyOrFail>"
 net.corda.testing.node.NotarySpec:
   annotations: []
   type: public final class
@@ -3209,42 +4441,70 @@ net.corda.testing.node.NotarySpec:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    component2:
+    component2():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.User>
-    component4:
+    component4():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.VerifierType
-    component5:
+    component5():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.testing.node.ClusterSpec
-    component6:
+    component6():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    copy:
-      annotations:
+    ? copy(net.corda.core.identity.CordaX500Name, boolean, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, net.corda.testing.node.ClusterSpec)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.testing.node.NotarySpec
+      params:
+        name:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.CordaX500Name
+        validating:
+          annotation: []
+          type: boolean
+        rpcUsers:
+          annotation:
+            - NotNull
+          type: java.util.List<net.corda.testing.node.User>
+        verifierType:
+          annotation:
+            - NotNull
+          type: net.corda.testing.driver.VerifierType
+        cluster:
+          annotation:
+            - Nullable
+          type: net.corda.testing.node.ClusterSpec
+    ? copy(net.corda.core.identity.CordaX500Name, boolean, java.util.List<net.corda.testing.node.User>,
+      net.corda.testing.driver.VerifierType, net.corda.testing.node.ClusterSpec, boolean)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -3272,7 +4532,7 @@ net.corda.testing.node.NotarySpec:
         startInProcess:
           annotation: []
           type: boolean
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -3282,52 +4542,52 @@ net.corda.testing.node.NotarySpec:
           annotation:
             - Nullable
           type: Object
-    getCluster:
+    getCluster():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: net.corda.testing.node.ClusterSpec
-    getMaximumHeapSize:
+    getMaximumHeapSize():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    getName:
+    getName():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.identity.CordaX500Name
-    getRpcUsers:
+    getRpcUsers():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.testing.node.User>
-    getStartInProcess:
+    getStartInProcess():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getValidating:
+    getValidating():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getVerifierType:
+    getVerifierType():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.driver.VerifierType
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    setMaximumHeapSize:
+    setMaximumHeapSize(String):
       annotations: []
       default: false
       type: public final
@@ -3337,7 +4597,7 @@ net.corda.testing.node.NotarySpec:
           annotation:
             - NotNull
           type: String
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -3350,7 +4610,7 @@ net.corda.testing.node.StartedMockNode:
   implements: []
   interface: false
   methods:
-    findStateMachines:
+    findStateMachines(Class<F>):
       annotations:
         - NotNull
       default: false
@@ -3361,24 +4621,24 @@ net.corda.testing.node.StartedMockNode:
           annotation:
             - NotNull
           type: Class<F>
-    getId:
+    getId():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getInfo:
+    getInfo():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.NodeInfo
-    getServices:
+    getServices():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.ServiceHub
-    pumpReceive:
+    pumpReceive(boolean):
       annotations:
         - Nullable
       default: false
@@ -3388,7 +4648,7 @@ net.corda.testing.node.StartedMockNode:
         block:
           annotation: []
           type: boolean
-    registerInitiatedFlow:
+    registerInitiatedFlow(Class<? extends net.corda.core.flows.FlowLogic<?>>, Class<F>):
       annotations:
         - NotNull
       default: false
@@ -3403,7 +4663,18 @@ net.corda.testing.node.StartedMockNode:
           annotation:
             - NotNull
           type: Class<F>
-    startFlow:
+    registerInitiatedFlow(Class<F>):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: rx.Observable<F>
+      params:
+        initiatedFlowClass:
+          annotation:
+            - NotNull
+          type: Class<F>
+    startFlow(net.corda.core.flows.FlowLogic<? extends T>):
       annotations:
         - NotNull
       default: false
@@ -3414,12 +4685,12 @@ net.corda.testing.node.StartedMockNode:
           annotation:
             - NotNull
           type: net.corda.core.flows.FlowLogic<? extends T>
-    stop:
+    stop():
       annotations: []
       default: false
       type: public final
       returnType: void
-    transaction:
+    transaction(kotlin.jvm.functions.Function0<? extends T>):
       annotations: []
       default: false
       type: public final
@@ -3449,7 +4720,7 @@ net.corda.testing.node.TestClock:
   implements: []
   interface: false
   methods:
-    advanceBy:
+    advanceBy(java.time.Duration):
       annotations: []
       default: false
       type: public final synchronized
@@ -3459,7 +4730,7 @@ net.corda.testing.node.TestClock:
           annotation:
             - NotNull
           type: java.time.Duration
-    setTo:
+    setTo(java.time.Instant):
       annotations: []
       default: false
       type: public final synchronized
@@ -3476,13 +4747,13 @@ net.corda.testing.node.TestCordapp:
   implements: []
   interface: false
   methods:
-    asSigned:
+    asSigned():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.testing.node.TestCordapp
-    findCordapp:
+    findCordapp(String):
       annotations:
         - NotNull
       default: false
@@ -3493,13 +4764,13 @@ net.corda.testing.node.TestCordapp:
           annotation:
             - NotNull
           type: String
-    getConfig:
+    getConfig():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: "java.util.Map<String, Object>"
-    of:
+    of(java.net.URI):
       annotations:
         - NotNull
       default: false
@@ -3510,7 +4781,7 @@ net.corda.testing.node.TestCordapp:
           annotation:
             - NotNull
           type: java.net.URI
-    withConfig:
+    withConfig(java.util.Map<String, ?>):
       annotations:
         - NotNull
       default: false
@@ -3533,7 +4804,7 @@ net.corda.testing.node.TestCordapp$Companion:
   implements: []
   interface: false
   methods:
-    findCordapp:
+    findCordapp(String):
       annotations:
         - NotNull
       default: false
@@ -3544,7 +4815,7 @@ net.corda.testing.node.TestCordapp$Companion:
           annotation:
             - NotNull
           type: String
-    of:
+    of(java.net.URI):
       annotations:
         - NotNull
       default: false
@@ -3562,18 +4833,18 @@ net.corda.testing.node.UnstartedMockNode:
   implements: []
   interface: false
   methods:
-    getId:
+    getId():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getStarted:
+    getStarted():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.node.StartedMockNode
-    installCordaService:
+    installCordaService(Class<T>):
       annotations:
         - NotNull
       default: false
@@ -3584,12 +4855,12 @@ net.corda.testing.node.UnstartedMockNode:
           annotation:
             - NotNull
           type: Class<T>
-    isStarted:
+    isStarted():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    start:
+    start():
       annotations:
         - NotNull
       default: false
@@ -3614,25 +4885,25 @@ net.corda.testing.node.User:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    component3:
+    component3():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Set<String>
-    copy:
+    copy(String, String, java.util.Set<String>):
       annotations:
         - NotNull
       default: false
@@ -3651,7 +4922,7 @@ net.corda.testing.node.User:
           annotation:
             - NotNull
           type: java.util.Set<String>
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -3661,30 +4932,30 @@ net.corda.testing.node.User:
           annotation:
             - Nullable
           type: Object
-    getPassword:
+    getPassword():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    getPermissions:
+    getPermissions():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.Set<String>
-    getUsername:
+    getUsername():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: String
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false

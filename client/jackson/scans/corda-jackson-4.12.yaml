@@ -7,7 +7,7 @@ net.corda.client.jackson.JacksonSupport:
   implements: []
   interface: false
   methods:
-    createDefaultMapper:
+    createDefaultMapper(net.corda.core.messaging.CordaRPCOps):
       annotations:
         - NotNull
       default: false
@@ -18,7 +18,61 @@ net.corda.client.jackson.JacksonSupport:
           annotation:
             - NotNull
           type: net.corda.core.messaging.CordaRPCOps
-    createInMemoryMapper:
+    createDefaultMapper(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        rpc:
+          annotation:
+            - NotNull
+          type: net.corda.core.messaging.CordaRPCOps
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+    createDefaultMapper(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        rpc:
+          annotation:
+            - NotNull
+          type: net.corda.core.messaging.CordaRPCOps
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+        fuzzyIdentityMatch:
+          annotation: []
+          type: boolean
+    createDefaultMapper(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory, boolean, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        rpc:
+          annotation:
+            - NotNull
+          type: net.corda.core.messaging.CordaRPCOps
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+        fuzzyIdentityMatch:
+          annotation: []
+          type: boolean
+        fullParties:
+          annotation: []
+          type: boolean
+    createInMemoryMapper(net.corda.core.node.services.IdentityService):
       annotations:
         - NotNull
       default: false
@@ -29,13 +83,92 @@ net.corda.client.jackson.JacksonSupport:
           annotation:
             - NotNull
           type: net.corda.core.node.services.IdentityService
-    createNonRpcMapper:
+    createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory):
       annotations:
         - NotNull
       default: false
       type: public static final
       returnType: com.fasterxml.jackson.databind.ObjectMapper
-    getCordaModule:
+      params:
+        identityService:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.services.IdentityService
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+    createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        identityService:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.services.IdentityService
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+        fuzzyIdentityMatch:
+          annotation: []
+          type: boolean
+    createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory, boolean, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        identityService:
+          annotation:
+            - NotNull
+          type: net.corda.core.node.services.IdentityService
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+        fuzzyIdentityMatch:
+          annotation: []
+          type: boolean
+        fullParties:
+          annotation: []
+          type: boolean
+    createNonRpcMapper():
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+    createNonRpcMapper(com.fasterxml.jackson.core.JsonFactory):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+    createNonRpcMapper(com.fasterxml.jackson.core.JsonFactory, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public static final
+      returnType: com.fasterxml.jackson.databind.ObjectMapper
+      params:
+        factory:
+          annotation:
+            - NotNull
+          type: com.fasterxml.jackson.core.JsonFactory
+        fullParties:
+          annotation: []
+          type: boolean
+    getCordaModule():
       annotations:
         - NotNull
       default: false
@@ -53,7 +186,7 @@ net.corda.client.jackson.JacksonSupport$AmountDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -80,8 +213,9 @@ net.corda.client.jackson.JacksonSupport$AmountSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.contracts.Amount<?>, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -110,7 +244,7 @@ net.corda.client.jackson.JacksonSupport$AnonymousPartyDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -137,8 +271,9 @@ net.corda.client.jackson.JacksonSupport$AnonymousPartySerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.identity.AnonymousParty, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -167,7 +302,7 @@ net.corda.client.jackson.JacksonSupport$CordaX500NameDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -194,8 +329,9 @@ net.corda.client.jackson.JacksonSupport$CordaX500NameSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.identity.CordaX500Name, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -225,23 +361,23 @@ net.corda.client.jackson.JacksonSupport$IdentityObjectMapper:
     - net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   interface: false
   methods:
-    getFuzzyIdentityMatch:
+    getFuzzyIdentityMatch():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getIdentityService:
+    getIdentityService():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.services.IdentityService
-    isFullParties:
+    isFullParties():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    nodeInfoFromParty:
+    nodeInfoFromParty(net.corda.core.identity.AbstractParty):
       annotations:
         - Nullable
       default: false
@@ -252,7 +388,7 @@ net.corda.client.jackson.JacksonSupport$IdentityObjectMapper:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    partiesFromName:
+    partiesFromName(String):
       annotations:
         - NotNull
       default: false
@@ -263,7 +399,7 @@ net.corda.client.jackson.JacksonSupport$IdentityObjectMapper:
           annotation:
             - NotNull
           type: String
-    partyFromKey:
+    partyFromKey(java.security.PublicKey):
       annotations:
         - Nullable
       default: false
@@ -274,7 +410,7 @@ net.corda.client.jackson.JacksonSupport$IdentityObjectMapper:
           annotation:
             - NotNull
           type: java.security.PublicKey
-    wellKnownPartyFromX500Name:
+    wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name):
       annotations:
         - Nullable
       default: false
@@ -293,12 +429,12 @@ net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper:
     - net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   interface: false
   methods:
-    isFullParties:
+    isFullParties():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    nodeInfoFromParty:
+    nodeInfoFromParty(net.corda.core.identity.AbstractParty):
       annotations:
         - Nullable
       default: false
@@ -309,7 +445,7 @@ net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    partiesFromName:
+    partiesFromName(String):
       annotations:
         - NotNull
       default: false
@@ -320,7 +456,7 @@ net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper:
           annotation:
             - NotNull
           type: String
-    partyFromKey:
+    partyFromKey(java.security.PublicKey):
       annotations:
         - Nullable
       default: false
@@ -331,7 +467,7 @@ net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper:
           annotation:
             - NotNull
           type: java.security.PublicKey
-    wellKnownPartyFromX500Name:
+    wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name):
       annotations:
         - Nullable
       default: false
@@ -349,7 +485,7 @@ net.corda.client.jackson.JacksonSupport$NodeInfoDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -376,8 +512,9 @@ net.corda.client.jackson.JacksonSupport$NodeInfoSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.node.NodeInfo, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -406,7 +543,7 @@ net.corda.client.jackson.JacksonSupport$OpaqueBytesDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -433,8 +570,9 @@ net.corda.client.jackson.JacksonSupport$OpaqueBytesSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.utilities.OpaqueBytes, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -463,7 +601,7 @@ net.corda.client.jackson.JacksonSupport$PartyDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -489,12 +627,12 @@ net.corda.client.jackson.JacksonSupport$PartyObjectMapper:
   extends: []
   interface: true
   methods:
-    isFullParties:
+    isFullParties():
       annotations: []
       default: false
       type: public abstract
       returnType: boolean
-    nodeInfoFromParty:
+    nodeInfoFromParty(net.corda.core.identity.AbstractParty):
       annotations:
         - Nullable
       default: false
@@ -505,7 +643,7 @@ net.corda.client.jackson.JacksonSupport$PartyObjectMapper:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    partiesFromName:
+    partiesFromName(String):
       annotations:
         - NotNull
       default: false
@@ -516,7 +654,7 @@ net.corda.client.jackson.JacksonSupport$PartyObjectMapper:
           annotation:
             - NotNull
           type: String
-    partyFromKey:
+    partyFromKey(java.security.PublicKey):
       annotations:
         - Nullable
       default: false
@@ -527,7 +665,7 @@ net.corda.client.jackson.JacksonSupport$PartyObjectMapper:
           annotation:
             - NotNull
           type: java.security.PublicKey
-    wellKnownPartyFromX500Name:
+    wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name):
       annotations:
         - Nullable
       default: false
@@ -545,8 +683,9 @@ net.corda.client.jackson.JacksonSupport$PartySerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.identity.Party, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -575,7 +714,7 @@ net.corda.client.jackson.JacksonSupport$PublicKeyDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -602,7 +741,7 @@ net.corda.client.jackson.JacksonSupport$PublicKeySerializer:
   implements: []
   interface: false
   methods:
-    serialize:
+    serialize(java.security.PublicKey, com.fasterxml.jackson.core.JsonGenerator, com.fasterxml.jackson.databind.SerializerProvider):
       annotations: []
       default: false
       type: public
@@ -633,23 +772,23 @@ net.corda.client.jackson.JacksonSupport$RpcObjectMapper:
     - net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   interface: false
   methods:
-    getFuzzyIdentityMatch:
+    getFuzzyIdentityMatch():
       annotations: []
       default: false
       type: public final
       returnType: boolean
-    getRpc:
+    getRpc():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.messaging.CordaRPCOps
-    isFullParties:
+    isFullParties():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    nodeInfoFromParty:
+    nodeInfoFromParty(net.corda.core.identity.AbstractParty):
       annotations:
         - Nullable
       default: false
@@ -660,7 +799,7 @@ net.corda.client.jackson.JacksonSupport$RpcObjectMapper:
           annotation:
             - NotNull
           type: net.corda.core.identity.AbstractParty
-    partiesFromName:
+    partiesFromName(String):
       annotations:
         - NotNull
       default: false
@@ -671,7 +810,7 @@ net.corda.client.jackson.JacksonSupport$RpcObjectMapper:
           annotation:
             - NotNull
           type: String
-    partyFromKey:
+    partyFromKey(java.security.PublicKey):
       annotations:
         - Nullable
       default: false
@@ -682,7 +821,7 @@ net.corda.client.jackson.JacksonSupport$RpcObjectMapper:
           annotation:
             - NotNull
           type: java.security.PublicKey
-    wellKnownPartyFromX500Name:
+    wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name):
       annotations:
         - Nullable
       default: false
@@ -700,7 +839,7 @@ net.corda.client.jackson.JacksonSupport$SecureHashDeserializer:
   implements: []
   interface: false
   methods:
-    deserialize:
+    deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext):
       annotations:
         - NotNull
       default: false
@@ -722,8 +861,9 @@ net.corda.client.jackson.JacksonSupport$SecureHashSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
-      annotations: []
+    ? serialize(net.corda.core.crypto.SecureHash, com.fasterxml.jackson.core.JsonGenerator,
+      com.fasterxml.jackson.databind.SerializerProvider)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -752,63 +892,63 @@ net.corda.client.jackson.JacksonSupport$SignedTransactionMixin:
   implements: []
   interface: false
   methods:
-    getId:
+    getId():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.crypto.SecureHash
-    getInputs:
+    getInputs():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.core.contracts.StateRef>
-    getNotary:
+    getNotary():
       annotations:
         - JsonIgnore
         - Nullable
       default: false
       type: public abstract
       returnType: net.corda.core.identity.Party
-    getNotaryChangeTx:
+    getNotaryChangeTx():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.transactions.NotaryChangeWireTransaction
-    getRequiredSigningKeys:
+    getRequiredSigningKeys():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.Set<java.security.PublicKey>
-    getSigs:
+    getSigs():
       annotations:
         - JsonProperty
         - NotNull
       default: false
       type: protected abstract
       returnType: java.util.List<net.corda.core.crypto.TransactionSignature>
-    getTransaction:
+    getTransaction():
       annotations:
         - JsonProperty
         - NotNull
       default: false
       type: protected abstract
       returnType: net.corda.core.transactions.CoreTransaction
-    getTx:
+    getTx():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.transactions.WireTransaction
-    getTxBits:
+    getTxBits():
       annotations:
         - JsonIgnore
         - NotNull
@@ -822,7 +962,7 @@ net.corda.client.jackson.JacksonSupport$ToStringSerializer:
   implements: []
   interface: false
   methods:
-    serialize:
+    serialize(Object, com.fasterxml.jackson.core.JsonGenerator, com.fasterxml.jackson.databind.SerializerProvider):
       annotations: []
       default: false
       type: public
@@ -852,28 +992,28 @@ net.corda.client.jackson.JacksonSupport$WireTransactionMixin:
   implements: []
   interface: false
   methods:
-    getAvailableComponentHashes:
+    getAvailableComponentHashes():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<net.corda.core.crypto.SecureHash>
-    getAvailableComponents:
+    getAvailableComponents():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: java.util.List<Object>
-    getMerkleTree:
+    getMerkleTree():
       annotations:
         - JsonIgnore
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.core.crypto.MerkleTree
-    getOutputStates:
+    getOutputStates():
       annotations:
         - JsonIgnore
         - NotNull
@@ -888,25 +1028,25 @@ net.corda.client.jackson.StringToMethodCallParser:
   implements: []
   interface: false
   methods:
-    getAvailableCommands:
+    getAvailableCommands():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, String>"
-    getMethodMap:
+    getMethodMap():
       annotations:
         - NotNull
       default: false
       type: protected final
       returnType: "com.google.common.collect.Multimap<String, reflect.Method>"
-    getMethodParamNames:
+    getMethodParamNames():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<String, java.util.List<String>>"
-    paramNamesFromConstructor:
+    paramNamesFromConstructor(reflect.Constructor<?>):
       annotations:
         - NotNull
       default: false
@@ -917,7 +1057,7 @@ net.corda.client.jackson.StringToMethodCallParser:
           annotation:
             - NotNull
           type: reflect.Constructor<?>
-    paramNamesFromMethod:
+    paramNamesFromMethod(reflect.Method):
       annotations:
         - NotNull
       default: false
@@ -928,7 +1068,7 @@ net.corda.client.jackson.StringToMethodCallParser:
           annotation:
             - NotNull
           type: reflect.Method
-    parse:
+    parse(T, String):
       annotations:
         - NotNull
       default: false
@@ -943,7 +1083,7 @@ net.corda.client.jackson.StringToMethodCallParser:
           annotation:
             - NotNull
           type: String
-    parseArguments:
+    parseArguments(String, java.util.List<? extends kotlin.Pair<String, ? extends reflect.Type>>, String):
       annotations:
         - NotNull
       default: false
@@ -962,7 +1102,7 @@ net.corda.client.jackson.StringToMethodCallParser:
           annotation:
             - NotNull
           type: String
-    validateIsMatchingCtor:
+    validateIsMatchingCtor(String, java.util.List<? extends kotlin.Pair<String, ? extends reflect.Type>>, String):
       annotations: []
       default: false
       type: public final
@@ -1000,25 +1140,25 @@ net.corda.client.jackson.StringToMethodCallParser$ParsedMethodCall:
     - java.util.concurrent.Callable
   interface: false
   methods:
-    call:
+    call():
       annotations:
         - Nullable
       default: false
       type: public
       returnType: Object
-    getArgs:
+    getArgs():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "Object[]"
-    getMethod:
+    getMethod():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: reflect.Method
-    invoke:
+    invoke():
       annotations:
         - Nullable
       default: false
@@ -1045,7 +1185,7 @@ net.corda.client.jackson.StringToMethodCallParser$UnparseableCallException$Missi
   implements: []
   interface: false
   methods:
-    getParamName:
+    getParamName():
       annotations:
         - NotNull
       default: false
@@ -1079,7 +1219,7 @@ net.corda.client.jackson.StringToMethodCallParser$UnparseableCallException$Unkno
   implements: []
   interface: false
   methods:
-    getMethodName:
+    getMethodName():
       annotations:
         - NotNull
       default: false

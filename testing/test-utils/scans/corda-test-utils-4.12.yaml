@@ -33,36 +33,36 @@ net.corda.finance.test.SampleCashSchemaV1$PersistentCashState:
   implements: []
   interface: false
   methods:
-    getCurrency:
+    getCurrency():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getIssuerPartyHash:
+    getIssuerPartyHash():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getIssuerRef:
+    getIssuerRef():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: "byte[]"
-    getOwnerHash:
+    getOwnerHash():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getPennies:
+    getPennies():
       annotations: []
       default: false
       type: public
       returnType: long
-    setCurrency:
+    setCurrency(String):
       annotations: []
       default: false
       type: public
@@ -72,7 +72,7 @@ net.corda.finance.test.SampleCashSchemaV1$PersistentCashState:
           annotation:
             - NotNull
           type: String
-    setIssuerPartyHash:
+    setIssuerPartyHash(String):
       annotations: []
       default: false
       type: public
@@ -82,7 +82,7 @@ net.corda.finance.test.SampleCashSchemaV1$PersistentCashState:
           annotation:
             - NotNull
           type: String
-    setIssuerRef:
+    setIssuerRef(byte[]):
       annotations: []
       default: false
       type: public
@@ -92,7 +92,7 @@ net.corda.finance.test.SampleCashSchemaV1$PersistentCashState:
           annotation:
             - NotNull
           type: "byte[]"
-    setOwnerHash:
+    setOwnerHash(String):
       annotations: []
       default: false
       type: public
@@ -102,7 +102,7 @@ net.corda.finance.test.SampleCashSchemaV1$PersistentCashState:
           annotation:
             - NotNull
           type: String
-    setPennies:
+    setPennies(long):
       annotations: []
       default: false
       type: public
@@ -132,19 +132,19 @@ net.corda.finance.test.SampleCashSchemaV2$PersistentCashState:
   implements: []
   interface: false
   methods:
-    getCurrency:
+    getCurrency():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getParticipants:
+    getParticipants():
       annotations:
         - Nullable
       default: false
       type: public
       returnType: java.util.Set<net.corda.core.identity.AbstractParty>
-    setCurrency:
+    setCurrency(String):
       annotations: []
       default: false
       type: public
@@ -154,7 +154,7 @@ net.corda.finance.test.SampleCashSchemaV2$PersistentCashState:
           annotation:
             - NotNull
           type: String
-    setParticipants:
+    setParticipants(java.util.Set<net.corda.core.identity.AbstractParty>):
       annotations: []
       default: false
       type: public
@@ -185,42 +185,42 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
   implements: []
   interface: false
   methods:
-    getCurrency:
+    getCurrency():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    getIssuer:
+    getIssuer():
       annotations:
         - Nullable
       default: false
       type: public
       returnType: net.corda.core.identity.AbstractParty
-    getIssuerRef:
+    getIssuerRef():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: "byte[]"
-    getOwner:
+    getOwner():
       annotations:
         - Nullable
       default: false
       type: public
       returnType: net.corda.core.identity.AbstractParty
-    getParticipants:
+    getParticipants():
       annotations:
         - Nullable
       default: false
       type: public
       returnType: java.util.Set<net.corda.core.identity.AbstractParty>
-    getPennies:
+    getPennies():
       annotations: []
       default: false
       type: public
       returnType: long
-    setCurrency:
+    setCurrency(String):
       annotations: []
       default: false
       type: public
@@ -230,7 +230,7 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
           annotation:
             - NotNull
           type: String
-    setIssuer:
+    setIssuer(net.corda.core.identity.AbstractParty):
       annotations: []
       default: false
       type: public
@@ -240,7 +240,7 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
           annotation:
             - Nullable
           type: net.corda.core.identity.AbstractParty
-    setIssuerRef:
+    setIssuerRef(byte[]):
       annotations: []
       default: false
       type: public
@@ -250,7 +250,7 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
           annotation:
             - NotNull
           type: "byte[]"
-    setOwner:
+    setOwner(net.corda.core.identity.AbstractParty):
       annotations: []
       default: false
       type: public
@@ -260,7 +260,7 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
           annotation:
             - Nullable
           type: net.corda.core.identity.AbstractParty
-    setParticipants:
+    setParticipants(java.util.Set<net.corda.core.identity.AbstractParty>):
       annotations: []
       default: false
       type: public
@@ -270,7 +270,7 @@ net.corda.finance.test.SampleCashSchemaV3$PersistentCashState:
           annotation:
             - Nullable
           type: java.util.Set<net.corda.core.identity.AbstractParty>
-    setPennies:
+    setPennies(long):
       annotations: []
       default: false
       type: public
@@ -327,8 +327,9 @@ net.corda.testing.dsl.LedgerDSL:
     - net.corda.testing.dsl.LedgerDSLInterpreter
   interface: false
   methods:
-    _transaction:
-      annotations:
+    ? _transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.TransactionDSLInterpreter, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -347,8 +348,9 @@ net.corda.testing.dsl.LedgerDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,\
             \ ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    _tweak:
-      annotations: []
+    ? _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -358,8 +360,10 @@ net.corda.testing.dsl.LedgerDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<?\
             \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>"
-    _unverifiedTransaction:
-      annotations:
+    ? _unverifiedTransaction(String, net.corda.core.transactions.TransactionBuilder,
+      kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,
+      kotlin.Unit>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -378,7 +382,7 @@ net.corda.testing.dsl.LedgerDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,\
             \ kotlin.Unit>"
-    attachment:
+    attachment(java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -389,13 +393,7 @@ net.corda.testing.dsl.LedgerDSL:
           annotation:
             - NotNull
           type: java.io.InputStream
-    fails:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: false
@@ -406,7 +404,13 @@ net.corda.testing.dsl.LedgerDSL:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: false
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: false
@@ -417,13 +421,13 @@ net.corda.testing.dsl.LedgerDSL:
           annotation:
             - Nullable
           type: String
-    getInterpreter:
+    getInterpreter():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: L
-    output:
+    output(String):
       annotations: []
       default: false
       type: public final synthetic
@@ -432,7 +436,7 @@ net.corda.testing.dsl.LedgerDSL:
         "null":
           annotation: []
           type: String
-    outputStateAndRef:
+    outputStateAndRef(String):
       annotations: []
       default: false
       type: public final synthetic
@@ -441,7 +445,7 @@ net.corda.testing.dsl.LedgerDSL:
         "null":
           annotation: []
           type: String
-    retrieveOutput:
+    retrieveOutput(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -456,7 +460,7 @@ net.corda.testing.dsl.LedgerDSL:
           annotation:
             - NotNull
           type: String
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -471,8 +475,50 @@ net.corda.testing.dsl.LedgerDSL:
           annotation:
             - NotNull
           type: String
-    transaction:
-      annotations:
+    ? transaction(String, kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.WireTransaction
+      params:
+        label:
+          annotation:
+            - Nullable
+          type: String
+        dsl:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
+            \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
+            \ net.corda.testing.dsl.EnforceVerifyOrFail>"
+    ? transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.TransactionDSL<? extends net.corda.testing.dsl.TransactionDSLInterpreter>,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.WireTransaction
+      params:
+        label:
+          annotation:
+            - Nullable
+          type: String
+        transactionBuilder:
+          annotation:
+            - NotNull
+          type: net.corda.core.transactions.TransactionBuilder
+        dsl:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
+            \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
+            \ net.corda.testing.dsl.EnforceVerifyOrFail>"
+    ? transaction(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -484,7 +530,7 @@ net.corda.testing.dsl.LedgerDSL:
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
             \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
             \ net.corda.testing.dsl.EnforceVerifyOrFail>"
-    tweak:
+    tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSL<? extends T, ? extends L>, kotlin.Unit>):
       annotations: []
       default: false
       type: public final
@@ -495,8 +541,48 @@ net.corda.testing.dsl.LedgerDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSL<?\
             \ extends T, ? extends L>, kotlin.Unit>"
-    unverifiedTransaction:
-      annotations:
+    ? unverifiedTransaction(String, kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.WireTransaction
+      params:
+        label:
+          annotation:
+            - Nullable
+          type: String
+        dsl:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
+            \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>"
+    ? unverifiedTransaction(String, net.corda.core.transactions.TransactionBuilder,
+      kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.WireTransaction
+      params:
+        label:
+          annotation:
+            - Nullable
+          type: String
+        transactionBuilder:
+          annotation:
+            - NotNull
+          type: net.corda.core.transactions.TransactionBuilder
+        dsl:
+          annotation:
+            - NotNull
+          type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
+            \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>"
+    ? unverifiedTransaction(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -507,7 +593,7 @@ net.corda.testing.dsl.LedgerDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
             \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, kotlin.Unit>"
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -521,8 +607,9 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
     - net.corda.testing.dsl.Verifies
   interface: true
   methods:
-    _transaction:
-      annotations:
+    ? _transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1<?
+      super T, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public abstract
@@ -540,7 +627,7 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super T, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    _tweak:
+    _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<? extends T>, kotlin.Unit>):
       annotations: []
       default: false
       type: public abstract
@@ -551,8 +638,9 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<?\
             \ extends T>, kotlin.Unit>"
-    _unverifiedTransaction:
-      annotations:
+    ? _unverifiedTransaction(String, net.corda.core.transactions.TransactionBuilder,
+      kotlin.jvm.functions.Function1<? super T, kotlin.Unit>)
+    : annotations:
         - NotNull
       default: false
       type: public abstract
@@ -570,7 +658,7 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super T, kotlin.Unit>"
-    attachment:
+    attachment(java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -581,13 +669,7 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - NotNull
           type: java.io.InputStream
-    fails:
-      annotations:
-        - NotNull
-      default: true
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: true
@@ -598,7 +680,13 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: true
@@ -609,7 +697,7 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - Nullable
           type: String
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -624,7 +712,7 @@ net.corda.testing.dsl.LedgerDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -636,7 +724,7 @@ net.corda.testing.dsl.OutputStateLookup:
   extends: []
   interface: true
   methods:
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -659,8 +747,9 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
     - net.corda.testing.dsl.LedgerDSLInterpreter
   interface: false
   methods:
-    _transaction:
-      annotations:
+    ? _transaction(String, net.corda.core.transactions.TransactionBuilder, kotlin.jvm.functions.Function1<?
+      super net.corda.testing.dsl.TestTransactionDSLInterpreter, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -679,8 +768,9 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TestTransactionDSLInterpreter,\
             \ ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    _tweak:
-      annotations: []
+    ? _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<net.corda.testing.dsl.TestTransactionDSLInterpreter>,
+      kotlin.Unit>)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -690,8 +780,10 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.LedgerDSLInterpreter<net.corda.testing.dsl.TestTransactionDSLInterpreter>,\
             \ kotlin.Unit>"
-    _unverifiedTransaction:
-      annotations:
+    ? _unverifiedTransaction(String, net.corda.core.transactions.TransactionBuilder,
+      kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TestTransactionDSLInterpreter,
+      kotlin.Unit>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -710,7 +802,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TestTransactionDSLInterpreter,\
             \ kotlin.Unit>"
-    attachment:
+    attachment(java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -721,14 +813,16 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: java.io.InputStream
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.ServiceHub
-    copy:
-      annotations:
+    ? copy(net.corda.core.node.ServiceHub, java.util.HashMap<String, net.corda.core.contracts.StateAndRef<net.corda.core.contracts.ContractState>>,
+      java.util.HashMap<net.corda.core.crypto.SecureHash, net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation>,
+      java.util.HashMap<net.corda.core.crypto.SecureHash, net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -750,7 +844,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: "java.util.HashMap<net.corda.core.crypto.SecureHash, net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation>"
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -760,13 +854,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - Nullable
           type: Object
-    fails:
-      annotations:
-        - NotNull
-      default: true
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: true
@@ -777,7 +865,13 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: true
@@ -788,36 +882,36 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - Nullable
           type: String
-    getServices:
+    getServices():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.ServiceHub
-    getTransactionsToVerify:
+    getTransactionsToVerify():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.transactions.WireTransaction>
-    getTransactionsUnverified:
+    getTransactionsUnverified():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.transactions.WireTransaction>
-    getWireTransactions:
+    getWireTransactions():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.List<net.corda.core.transactions.WireTransaction>
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    outputToLabel:
+    outputToLabel(net.corda.core.contracts.ContractState):
       annotations:
         - Nullable
       default: false
@@ -828,7 +922,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -843,13 +937,13 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    transactionName:
+    transactionName(net.corda.core.crypto.SecureHash):
       annotations:
         - Nullable
       default: false
@@ -860,7 +954,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -899,25 +993,25 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.transactions.WireTransaction
-    component3:
+    component3():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    copy:
+    copy(String, net.corda.core.transactions.WireTransaction, String):
       annotations:
         - NotNull
       default: false
@@ -936,7 +1030,7 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation:
           annotation:
             - Nullable
           type: String
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -946,30 +1040,30 @@ net.corda.testing.dsl.TestLedgerDSLInterpreter$WireTransactionWithLocation:
           annotation:
             - Nullable
           type: Object
-    getLabel:
+    getLabel():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    getLocation:
+    getLocation():
       annotations:
         - Nullable
       default: false
       type: public final
       returnType: String
-    getTransaction:
+    getTransaction():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.transactions.WireTransaction
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -984,8 +1078,37 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
     - net.corda.testing.dsl.TransactionDSLInterpreter
   interface: false
   methods:
-    _attachment:
+    _attachment(String):
       annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+    _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends java.security.PublicKey>):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+    ? _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends
+      java.security.PublicKey>, java.util.Map<String, String>)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -1006,8 +1129,9 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    _tweak:
-      annotations:
+    ? _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -1018,7 +1142,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,\
             \ ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    attachment:
+    attachment(net.corda.core.crypto.SecureHash):
       annotations: []
       default: false
       type: public
@@ -1028,7 +1152,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    command:
+    command(java.util.List<? extends java.security.PublicKey>, net.corda.core.contracts.CommandData):
       annotations: []
       default: false
       type: public
@@ -1042,20 +1166,21 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.CommandData
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.testing.dsl.TestLedgerDSLInterpreter
-    component2:
+    component2():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.transactions.TransactionBuilder
-    copy:
-      annotations:
+    ? copy(net.corda.testing.dsl.TestLedgerDSLInterpreter, net.corda.core.transactions.TransactionBuilder,
+      java.util.HashMap<String, Integer>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -1073,7 +1198,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: "java.util.HashMap<String, Integer>"
-    equals:
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -1083,13 +1208,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - Nullable
           type: Object
-    fails:
-      annotations:
-        - NotNull
-      default: true
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: true
@@ -1100,7 +1219,13 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: true
@@ -1111,30 +1236,30 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - Nullable
           type: String
-    getLedgerInterpreter:
+    getLedgerInterpreter():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.testing.dsl.TestLedgerDSLInterpreter
-    getServices:
+    getServices():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.node.ServicesForResolution
-    getTransactionBuilder:
+    getTransactionBuilder():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.core.transactions.TransactionBuilder
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    input:
+    input(net.corda.core.contracts.StateRef):
       annotations: []
       default: false
       type: public
@@ -1144,8 +1269,9 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    output:
-      annotations: []
+    ? output(String, String, net.corda.core.identity.Party, Integer, net.corda.core.contracts.AttachmentConstraint,
+      net.corda.core.contracts.ContractState)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -1174,7 +1300,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    reference:
+    reference(net.corda.core.contracts.StateRef):
       annotations: []
       default: false
       type: public
@@ -1184,7 +1310,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -1199,7 +1325,7 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    timeWindow:
+    timeWindow(net.corda.core.contracts.TimeWindow):
       annotations: []
       default: false
       type: public
@@ -1209,13 +1335,13 @@ net.corda.testing.dsl.TestTransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.TimeWindow
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: String
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -1229,8 +1355,37 @@ net.corda.testing.dsl.TransactionDSL:
     - net.corda.testing.dsl.TransactionDSLInterpreter
   interface: false
   methods:
-    _attachment:
+    _attachment(String):
       annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+    _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends java.security.PublicKey>):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+    ? _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends
+      java.security.PublicKey>, java.util.Map<String, String>)
+    : annotations: []
       default: false
       type: public
       returnType: void
@@ -1251,8 +1406,9 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    _tweak:
-      annotations:
+    ? _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public
@@ -1263,7 +1419,17 @@ net.corda.testing.dsl.TransactionDSL:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,\
             \ ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    attachment:
+    attachment(String):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+    attachment(String, net.corda.core.crypto.SecureHash):
       annotations: []
       default: false
       type: public final
@@ -1277,7 +1443,40 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    attachments:
+    ? attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends
+      java.security.PublicKey>, java.util.Map<String, String>)
+    : annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+        jarManifestAttributes:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+    attachment(net.corda.core.crypto.SecureHash):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+    attachments(String[]):
       annotations: []
       default: false
       type: public final
@@ -1287,7 +1486,7 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: "String[]"
-    command:
+    command(java.security.PublicKey, net.corda.core.contracts.CommandData):
       annotations: []
       default: false
       type: public final
@@ -1301,13 +1500,21 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: net.corda.core.contracts.CommandData
-    fails:
-      annotations:
-        - NotNull
+    command(java.util.List<? extends java.security.PublicKey>, net.corda.core.contracts.CommandData):
+      annotations: []
       default: false
       type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+      returnType: void
+      params:
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+        commandData:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.CommandData
+    fails with(String):
       annotations:
         - NotNull
       default: false
@@ -1318,7 +1525,13 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: false
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: false
@@ -1329,13 +1542,37 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - Nullable
           type: String
-    getLedgerInterpreter:
+    getLedgerInterpreter():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.testing.dsl.LedgerDSLInterpreter<net.corda.testing.dsl.TransactionDSLInterpreter>
-    input:
+    input(String):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        stateLabel:
+          annotation:
+            - NotNull
+          type: String
+    input(String, String):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        stateLabel:
+          annotation:
+            - NotNull
+          type: String
+    input(String, net.corda.core.contracts.ContractState):
       annotations: []
       default: false
       type: public final
@@ -1349,7 +1586,126 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    output:
+    input(net.corda.core.contracts.StateRef):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        stateRef:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateRef
+    output(String, String, int, net.corda.core.contracts.ContractState):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        label:
+          annotation:
+            - NotNull
+          type: String
+        encumbrance:
+          annotation: []
+          type: int
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    output(String, String, net.corda.core.contracts.ContractState):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        label:
+          annotation:
+            - NotNull
+          type: String
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    ? output(String, String, net.corda.core.identity.Party, Integer, net.corda.core.contracts.AttachmentConstraint,
+      net.corda.core.contracts.ContractState)
+    : annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        label:
+          annotation:
+            - Nullable
+          type: String
+        notary:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        encumbrance:
+          annotation:
+            - Nullable
+          type: Integer
+        attachmentConstraint:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.AttachmentConstraint
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    output(String, String, net.corda.core.identity.Party, net.corda.core.contracts.ContractState):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        label:
+          annotation:
+            - NotNull
+          type: String
+        notary:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    output(String, int, net.corda.core.contracts.ContractState):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        encumbrance:
+          annotation: []
+          type: int
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    output(String, net.corda.core.contracts.ContractState):
       annotations: []
       default: false
       type: public final
@@ -1363,7 +1719,35 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    reference:
+    output(String, net.corda.core.identity.Party, net.corda.core.contracts.ContractState):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        notary:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        contractState:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractState
+    reference(String):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        stateLabel:
+          annotation:
+            - NotNull
+          type: String
+    reference(String, net.corda.core.contracts.ContractState):
       annotations: []
       default: false
       type: public final
@@ -1377,7 +1761,17 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    retrieveOutputStateAndRef:
+    reference(net.corda.core.contracts.StateRef):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        stateRef:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.StateRef
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -1392,7 +1786,7 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: String
-    timeWindow:
+    timeWindow(java.time.Instant):
       annotations: []
       default: false
       type: public final
@@ -1402,8 +1796,33 @@ net.corda.testing.dsl.TransactionDSL:
           annotation:
             - NotNull
           type: java.time.Instant
-    tweak:
-      annotations:
+    timeWindow(java.time.Instant, java.time.Duration):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        time:
+          annotation:
+            - NotNull
+          type: java.time.Instant
+        tolerance:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    timeWindow(net.corda.core.contracts.TimeWindow):
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        data:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.TimeWindow
+    ? tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?
+      extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public final
@@ -1415,7 +1834,7 @@ net.corda.testing.dsl.TransactionDSL:
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSL<?\
             \ extends net.corda.testing.dsl.TransactionDSLInterpreter>, ? extends\
             \ net.corda.testing.dsl.EnforceVerifyOrFail>"
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -1429,8 +1848,37 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
     - net.corda.testing.dsl.Verifies
   interface: true
   methods:
-    _attachment:
+    _attachment(String):
       annotations: []
+      default: false
+      type: public abstract
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+    _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends java.security.PublicKey>):
+      annotations: []
+      default: false
+      type: public abstract
+      returnType: void
+      params:
+        contractClassName:
+          annotation:
+            - NotNull
+          type: String
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+    ? _attachment(String, net.corda.core.crypto.SecureHash, java.util.List<? extends
+      java.security.PublicKey>, java.util.Map<String, String>)
+    : annotations: []
       default: false
       type: public abstract
       returnType: void
@@ -1451,8 +1899,9 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: "java.util.Map<String, String>"
-    _tweak:
-      annotations:
+    ? _tweak(kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,
+      ? extends net.corda.testing.dsl.EnforceVerifyOrFail>)
+    : annotations:
         - NotNull
       default: false
       type: public abstract
@@ -1463,7 +1912,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
             - NotNull
           type: "kotlin.jvm.functions.Function1<? super net.corda.testing.dsl.TransactionDSLInterpreter,\
             \ ? extends net.corda.testing.dsl.EnforceVerifyOrFail>"
-    attachment:
+    attachment(net.corda.core.crypto.SecureHash):
       annotations: []
       default: false
       type: public abstract
@@ -1473,7 +1922,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    command:
+    command(java.util.List<? extends java.security.PublicKey>, net.corda.core.contracts.CommandData):
       annotations: []
       default: false
       type: public abstract
@@ -1487,13 +1936,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.CommandData
-    fails:
-      annotations:
-        - NotNull
-      default: true
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: true
@@ -1504,7 +1947,13 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: true
@@ -1515,13 +1964,13 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - Nullable
           type: String
-    getLedgerInterpreter:
+    getLedgerInterpreter():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: net.corda.testing.dsl.LedgerDSLInterpreter<net.corda.testing.dsl.TransactionDSLInterpreter>
-    input:
+    input(net.corda.core.contracts.StateRef):
       annotations: []
       default: false
       type: public abstract
@@ -1531,8 +1980,9 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    output:
-      annotations: []
+    ? output(String, String, net.corda.core.identity.Party, Integer, net.corda.core.contracts.AttachmentConstraint,
+      net.corda.core.contracts.ContractState)
+    : annotations: []
       default: false
       type: public abstract
       returnType: void
@@ -1561,7 +2011,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.ContractState
-    reference:
+    reference(net.corda.core.contracts.StateRef):
       annotations: []
       default: false
       type: public abstract
@@ -1571,7 +2021,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.StateRef
-    retrieveOutputStateAndRef:
+    retrieveOutputStateAndRef(Class<S>, String):
       annotations:
         - NotNull
       default: false
@@ -1586,7 +2036,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: String
-    timeWindow:
+    timeWindow(net.corda.core.contracts.TimeWindow):
       annotations: []
       default: false
       type: public abstract
@@ -1596,7 +2046,7 @@ net.corda.testing.dsl.TransactionDSLInterpreter:
           annotation:
             - NotNull
           type: net.corda.core.contracts.TimeWindow
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -1608,13 +2058,7 @@ net.corda.testing.dsl.Verifies:
   extends: []
   interface: true
   methods:
-    fails:
-      annotations:
-        - NotNull
-      default: true
-      type: public
-      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
-    fails with:
+    fails with(String):
       annotations:
         - NotNull
       default: true
@@ -1625,7 +2069,13 @@ net.corda.testing.dsl.Verifies:
           annotation:
             - NotNull
           type: String
-    failsWith:
+    fails():
+      annotations:
+        - NotNull
+      default: true
+      type: public
+      returnType: net.corda.testing.dsl.EnforceVerifyOrFail
+    failsWith(String):
       annotations:
         - NotNull
       default: true
@@ -1636,7 +2086,7 @@ net.corda.testing.dsl.Verifies:
           annotation:
             - Nullable
           type: String
-    verifies:
+    verifies():
       annotations:
         - NotNull
       default: false
@@ -1649,7 +2099,7 @@ net.corda.testing.http.HttpApi:
   implements: []
   interface: false
   methods:
-    getJson:
+    getJson(String, java.util.Map<String, String>):
       annotations: []
       default: false
       type: public final synthetic
@@ -1658,19 +2108,19 @@ net.corda.testing.http.HttpApi:
         "null":
           annotation: []
           type: "java.util.Map<String, String>"
-    getMapper:
+    getMapper():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: com.fasterxml.jackson.databind.ObjectMapper
-    getRoot:
+    getRoot():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.net.URL
-    postJson:
+    postJson(String, Object):
       annotations: []
       default: false
       type: public final
@@ -1684,7 +2134,7 @@ net.corda.testing.http.HttpApi:
           annotation:
             - NotNull
           type: Object
-    postPlain:
+    postPlain(String, String):
       annotations: []
       default: false
       type: public final
@@ -1698,7 +2148,7 @@ net.corda.testing.http.HttpApi:
           annotation:
             - NotNull
           type: String
-    putJson:
+    putJson(String, Object):
       annotations: []
       default: false
       type: public final
@@ -1724,7 +2174,7 @@ net.corda.testing.http.HttpApi$Companion:
   implements: []
   interface: false
   methods:
-    fromHostAndPort:
+    fromHostAndPort(net.corda.core.utilities.NetworkHostAndPort, String, String, com.fasterxml.jackson.databind.ObjectMapper):
       annotations:
         - NotNull
       default: false
@@ -1754,13 +2204,13 @@ net.corda.testing.http.HttpUtils:
   implements: []
   interface: false
   methods:
-    getDefaultMapper:
+    getDefaultMapper():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: com.fasterxml.jackson.databind.ObjectMapper
-    getJson:
+    getJson(java.net.URL, java.util.Map<String, String>, com.fasterxml.jackson.databind.ObjectMapper):
       annotations: []
       default: false
       type: public final synthetic
@@ -1769,7 +2219,7 @@ net.corda.testing.http.HttpUtils:
         "null":
           annotation: []
           type: com.fasterxml.jackson.databind.ObjectMapper
-    postJson:
+    postJson(java.net.URL, String):
       annotations: []
       default: false
       type: public final
@@ -1783,7 +2233,7 @@ net.corda.testing.http.HttpUtils:
           annotation:
             - NotNull
           type: String
-    postPlain:
+    postPlain(java.net.URL, String):
       annotations: []
       default: false
       type: public final
@@ -1797,7 +2247,7 @@ net.corda.testing.http.HttpUtils:
           annotation:
             - NotNull
           type: String
-    putJson:
+    putJson(java.net.URL, String):
       annotations: []
       default: false
       type: public final
@@ -1824,7 +2274,7 @@ net.corda.testing.services.MockAttachmentStorage:
     - net.corda.core.node.services.AttachmentStorage
   interface: false
   methods:
-    getAttachmentIdAndBytes:
+    getAttachmentIdAndBytes(java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -1835,14 +2285,14 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - NotNull
           type: java.io.InputStream
-    getFiles:
+    getFiles():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: "java.util.Map<net.corda.core.crypto.SecureHash, kotlin.Pair<net.corda.core.contracts.Attachment,\
         \ byte[]>>"
-    getLatestContractAttachments:
+    getLatestContractAttachments(String, int):
       annotations:
         - NotNull
       default: false
@@ -1856,7 +2306,7 @@ net.corda.testing.services.MockAttachmentStorage:
         minContractVersion:
           annotation: []
           type: int
-    hasAttachment:
+    hasAttachment(net.corda.core.crypto.SecureHash):
       annotations: []
       default: false
       type: public
@@ -1866,7 +2316,18 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    importAttachment:
+    importAttachment(java.io.InputStream):
+      annotations:
+        - NotNull
+      default: false
+      type: public
+      returnType: net.corda.core.crypto.SecureHash
+      params:
+        jar:
+          annotation:
+            - NotNull
+          type: java.io.InputStream
+    importAttachment(java.io.InputStream, String, String):
       annotations:
         - NotNull
       default: false
@@ -1885,7 +2346,7 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - Nullable
           type: String
-    importContractAttachment:
+    importContractAttachment(java.util.List<String>, String, java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -1904,7 +2365,72 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - NotNull
           type: java.io.InputStream
-    importOrGetAttachment:
+    importContractAttachment(java.util.List<String>, String, java.io.InputStream, net.corda.core.crypto.SecureHash):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.crypto.SecureHash
+      params:
+        contractClassNames:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        uploader:
+          annotation:
+            - NotNull
+          type: String
+        jar:
+          annotation:
+            - NotNull
+          type: java.io.InputStream
+        attachmentId:
+          annotation:
+            - Nullable
+          type: net.corda.core.crypto.SecureHash
+    ? importContractAttachment(java.util.List<String>, String, java.io.InputStream,
+      net.corda.core.crypto.SecureHash, java.util.List<? extends java.security.PublicKey>)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.crypto.SecureHash
+      params:
+        contractClassNames:
+          annotation:
+            - NotNull
+          type: java.util.List<String>
+        uploader:
+          annotation:
+            - NotNull
+          type: String
+        jar:
+          annotation:
+            - NotNull
+          type: java.io.InputStream
+        attachmentId:
+          annotation:
+            - Nullable
+          type: net.corda.core.crypto.SecureHash
+        signers:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends java.security.PublicKey>
+    importContractAttachment(net.corda.core.crypto.SecureHash, net.corda.core.contracts.ContractAttachment):
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        attachmentId:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+        contractAttachment:
+          annotation:
+            - NotNull
+          type: net.corda.core.contracts.ContractAttachment
+    importOrGetAttachment(java.io.InputStream):
       annotations:
         - NotNull
       default: false
@@ -1915,7 +2441,7 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - NotNull
           type: java.io.InputStream
-    openAttachment:
+    openAttachment(net.corda.core.crypto.SecureHash):
       annotations:
         - Nullable
       default: false
@@ -1926,7 +2452,7 @@ net.corda.testing.services.MockAttachmentStorage:
           annotation:
             - NotNull
           type: net.corda.core.crypto.SecureHash
-    queryAttachments:
+    queryAttachments(net.corda.core.node.services.vault.AttachmentQueryCriteria, net.corda.core.node.services.vault.AttachmentSort):
       annotations:
         - NotNull
       default: false

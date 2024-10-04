@@ -14,7 +14,91 @@ net.corda.client.rpc.CordaRPCClient:
   implements: []
   interface: false
   methods:
-    start:
+    start(String, String):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+    start(String, String, net.corda.client.rpc.GracefulReconnect):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        gracefulReconnect:
+          annotation:
+            - Nullable
+          type: net.corda.client.rpc.GracefulReconnect
+    start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        externalTrace:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Trace
+        impersonatedActor:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Actor
+    start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.client.rpc.GracefulReconnect):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        externalTrace:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Trace
+        impersonatedActor:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Actor
+        gracefulReconnect:
+          annotation:
+            - Nullable
+          type: net.corda.client.rpc.GracefulReconnect
+    start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name):
       annotations:
         - NotNull
       default: false
@@ -41,7 +125,81 @@ net.corda.client.rpc.CordaRPCClient:
           annotation:
             - Nullable
           type: net.corda.core.identity.CordaX500Name
-    use:
+    ? start(String, String, net.corda.core.context.Trace, net.corda.core.context.Actor,
+      net.corda.core.identity.CordaX500Name, net.corda.client.rpc.GracefulReconnect)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        externalTrace:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Trace
+        impersonatedActor:
+          annotation:
+            - Nullable
+          type: net.corda.core.context.Actor
+        targetLegalIdentity:
+          annotation:
+            - Nullable
+          type: net.corda.core.identity.CordaX500Name
+        gracefulReconnect:
+          annotation:
+            - Nullable
+          type: net.corda.client.rpc.GracefulReconnect
+    start(String, String, net.corda.core.identity.CordaX500Name):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        targetLegalIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.CordaX500Name
+    start(String, String, net.corda.core.identity.CordaX500Name, net.corda.client.rpc.GracefulReconnect):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCConnection
+      params:
+        username:
+          annotation:
+            - NotNull
+          type: String
+        password:
+          annotation:
+            - NotNull
+          type: String
+        targetLegalIdentity:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.CordaX500Name
+        gracefulReconnect:
+          annotation:
+            - Nullable
+          type: net.corda.client.rpc.GracefulReconnect
+    use(String, String, kotlin.jvm.functions.Function1<? super net.corda.client.rpc.CordaRPCConnection, ? extends A>):
       annotations: []
       default: false
       type: public final
@@ -79,19 +237,376 @@ net.corda.client.rpc.CordaRPCClientConfiguration:
   implements: []
   interface: false
   methods:
-    component1:
+    component1():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.time.Duration
-    copy:
+    copy():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: net.corda.client.rpc.CordaRPCClientConfiguration
-    equals:
+    copy(java.time.Duration):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    copy(java.time.Duration, int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+    copy(java.time.Duration, int, boolean):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+    copy(java.time.Duration, int, boolean, java.time.Duration):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    copy(java.time.Duration, int, boolean, java.time.Duration, int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        connectionRetryIntervalMultiplier:
+          annotation: []
+          type: double
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        connectionRetryIntervalMultiplier:
+          annotation: []
+          type: double
+        maxReconnectAttempts:
+          annotation: []
+          type: int
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        connectionRetryIntervalMultiplier:
+          annotation: []
+          type: double
+        maxReconnectAttempts:
+          annotation: []
+          type: int
+        maxFileSize:
+          annotation: []
+          type: int
+    copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration):
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        connectionRetryIntervalMultiplier:
+          annotation: []
+          type: double
+        maxReconnectAttempts:
+          annotation: []
+          type: int
+        maxFileSize:
+          annotation: []
+          type: int
+        deduplicationCacheExpiry:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    ? copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration,
+      double, int, int, java.time.Duration, boolean, boolean, boolean, boolean)
+    : annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.client.rpc.CordaRPCClientConfiguration
+      params:
+        connectionMaxRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        minimumServerProtocolVersion:
+          annotation: []
+          type: int
+        trackRpcCallSites:
+          annotation: []
+          type: boolean
+        reapInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        observationExecutorPoolSize:
+          annotation: []
+          type: int
+        cacheConcurrencyLevel:
+          annotation: []
+          type: int
+        connectionRetryInterval:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        connectionRetryIntervalMultiplier:
+          annotation: []
+          type: double
+        maxReconnectAttempts:
+          annotation: []
+          type: int
+        maxFileSize:
+          annotation: []
+          type: int
+        deduplicationCacheExpiry:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+        openTelemetryEnabled:
+          annotation: []
+          type: boolean
+        simpleLogTelemetryEnabled:
+          annotation: []
+          type: boolean
+        spanStartEndEventsEnabled:
+          annotation: []
+          type: boolean
+        copyBaggageToTags:
+          annotation: []
+          type: boolean
+    equals(Object):
       annotations: []
       default: false
       type: public
@@ -101,91 +616,91 @@ net.corda.client.rpc.CordaRPCClientConfiguration:
           annotation:
             - Nullable
           type: Object
-    getCacheConcurrencyLevel:
+    getCacheConcurrencyLevel():
       annotations: []
       default: false
       type: public
       returnType: int
-    getConnectionMaxRetryInterval:
+    getConnectionMaxRetryInterval():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.time.Duration
-    getConnectionRetryInterval:
+    getConnectionRetryInterval():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.time.Duration
-    getConnectionRetryIntervalMultiplier:
+    getConnectionRetryIntervalMultiplier():
       annotations: []
       default: false
       type: public
       returnType: double
-    getCopyBaggageToTags:
+    getCopyBaggageToTags():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    getDeduplicationCacheExpiry:
+    getDeduplicationCacheExpiry():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.time.Duration
-    getMaxFileSize:
+    getMaxFileSize():
       annotations: []
       default: false
       type: public
       returnType: int
-    getMaxReconnectAttempts:
+    getMaxReconnectAttempts():
       annotations: []
       default: false
       type: public
       returnType: int
-    getMinimumServerProtocolVersion:
+    getMinimumServerProtocolVersion():
       annotations: []
       default: false
       type: public
       returnType: int
-    getObservationExecutorPoolSize:
+    getObservationExecutorPoolSize():
       annotations: []
       default: false
       type: public
       returnType: int
-    getOpenTelemetryEnabled:
+    getOpenTelemetryEnabled():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    getReapInterval:
+    getReapInterval():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: java.time.Duration
-    getSimpleLogTelemetryEnabled:
+    getSimpleLogTelemetryEnabled():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    getSpanStartEndEventsEnabled:
+    getSpanStartEndEventsEnabled():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    getTrackRpcCallSites:
+    getTrackRpcCallSites():
       annotations: []
       default: false
       type: public
       returnType: boolean
-    hashCode:
+    hashCode():
       annotations: []
       default: false
       type: public
       returnType: int
-    toString:
+    toString():
       annotations:
         - NotNull
       default: false
@@ -215,28 +730,28 @@ net.corda.client.rpc.CordaRPCConnection:
     - net.corda.client.rpc.RPCConnection
   interface: false
   methods:
-    close:
+    close():
       annotations: []
       default: true
       type: public
       returnType: void
-    forceClose:
+    forceClose():
       annotations: []
       default: false
       type: public
       returnType: void
-    getProxy:
+    getProxy():
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.messaging.CordaRPCOps
-    getServerProtocolVersion:
+    getServerProtocolVersion():
       annotations: []
       default: false
       type: public
       returnType: int
-    getTelemetryHandle:
+    getTelemetryHandle(Class<T>):
       annotations:
         - Nullable
       default: false
@@ -247,7 +762,7 @@ net.corda.client.rpc.CordaRPCConnection:
           annotation:
             - NotNull
           type: Class<T>
-    notifyServerAndClose:
+    notifyServerAndClose():
       annotations: []
       default: false
       type: public
@@ -271,18 +786,18 @@ net.corda.client.rpc.GracefulReconnect:
   implements: []
   interface: false
   methods:
-    getMaxAttempts:
+    getMaxAttempts():
       annotations: []
       default: false
       type: public final
       returnType: int
-    getOnDisconnect:
+    getOnDisconnect():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: kotlin.jvm.functions.Function0<kotlin.Unit>
-    getOnReconnect:
+    getOnReconnect():
       annotations:
         - NotNull
       default: false
@@ -304,7 +819,7 @@ net.corda.client.rpc.PermissionException:
     - net.corda.nodeapi.exceptions.RpcSerializableError
   interface: false
   methods:
-    getMsg:
+    getMsg():
       annotations:
         - NotNull
       default: false
@@ -317,28 +832,28 @@ net.corda.client.rpc.RPCConnection:
     - java.io.Closeable
   interface: true
   methods:
-    close:
+    close():
       annotations: []
       default: true
       type: public
       returnType: void
-    forceClose:
+    forceClose():
       annotations: []
       default: false
       type: public abstract
       returnType: void
-    getProxy:
+    getProxy():
       annotations:
         - NotNull
       default: false
       type: public abstract
       returnType: I
-    getServerProtocolVersion:
+    getServerProtocolVersion():
       annotations: []
       default: false
       type: public abstract
       returnType: int
-    getTelemetryHandle:
+    getTelemetryHandle(Class<T>):
       annotations:
         - Nullable
       default: false
@@ -349,7 +864,7 @@ net.corda.client.rpc.RPCConnection:
           annotation:
             - NotNull
           type: Class<T>
-    notifyServerAndClose:
+    notifyServerAndClose():
       annotations: []
       default: false
       type: public abstract
@@ -366,7 +881,7 @@ net.corda.client.rpc.RPCSinceVersion:
   type: public @interface
   interface: false
   methods:
-    version:
+    version():
       annotations: []
       default: false
       type: public abstract
@@ -385,7 +900,7 @@ net.corda.client.rpc.UtilsKt:
   implements: []
   interface: false
   methods:
-    notUsed:
+    notUsed(rx.Observable<T>):
       annotations: []
       default: false
       type: public static final
@@ -403,7 +918,7 @@ net.corda.client.rpc.ext.MultiRPCClient:
     - java.lang.AutoCloseable
   interface: false
   methods:
-    addConnectionListener:
+    addConnectionListener(net.corda.client.rpc.ext.RPCConnectionListener<I>):
       annotations: []
       default: false
       type: public final
@@ -413,12 +928,12 @@ net.corda.client.rpc.ext.MultiRPCClient:
           annotation:
             - NotNull
           type: net.corda.client.rpc.ext.RPCConnectionListener<I>
-    close:
+    close():
       annotations: []
       default: false
       type: public
       returnType: void
-    removeConnectionListener:
+    removeConnectionListener(net.corda.client.rpc.ext.RPCConnectionListener<I>):
       annotations: []
       default: false
       type: public final
@@ -428,13 +943,13 @@ net.corda.client.rpc.ext.MultiRPCClient:
           annotation:
             - NotNull
           type: net.corda.client.rpc.ext.RPCConnectionListener<I>
-    start:
+    start():
       annotations:
         - NotNull
       default: false
       type: public final
       returnType: java.util.concurrent.CompletableFuture<net.corda.client.rpc.RPCConnection<I>>
-    stop:
+    stop():
       annotations: []
       default: false
       type: public final
@@ -445,7 +960,7 @@ net.corda.client.rpc.ext.RPCConnectionListener:
   extends: []
   interface: true
   methods:
-    onConnect:
+    onConnect(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>):
       annotations: []
       default: false
       type: public abstract
@@ -455,7 +970,7 @@ net.corda.client.rpc.ext.RPCConnectionListener:
           annotation:
             - NotNull
           type: net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>
-    onDisconnect:
+    onDisconnect(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>):
       annotations: []
       default: false
       type: public abstract
@@ -465,7 +980,7 @@ net.corda.client.rpc.ext.RPCConnectionListener:
           annotation:
             - NotNull
           type: net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>
-    onPermanentFailure:
+    onPermanentFailure(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>):
       annotations: []
       default: false
       type: public abstract
@@ -481,19 +996,19 @@ net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext:
   extends: []
   interface: true
   methods:
-    getConnectionOpt:
+    getConnectionOpt():
       annotations:
         - Nullable
       default: false
       type: public abstract
       returnType: net.corda.client.rpc.RPCConnection<I>
-    getThrowableOpt:
+    getThrowableOpt():
       annotations:
         - Nullable
       default: false
       type: public abstract
       returnType: Throwable
-    getUserName:
+    getUserName():
       annotations:
         - NotNull
       default: false
