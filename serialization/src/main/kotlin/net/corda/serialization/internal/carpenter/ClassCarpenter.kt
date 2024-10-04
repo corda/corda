@@ -44,8 +44,8 @@ class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.c
     }
 }
 
-class InterfaceMismatchNonGetterException(val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
-        "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
+class InterfaceMismatchNonGetterException(val clazz: Class<*>, val methodName: String) : InterfaceMismatchException(
+        "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${methodName}")
 
 class InterfaceMismatchMissingAMQPFieldException(val clazz: Class<*>, val field: String) : InterfaceMismatchException(
         "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
@@ -459,7 +459,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
                     logger.debug { "Ignoring interface $method which is not a getter" }
                     continue@methodLoop
                 } else {
-                    throw InterfaceMismatchNonGetterException(itf, method)
+                    throw InterfaceMismatchNonGetterException(itf, method.name)
                 }
 
                 // If we're trying to carpent a class that prior to serialisation / deserialization
