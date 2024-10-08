@@ -36,6 +36,7 @@ import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.Verifi
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachments
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
+import java.io.File
 import java.io.IOException
 import java.lang.Character.MAX_RADIX
 import java.lang.ProcessBuilder.Redirect
@@ -206,9 +207,18 @@ class ExternalVerifierHandleImpl(
             val command = ArrayList<String>()
             command += "${Path(System.getProperty("java.home"), "bin", "java")}"
             command += inheritedJvmArgs
+
+            // Build list of 3rd party jars
+            val legacyJarsPath = baseDirectory / "legacy-jars"
+            val extraClassPath = legacyJarsPath.toFile().listFiles { _, name ->
+                name.endsWith(".jar")
+            }?.joinToString(File.pathSeparator, File.pathSeparator)
+            val classpath = if (extraClassPath == null) "$verifierJar" else "$verifierJar$extraClassPath"
+
             command += listOf(
-                    "-jar",
-                    "$verifierJar",
+                    "-cp",
+                    classpath,
+                    "net.corda.verifier.Main",
                     socketFile.absolutePathString(),
                     log.level.name.lowercase()
             )
