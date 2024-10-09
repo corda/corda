@@ -6,15 +6,12 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
-import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash

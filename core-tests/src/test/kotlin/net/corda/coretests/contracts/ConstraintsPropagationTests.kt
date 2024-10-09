@@ -1,6 +1,5 @@
 package net.corda.coretests.contracts
 
-<
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever

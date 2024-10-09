@@ -90,6 +90,7 @@ abstract class AbstractVerifier(
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps
+ */
 private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map(StateAndRef<ContractState>::state) + ltx.outputs
@@ -438,7 +439,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
     private fun verifyConstraintUsingRotatedKeys(constraint: AttachmentConstraint, constraintAttachment: AttachmentWithContext, contract: ContractClassName ) {
         // constraint could be an input constraint so we manually have to rotate to updated constraint
         if (constraint is SignatureAttachmentConstraint && rotatedKeys.canBeTransitioned(constraint.key, constraintAttachment.signerKeys)) {
-            val constraintWithRotatedKeys =  SignatureAttachmentConstraint.create(CompositeKey.Builder().addKeys(constraintAttachment.signerKeys).build())
+            val constraintWithRotatedKeys =  SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(constraintAttachment.signerKeys).build())
             if (!constraintWithRotatedKeys.isSatisfiedBy(constraintAttachment)) throw ContractConstraintRejection(ltx.id, contract)
         }
         else {

@@ -5,6 +5,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -54,7 +55,8 @@ class LtxSupplierFactory : Function<Array<out Any?>, Supplier<LedgerTransaction>
                 privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
                 networkParameters = networkParameters,
                 references = referencesProvider.get(),
-                digestService = txArgs[TX_DIGEST_SERVICE] as DigestService
+                digestService = txArgs[TX_DIGEST_SERVICE] as DigestService,
+                rotatedKeys = CordaRotatedKeys.keys
             )
         }
     }

@@ -1,18 +1,14 @@
 package net.corda.core.contracts
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.hash
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SingletonSerializeAsToken
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-@DeleteForDJVM
 object CordaRotatedKeys {
     val keys = RotatedKeys()
 }
@@ -47,8 +43,7 @@ private val CORDA_SIGNING_KEY_ROTATIONS = listOf(
  *
  */
 @CordaSerializable
-@DeleteForDJVM
-data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()): SingletonSerializeAsToken() {
+data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyList()) {
     private val canBeTransitionedMap: ConcurrentMap<Pair<PublicKey, PublicKey>, Boolean> = ConcurrentHashMap()
     private val rotateMap: Map<SecureHash, SecureHash> = HashMap<SecureHash, SecureHash>().apply {
         (rotatedSigningKeys + CORDA_SIGNING_KEY_ROTATIONS).forEach { rotatedKeyList ->

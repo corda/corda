@@ -2,7 +2,6 @@ package net.corda.core.serialization.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.CordaRotatedKeys
@@ -359,7 +358,7 @@ object AttachmentsClassLoaderBuilder {
 
         val cache = if (attachmentsClassLoaderCache is AttachmentsClassLoaderForRotatedKeysOnlyImpl) fallBackCache else
                           attachmentsClassLoaderCache ?: fallBackCache
-        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params)), Function { key ->
+        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
@@ -539,7 +538,7 @@ class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int, override val rotated
 }
 
 class AttachmentsClassLoaderForRotatedKeysOnlyImpl(override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : AttachmentsClassLoaderCache {
-    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: (AttachmentsClassLoaderKey) -> SerializationContext): SerializationContext {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         throw NotImplementedError("AttachmentsClassLoaderForRotatedKeysOnlyImpl.computeIfAbsent should never be called. Should be replaced by the fallback cache")
     }
 }

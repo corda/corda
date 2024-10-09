@@ -1,18 +1,19 @@
 package net.corda.coretests.transactions
 
 import com.codahale.metrics.MetricRegistry
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.hash
-import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.toInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
@@ -30,8 +31,6 @@ import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.whenever
 import java.net.URL
 import kotlin.test.assertFailsWith
 
@@ -49,12 +48,11 @@ class AttachmentsClassLoaderWithStoragePersistenceTests {
 
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
-    private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private lateinit var attachmentTrustCalculator2: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
     private val cacheFactory = TestingNamedCacheFactory(1)
     private val cacheFactory2 = TestingNamedCacheFactory()
-    private val nodeVerificationSupport = rigorousMock<NodeVerificationSupport>().also {
+    private val services = rigorousMock<ServicesForResolution>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
 
@@ -86,8 +84,7 @@ class AttachmentsClassLoaderWithStoragePersistenceTests {
                 it.start()
             }
         }
-        storage.nodeVerificationSupport = nodeVerificationSupport
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage.toInternal(), cacheFactory)
+        storage.servicesForResolution = services
         attachmentTrustCalculator2 = NodeAttachmentTrustCalculator(storage, database, cacheFactory2)
     }
 
