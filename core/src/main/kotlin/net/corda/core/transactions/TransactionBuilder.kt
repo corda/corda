@@ -535,6 +535,7 @@ open class TransactionBuilder(
 
         val resolvedOutputStates = outputStates.map {
             val outputConstraint = it.constraint
+
             if (outputConstraint in automaticConstraints) {
                 it.copy(constraint = defaultOutputConstraint)
             } else {
@@ -553,9 +554,9 @@ open class TransactionBuilder(
     }
 
     private fun getRotatedKeys(services: ServiceHub?): RotatedKeys {
-        return services?.rotatedKeys ?: CordaRotatedKeys.keys.also {
+        return services?.let { services.retrieveRotatedKeys() } ?: CordaRotatedKeys.keys.also {
             log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
-                    "rotated keys defined in configuration. If you are writing a unit test then pass in a " +
+                    "state pointers outside of flows. If you are writing a unit test then pass in a " +
                     "MockServices instance.")
         }
     }

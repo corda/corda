@@ -8,6 +8,7 @@ import net.corda.core.crypto.algorithm
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
@@ -15,6 +16,20 @@ import net.corda.core.utilities.OpaqueBytes
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
+
+
+fun ServiceHub.retrieveRotatedKeys(): RotatedKeys {
+    if (this is ServiceHubCoreInternal) {
+        return this.rotatedKeys
+    }
+    var clazz: Class<*> = javaClass
+    while (true) {
+        if (clazz.name == "net.corda.testing.node.MockServices") {
+            return clazz.getDeclaredMethod("getRotatedKeys").apply { isAccessible = true }.invoke(this) as RotatedKeys
+        }
+        clazz = clazz.superclass ?: throw ClassCastException("${javaClass.name} is not a ServiceHub")
+    }
+}
 
 /** Constructs a [NotaryChangeWireTransaction]. */
 class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,

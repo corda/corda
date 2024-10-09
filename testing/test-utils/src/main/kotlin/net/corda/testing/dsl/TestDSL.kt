@@ -105,7 +105,7 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
-        override val rotatedKeys: RotatedKeys = ledgerInterpreter.services.rotatedKeys
+        override val rotatedKeys: RotatedKeys = (ledgerInterpreter.services as? ServiceHubCoreInternal)?.rotatedKeys ?: CordaRotatedKeys.keys
 
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {

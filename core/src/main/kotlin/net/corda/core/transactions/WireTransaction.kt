@@ -28,6 +28,7 @@ import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderForRotatedKeysOnlyImpl
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -166,8 +167,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 Attachment::isUploaderTrusted,
-                null
-               // TODO : elbad01 : does rotated keys need to be passed here, or we use attachment class loader cache
+                attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl()
         )
     }
 

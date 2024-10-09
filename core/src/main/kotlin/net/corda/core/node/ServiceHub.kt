@@ -172,12 +172,6 @@ interface ServiceHub : ServicesForResolution {
     val transactionVerifierService: TransactionVerifierService
 
     /**
-     * INTERNAL. DO NOT USE.
-     * @suppress
-     */
-    val rotatedKeys: RotatedKeys
-
-    /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
      * clock so the current time can be controlled during unit testing.
      */

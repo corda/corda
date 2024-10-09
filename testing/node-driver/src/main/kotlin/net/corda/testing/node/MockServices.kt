@@ -3,6 +3,7 @@ package net.corda.testing.node
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
@@ -457,10 +458,10 @@ open class MockServices private constructor(
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
+    var rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
-    override val rotatedKeys: RotatedKeys = RotatedKeys()
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(
