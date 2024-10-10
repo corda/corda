@@ -13,6 +13,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
@@ -27,7 +28,9 @@ fun ServiceHub.retrieveRotatedKeys(): RotatedKeys {
         if (clazz.name == "net.corda.testing.node.MockServices") {
             return clazz.getDeclaredMethod("getRotatedKeys").apply { isAccessible = true }.invoke(this) as RotatedKeys
         }
-        clazz = clazz.superclass ?: throw ClassCastException("${javaClass.name} is not a ServiceHub")
+        clazz = clazz.superclass ?: return CordaRotatedKeys.keys.also {
+            this.contextLogger().warn("${javaClass.name} is not a MockServices instance - returning default rotated keys")
+        }
     }
 }
 

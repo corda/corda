@@ -1,16 +1,31 @@
 package net.corda.coretests.contracts
 
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.sha256
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.hash
+import net.corda.core.internal.retrieveRotatedKeys
+import net.corda.core.node.ServiceHub
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
+import net.corda.testing.node.MockServices
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RotatedKeysTest {
+
+    @Test(timeout = 300_000)
+    fun `validateDefaultRotatedKeysAreRetrievableFromMockServices`() {
+        val services: ServiceHub = MockServices(TestIdentity(CordaX500Name("MegaCorp", "London", "GB")))
+        val rotatedKeys = services.retrieveRotatedKeys()
+        assertEquals( CordaRotatedKeys.keys.rotatedSigningKeys, rotatedKeys.rotatedSigningKeys)
+    }
+
     @Test(timeout = 300_000)
     fun `when input and output keys are the same canBeTransitioned returns true`() {
         SelfCleaningDir().use { file ->
