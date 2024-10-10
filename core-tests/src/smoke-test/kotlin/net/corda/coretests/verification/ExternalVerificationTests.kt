@@ -3,6 +3,7 @@ package net.corda.coretests.verification
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
@@ -24,6 +25,7 @@ import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
+import net.corda.legacy.workflows.LegacyIssuanceFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
@@ -63,6 +65,8 @@ class ExternalVerificationSignedCordappsTest {
             val (legacyContractsCordapp, legacyWorkflowsCordapp) = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it-4.11.jar") }
             // The current version finance CorDapp jars
             val currentCordapps = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it.jar") }
+            val legacyJacksonCordapp411 = smokeTestResource("legacy411.jar")
+            val legacyJacksonCordapp412 = smokeTestResource("legacy412.jar")
 
             notaries = factory.createNotaries(
                     nodeParams(DUMMY_NOTARY_NAME, cordappJars = currentCordapps, legacyContractJars = listOf(legacyContractsCordapp)),
@@ -76,9 +80,15 @@ class ExternalVerificationSignedCordappsTest {
             ))
             currentNode = factory.createNode(nodeParams(
                     CordaX500Name("New", "York", "US"),
-                    currentCordapps,
-                    listOf(legacyContractsCordapp)
+                    currentCordapps + listOf(legacyJacksonCordapp412),
+                    listOf(legacyContractsCordapp, legacyJacksonCordapp411)
             ))
+            val legacyJars = currentNode.nodeDir / "legacy-jars"
+            legacyJars.toFile().mkdir()
+
+            val jacksonDestination = legacyJars / "jackson-core.jar"
+            val jacksonSource = smokeTestResource("jackson-core.jar")
+            jacksonSource.copyTo(jacksonDestination)
         }
 
         @AfterClass
@@ -121,6 +131,18 @@ class ExternalVerificationSignedCordappsTest {
             notary.connect(superUser).use { it.proxy.waitForVisibility(oldNodeInfo) }
         }
         oldRpc.startFlow(::IssueAndChangeNotaryFlow, notaryIdentities[0], notaryIdentities[1]).returnValue.getOrThrow()
+    }
+
+    @Test(timeout = 300_000)
+    fun `transaction containing 4_11 and 4_12 contract referencing Jackson dependency issued on new node`() {
+        val issuanceStateRef = legacyJackonIssuance(currentNode)
+        currentNode.assertTransactionsWereVerified(BOTH, issuanceStateRef.txhash)
+    }
+
+    private fun legacyJackonIssuance(issuer: NodeProcess): StateRef {
+        val issuerRpc = issuer.connect(superUser).proxy
+        val issuanceStateRef = issuerRpc.startFlowDynamic(LegacyIssuanceFlow::class.java, 2).returnValue.getOrThrow() as StateRef
+        return issuanceStateRef
     }
 
     private fun cashIssuanceAndPayment(issuer: NodeProcess, recipient: NodeProcess): Pair<SignedTransaction, SignedTransaction> {

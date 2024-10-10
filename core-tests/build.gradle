@@ -54,7 +54,15 @@ processSmokeTestResources {
         rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
     }
     from(tasks.getByPath(":testing:cordapps:4.11-workflows:jar"))
-    from(configurations.corda4_11)
+    from(configurations.corda4_11) {
+        rename 'jackson-core-.*.jar', 'jackson-core.jar'
+    }
+    from(tasks.getByPath(":legacy411:jar")) {
+        rename 'legacy411-.*.jar', 'legacy411.jar'
+    }
+    from(tasks.getByPath(":legacy412:jar")) {
+        rename 'legacy412-.*.jar', 'legacy412.jar'
+    }
 }
 
 processIntegrationTestResources {
@@ -123,6 +131,8 @@ dependencies {
     smokeTestImplementation project(":finance:workflows")
     smokeTestImplementation project(":testing:cordapps:4.11-workflows")
     smokeTestImplementation project(":finance:contracts")
+    smokeTestImplementation project(":legacy411")
+    smokeTestImplementation project(":legacy412")
     smokeTestImplementation "org.assertj:assertj-core:${assertj_version}"
     smokeTestImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
@@ -137,6 +147,7 @@ dependencies {
     corda4_11 "net.corda:corda-finance-contracts:4.11"
     corda4_11 "net.corda:corda-finance-workflows:4.11"
     corda4_11 "net.corda:corda:4.11"
+    corda4_11 "com.fasterxml.jackson.core:jackson-core:2.17.2"
 }
 
 tasks.withType(Test).configureEach {
