@@ -9,7 +9,6 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
@@ -62,19 +61,6 @@ class TestSerializationOutput(
         private val verbose: Boolean,
         serializerFactory: SerializerFactory = testDefaultFactory())
     : SerializationOutput(serializerFactory) {
-
-    override fun writeSchema(schema: Schema, data: Data) {
-        if (verbose) println(schema)
-        super.writeSchema(schema, data)
-    }
-
-    override fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
-        if(verbose) {
-            println ("Writing Transform Schema")
-            println (transformsSchema)
-        }
-        super.writeTransformSchema(transformsSchema, data)
-    }
 
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {

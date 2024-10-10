@@ -919,4 +919,26 @@ class CashTests {
 
         assertEquals(2, wtx.commands.size)
     }
+
+    @Test(timeout = 300_000)
+    fun performanceTest() {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
+            )
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+        val counts = 1000
+        val loops = 50
+        for (loop in 0 until loops) {
+            val start = System.nanoTime()
+            for (count in 0 until counts) {
+                tx.toWireTransaction(ourServices)
+            }
+            val end = System.nanoTime()
+            println("Time per transaction serialize on loop $loop = ${(end - start) / counts} nanoseconds")
+        }
+    }
 }

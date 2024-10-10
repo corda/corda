@@ -5,12 +5,15 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.model.*
-import net.corda.serialization.internal.model.TypeIdentifier.*
+import net.corda.serialization.internal.model.FingerPrinter
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.LocalTypeModel
+import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.serialization.internal.model.TypeIdentifier.Parameterised
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 import java.util.function.Predicate
@@ -82,6 +85,8 @@ interface LocalSerializerFactory {
      * when serialising and deserialising.
      */
     fun isSuitableForObjectReference(type: Type): Boolean
+
+    fun getCachedSchema(types: Set<TypeNotation>): Pair<Schema, TransformsSchema>
 }
 
 /**
@@ -277,4 +282,24 @@ class DefaultLocalSerializerFactory(
         }
     }
 
+    private val schemaCache = ConcurrentHashMap<Set<TypeNotation>, Pair<Schema, TransformsSchema>>()
+
+    override fun getCachedSchema(types: Set<TypeNotation>): Pair<Schema, TransformsSchema> {
+        val cacheKey = CachingSet(types)
+        return schemaCache.getOrPut(cacheKey) {
+            val schema = Schema(cacheKey.toList())
+            schema to TransformsSchema.build(schema, this)
+        }
+    }
+
+    private class CachingSet<T>(exisitingSet: Set<T>) : LinkedHashSet<T>(exisitingSet) {
+        override val size: Int = super.size
+        private val hashCode = super.hashCode()
+        override fun hashCode(): Int {
+            return hashCode
+        }
+        override fun equals(other: Any?): Boolean {
+            return super.equals(other)
+        }
+    }
 }

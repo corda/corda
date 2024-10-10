@@ -4,9 +4,10 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
-import java.util.*
+import java.util.EnumMap
 
 // NOTE: We are effectively going to replicate the annotations, we need to do this because
 // we can't instantiate instances of those annotation classes and this code needs to
@@ -243,7 +244,7 @@ object TransformsAnnotationProcessor {
  * @property types maps class names to a map of transformation types. In turn those transformation types
  * are each a list of instances o that transform.
  */
-data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : DescribedType {
+data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : CachingDescribedType, DescribedType {
     companion object : DescribedTypeConstructor<TransformsSchema> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_SCHEMA.amqpDescriptor
 
@@ -340,6 +341,12 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
         sb.appendLine("$indent</type-transforms>")
 
         return sb.toString()
+    }
+
+    override val bytes: ByteArray by lazy {
+        val data = Data.Factory.create()
+        data.putObject(this)
+        data.encode().array
     }
 }
 

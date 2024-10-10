@@ -775,6 +775,34 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertEquals(desState.encumbrance, state.encumbrance)
     }
 
+    @Test(timeout = 300_000)
+    fun performanceTest() {
+        val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
+        val scheme = AMQPServerSerializationScheme(emptyList())
+        val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
+                .java.getDeclaredMethod("registerCustomSerializers",
+                        SerializationContext::class.java,
+                        SerializerFactory::class.java)
+        func.isAccessible = true
+
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+        )
+        func.invoke(scheme, testSerializationContext, factory)
+        val ser = SerializationOutput(factory)
+
+        val counts = 1000
+        val loops = 50
+        for (loop in 0 until loops) {
+            val start = System.nanoTime()
+            for (count in 0 until counts) {
+                ser.serialize(state, compression)
+            }
+            val end = System.nanoTime()
+            println("Time per transaction state serialize on loop $loop = ${(end - start) / counts} nanoseconds")
+        }
+    }
+
     @Test(timeout=300_000)
 	fun `test currencies serialize`() {
         val factory = SerializerFactoryBuilder.build(AllWhitelist,
