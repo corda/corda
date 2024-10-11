@@ -283,12 +283,18 @@ class DefaultLocalSerializerFactory(
     }
 
     private val schemaCache = ConcurrentHashMap<Set<TypeNotation>, Pair<Schema, TransformsSchema>>()
+    private val schemaCachingDisabled: Boolean = java.lang.Boolean.getBoolean("net.corda.serialization.disableSchemaCaching")
 
     override fun getCachedSchema(types: Set<TypeNotation>): Pair<Schema, TransformsSchema> {
-        val cacheKey = CachingSet(types)
-        return schemaCache.getOrPut(cacheKey) {
-            val schema = Schema(cacheKey.toList())
+        return if (schemaCachingDisabled) {
+            val schema = Schema(types.toList())
             schema to TransformsSchema.build(schema, this)
+        } else {
+            val cacheKey = CachingSet(types)
+            schemaCache.getOrPut(cacheKey) {
+                val schema = Schema(cacheKey.toList())
+                schema to TransformsSchema.build(schema, this)
+            }
         }
     }
 
