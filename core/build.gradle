@@ -3,6 +3,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
+apply plugin: 'corda.api-scanner'
 
 description 'Corda core'
 
@@ -130,6 +131,12 @@ quasar {
 }
 
 scanApi {
+    excludeClasses = [
+        // Kotlin should probably have declared this class as "synthetic".
+        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
+    ]
+}
+exportApis {
     excludeClasses = [
         // Kotlin should probably have declared this class as "synthetic".
         "net.corda.core.Utils\$toFuture\$1\$subscription\$1"

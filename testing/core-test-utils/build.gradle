@@ -3,6 +3,7 @@ plugins {
     id 'net.corda.plugins.api-scanner'
     id 'java-library'
     id 'corda.common-publishing'
+    id 'corda.api-scanner'
 }
 
 description 'Core test types and helpers for testing Corda'

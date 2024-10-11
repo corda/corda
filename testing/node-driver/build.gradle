@@ -3,6 +3,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
+apply plugin: 'corda.api-scanner'
 
 description 'Corda Node Driver module'
 
@@ -136,6 +137,17 @@ tasks.named('javadoc', Javadoc) {
 }
 
 scanApi {
+    //Constructors that are synthesized by Kotlin unexpectedly
+    excludeMethods = [
+        "net.corda.testing.node.MockServices": [
+            "<init>(Lnet/corda/node/cordapp/CordappLoader;Lnet/corda/core/node/services/IdentityService;Lnet/corda/core/node/NetworkParameters;Lnet/corda/testing/core/TestIdentity;[Ljava/security/KeyPair;Lkotlin/jvm/internal/DefaultConstructorMarker;)V"
+        ],
+        "net.corda.testing.node.InMemoryMessagingNetwork\$MessageTransfer": [
+            "<init>(Lnet/corda/testing/node/InMemoryMessagingNetwork\$PeerHandle;Lnet/corda/node/services/messaging/Message;Lnet/corda/core/messaging/MessageRecipients;Lkotlin/jvm/internal/DefaultConstructorMarker;)V"
+        ]
+    ]
+}
+exportApis {
     //Constructors that are synthesized by Kotlin unexpectedly
     excludeMethods = [
         "net.corda.testing.node.MockServices": [
