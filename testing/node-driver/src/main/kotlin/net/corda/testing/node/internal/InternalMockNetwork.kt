@@ -27,6 +27,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -47,6 +48,7 @@ import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
+import net.corda.node.services.config.TelemetryConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -410,7 +412,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, TelemetryServiceImpl())
         }
 
         override fun startShell() {
@@ -491,6 +493,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
+            doReturn(TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false)).whenever(it).telemetry
             parameters.configOverrides(it)
         }
 

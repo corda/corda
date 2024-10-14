@@ -59,9 +59,8 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
-import java.util.Arrays
-import java.util.BitSet
-import java.util.ServiceLoader
+import java.util.*
+import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
     private val serializationWhitelists: List<SerializationWhitelist> by lazy {
@@ -233,7 +232,7 @@ object DefaultKryoCustomizer {
         @Suppress("UNCHECKED_CAST")
         override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
             if (kryo.serializationContext() != null) {
-                val attachmentHash = SecureHash.SHA256(input.readBytes(32))
+                val attachmentHash = SecureHash.createSHA256(input.readBytes(32))
                 val contract = input.readString()
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
                 val uploader = input.readString()
