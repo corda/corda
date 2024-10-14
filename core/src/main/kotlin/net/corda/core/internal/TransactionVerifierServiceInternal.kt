@@ -4,11 +4,13 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -87,10 +89,9 @@ abstract class AbstractVerifier(
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
- * wrong object instance. This class helps avoid that.
+ * wrong object instance. This class helps
  */
-@KeepForDJVM
-private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader) {
+private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map(StateAndRef<ContractState>::state) + ltx.outputs
 
@@ -375,7 +376,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
             outputConstraints.forEach { outputConstraint ->
                 inputConstraints.forEach { inputConstraint ->
-                    if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachment))) {
+                    if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachment, rotatedKeys))) {
                         throw ConstraintPropagationRejection(
                                 ltx.id,
                                 contractClassName,
@@ -429,8 +430,20 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
             if (HashAttachmentConstraint.disableHashConstraints && constraint is HashAttachmentConstraint)
                 logger.warnOnce("Skipping hash constraints verification.")
-            else if (!constraint.isSatisfiedBy(constraintAttachment))
-                throw ContractConstraintRejection(ltx.id, contract)
+            else if (!constraint.isSatisfiedBy(constraintAttachment)) {
+                verifyConstraintUsingRotatedKeys(constraint, constraintAttachment, contract)
+            }
+        }
+    }
+
+    private fun verifyConstraintUsingRotatedKeys(constraint: AttachmentConstraint, constraintAttachment: AttachmentWithContext, contract: ContractClassName ) {
+        // constraint could be an input constraint so we manually have to rotate to updated constraint
+        if (constraint is SignatureAttachmentConstraint && rotatedKeys.canBeTransitioned(constraint.key, constraintAttachment.signerKeys)) {
+            val constraintWithRotatedKeys =  SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(constraintAttachment.signerKeys).build())
+            if (!constraintWithRotatedKeys.isSatisfiedBy(constraintAttachment)) throw ContractConstraintRejection(ltx.id, contract)
+        }
+        else {
+            throw ContractConstraintRejection(ltx.id, contract)
         }
     }
 }
@@ -478,7 +491,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Fun
     }
 
     private fun validateTransaction(ltx: LedgerTransaction) {
-        Validator(ltx, transactionClassLoader).validate()
+        Validator(ltx, transactionClassLoader, ltx.rotatedKeys).validate()
     }
 
     override fun apply(transactionFactory: Supplier<LedgerTransaction>) {

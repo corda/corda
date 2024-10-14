@@ -3,6 +3,7 @@ package net.corda.core.internal
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.utilities.loggerFor
 
 /**
@@ -58,7 +59,8 @@ val ContractState.requiredContractClassName: String? get() {
  *    JAR are required to sign in the future.
  *
  */
-fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
+@Suppress("ComplexMethod")
+fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment, rotatedKeys: RotatedKeys): Boolean {
     val output = this
 
     @Suppress("DEPRECATION")
@@ -84,7 +86,7 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
 
         // The SignatureAttachmentConstraint allows migration from a Signature constraint with the same key.
         // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key.
-        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> input.key == output.key
+        input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> rotatedKeys.canBeTransitioned(input.key, output.key)
 
         // HashAttachmentConstraint can be transformed to a SignatureAttachmentConstraint when hash constraint verification checking disabled.
         HashAttachmentConstraint.disableHashConstraints && input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> true

@@ -81,6 +81,9 @@ def patchCore = tasks.register('patchCore', Zip) {
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/contracts/CordaRotatedKeys.class'
+        exclude 'net/corda/core/contracts/RotatedKeysKt.class'
+        exclude 'net/corda/core/contracts/RotatedKeys.class'
         exclude 'net/corda/core/internal/utilities/PrivateInterner*.class'
     }
 

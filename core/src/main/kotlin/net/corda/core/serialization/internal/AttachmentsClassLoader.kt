@@ -2,9 +2,10 @@ package net.corda.core.serialization.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.CordaRotatedKeys
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
@@ -358,7 +359,8 @@ object AttachmentsClassLoaderBuilder {
                                               block: (SerializationContext) -> T): T {
         val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
-        val cache = attachmentsClassLoaderCache ?: fallBackCache
+        val cache = if (attachmentsClassLoaderCache is AttachmentsClassLoaderForRotatedKeysOnlyImpl) fallBackCache else
+                          attachmentsClassLoaderCache ?: fallBackCache
         val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
@@ -474,12 +476,11 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
 }
 
 interface AttachmentsClassLoaderCache {
+    val rotatedKeys: RotatedKeys
     fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
 }
 
-@DeleteForDJVM
-class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
-
+class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory, override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
     private class ToBeClosed(
         serializationContext: SerializationContext,
         val classLoaderToClose: AutoCloseable,
@@ -530,13 +531,18 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
     }
 }
 
-class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int) : AttachmentsClassLoaderCache {
-
+class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int, override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : AttachmentsClassLoaderCache {
     private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
             = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(cacheSize).toSynchronised()
 
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         return cache.computeIfAbsent(key, mappingFunction)
+    }
+}
+
+class AttachmentsClassLoaderForRotatedKeysOnlyImpl(override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : AttachmentsClassLoaderCache {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        throw NotImplementedError("AttachmentsClassLoaderForRotatedKeysOnlyImpl.computeIfAbsent should never be called. Should be replaced by the fallback cache")
     }
 }
 
