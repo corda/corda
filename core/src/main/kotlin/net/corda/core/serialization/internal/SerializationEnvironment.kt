@@ -1,14 +1,11 @@
-@file:KeepForDJVM
 package net.corda.core.serialization.internal
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 
-@KeepForDJVM
 interface SerializationEnvironment {
 
     companion object {
@@ -43,7 +40,6 @@ interface SerializationEnvironment {
     val checkpointContext: CheckpointSerializationContext
 }
 
-@KeepForDJVM
 private class SerializationEnvironmentImpl(
         override val serializationFactory: SerializationFactory,
         override val p2pContext: SerializationContext,

@@ -9,7 +9,6 @@ import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeParameters
@@ -30,8 +29,8 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
                 inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4),
+                systemProperties = mapOf("net.corda.recordtransaction.signature.verification.disabled" to true.toString())
         ) {
             val nodeName = {
                 val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp))).getOrThrow()
@@ -142,7 +141,7 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
                         )
                 ),
                 systemProperties = emptyMap(),
-                startNodesInProcess = true,
+                startNodesInProcess = false,
                 specifyExistingConstraint = true,
                 addAnotherAutomaticConstraintState = true
         )

@@ -93,6 +93,8 @@ dependencies {
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
 
+    // used by FinalityFlowTests
+    testCompile project(':testing:cordapps:cashobservers')
 }
 
 configurations {

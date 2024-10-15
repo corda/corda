@@ -1,10 +1,16 @@
 package net.corda.node
 
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultTrackBy
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.core.ALICE_NAME
@@ -17,6 +23,8 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.findCordapp
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import java.util.concurrent.CountDownLatch
+import kotlin.test.assertEquals
 
 /**
  * Execute a flow with sub-flows, including the finality flow.
@@ -61,6 +69,38 @@ class CashIssueAndPaymentTest {
                 ).use { flowHandle ->
                     flowHandle.returnValue.getOrThrow()
                 }
+            }
+            logger.info("TXN={}, recipient={}", result.stx, result.recipient)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `test can issue cash and see consumming transaction id in rpc client`() {
+        driver(parametersFor()) {
+            val alice = startNode(providedName = ALICE_NAME, customOverrides = configOverrides).getOrThrow()
+            val aliceParty = alice.nodeInfo.singleIdentity()
+            val notaryParty = notaryHandles.single().identity
+            val result = assertDoesNotThrow {
+
+                val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.CONSUMED)
+                val (_, vaultUpdates) = alice.rpc.vaultTrackBy<Cash.State>(criteria = criteria, paging = PageSpecification(DEFAULT_PAGE_NUM))
+                val updateLatch = CountDownLatch(1)
+                vaultUpdates.subscribe { update ->
+                    val consumedRef = update.consumed.single().ref
+                    assertEquals( update.produced.single().ref.txhash, update.consumingTxIds[consumedRef] )
+                    updateLatch.countDown()
+                }
+                val flowRet = alice.rpc.startFlow(::CashIssueAndPaymentFlow,
+                        CASH_AMOUNT,
+                        OpaqueBytes.of(0x01),
+                        aliceParty,
+                        false,
+                        notaryParty
+                ).use { flowHandle ->
+                    flowHandle.returnValue.getOrThrow()
+                }
+                updateLatch.await()
+                flowRet
             }
             logger.info("TXN={}, recipient={}", result.stx, result.recipient)
         }

@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
@@ -195,7 +194,6 @@ fun createComponentGroups(inputs: List<StateRef>,
  * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
  * The [serializedState] is the actual component from the original wire transaction.
  */
-@KeepForDJVM
 data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
     fun toStateAndRef(factory: SerializationFactory, context: SerializationContext) = StateAndRef(serializedState.deserialize(factory, context), ref)
     fun toStateAndRef(): StateAndRef<ContractState> {

@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.Destination
@@ -17,7 +16,6 @@ import java.security.PublicKey
  * Anonymous parties can be used to communicate using the [FlowLogic.initiateFlow] method. Message routing is simply routing to the well-known
  * [Party] the anonymous party belongs to. This mechanism assumes the party initiating the communication knows who the anonymous party is.
  */
-@KeepForDJVM
 class AnonymousParty(owningKey: PublicKey) : Destination, AbstractParty(owningKey) {
     override fun nameOrNull(): CordaX500Name? = null
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)

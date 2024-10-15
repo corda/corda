@@ -39,7 +39,6 @@ import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -422,9 +421,10 @@ class VaultObserverExceptionTest {
     /**
      * An error is thrown inside of the [VaultService.rawUpdates] observable while recording a transaction inside of the initiating node.
      *
-     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
-     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
-     * counterparty node.
+     * Two Phase Finality update:
+     * This causes the transaction to not be finalised on the local node but the notary still records the transaction as spent. The transaction
+     * does finalize at the counterparty node since the notary signatures are broadcast to peers prior to initiator node finalisation.
+     * Subscriber events will occur on the counterparty node.
      *
      * More importantly, the observer listening to the [VaultService.rawUpdates] observable should not unsubscribe.
      *
@@ -487,29 +487,32 @@ class VaultObserverExceptionTest {
             println("First set of flows")
             val stateId = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(1, notary.getNotarisedTransactionIds().size)
             assertEquals(1, observationCounter)
             assertEquals(2, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(1, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
 
             println("Second set of flows")
             val stateId2 = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(2, notary.getNotarisedTransactionIds().size)
             assertEquals(2, observationCounter)
             assertEquals(4, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(2, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
         }
     }
 
     /**
      * An error is thrown inside of the [VaultService.rawUpdates] observable while recording a transaction inside of the initiating node.
      *
-     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
-     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
-     * counterparty node.
+     * Two Phase Finality update:
+     * This causes the transaction to not be finalised on the local node but the notary still records the transaction as spent. The transaction
+     * does finalize at the counterparty node since the notary signatures are broadcast to peers prior to initiator node finalisation.
+     * Subscriber events will occur on the counterparty node.
      *
      * More importantly, the observer listening to the [VaultService.rawUpdates] observable should not unsubscribe.
      *
@@ -578,19 +581,21 @@ class VaultObserverExceptionTest {
 
             val stateId = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(1, notary.getNotarisedTransactionIds().size)
             assertEquals(1, observationCounter)
             assertEquals(3, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(1, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
 
             val stateId2 = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(2, notary.getNotarisedTransactionIds().size)
             assertEquals(2, observationCounter)
             assertEquals(6, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(2, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
         }
     }
 
@@ -681,9 +686,10 @@ class VaultObserverExceptionTest {
     /**
      * An error is thrown inside of the [VaultService.updates] observable while recording a transaction inside of the initiating node.
      *
-     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
-     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
-     * counterparty node.
+     * Two Phase Finality update:
+     * This causes the transaction to not be finalised on the local node but the notary still records the transaction as spent. The transaction
+     * does finalize at the counterparty node since the notary signatures are broadcast to peers prior to initiator node finalisation.
+     * Subscriber events will occur on the counterparty node.
      *
      * More importantly, the observer listening to the [VaultService.updates] observable should not unsubscribe.
      *
@@ -743,19 +749,21 @@ class VaultObserverExceptionTest {
             val stateId = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
             assertEquals(1, aliceNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(1, notary.getNotarisedTransactionIds().size)
             assertEquals(1, observationCounter)
             assertEquals(2, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(1, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
 
             val stateId2 = startErrorInObservableWhenConsumingState()
             assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
             assertEquals(2, aliceNode.getAllStates(Vault.StateStatus.UNCONSUMED).size)
-            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            // Ledger is temporarily inconsistent as peer finalised transaction but initiator error'ed before finalisation.
+            assertEquals(1, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
             assertEquals(2, notary.getNotarisedTransactionIds().size)
             assertEquals(4, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
-            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+            assertEquals(2, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
         }
     }
 

@@ -43,6 +43,10 @@ import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
+import net.corda.core.internal.telemetry.OpenTelemetryComponent
+import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
@@ -57,10 +61,6 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.internal.telemetry.OpenTelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.node.services.TelemetryService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
@@ -76,9 +76,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.minutes
-import net.corda.djvm.source.ApiSource
-import net.corda.djvm.source.EmptyApi
-import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.attachments.AttachmentTrustInfoRPCOpsImpl
@@ -123,13 +120,15 @@ import net.corda.node.services.network.NetworkParameterUpdateListener
 import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.persistence.DBCheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.AesDbEncryptionService
 import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
@@ -143,10 +142,7 @@ import net.corda.node.services.statemachine.FlowOperator
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.BasicVerifierFactoryService
-import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -211,8 +207,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
-                               djvmBootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null,
                                protected val allowHibernateToManageAppSchema: Boolean = false,
                                private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : SingletonSerializeAsToken() {
 
@@ -286,6 +280,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
+    val partyInfoCache = PersistentPartyInfoCache(networkMapCache, cacheFactory, database)
+    val encryptionService = AesDbEncryptionService(database)
+    @Suppress("LeakingThis")
+    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -296,8 +294,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database, rotatedKeys)
-    @Suppress("LeakingThis")
-    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -657,6 +653,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+            partyInfoCache.start()
+            encryptionService.start(nodeInfo.legalIdentities[0])
+
             /* Note the .get() at the end of the distributeEvent call, below.
                This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
                state machine manager from starting (just below this) until the service is ready.
@@ -695,6 +694,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
+
         setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo
     }
@@ -1086,7 +1086,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-        return DBTransactionStorage(database, cacheFactory, platformClock)
+        return DBTransactionStorageLedgerRecovery(database, cacheFactory, platformClock, encryptionService, partyInfoCache)
     }
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {
@@ -1325,8 +1325,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
-            val ledgerTransaction = servicesForResolution.specialise(ltx)
-            return verifierFactoryService.apply(ledgerTransaction)
+            return servicesForResolution.specialise(ltx)
         }
 
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
