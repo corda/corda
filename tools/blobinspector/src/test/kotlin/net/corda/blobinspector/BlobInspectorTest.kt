@@ -55,7 +55,12 @@ class BlobInspectorTest {
     private fun run(resourceName: String): String {
         blobInspector.source = javaClass.getResource(resourceName)
         val writer = StringWriter()
-        blobInspector.run(PrintStream(WriterOutputStream(writer, UTF_8)))
+        val oStream = WriterOutputStream.builder()
+                .setCharset(UTF_8)
+                .setWriter(writer)
+                .get()
+        blobInspector.run(PrintStream(oStream))
+
         val output = writer.toString()
         println(output)
         return output
