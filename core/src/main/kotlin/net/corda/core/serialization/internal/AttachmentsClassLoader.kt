@@ -480,12 +480,7 @@ interface AttachmentsClassLoaderCache {
     fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
 }
 
-<<<<<<< HEAD
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory, override val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
-=======
-class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
-
->>>>>>> release/os/4.11
     private class ToBeClosed(
         serializationContext: SerializationContext,
         val classLoaderToClose: AutoCloseable,

@@ -317,18 +317,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         cordappProvider = cordappProvider,
         attachments = attachments
     ).tokenize()
-    val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
-        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
-            log.info("DJVM sandbox enabled for deterministic contract verification.")
-            if (!configuration.devMode) {
-                log.info("Generating Corda classes for DJVM sandbox.")
-                generateSandbox()
-            }
-            tokenize()
-        }
-    } else {
-        BasicVerifierFactoryService()
-    }
     private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory, rotatedKeys).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()

@@ -25,7 +25,11 @@ interface ServiceHubCoreInternal : ServiceHub {
      */
     val notaryService: NotaryService?
 
-    fun createTransactionsResolver(flow: ResolveTransactionsval rotatedKeys: RotatedKeys)
+    fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
+
+    val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
+
+    val rotatedKeys: RotatedKeys
 
     /**
      * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage,
