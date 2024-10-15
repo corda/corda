@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.SecureRandom
@@ -38,6 +39,7 @@ data class SessionId(val toLong: Long) {
  * @param flowVersion the version of the initiating flow.
  * @param appName the name of the cordapp defining the initiating flow, or "corda" if it's a core flow.
  * @param firstPayload the optional first payload.
+ * @param serializedTelemetry the telemetry data
  */
 data class InitialSessionMessage(
         val initiatorSessionId: SessionId,
@@ -45,7 +47,8 @@ data class InitialSessionMessage(
         val initiatorFlowClassName: String,
         val flowVersion: Int,
         val appName: String,
-        val firstPayload: SerializedBytes<Any>?
+        val firstPayload: SerializedBytes<Any>?,
+        val serializedTelemetry: SerializedTelemetry?
 ) : SessionMessage() {
     override fun toString() = "InitialSessionMessage(" +
             "initiatorSessionId=$initiatorSessionId, " +
@@ -53,6 +56,7 @@ data class InitialSessionMessage(
             "initiatorFlowClassName=$initiatorFlowClassName, " +
             "appName=$appName, " +
             "firstPayload=${firstPayload?.javaClass}" +
+            "telemetryContext=$serializedTelemetry" +
             ")"
 }
 

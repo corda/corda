@@ -397,6 +397,7 @@ class NodeConfigurationImplTest {
                 p2pAddress = NetworkHostAndPort("localhost", 0),
                 messagingServerAddress = null,
                 flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
+                telemetry = TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false),
                 notary = null,
                 devMode = true,
                 noLocalShell = false,

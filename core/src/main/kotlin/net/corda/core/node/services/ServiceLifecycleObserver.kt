@@ -17,6 +17,18 @@ interface ServiceLifecycleObserver {
 }
 
 enum class ServiceLifecycleEvent {
+
+    /**
+     * This event is dispatched when the node is about to start the State Machine. The State Machine will not be started until
+     * all handlers return from processing this event.
+     * Handlers can delay the node start-up, and the processing of flows, by not returning from handling this event until their
+     * CorDapp is ready for flows to be started/resumed.
+     *
+     * If a handler for this event throws [CordaServiceCriticalFailureException] - this is the way to flag that it will not make
+     * sense for Corda node to continue its operation. The lifecycle events dispatcher will endeavor to terminate node's JVM as soon
+     * as practically possible.
+     */
+    BEFORE_STATE_MACHINE_START,
     /**
      * This event is dispatched when State Machine is fully started such that [net.corda.core.node.AppServiceHub] available
      * for [CordaService] to be use.

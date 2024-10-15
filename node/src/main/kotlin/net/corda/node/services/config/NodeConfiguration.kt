@@ -43,6 +43,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
+    val telemetry: TelemetryConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
@@ -233,6 +234,13 @@ data class FlowTimeoutConfiguration(
  * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
  */
 data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
+
+data class TelemetryConfiguration(
+        val openTelemetryEnabled: Boolean,
+        val simpleLogTelemetryEnabled: Boolean,
+        val spanStartEndEventsEnabled: Boolean,
+        val copyBaggageToTags: Boolean
+)
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 

@@ -30,7 +30,7 @@ import java.util.jar.JarInputStream
 
 
 // When incrementing platformVersion make sure to update PLATFORM_VERSION in constants.properties as well.
-const val PLATFORM_VERSION = 11
+const val PLATFORM_VERSION = 12
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)

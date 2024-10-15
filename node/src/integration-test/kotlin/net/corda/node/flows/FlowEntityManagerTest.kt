@@ -16,6 +16,7 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -854,19 +855,25 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         init {
             if (includeRawUpdates) {
                 services.register {
-                    services.vaultService.rawUpdates.subscribe {
-                        if (insertionType == InsertionType.ENTITY_MANAGER) {
-                            services.withEntityManager {
-                                persist(entityWithIdOne)
-                                persist(entityWithIdTwo)
-                                persist(entityWithIdThree)
-                            }
-                        } else {
-                            services.jdbcSession().run {
-                                insert(entityWithIdOne)
-                                insert(entityWithIdTwo)
-                                insert(entityWithIdThree)
-                            }
+                    processEvent(it)
+                }
+            }
+        }
+
+        private fun processEvent(event : ServiceLifecycleEvent) {
+            if (event == ServiceLifecycleEvent.STATE_MACHINE_STARTED) {
+                services.vaultService.rawUpdates.subscribe {
+                    if (insertionType == InsertionType.ENTITY_MANAGER) {
+                        services.withEntityManager {
+                            persist(entityWithIdOne)
+                            persist(entityWithIdTwo)
+                            persist(entityWithIdThree)
+                        }
+                    } else {
+                        services.jdbcSession().run {
+                            insert(entityWithIdOne)
+                            insert(entityWithIdTwo)
+                            insert(entityWithIdThree)
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.toPath
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -24,6 +25,7 @@ data class CordappImpl(
         override val serviceFlows: List<Class<out FlowLogic<*>>>,
         override val schedulableFlows: List<Class<out FlowLogic<*>>>,
         override val services: List<Class<out SerializeAsToken>>,
+        override val telemetryComponents: List<Class<out TelemetryComponent>>,
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val checkpointCustomSerializers: List<CheckpointCustomSerializer<*, *>>,
@@ -79,6 +81,7 @@ data class CordappImpl(
                 serviceFlows = emptyList(),
                 schedulableFlows = emptyList(),
                 services = emptyList(),
+                telemetryComponents = emptyList(),
                 serializationWhitelists = emptyList(),
                 serializationCustomSerializers = emptyList(),
                 checkpointCustomSerializers = emptyList(),
