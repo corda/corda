@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
@@ -27,6 +28,8 @@ interface ServiceHubCoreInternal : ServiceHub {
     fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
 
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
+
+    val rotatedKeys: RotatedKeys
 
     /**
      * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage,
