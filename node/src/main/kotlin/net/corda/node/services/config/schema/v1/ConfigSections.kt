@@ -214,14 +214,6 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
     }
 }
 
-internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
-    private val rotatedKeys by string().listOrEmpty()
-    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
-        val config = configuration.withOptions(options)
-        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
-    }
-}
-
 internal object TelemetryConfigurationSpec : Configuration.Specification<TelemetryConfiguration>("TelemetryConfiguration") {
     private val openTelemetryEnabled by boolean()
     private val simpleLogTelemetryEnabled by boolean()

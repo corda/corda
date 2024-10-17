@@ -222,13 +222,6 @@ data class FlowTimeoutConfiguration(
         val backoffBase: Double
 )
 
-/**
- * Represents a list of rotated CorDapp attachment signing keys.
- *
- * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
- */
-data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
-
 data class TelemetryConfiguration(
         val openTelemetryEnabled: Boolean,
         val simpleLogTelemetryEnabled: Boolean,

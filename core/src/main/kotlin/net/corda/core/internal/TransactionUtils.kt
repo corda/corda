@@ -28,7 +28,6 @@ import net.corda.core.crypto.algorithm
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.MissingAttachmentsRuntimeException
@@ -45,26 +44,9 @@ import net.corda.core.transactions.FullTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
-
-
-fun ServiceHub.retrieveRotatedKeys(): RotatedKeys {
-    if (this is ServiceHubCoreInternal) {
-        return this.rotatedKeys
-    }
-    var clazz: Class<*> = javaClass
-    while (true) {
-        if (clazz.name == "net.corda.testing.node.MockServices") {
-            return clazz.getDeclaredMethod("getRotatedKeys").apply { isAccessible = true }.invoke(this) as RotatedKeys
-        }
-        clazz = clazz.superclass ?: return CordaRotatedKeys.keys.also {
-            this.contextLogger().warn("${javaClass.name} is not a MockServices instance - returning default rotated keys")
-        }
-    }
-}
 
 /** Constructs a [NotaryChangeWireTransaction]. */
 class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
