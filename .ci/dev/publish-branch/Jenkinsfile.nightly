@@ -39,6 +39,7 @@ pipeline {
         BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         USE_CACHE = 'corda-remotes'
         DOCKER_URL = "https://index.docker.io/v1/"
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {

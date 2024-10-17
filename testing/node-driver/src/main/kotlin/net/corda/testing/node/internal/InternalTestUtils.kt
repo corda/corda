@@ -10,8 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
-import net.corda.core.internal.readText
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentFixup
@@ -22,14 +20,14 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
-import net.corda.coretesting.internal.createTestSerializationEnv
-import net.corda.coretesting.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -50,6 +48,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
+import kotlin.io.path.div
+import kotlin.io.path.readText
 import kotlin.reflect.KClass
 
 private val log = LoggerFactory.getLogger("net.corda.testing.internal.InternalTestUtils")
@@ -61,7 +61,7 @@ private val log = LoggerFactory.getLogger("net.corda.testing.internal.InternalTe
  * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the flows as well.
  */
 @JvmField
-val FINANCE_CONTRACTS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.contracts")
+val FINANCE_CONTRACTS_CORDAPP: ScanPackageTestCordapp = findCordapp("net.corda.finance.contracts")
 
 /**
  * Reference to the finance-workflows CorDapp in this repo. The metadata is taken directly from finance/workflows/build.gradle, including the
@@ -70,10 +70,10 @@ val FINANCE_CONTRACTS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.
  * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the contract classes as well.
  */
 @JvmField
-val FINANCE_WORKFLOWS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.workflows")
+val FINANCE_WORKFLOWS_CORDAPP: ScanPackageTestCordapp = findCordapp("net.corda.finance.workflows")
 
 @JvmField
-val FINANCE_CORDAPPS: Set<TestCordappImpl> = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
+val FINANCE_CORDAPPS: Set<ScanPackageTestCordapp> = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
 
 /**
  * *Custom* CorDapp containing the contents of the `net.corda.testing.contracts` package, i.e. the dummy contracts. This is not a real CorDapp
@@ -105,9 +105,9 @@ fun cordappWithFixups(fixups: List<AttachmentFixup>) = CustomCordapp(fixups = fi
 
 /**
  * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for
- * [TestCordapp.findCordapp] but returns the internal [TestCordappImpl].
+ * [TestCordapp.findCordapp] but returns the internal [ScanPackageTestCordapp].
  */
-fun findCordapp(scanPackage: String): TestCordappImpl = TestCordapp.findCordapp(scanPackage) as TestCordappImpl
+fun findCordapp(scanPackage: String): ScanPackageTestCordapp = TestCordapp.findCordapp(scanPackage) as ScanPackageTestCordapp
 
 /** Create a *custom* CorDapp which just contains the enclosed classes of the receiver class. */
 fun Any.enclosedCordapp(): CustomCordapp {
@@ -169,8 +169,7 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
         }
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
+        } catch (_: SocketException) {
             null
         }
     }
@@ -188,7 +187,7 @@ fun nodeMustBeStartedFuture(
             throw exception()
         }
         when {
-            logFile.readText().contains("Running P2PMessaging loop") -> {
+            "Running P2PMessaging loop" in logFile.readText() -> {
                 Unit
             }
             Instant.now().isAfter(stopPolling) -> {
@@ -217,9 +216,7 @@ fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostA
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
             null
-        } catch (_exception: SocketException) {
-            Unit
-        }
+        } catch (_: SocketException) { }
     }
 }
 
@@ -302,6 +299,10 @@ fun DriverDSL.assertUncompletedCheckpoints(name: CordaX500Name, expected: Long) 
             assertThat(rs.getLong(1)).isEqualTo(expected)
         }
     }
+}
+
+val nodeJvmArgs: List<String> by lazy {
+    DriverDSLImpl::class.java.getResourceAsStream("node-jvm-args.txt")!!.use { it.bufferedReader().readLines() }
 }
 
 /**

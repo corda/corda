@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.kotlinModule
 import net.corda.client.jackson.internal.CordaModule
 import net.corda.client.jackson.internal.ToStringSerialize
 import net.corda.client.jackson.internal.jsonObject
@@ -197,7 +197,7 @@ object JacksonSupport {
                 addSerializer(Date::class.java, DateSerializer)
             })
             registerModule(CordaModule())
-            registerModule(KotlinModule().apply {
+            registerModule(kotlinModule().apply {
                 setDeserializerModifier(KotlinObjectDeserializerModifier)
             })
 

@@ -37,7 +37,7 @@ function generateGenericCZConfig() {
     : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
     : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
     : ${RPC_USER=:? '$RPC_USER, the name of the primary rpc user must be set as environment variable'}
-    : ${SSHPORT=:? 'SSHPORT, the port number for the SSHD must be set as enviroment variable'}
+    : ${SSHPORT=:? 'SSHPORT, the port number for the SSHD must be set as environment variable'}
 
 
     if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
@@ -121,7 +121,7 @@ while :; do
 done
 
 : ${TRUST_STORE_NAME="network-root-truststore.jks"}
-: ${JVM_ARGS='-Xmx4g -Xms2g -XX:+UseG1GC'}
+: ${JVM_ARGS='-Xmx4g -Xms2g'}
 
 if [[ ${GENERATE_TEST_NET} == 1 ]]; then
   : ${MY_PUBLIC_ADDRESS:? 'MY_PUBLIC_ADDRESS must be set as environment variable'}

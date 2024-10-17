@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import com.typesafe.config.Config
 import net.corda.nodeapi.internal.config.ConfigParser
 import net.corda.nodeapi.internal.config.CustomConfigParser
+import java.util.Locale
 
 /**
  * Data structure for controlling the way how Certificate Revocation Lists are handled.
@@ -58,7 +59,7 @@ class RevocationConfigParser : ConfigParser<RevocationConfig> {
         require(allKeys.size == 1 && allKeys.contains(oneAndTheOnly)) {"For RevocationConfig, it is expected to have '$oneAndTheOnly' property only. " +
                 "Actual set of properties: $allKeys. Please check 'revocationConfig' section."}
         val mode = config.getString(oneAndTheOnly)
-        return when (mode.toUpperCase()) {
+        return when (mode.uppercase(Locale.getDefault())) {
             "SOFT_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL)
             "HARD_FAIL" -> RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
             "EXTERNAL_SOURCE" -> RevocationConfigImpl(RevocationConfig.Mode.EXTERNAL_SOURCE, null) // null for now till `enrichExternalCrlSource` is called

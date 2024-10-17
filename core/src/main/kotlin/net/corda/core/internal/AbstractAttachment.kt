@@ -11,6 +11,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
+import java.util.Locale
 import java.util.jar.JarInputStream
 
 const val DEPLOYED_CORDAPP_UPLOADER = "app"
@@ -60,18 +61,19 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: Str
         openAsJAR().use(JarSignatureCollector::collectSigners)
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override val signers: List<Party> by lazy {
         openAsJAR().use(JarSignatureCollector::collectSigningParties)
     }
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
     override fun hashCode() = id.hashCode()
-    override fun toString() = "${javaClass.simpleName}(id=$id)"
+    override fun toString() = toSimpleString()
 }
 
 @Throws(IOException::class)
 fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
-    fun String.norm() = toLowerCase().split('\\', '/') // XXX: Should this really be locale-sensitive?
+    fun String.norm() = lowercase(Locale.getDefault()).split('\\', '/') // XXX: Should this really be locale-sensitive?
     val p = path.norm()
     while (true) {
         val e = nextJarEntry ?: break

@@ -28,6 +28,6 @@ class ContentSignerBuilderTest {
                 .isThrownBy {
                     ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
                 }
-                .withMessage("Incorrect key type EC for signature scheme NONEwithEdDSA")
+                .withMessage("Incorrect key type EC for signature scheme Ed25519")
     }
 }

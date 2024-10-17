@@ -42,7 +42,7 @@ class TopLevelTransition(
         val log = contextLogger()
     }
 
-    @Suppress("ComplexMethod", "TooGenericExceptionCaught")
+    @Suppress("ComplexMethod")
     override fun transition(): TransitionResult {
         return try {
             if (startingState.isKilled) {

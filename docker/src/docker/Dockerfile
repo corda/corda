@@ -1,11 +1,11 @@
-FROM azul/zulu-openjdk:8u422
+FROM azul/zulu-openjdk:17.0.12
 
 ## Remove Azul Zulu repo, as it is gone by now
 RUN rm -rf /etc/apt/sources.list.d/zulu.list
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
-    apt-mark hold zulu8-jdk && \
+    apt-mark hold zulu17-jdk && \
     apt-get -y upgrade && \
     apt-get -y install bash curl unzip && \
     rm -rf /var/lib/apt/lists/* && \
@@ -33,7 +33,7 @@ ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
     MY_RPC_PORT=10201 \
     MY_RPC_ADMIN_PORT=10202 \
     PATH=$PATH:/opt/corda/bin \
-    JVM_ARGS="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap " \
+    JVM_ARGS="-XX:+UnlockExperimentalVMOptions " \
     CORDA_ARGS=""
 
 ##CORDAPPS FOLDER

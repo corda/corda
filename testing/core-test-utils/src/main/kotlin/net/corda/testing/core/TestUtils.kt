@@ -1,5 +1,5 @@
 @file:JvmName("TestUtils")
-@file:Suppress("TooGenericExceptionCaught", "MagicNumber", "ComplexMethod", "LongParameterList")
+@file:Suppress("MagicNumber", "ComplexMethod", "LongParameterList")
 
 package net.corda.testing.core
 

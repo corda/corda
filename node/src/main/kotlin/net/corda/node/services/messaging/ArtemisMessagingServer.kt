@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
@@ -46,6 +45,7 @@ import java.lang.Long.max
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED
+import kotlin.io.path.div
 
 // TODO: Verify that nobody can connect to us and fiddle with our config over the socket due to the secman.
 // TODO: Implement a discovery engine that can trigger builds of new connections when another node registers? (later)
@@ -113,7 +113,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         try {
             activeMQServer.startSynchronously()
         } catch (e: Throwable) {
@@ -170,7 +169,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         journalBufferTimeout_NIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutNio()
         journalBufferTimeout_AIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutAio()
         journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
-        managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
+        managementNotificationAddress = SimpleString.of(NOTIFICATIONS_ADDRESS)
 
         // JMX enablement
         if (config.jmxMonitoringHttpPort != null) {
@@ -190,7 +189,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
     private fun ConfigurationImpl.configureAddressSecurity(): Configuration {
-        val nodeInternalRole = Role(NODE_P2P_ROLE, true, true, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(NODE_P2P_ROLE, true, true, true, true, true, true, true, true, true, true, false, false)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityInvalidationInterval = SECURITY_INVALIDATION_INTERVAL
@@ -201,7 +200,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
         return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue,
-                deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
+                deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue, false, false)
     }
 
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {

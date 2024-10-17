@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 class RotatedKeysTest {
 
     @Test(timeout = 300_000)
-    fun `validateDefaultRotatedKeysAreRetrievableFromMockServices`() {
+    fun validateDefaultRotatedKeysAreRetrievableFromMockServices() {
         val services: ServiceHub = MockServices(TestIdentity(CordaX500Name("MegaCorp", "London", "GB")))
         val rotatedKeys = services.retrieveRotatedKeys()
         assertEquals( CordaRotatedKeys.keys.rotatedSigningKeys, rotatedKeys.rotatedSigningKeys)

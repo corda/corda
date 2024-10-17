@@ -234,6 +234,14 @@ internal object TelemetryConfigurationSpec : Configuration.Specification<Telemet
     }
 }
 
+internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
+    private val rotatedKeys by string().listOrEmpty()
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
+    }
+}
+
 internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("NotaryConfig") {
     private val validating by boolean()
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
