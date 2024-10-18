@@ -313,7 +313,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @JvmOverloads
     open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>, maySkipCheckpoint: Boolean = false): Map<FlowSession, UntrustworthyData<Any>> {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receiveAllMap", mapOf("sessions" to sessions.keys.toString())) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receiveAllMap") {
             enforceNoPrimitiveInReceive(sessions.values)
             val replies = stateMachine.suspend(
                     ioRequest = FlowIORequest.Receive(sessions.keys.toNonEmptySet()),
@@ -337,7 +337,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @JvmOverloads
     open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>, maySkipCheckpoint: Boolean = false): List<UntrustworthyData<R>> {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receiveAll", mapOf("sessions" to sessions.toString())) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receiveAll") {
             enforceNoPrimitiveInReceive(listOf(receiveType))
             enforceNoDuplicates(sessions)
             return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
@@ -358,7 +358,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @JvmOverloads
     fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receiveAll", mapOf("sessions" to sessions.toString())) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#sendAll") {
             val sessionToPayload = sessions.map { it to payload }.toMap()
             return sendAllMap(sessionToPayload, maySkipCheckpoint)
         }
@@ -377,7 +377,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @JvmOverloads
     fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#payloadsPerSession", mapOf("sessions" to payloadsPerSession.keys.toString())) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#sendAllMap") {
             val request = FlowIORequest.Send(
                     sessionToMessage = stateMachine.serialize(payloadsPerSession)
             )
