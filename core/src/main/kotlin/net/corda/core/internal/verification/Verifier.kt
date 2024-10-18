@@ -89,7 +89,7 @@ abstract class AbstractVerifier(
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
- * wrong object instance. This class helps
+ * wrong object instance. This class helps avoid that.
  */
 private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val rotatedKeys: RotatedKeys) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
