@@ -3,6 +3,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'corda.api-scanner'
 
 description 'Corda client RPC modules'
 
