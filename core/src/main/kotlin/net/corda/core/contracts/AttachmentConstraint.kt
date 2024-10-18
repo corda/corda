@@ -117,7 +117,9 @@ data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstra
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         log.debug("Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}")
         return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
-            log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
+            log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}." +
+                     "The key on the attachment may be a rotated key. Will recheck. To remove this warning you should update your" +
+                    "output state signature attachment constraint to use the same key as on the attachment.")
             false
         }
         else true
