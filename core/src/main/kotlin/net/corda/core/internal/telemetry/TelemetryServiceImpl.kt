@@ -1,6 +1,7 @@
 package net.corda.core.internal.telemetry
 
 import net.corda.core.CordaInternal
+import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
@@ -34,6 +35,7 @@ enum class TelemetryStatusCode {
     ERROR
 }
 
+@DeleteForDJVM
 @CordaSerializable
 data class TelemetryId(private val telemetryService: TelemetryServiceImpl) {
     val id: UUID = UUID.randomUUID()
@@ -57,12 +59,14 @@ data class ComponentTelemetryIds(val componentTelemetryIds: Map<String, UUID>)
 
 
 interface TelemetryEvent
-
+@DeleteForDJVM
 class StartSpanForFlowEvent(val name: String,
                             val attributes: Map<String, String>,
                             val telemetryId: UUID, val flowLogic: FlowLogic<*>?,
                             val telemetryDataItem: TelemetryDataItem?): TelemetryEvent
+@DeleteForDJVM
 class EndSpanForFlowEvent(val telemetryId: UUID): TelemetryEvent
+@DeleteForDJVM
 class StartSpanEvent(val name: String, val attributes: Map<String, String>, val telemetryId: UUID, val flowLogic: FlowLogic<*>?): TelemetryEvent
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
 class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetryStatusCode, val message: String): TelemetryEvent
@@ -88,6 +92,7 @@ interface TelemetryComponentId {
 }
 
 @Suppress("TooManyFunctions")
+@DeleteForDJVM
 class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
 
     companion object {
