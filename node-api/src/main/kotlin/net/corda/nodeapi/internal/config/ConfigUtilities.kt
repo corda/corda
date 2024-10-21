@@ -105,7 +105,7 @@ fun <T : Any> Config.parseAs(
             .toSortedSet()
     onUnknownKeys.invoke(unknownConfigurationKeys, logger)
 
-    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
+    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateWith { param ->
         // Get the matching property for this parameter
         val property = clazz.memberProperties.first { it.name == param.name }
         val path = defaultToOldPath(property)
@@ -334,8 +334,8 @@ private fun sanitiseForFromAnyRef(value: Any?): Any? {
 fun Config.getBooleanCaseInsensitive(path: String): Boolean {
     try {
         return getBoolean(path)
-    } catch(e:Exception) {
-        val stringVal = getString(path).toLowerCase()
+    } catch (e: Exception) {
+        val stringVal = getString(path).lowercase()
         if (stringVal == "true" || stringVal == "false") {
             return stringVal.toBoolean()
         }

@@ -135,7 +135,7 @@ object ObjectDiffer {
                 continue
             }
             if (method.name.startsWith("get") && method.name.length > 3 && method.parameterCount == 0) {
-                val fieldName = method.name[3].toLowerCase() + method.name.substring(4)
+                val fieldName = method.name[3].lowercaseChar() + method.name.substring(4)
                 foci.add(FieldFocus(fieldName, method.returnType, method))
             } else if (method.name.startsWith("is") && method.parameterCount == 0) {
                 foci.add(FieldFocus(method.name, method.returnType, method))

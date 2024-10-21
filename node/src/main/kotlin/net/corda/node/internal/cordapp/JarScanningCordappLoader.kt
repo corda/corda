@@ -2,205 +2,264 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ClassInfo
+import io.github.classgraph.ClassInfoList
 import io.github.classgraph.ScanResult
 import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.*
-import net.corda.core.internal.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StartableByService
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
+import net.corda.core.internal.cordapp.KotlinMetadataVersion
+import net.corda.core.internal.cordapp.LanguageVersion
 import net.corda.core.internal.cordapp.get
+import net.corda.core.internal.flatMapToSet
+import net.corda.core.internal.groupByMultipleKeys
+import net.corda.core.internal.hash
+import net.corda.core.internal.isAbstractClass
+import net.corda.core.internal.loadClassOfType
+import net.corda.core.internal.location
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
-import net.corda.core.node.services.CordaService
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.pooledScan
 import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.toPath
+import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.warnContractWithoutConstraintPropagation
+import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import java.lang.reflect.Modifier
-import java.math.BigInteger
-import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
+import java.util.ServiceLoader
+import java.util.TreeSet
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
-import java.util.zip.ZipInputStream
-import kotlin.collections.LinkedHashSet
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+import kotlin.io.path.isSameFileAs
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.useDirectoryEntries
 import kotlin.reflect.KClass
-import kotlin.streams.toList
+import kotlin.reflect.KProperty1
 
 /**
  * Handles CorDapp loading and classpath scanning of CorDapp JARs
  *
- * @property cordappJarPaths The classpath of cordapp JARs
+ * @property cordappJars The classpath of cordapp JARs
+ * @property legacyContractJars Legacy contract CorDapps (4.11 or earlier) needed for backwards compatibility with 4.11 nodes.
  */
-class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
-                                                   private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
-                                                   extraCordapps: List<CordappImpl>,
-                                                   private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
-                                                   private val rotatedKeys: RotatedKeys = RotatedKeys()) : CordappLoaderTemplate() {
-    init {
-        if (cordappJarPaths.isEmpty()) {
-            logger.info("No CorDapp paths provided")
-        } else {
-            logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
-        }
-    }
-    private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
-    override val cordapps: List<CordappImpl> by lazy { loadCordapps() + extraCordapps }
-
-    override val appClassLoader: URLClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
-
-    override fun close() = appClassLoader.close()
-
+@Suppress("TooManyFunctions", "LongParameterList")
+class JarScanningCordappLoader(private val cordappJars: Set<Path>,
+                               private val legacyContractJars: Set<Path> = emptySet(),
+                               private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
+                               private val extraCordapps: List<CordappImpl> = emptyList(),
+                               private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                               private val rotatedKeys: RotatedKeys = RotatedKeys()) : CordappLoader {
     companion object {
         private val logger = contextLogger()
+
+        const val LEGACY_CONTRACTS_DIR_NAME = "legacy-contracts"
 
         /**
          * Creates a CordappLoader from multiple directories.
          *
          * @param cordappDirs Directories used to scan for CorDapp JARs.
+         * @param legacyContractsDir Directory containing legacy contract CorDapps (4.11 or earlier).
          */
         fun fromDirectories(cordappDirs: Collection<Path>,
+                            legacyContractsDir: Path? = null,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
                             signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
                             rotatedKeys: RotatedKeys = RotatedKeys()): JarScanningCordappLoader {
-            logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
-            val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, rotatedKeys)
-        }
-
-        /**
-         * Creates a CordappLoader loader out of a list of JAR URLs.
-         *
-         * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
-         */
-        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(),
-                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash> = emptyList(), rotatedKeys: RotatedKeys = CordaRotatedKeys.keys): JarScanningCordappLoader {
-            val paths = scanJars.map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, cordappsSignerKeyFingerprintBlacklist, rotatedKeys)
-        }
-
-        private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
-
-        private fun jarUrlsInDirectory(directory: Path): List<URL> {
-            return if (!directory.exists()) {
-                emptyList()
-            } else {
-                directory.list { paths ->
-                    // `toFile()` can't be used here...
-                    paths.filter { it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-                }
-            }
+            logger.info("Looking for CorDapps in ${cordappDirs.toSet().joinToString(", ", "[", "]")}")
+            val cordappJars = cordappDirs
+                    .asSequence()
+                    .flatMap { if (it.exists()) it.listDirectoryEntries("*.jar") else emptyList() }
+                    .toSet()
+            val legacyContractJars = legacyContractsDir?.useDirectoryEntries("*.jar") { it.toSet() } ?: emptySet()
+            return JarScanningCordappLoader(cordappJars, legacyContractJars, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, rotatedKeys)
         }
     }
 
-    private fun loadCordapps(): List<CordappImpl> {
-        val invalidCordapps = mutableMapOf<String, URL>()
-
-        val cordapps = cordappJarPaths
-                .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
-                .filter {
-                    if (it.minimumPlatformVersion > versionInfo.platformVersion) {
-                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
-                                "platform version ${it.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
-                        invalidCordapps.put("CorDapp requires minimumPlatformVersion: ${it.minimumPlatformVersion}, but was: ${versionInfo.platformVersion}", it.jarPath)
-                        false
-                    } else {
-                        true
-                    }
-                }
-                .filter {
-                    if (signerKeyFingerprintBlacklist.isEmpty()) {
-                        true //Nothing blacklisted, no need to check
-                    } else {
-                        val certificates = it.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
-                        val blockedCertificates = certificates.filter { it.publicKey.hash.sha256() in signerKeyFingerprintBlacklist }
-                        if (certificates.isEmpty() || (certificates - blockedCertificates).isNotEmpty())
-                            true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
-                        else {
-                            logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by blacklisted key(s) only (probably development key): " +
-                                    "${blockedCertificates.map { it.publicKey }}.")
-                            invalidCordapps.put("Corresponding contracts are signed by blacklisted key(s) only (probably development key),", it.jarPath)
-                            false
-                        }
-                    }
-                }
-
-        if (invalidCordapps.isNotEmpty()) {
-            throw InvalidCordappException("Invalid Cordapps found, that couldn't be loaded: " +
-                    "${invalidCordapps.map { "Problem: ${it.key} in Cordapp ${it.value}" }}, ")
-        }
-
-        cordapps.forEach(::register)
-        return cordapps
+    init {
+        logger.debug { "cordappJars: $cordappJars" }
+        logger.debug { "legacyContractJars: $legacyContractJars" }
     }
 
-    private fun register(cordapp: Cordapp) {
-        val contractClasses = cordapp.contractClassNames.toSet()
-        val existingClasses = cordappClasses.keys
-        val classesToRegister = cordapp.cordappClasses.toSet()
-        val notAlreadyRegisteredClasses = classesToRegister - existingClasses
-        val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
+    override val appClassLoader = URLClassLoader(cordappJars.stream().map { it.toUri().toURL() }.toTypedArray(), javaClass.classLoader)
 
-        notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
+    private val internal by lazy(::InternalHolder)
 
-        for ((registeredClassName, registeredCordapps) in alreadyRegistered) {
-            val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
+    override val cordapps: List<CordappImpl>
+        get() = internal.nonLegacyCordapps
 
-            if (duplicateCordapps.isNotEmpty()) {
-                throw DuplicateCordappsInstalledException(cordapp, duplicateCordapps)
+    override val legacyContractCordapps: List<CordappImpl>
+        get() = internal.legacyContractCordapps
+
+    override fun close() = appClassLoader.close()
+
+    private inner class InternalHolder {
+        val nonLegacyCordapps = cordappJars.mapTo(ArrayList(), ::scanCordapp)
+        val legacyContractCordapps = legacyContractJars.map(::scanCordapp)
+
+        init {
+            commonChecks(nonLegacyCordapps, LanguageVersion::isNonLegacyCompatible)
+            nonLegacyCordapps += extraCordapps
+            if (legacyContractCordapps.isNotEmpty()) {
+                commonChecks(legacyContractCordapps, LanguageVersion::isLegacyCompatible)
+                checkLegacyContracts()
             }
-            if (registeredClassName in contractClasses) {
-                throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
+        }
+
+        private fun commonChecks(cordapps: List<CordappImpl>, compatibilityProperty: KProperty1<LanguageVersion, Boolean>) {
+            for (cordapp in cordapps) {
+                check(compatibilityProperty(cordapp.languageVersion)) {
+                    val isLegacyCompatibleCheck = compatibilityProperty == LanguageVersion::isLegacyCompatible
+                    val msg = when {
+                        isLegacyCompatibleCheck -> "not legacy; please remove or place it in the node's CorDapps directory."
+                        cordapp.contractClassNames.isEmpty() -> "legacy (should be 4.12 or later)"
+                        else -> "legacy contracts; please place it in the node's '$LEGACY_CONTRACTS_DIR_NAME' directory."
+                    }
+                    "CorDapp ${cordapp.jarFile} is $msg"
+                }
+            }
+            checkInvalidCordapps(cordapps)
+            checkDuplicateCordapps(cordapps)
+            // The same contract may occur in both 4.11 and 4.12 CorDapps for ledger compatibility, so we only check for overlap within each
+            // compatibility group
+            checkContractOverlap(cordapps)
+        }
+
+        private fun checkInvalidCordapps(cordapps: List<CordappImpl>) {
+            val invalidCordapps = LinkedHashMap<String, CordappImpl>()
+
+            for (cordapp in cordapps) {
+                if (cordapp.minimumPlatformVersion > versionInfo.platformVersion) {
+                    logger.error("Not loading CorDapp ${cordapp.info.shortName} (${cordapp.info.vendor}) as it requires minimum " +
+                            "platform version ${cordapp.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                    invalidCordapps["CorDapp requires minimumPlatformVersion ${cordapp.minimumPlatformVersion}, but this node is running version ${versionInfo.platformVersion}"] = cordapp
+                }
+                if (signerKeyFingerprintBlacklist.isNotEmpty()) {
+                    val certificates = cordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
+                    val blockedCertificates = certificates.filterTo(HashSet()) { it.publicKey.hash.sha256() in signerKeyFingerprintBlacklist }
+                    if (certificates.isNotEmpty() && (certificates - blockedCertificates).isEmpty()) {
+                        logger.error("Not loading CorDapp ${cordapp.info.shortName} (${cordapp.info.vendor}) as it is signed by blacklisted " +
+                                "key(s) only (probably development key): ${blockedCertificates.map { it.publicKey }}.")
+                        invalidCordapps["Corresponding contracts are signed by blacklisted key(s) only (probably development key),"] = cordapp
+                    }
+                }
+            }
+
+            if (invalidCordapps.isNotEmpty()) {
+                throw InvalidCordappException("Invalid Cordapps found, that couldn't be loaded: " +
+                        "${invalidCordapps.map { "Problem: ${it.key} in Cordapp ${it.value.jarFile}" }}, ")
+            }
+        }
+
+        private fun checkDuplicateCordapps(cordapps: List<CordappImpl>) {
+            for (group in cordapps.groupBy { it.jarHash }.values) {
+                if (group.size > 1) {
+                    throw DuplicateCordappsInstalledException(group[0], group.drop(1))
+                }
+            }
+        }
+
+        private fun checkContractOverlap(cordapps: List<CordappImpl>) {
+            cordapps.groupByMultipleKeys(CordappImpl::contractClassNames) { contract, cordapp1, cordapp2 ->
+                throw IllegalStateException("Contract $contract occuring in multiple CorDapps (${cordapp1.name}, ${cordapp2.name}). " +
                         "Please remove the previous version when upgrading to a new version.")
             }
-            cordappClasses[registeredClassName] = registeredCordapps + cordapp
         }
+
+        private fun checkLegacyContracts() {
+            for (legacyCordapp in legacyContractCordapps) {
+                if (legacyCordapp.contractClassNames.isEmpty()) continue
+                logger.debug { "Contracts CorDapp ${legacyCordapp.name} is legacy (4.11 or older), searching for corresponding 4.12+ contracts" }
+                for (legacyContract in legacyCordapp.contractClassNames) {
+                    val newerCordapp = nonLegacyCordapps.find { legacyContract in it.contractClassNames }
+                    checkNotNull(newerCordapp) {
+                        "Contract $legacyContract in legacy CorDapp (4.11 or older) '${legacyCordapp.jarFile}' does not have a " +
+                                "corresponding newer version (4.12 or later). Please add this corresponding CorDapp or remove the legacy one."
+                    }
+                    check(newerCordapp.contractVersionId > legacyCordapp.contractVersionId) {
+                        "Newer contract CorDapp '${newerCordapp.jarFile}' does not have a higher versionId " +
+                                "(${newerCordapp.contractVersionId}) than corresponding legacy contract CorDapp " +
+                                "'${legacyCordapp.jarFile}' (${legacyCordapp.contractVersionId})"
+                    }
+                    checkSignersMatch(legacyCordapp, newerCordapp)
+                }
+            }
+        }
+
+        private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {
+            val legacySigners = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            val nonLegacySigners = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            check(rotatedKeys.canBeTransitioned(legacySigners, nonLegacySigners)) {
+                "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
+                        "'${legacyCordapp.jarFile}' signers."
+            }
+        }
+
+        private val CordappImpl.contractVersionId: Int
+            get() = when (val info = info) {
+                is Cordapp.Info.Contract -> info.versionId
+                is Cordapp.Info.ContractAndWorkflow -> info.contract.versionId
+                else -> 1
+            }
     }
 
-    private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val manifest: Manifest? = url.url.openStream().use { JarInputStream(it).manifest }
-        val info = parseCordappInfo(manifest, CordappImpl.jarName(url.url))
+    private fun ScanResult.toCordapp(path: Path): CordappImpl {
+        val manifest: Manifest? = JarInputStream(path.inputStream()).use { it.manifest }
+        val info = parseCordappInfo(manifest, CordappImpl.jarName(path))
         val minPlatformVersion = manifest?.get(CordappImpl.MIN_PLATFORM_VERSION)?.toIntOrNull() ?: 1
         val targetPlatformVersion = manifest?.get(CordappImpl.TARGET_PLATFORM_VERSION)?.toIntOrNull() ?: minPlatformVersion
-        validateContractStateClassVersion(this)
-        validateWhitelistClassVersion(this)
+        val languageVersion = determineLanguageVersion(path)
+        logger.debug { "$path: $languageVersion" }
         return CordappImpl(
-                findContractClassNamesWithVersionCheck(this),
+                path,
+                findContractClassNames(this),
                 findInitiatedFlows(this),
                 findRPCFlows(this),
                 findServiceFlows(this),
                 findSchedulableFlows(this),
                 findServices(this),
                 findTelemetryComponents(this),
-                findWhitelists(url),
+                findWhitelists(path),
                 findSerializers(this),
                 findCheckpointSerializers(this),
                 findCustomSchemas(this),
                 findAllFlows(this),
-                url.url,
                 info,
-                getJarHash(url.url),
                 minPlatformVersion,
                 targetPlatformVersion,
-                findNotaryService(this),
+                languageVersion = languageVersion,
+                notaryService = findNotaryService(this),
                 explicitCordappClasses = findAllCordappClasses(this)
         )
     }
@@ -269,29 +328,27 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return version
     }
 
-    private fun findNotaryService(scanResult: RestrictedScanResult): Class<out NotaryService>? {
+    private fun findNotaryService(scanResult: ScanResult): Class<out NotaryService>? {
         // Note: we search for implementations of both NotaryService and SinglePartyNotaryService as
         // the scanner won't find subclasses deeper down the hierarchy if any intermediate class is not
         // present in the CorDapp.
-        val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
-                scanResult.getClassesWithSuperclass(SinglePartyNotaryService::class)
+        val result = scanResult.getClassesExtending(NotaryService::class) +
+                scanResult.getClassesExtending(SinglePartyNotaryService::class)
         if (result.isNotEmpty()) {
             logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
         }
         return result.firstOrNull()
     }
 
-    private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
-
-    private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
+    private fun findServices(scanResult: ScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
     }
 
-    private fun findTelemetryComponents(scanResult: RestrictedScanResult): List<Class<out TelemetryComponent>> {
+    private fun findTelemetryComponents(scanResult: ScanResult): List<Class<out TelemetryComponent>> {
         return scanResult.getClassesImplementing(TelemetryComponent::class)
     }
 
-    private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findInitiatedFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
     }
 
@@ -299,76 +356,68 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
     }
 
-    private fun findRPCFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
     }
 
-    private fun findServiceFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findServiceFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByService::class)
     }
 
-    private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
     }
 
-    private fun findAllFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getConcreteClassesOfType(FlowLogic::class)
+    private fun findAllFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesExtending(FlowLogic::class)
     }
 
-    private fun findAllCordappClasses(scanResult: RestrictedScanResult): List<String> {
-        return scanResult.getAllStandardClasses() + scanResult.getAllInterfaces()
+    private fun findAllCordappClasses(scanResult: ScanResult): List<String> {
+        val cordappClasses = ArrayList<String>()
+        scanResult.allStandardClasses.mapTo(cordappClasses) { it.name }
+        scanResult.allInterfaces.mapTo(cordappClasses) { it.name }
+        return cordappClasses
     }
 
-    private fun findContractClassNamesWithVersionCheck(scanResult: RestrictedScanResult): List<String> {
-        val contractClasses = coreContractClasses.flatMapTo(LinkedHashSet()) { scanResult.getNamesOfClassesImplementingWithClassVersionCheck(it) }.toList()
+    private fun findContractClassNames(scanResult: ScanResult): List<String> {
+        val contractClasses = coreContractClasses.flatMapToSet(scanResult::getClassesImplementing)
         for (contractClass in contractClasses) {
-            contractClass.warnContractWithoutConstraintPropagation(appClassLoader)
+            contractClass.name.warnContractWithoutConstraintPropagation(appClassLoader)
         }
-        return contractClasses
+        return contractClasses.map { it.name }
     }
 
-    private fun validateContractStateClassVersion(scanResult: RestrictedScanResult) {
-        coreContractClasses.forEach { scanResult.versionCheckClassesImplementing(it) }
-    }
-
-    private fun validateWhitelistClassVersion(scanResult: RestrictedScanResult) {
-        scanResult.versionCheckClassesImplementing(SerializationWhitelist::class)
-    }
-
-    private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
+    private fun findWhitelists(cordappJar: Path): List<SerializationWhitelist> {
         val whitelists = ServiceLoader.load(SerializationWhitelist::class.java, appClassLoader).toList()
         return whitelists.filter {
-            it.javaClass.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
+            it.javaClass.location.toPath().isSameFileAs(cordappJar)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
-    private fun findSerializers(scanResult: RestrictedScanResult): List<SerializationCustomSerializer<*, *>> {
-        return scanResult.getClassesImplementingWithClassVersionCheck(SerializationCustomSerializer::class)
+    private fun findSerializers(scanResult: ScanResult): List<SerializationCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementing(SerializationCustomSerializer::class).map { it.kotlin.objectOrNewInstance() }
     }
 
-    private fun findCheckpointSerializers(scanResult: RestrictedScanResult): List<CheckpointCustomSerializer<*, *>> {
-        return scanResult.getClassesImplementingWithClassVersionCheck(CheckpointCustomSerializer::class)
+    private fun findCheckpointSerializers(scanResult: ScanResult): List<CheckpointCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementing(CheckpointCustomSerializer::class).map { it.kotlin.objectOrNewInstance() }
     }
 
-    private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {
-        return scanResult.getClassesWithSuperclass(MappedSchema::class).instances().toSet()
+    private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {
+        return scanResult.getClassesExtending(MappedSchema::class).mapToSet { it.kotlin.objectOrNewInstance() }
     }
 
-    private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
-        val cordappElement = cordappJarPath.url.toString()
-        logger.info("Scanning CorDapp in $cordappElement")
-        val scanResult = ClassGraph()
-            .filterClasspathElementsByURL { elt -> elt == cordappJarPath.url }
-            .overrideClassLoaders(appClassLoader)
-            .ignoreParentClassLoaders()
-            .enableAllInfo()
-            .pooledScan()
-        return RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix, cordappJarPath)
+    private fun scanCordapp(cordappJar: Path): CordappImpl {
+        logger.info("Scanning CorDapp ${cordappJar.absolutePathString()}")
+        return ClassGraph()
+                .overrideClasspath(cordappJar.absolutePathString())
+                .enableAllInfo()
+                .pooledScan()
+                .use { it.toCordapp(cordappJar) }
     }
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            Class.forName(className, false, appClassLoader).asSubclass(type.java)
+            loadClassOfType(type.java, className, false, appClassLoader)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null
@@ -378,101 +427,50 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
     }
 
-    // TODO Remove this class as rootPackageName is never non-null.
-    /** @property rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
-    private data class RestrictedURL(val url: URL, val rootPackageName: String?) {
-        val qualifiedNamePrefix: String get() = rootPackageName?.let { "$it." } ?: ""
+    private fun <T : Any> ScanResult.getClassesExtending(type: KClass<T>): List<Class<out T>> {
+        return getSubclasses(type.java).getAllConcreteClasses(type)
     }
 
-    private fun <T : Any> List<Class<out T>>.instances(): List<T> {
-        return map { it.kotlin.objectOrNewInstance() }
+    private fun <T : Any> ScanResult.getClassesImplementing(type: KClass<T>): List<Class<out T>> {
+        return getClassesImplementing(type.java).getAllConcreteClasses(type)
     }
 
-    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String,
-                                             private val cordappJarPath: RestrictedURL) : AutoCloseable {
+    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
+        return getClassesWithAnnotation(annotation.java).getAllConcreteClasses(type)
+    }
 
-        fun getNamesOfClassesImplementingWithClassVersionCheck(type: KClass<*>): List<String> {
-            return scanResult.getClassesImplementing(type.java.name).filter { it.name.startsWith(qualifiedNamePrefix) }.map {
-                validateClassFileVersion(it)
-                it.name
-            }
+    private fun <T : Any> ClassInfoList.getAllConcreteClasses(type: KClass<T>): List<Class<out T>> {
+        return mapNotNull { loadClass(it.name, type)?.takeUnless(Class<*>::isAbstractClass) }
+    }
+
+    private fun ScanResult.determineLanguageVersion(cordappJar: Path): LanguageVersion {
+        val allClasses = allClassesAsMap.values
+        if (allClasses.isEmpty()) {
+            return LanguageVersion.Data
         }
-
-        fun versionCheckClassesImplementing(type: KClass<*>) {
-            return scanResult.getClassesImplementing(type.java.name).filter { it.name.startsWith(qualifiedNamePrefix) }.forEach {
-                validateClassFileVersion(it)
-            }
+        val classFileMajorVersion = allClasses.maxOf { it.classfileMajorVersion }
+        val kotlinMetadataVersion = allClasses
+                .mapNotNullTo(TreeSet()) { it.kotlinMetadataVersion() }
+                .let { kotlinMetadataVersions ->
+                    // If there's more than one minor version of Kotlin
+                    if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
+                        logger.warn("CorDapp $cordappJar comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
+                                "This may cause compatibility issues.")
+                    }
+                    kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last()
+                }
+        try {
+            return LanguageVersion.Bytecode(classFileMajorVersion, kotlinMetadataVersion)
+        } catch (e: IllegalArgumentException) {
+            throw IllegalStateException("Unable to load CorDapp $cordappJar: ${e.message}")
         }
+    }
 
-        fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<Class<out T>> {
-            return scanResult
-                    .getSubclasses(type.java.name)
-                    .names
-                    .filter { it.startsWith(qualifiedNamePrefix) }
-                    .mapNotNull { loadClass(it, type) }
-                    .filterNot { it.isAbstractClass }
-        }
-
-        fun <T : Any> getClassesImplementingWithClassVersionCheck(type: KClass<T>): List<T> {
-            return scanResult
-                    .getClassesImplementing(type.java.name)
-                    .filter { it.name.startsWith(qualifiedNamePrefix) }
-                    .mapNotNull {
-                        validateClassFileVersion(it)
-                        loadClass(it.name, type) }
-                    .filterNot { it.isAbstractClass }
-                    .map { it.kotlin.objectOrNewInstance() }
-        }
-
-        fun <T : Any> getClassesImplementing(type: KClass<T>): List<Class<out T>> {
-            return scanResult
-                    .getClassesImplementing(type.java.name)
-                    .filter { it.name.startsWith(qualifiedNamePrefix) }
-                    .mapNotNull {
-                        loadClass(it.name, type) }
-                    .filterNot { it.isAbstractClass }
-        }
-
-        fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-            return scanResult
-                    .getClassesWithAnnotation(annotation.java.name)
-                    .names
-                    .filter { it.startsWith(qualifiedNamePrefix) }
-                    .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
-        }
-
-        fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
-            return scanResult
-                    .getSubclasses(type.java.name)
-                    .names
-                    .filter { it.startsWith(qualifiedNamePrefix) }
-                    .mapNotNull { loadClass(it, type) }
-                    .filterNot { it.isAbstractClass }
-        }
-
-        fun getAllStandardClasses(): List<String> {
-            return scanResult
-                    .allStandardClasses
-                    .names
-                    .filter { it.startsWith(qualifiedNamePrefix) }
-        }
-
-        fun getAllInterfaces(): List<String> {
-            return scanResult
-                    .allInterfaces
-                    .names
-                    .filter { it.startsWith(qualifiedNamePrefix) }
-        }
-
-        private fun validateClassFileVersion(classInfo: ClassInfo) {
-            if (classInfo.classfileMajorVersion < JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION ||
-                classInfo.classfileMajorVersion > JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
-                    throw IllegalStateException("Class ${classInfo.name} from jar file ${cordappJarPath.url} has an invalid version of " +
-                            "${classInfo.classfileMajorVersion}")
-        }
-
-        override fun close() = scanResult.close()
+    private fun ClassInfo.kotlinMetadataVersion(): KotlinMetadataVersion? {
+        val kotlinMetadata = getAnnotationInfo(Metadata::class.java) ?: return null
+        val kotlinMetadataVersion = KotlinMetadataVersion.from(kotlinMetadata.parameterValues.get("mv").value as IntArray)
+        logger.trace { "$name: $kotlinMetadataVersion" }
+        return kotlinMetadataVersion
     }
 }
 
@@ -500,7 +498,7 @@ class CordappInvalidVersionException(
 /**
  * Thrown if duplicate CorDapps are installed on the node
  */
-class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>)
+class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Collection<Cordapp>)
     : CordaRuntimeException("IllegalStateExcepion", "The CorDapp (name: ${app.info.shortName}, file: ${app.name}) " +
         "is installed multiple times on the node. The following files correspond to the exact same content: " +
         "${duplicates.map { it.name }}", null), ErrorCode<CordappErrors> {
@@ -512,42 +510,3 @@ class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>
  * Thrown if an exception occurs during loading cordapps.
  */
 class InvalidCordappException(message: String) : CordaRuntimeException(message)
-
-abstract class CordappLoaderTemplate : CordappLoader {
-
-    companion object {
-
-        private val logger = contextLogger()
-    }
-
-    override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
-        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
-                .groupBy { it.first }
-                .mapValues { entry ->
-                    if (entry.value.size > 1) {
-                        logger.error("There are multiple CorDapp JARs on the classpath for flow " +
-                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
-                        entry.value.forEach { (_, cordapp) ->
-                            ZipInputStream(cordapp.jarPath.openStream()).use { zip ->
-                                val ident = BigInteger(64, Random()).toString(36)
-                                logger.error("Contents of: ${cordapp.jarPath} will be prefaced with: $ident")
-                                var e = zip.nextEntry
-                                while (e != null) {
-                                    logger.error("$ident\t ${e.name}")
-                                    e = zip.nextEntry
-                                }
-                            }
-                        }
-                        throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow " +
-                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].",
-                                entry.value.first().first.name,
-                                entry.value.joinToString { it.second.jarPath.toString() })
-                    }
-                    entry.value.single().second
-                }
-    }
-
-    override val cordappSchemas: Set<MappedSchema> by lazy {
-        cordapps.flatMap { it.customSchemas }.toSet()
-    }
-}

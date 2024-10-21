@@ -1,3 +1,6 @@
+import net.corda.plugins.SignJar
+
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
@@ -14,33 +17,40 @@ cordapp {
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
+    signing {
+        enabled false
+    }
 }
 
 dependencies {
-    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:workflows')
     cordapp project(':finance:contracts')
-    cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
+    cordapp project(':samples:simm-valuation-demo:contracts-states')
 
     // Corda integration dependencies
-    cordaCompile project(':core')
+    cordaProvided project(':core')
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-basics:$strata_version"
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-data:$strata_version"
-    compile "com.opengamma.strata:strata-calc:$strata_version"
-    compile "com.opengamma.strata:strata-pricer:$strata_version"
-    compile "com.opengamma.strata:strata-report:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
-    compile "com.opengamma.strata:strata-collect:$strata_version"
-    compile "com.opengamma.strata:strata-loader:$strata_version"
-    compile "com.opengamma.strata:strata-math:$strata_version"
+    implementation "com.opengamma.strata:strata-basics:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-data:$strata_version"
+    implementation "com.opengamma.strata:strata-calc:$strata_version"
+    implementation "com.opengamma.strata:strata-pricer:$strata_version"
+    implementation "com.opengamma.strata:strata-report:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-collect:$strata_version"
+    implementation "com.opengamma.strata:strata-loader:$strata_version"
+    implementation "com.opengamma.strata:strata-math:$strata_version"
 }
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+tasks.register('sign', SignJar) {
+    inputJars jar
+}
+
+jar.finalizedBy sign

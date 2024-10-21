@@ -70,6 +70,8 @@ pipeline {
         SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
         SNYK_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
+        JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
     }
 
     stages {
@@ -327,7 +329,7 @@ pipeline {
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
                             'docker:pushDockerImage',
-                            '-Pdocker.image.repository=corda/community',
+                            '-Pdocker.image.repository=corda/open-source',
                             '--image OFFICIAL'
                             ].join(' ')
                 }

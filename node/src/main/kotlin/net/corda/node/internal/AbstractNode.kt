@@ -39,11 +39,10 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
+import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
-import net.corda.core.internal.telemetry.OpenTelemetryComponent
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
@@ -56,13 +55,11 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TelemetryService
-import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
@@ -71,7 +68,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.toFuture
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -83,8 +79,8 @@ import net.corda.node.internal.checkpoints.FlowManagerRPCOpsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader.Companion.LEGACY_CONTRACTS_DIR_NAME
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
@@ -123,10 +119,10 @@ import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.AesDbEncryptionService
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.persistence.DBCheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.AesDbEncryptionService
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -142,22 +138,24 @@ import net.corda.node.services.statemachine.FlowOperator
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NotaryLoader
+import net.corda.node.verification.ExternalVerifierHandleImpl
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.NodeStatus
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.cordappSchemas
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
+import net.corda.nodeapi.internal.namedThreadPoolExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -170,7 +168,7 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
-import net.corda.nodeapi.internal.namedThreadPoolExecutor
+import net.corda.nodeapi.internal.telemetry.OpenTelemetryComponent
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
@@ -182,7 +180,6 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.ArrayList
 import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -191,6 +188,8 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import javax.sql.DataSource
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -301,22 +300,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
-        attachments.servicesForResolution = it
-    }
-    @Suppress("LeakingThis")
-    val vaultService = makeVaultService(keyManagementService, servicesForResolution, database, cordappLoader).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = makeFlowLogicRefFactoryImpl()
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = makeNetworkMapUpdater()
 
-    @Suppress("LeakingThis")
-    val transactionVerifierService = InMemoryTransactionVerifierService(
-        numberOfWorkers = transactionVerifierWorkerCount,
-        cordappProvider = cordappProvider,
-        attachments = attachments
-    ).tokenize()
     private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory, rotatedKeys).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
@@ -328,7 +316,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             log.warn("MessagingService subscription error", it)
         })
     }
-    val services = ServiceHubInternalImpl().tokenize()
+    val services = ServiceHubImpl().tokenize()
+    @Suppress("LeakingThis")
+    val vaultService = makeVaultService(keyManagementService, database, cordappLoader).tokenize()
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
@@ -340,7 +330,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val cordappTelemetryComponents = MutableClassToInstanceMap.create<TelemetryComponent>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor(DefaultThreadFactory("Shutdown"))
 
-    protected abstract val transactionVerifierWorkerCount: Int
     /**
      * Should be [rx.schedulers.Schedulers.io] for production,
      * or [rx.internal.schedulers.CachedThreadScheduler] (with shutdown registered with [runOnStop]) for shared-JVM testing.
@@ -353,7 +342,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database.
      */
-    val nodeReadyFuture: CordaFuture<Unit> get() = networkMapCache.nodeReady.map { Unit }
+    val nodeReadyFuture: CordaFuture<*> get() = networkMapCache.nodeReady
 
     open val serializationWhitelists: List<SerializationWhitelist> by lazy {
         cordappLoader.cordapps.flatMap { it.serializationWhitelists }
@@ -471,8 +460,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        var pendingAppChanges: Int = 0
-        var pendingCoreChanges: Int = 0
+        var pendingAppChanges = 0
+        var pendingCoreChanges = 0
         database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
             val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.networkParametersPath, configuration.myLegalName)
             if(updateCoreSchemas) {
@@ -498,6 +487,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 "Node's platform version is lower than network's required minimumPlatformVersion"
             }
             networkMapCache.start(netParams.notaries)
+            services.networkParameters = netParams
 
             database.transaction {
                 networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
@@ -507,13 +497,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val updatedSchemas = listOfNotNull(
                 ("core").takeIf { updateCoreSchemas },
                 ("app").takeIf { updateAppSchemas }
-        ).joinToString(separator = " and ");
+        ).joinToString(separator = " and ")
 
         val pendingChanges = listOfNotNull(
                 ("no outstanding").takeIf { pendingAppChanges == 0 && pendingCoreChanges == 0 },
                 ("$pendingCoreChanges outstanding core").takeIf { !updateCoreSchemas && pendingCoreChanges > 0 },
                 ("$pendingAppChanges outstanding app").takeIf { !updateAppSchemas && pendingAppChanges > 0 }
-        ).joinToString(prefix = "There are ", postfix = " database changes.");
+        ).joinToString(prefix = "There are ", postfix = " database changes.")
 
         Node.printBasicNodeInfo("Database migration scripts for $updatedSchemas schemas complete. $pendingChanges")
     }
@@ -834,7 +824,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkMapCache,
             NodeInfoWatcher(
                     configuration.baseDirectory,
-                    @Suppress("LeakingThis")
                     rxIoScheduler,
                     Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)
             ),
@@ -848,7 +837,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             platformClock,
             database,
             flowStarter,
-            servicesForResolution,
+            services,
             flowLogicRefFactory,
             nodeProperties,
             configuration.drainingModePollPeriod,
@@ -868,6 +857,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
+                (configuration.baseDirectory / LEGACY_CONTRACTS_DIR_NAME).takeIf { it.exists() },
                 versionInfo,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys,
@@ -1082,7 +1072,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeCryptoService(): CryptoService {
-        return BCCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
+        return DefaultCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
     }
 
     @VisibleForTesting
@@ -1171,15 +1161,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  networkParameters: NetworkParameters)
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
-                                        services: NodeServicesForResolution,
                                         database: CordaPersistence,
                                         cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
-    // JDK 11: switch to directly instantiating jolokia server (rather than indirectly via dynamically self attaching Java Agents,
-    // which is no longer supported from JDK 9 onwards (https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8180425).
-    // No longer need to use https://github.com/electronicarts/ea-agent-loader either (which is also deprecated)
     private fun initialiseJolokia() {
         configuration.jmxMonitoringHttpPort?.let { port ->
             val config = JolokiaServerConfig(mapOf("port" to port.toString()))
@@ -1189,9 +1175,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution, NetworkParameterUpdateListener {
+    inner class ServiceHubImpl : SingletonSerializeAsToken(), ServiceHubInternal, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
+        override val externalVerifierHandle = ExternalVerifierHandleImpl(this, configuration.baseDirectory).also { runOnStop += it::close }
         override val identityService: IdentityService get() = this@AbstractNode.identityService
         override val keyManagementService: KeyManagementService get() = this@AbstractNode.keyManagementService
         override val schemaService: SchemaService get() = this@AbstractNode.schemaService
@@ -1202,7 +1189,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val nodeProperties: NodePropertiesStore get() = this@AbstractNode.nodeProperties
         override val database: CordaPersistence get() = this@AbstractNode.database
         override val monitoringService: MonitoringService get() = this@AbstractNode.monitoringService
-        override val transactionVerifierService: TransactionVerifierService get() = this@AbstractNode.transactionVerifierService
         override val contractUpgradeService: ContractUpgradeService get() = this@AbstractNode.contractUpgradeService
         override val auditService: AuditService get() = this@AbstractNode.auditService
         override val attachments: AttachmentStorageInternal get() = this@AbstractNode.attachments
@@ -1216,8 +1202,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
         override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
-        override val rotatedKeys: RotatedKeys get() = this@AbstractNode.rotatedKeys
         override val telemetryService: TelemetryService get() = this@AbstractNode.telemetryService
+        override val rotatedKeys: RotatedKeys get() = this@AbstractNode.rotatedKeys
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
@@ -1225,12 +1211,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
         @Volatile
-        private lateinit var _networkParameters: NetworkParameters
-        override val networkParameters: NetworkParameters get() = _networkParameters
+        override lateinit var networkParameters: NetworkParameters
+
+        init {
+            this@AbstractNode.attachments.nodeVerificationSupport = this
+        }
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
             this._myInfo = myInfo
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
@@ -1253,7 +1242,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
          */
         override fun jdbcSession(): Connection = RestrictedConnection(database.createSession(), services)
 
-        @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction(useErrorHandler = false) {
                 session.flush()
@@ -1312,12 +1300,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             this@AbstractNode.runOnStop += runOnStop
         }
 
-        override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
-            return servicesForResolution.specialise(ltx)
-        }
-
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
     }
 }

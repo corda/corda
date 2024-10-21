@@ -1,9 +1,5 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.atLeast
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
@@ -20,12 +16,17 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.h2.tools.Server
 import org.junit.Test
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.net.InetAddress
 import java.sql.Connection
 import java.sql.DatabaseMetaData
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import javax.sql.DataSource
+import kotlin.io.path.Path
 import kotlin.test.assertFailsWith
 
 class NodeH2SecurityTests {
@@ -133,13 +134,13 @@ class NodeH2SecurityTests {
     init {
         whenever(config.database).thenReturn(database)
         whenever(config.dataSourceProperties).thenReturn(hikaryProperties)
-        whenever(config.baseDirectory).thenReturn(mock())
+        whenever(config.baseDirectory).thenReturn(Path("."))
         whenever(config.effectiveH2Settings).thenAnswer { NodeH2Settings(address) }
         whenever(config.telemetry).thenReturn(mock())
         whenever(config.myLegalName).thenReturn(CordaX500Name(null, "client-${address.toString()}", "Corda", "London", null, "GB"))
     }
 
-    private inner class MockNode: Node(config, VersionInfo.UNKNOWN, false) {
+    private inner class MockNode : Node(config, VersionInfo.UNKNOWN, false) {
         fun startDb() = startDatabase()
 
         override fun makeMessagingService(): MessagingService {

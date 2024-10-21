@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.carpenter
 
 import com.google.common.reflect.TypeToken
+import net.corda.core.internal.capitalize
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes

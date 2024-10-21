@@ -1,12 +1,18 @@
 package net.corda.node.services.attachments
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.AttachmentTrustInfo
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.TRUSTED_UPLOADERS
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.hash
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
@@ -39,10 +45,7 @@ class NodeAttachmentTrustCalculator(
     ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeys)
 
     // A cache for caching whether a signing key is trusted
-    private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>(
-        Caffeine.newBuilder(),
-        "NodeAttachmentTrustCalculator_trustedKeysCache"
-    )
+    private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>("NodeAttachmentTrustCalculator_trustedKeysCache")
 
     override fun calculate(attachment: Attachment): Boolean {
 
@@ -118,9 +121,7 @@ class NodeAttachmentTrustCalculator(
                     val trustRoot = if (attachment.isSignedByBlacklistedKey()) {
                         null
                     } else {
-                        attachment.signerKeys
-                            .mapNotNull { publicKeyToTrustRootMap[it] }
-                            .firstOrNull()
+                        attachment.signerKeys.firstNotNullOfOrNull { publicKeyToTrustRootMap[it] }
                     }
                     attachmentTrustInfos += AttachmentTrustInfo(
                         attachmentId = attachment.id,

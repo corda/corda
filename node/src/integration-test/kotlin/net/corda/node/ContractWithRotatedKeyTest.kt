@@ -30,8 +30,9 @@ import org.apache.commons.io.FileUtils.deleteDirectory
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 
 class ContractWithRotatedKeyTest {
@@ -61,7 +62,7 @@ class ContractWithRotatedKeyTest {
     ): TestStartedNode {
         node.internals.disableDBCloseOnStop()
         node.dispose()
-        val cordappsDir = network.baseDirectory(node).resolve("cordapps")
+        val cordappsDir = network.baseDirectory(node) / "cordapps"
         deleteDirectory(cordappsDir.toFile())
         return network.createNode(
                 parameters.copy(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id),
@@ -74,8 +75,8 @@ class ContractWithRotatedKeyTest {
         val keyStoreDir1 = SelfCleaningDir()
         val keyStoreDir2 = SelfCleaningDir()
 
-        val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="alias1")
-        val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="alias1")
+        val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="1-testcordapp-rsa")
+        val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="1-testcordapp-rsa")
 
         val unsignedFinanceCorDapp1 = cordappWithPackages("net.corda.finance", "migration", "META-INF.services")
         val unsignedFinanceCorDapp2 = cordappWithPackages("net.corda.finance", "migration", "META-INF.services").copy(versionId = 2)

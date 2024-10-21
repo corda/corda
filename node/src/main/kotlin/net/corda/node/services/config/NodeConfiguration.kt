@@ -77,7 +77,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val baseDirectory: Path
     val certificatesDirectory: Path
     // signingCertificateStore is used to store certificate chains.
-    // However, BCCryptoService is reusing this to store keys as well.
+    // However, DefaultCryptoService is reusing this to store keys as well.
     val signingCertificateStore: FileBasedCertificateStoreSupplier
     val p2pSslOptions: MutualSslConfiguration
 
@@ -222,19 +222,19 @@ data class FlowTimeoutConfiguration(
         val backoffBase: Double
 )
 
-/**
- * Represents a list of rotated CorDapp attachment signing keys.
- *
- * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
- */
-data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
-
 data class TelemetryConfiguration(
         val openTelemetryEnabled: Boolean,
         val simpleLogTelemetryEnabled: Boolean,
         val spanStartEndEventsEnabled: Boolean,
         val copyBaggageToTags: Boolean
 )
+
+/**
+ * Represents a list of rotated CorDapp attachment signing keys.
+ *
+ * @param rotatedKeys This is a list of public key hashes (SHA-256) in uppercase hexidecimal, that are all equivalent.
+ */
+data class RotatedCorDappSignerKeyConfiguration(val rotatedKeys: List<String>)
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 

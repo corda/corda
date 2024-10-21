@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.serialization.internal.NotSerializableException
 import net.corda.serialization.internal.model.LocalConstructorInformation
 import net.corda.serialization.internal.model.LocalPropertyInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -32,17 +33,12 @@ private class ConstructorCaller(private val javaConstructor: Constructor<Any>) :
             try {
                 javaConstructor.newInstance(*parameters)
             } catch (e: InvocationTargetException) {
-                @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
                 throw NotSerializableException(
-                        "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                                "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}"
+                        "Constructor for ${javaConstructor.declaringClass.name} failed when called with parameters ${parameters.asList()}: ${e.cause?.message}",
+                        e.cause
                 )
             } catch (e: IllegalAccessException) {
-                @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-                throw NotSerializableException(
-                        "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                                "not accessible: ${e.message}"
-                )
+                throw NotSerializableException("Constructor for ${javaConstructor.declaringClass.name} not accessible: ${e.message}")
             }
 }
 
@@ -54,17 +50,11 @@ private class SetterCaller(val setter: Method) : (Any, Any?) -> Unit {
         try {
             setter.invoke(target, value)
         } catch (e: InvocationTargetException) {
-            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
-                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                            "failed when called with parameter $value: ${e.cause!!.message}"
+                    "Setter ${setter.declaringClass}.${setter.name} failed when called with parameter $value: ${e.cause?.message}"
             )
         } catch (e: IllegalAccessException) {
-            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-            throw NotSerializableException(
-                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                            "not accessible: ${e.message}"
-            )
+            throw NotSerializableException("Setter ${setter.declaringClass}.${setter.name} not accessible: ${e.message}")
         }
     }
 }
@@ -210,7 +200,7 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        private val constructorInfo: LocalConstructorInformation,
+        constructorInfo: LocalConstructorInformation,
         private val slotToCtorArgIdx: IntArray
 ) : ObjectBuilder {
 
