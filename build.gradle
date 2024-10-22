@@ -447,6 +447,9 @@ allprojects {
                     if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
                         details.useVersion snake_yaml_version
                     }
+                    if (details.requested.group == 'commons-io' && details.requested.name == "commons-io") {
+                        details.useVersion commons_io_version
+                    }
                 }
 
                 dependencySubstitution {
