@@ -73,6 +73,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
+import org.hibernate.internal.SessionFactoryRegistry
 import rx.Observable
 import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
@@ -621,6 +622,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             }
             messagingNetwork.stop()
         }
+        SessionFactoryRegistry.INSTANCE.clearRegistrations()
     }
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
