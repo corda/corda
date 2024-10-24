@@ -233,6 +233,9 @@ dependencies {
 
     // used by FinalityFlowErrorHandlingTest
     slowIntegrationTestCompile project(':testing:cordapps:cashobservers')
+
+    // ENT-12355 javassist required for runtime by the checkpoint agent.
+    runtime "org.javassist:javassist:$javaassist_version"
 }
 
 tasks.withType(JavaCompile).configureEach {
