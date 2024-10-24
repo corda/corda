@@ -1,5 +1,6 @@
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
+apply plugin: 'corda.api-scanner'
 
 description 'Corda test-db module'
 

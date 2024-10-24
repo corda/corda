@@ -5,7 +5,7 @@ plugins {
 Properties constants = new Properties()
 file("$rootDir/../constants.properties").withInputStream { constants.load(it) }
 
-def internalPublishVersion = constants.getProperty('internalPublishVersion')
+def internalPluginVersion = constants.getProperty('internalPluginVersion')
 def artifactoryContextUrl = constants.getProperty('artifactoryContextUrl')
 
 repositories {
@@ -51,6 +51,7 @@ dependencies {
     implementation "org.jooq:joor:$constants.joorVersion"
 
     if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
-        implementation "com.r3.internal.gradle.plugins:publish:$internalPublishVersion"
+        implementation "com.r3.internal.gradle.plugins:publish:$internalPluginVersion"
+        implementation "com.r3.internal.gradle.plugins:api-scanner:$internalPluginVersion"
     }
 }

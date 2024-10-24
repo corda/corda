@@ -1,6 +1,7 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
+apply plugin: 'corda.api-scanner'
 
 description 'Corda Test Common module'
 

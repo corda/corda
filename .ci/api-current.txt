@@ -1203,7 +1203,7 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.contracts.TransactionVerificationException$Direction valueOf(String)
-  public static net.corda.core.contracts.TransactionVerificationException.Direction[] values()
+  public static net.corda.core.contracts.TransactionVerificationException$Direction[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$DuplicateAttachmentsRejection extends net.corda.core.contracts.TransactionVerificationException
@@ -3848,7 +3848,7 @@ public static final class net.corda.core.flows.StateConsumptionDetails$ConsumedS
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.flows.StateConsumptionDetails$ConsumedStateType valueOf(String)
-  public static net.corda.core.flows.StateConsumptionDetails.ConsumedStateType[] values()
+  public static net.corda.core.flows.StateConsumptionDetails$ConsumedStateType[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.StateMachineRunId extends java.lang.Object
@@ -5161,7 +5161,7 @@ public static final class net.corda.core.node.services.Vault$ConstraintInfo$Type
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$ConstraintInfo$Type valueOf(String)
-  public static net.corda.core.node.services.Vault.ConstraintInfo.Type[] values()
+  public static net.corda.core.node.services.Vault$ConstraintInfo$Type[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$Page extends java.lang.Object
@@ -5204,7 +5204,7 @@ public static final class net.corda.core.node.services.Vault$RelevancyStatus ext
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$RelevancyStatus valueOf(String)
-  public static net.corda.core.node.services.Vault.RelevancyStatus[] values()
+  public static net.corda.core.node.services.Vault$RelevancyStatus[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$StateMetadata extends java.lang.Object
@@ -5268,7 +5268,7 @@ public static final class net.corda.core.node.services.Vault$StateStatus extends
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$StateStatus valueOf(String)
-  public static net.corda.core.node.services.Vault.StateStatus[] values()
+  public static net.corda.core.node.services.Vault$StateStatus[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$Update extends java.lang.Object
@@ -5328,7 +5328,7 @@ public static final class net.corda.core.node.services.Vault$UpdateType extends 
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$UpdateType valueOf(String)
-  public static net.corda.core.node.services.Vault.UpdateType[] values()
+  public static net.corda.core.node.services.Vault$UpdateType[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.VaultQueryException extends net.corda.core.flows.FlowException
@@ -5540,7 +5540,7 @@ public static final class net.corda.core.node.services.vault.AttachmentSort$Atta
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute valueOf(String)
-  public static net.corda.core.node.services.vault.AttachmentSort.AttachmentSortAttribute[] values()
+  public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortColumn extends java.lang.Object
@@ -6435,7 +6435,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$SoftL
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.QueryCriteria$SoftLockingType valueOf(String)
-  public static net.corda.core.node.services.vault.QueryCriteria.SoftLockingType[] values()
+  public static net.corda.core.node.services.vault.QueryCriteria$SoftLockingType[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.QueryCriteria$TimeCondition extends java.lang.Object
@@ -6460,7 +6460,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$TimeI
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.QueryCriteria$TimeInstantType valueOf(String)
-  public static net.corda.core.node.services.vault.QueryCriteria.TimeInstantType[] values()
+  public static net.corda.core.node.services.vault.QueryCriteria$TimeInstantType[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.QueryCriteria$VaultCustomQueryCriteria extends net.corda.core.node.services.vault.QueryCriteria$CommonQueryCriteria
@@ -6666,14 +6666,14 @@ public static final class net.corda.core.node.services.vault.Sort$CommonStateAtt
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$CommonStateAttribute valueOf(String)
-  public static net.corda.core.node.services.vault.Sort.CommonStateAttribute[] values()
+  public static net.corda.core.node.services.vault.Sort$CommonStateAttribute[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.Sort$Direction extends java.lang.Enum
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$Direction valueOf(String)
-  public static net.corda.core.node.services.vault.Sort.Direction[] values()
+  public static net.corda.core.node.services.vault.Sort$Direction[] values()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -6683,7 +6683,7 @@ public static final class net.corda.core.node.services.vault.Sort$FungibleStateA
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$FungibleStateAttribute valueOf(String)
-  public static net.corda.core.node.services.vault.Sort.FungibleStateAttribute[] values()
+  public static net.corda.core.node.services.vault.Sort$FungibleStateAttribute[] values()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -6693,7 +6693,7 @@ public static final class net.corda.core.node.services.vault.Sort$LinearStateAtt
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$LinearStateAttribute valueOf(String)
-  public static net.corda.core.node.services.vault.Sort.LinearStateAttribute[] values()
+  public static net.corda.core.node.services.vault.Sort$LinearStateAttribute[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.Sort$SortColumn extends java.lang.Object
@@ -6722,7 +6722,7 @@ public static final class net.corda.core.node.services.vault.Sort$VaultStateAttr
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$VaultStateAttribute valueOf(String)
-  public static net.corda.core.node.services.vault.Sort.VaultStateAttribute[] values()
+  public static net.corda.core.node.services.vault.Sort$VaultStateAttribute[] values()
 ##
 @CordaSerializable
 public abstract class net.corda.core.node.services.vault.SortAttribute extends java.lang.Object
@@ -7039,7 +7039,7 @@ public static final class net.corda.core.serialization.SerializationContext$UseC
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
-  public static net.corda.core.serialization.SerializationContext.UseCase[] values()
+  public static net.corda.core.serialization.SerializationContext$UseCase[] values()
 ##
 public interface net.corda.core.serialization.SerializationCustomSerializer
   public abstract OBJ fromProxy(PROXY)
@@ -7380,7 +7380,7 @@ public static final class net.corda.core.transactions.ContractUpgradeWireTransac
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.transactions.ContractUpgradeWireTransaction$Component valueOf(String)
-  public static net.corda.core.transactions.ContractUpgradeWireTransaction.Component[] values()
+  public static net.corda.core.transactions.ContractUpgradeWireTransaction$Component[] values()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -7729,7 +7729,7 @@ public static final class net.corda.core.transactions.NotaryChangeWireTransactio
   @NotNull
   public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.transactions.NotaryChangeWireTransaction$Component valueOf(String)
-  public static net.corda.core.transactions.NotaryChangeWireTransaction.Component[] values()
+  public static net.corda.core.transactions.NotaryChangeWireTransaction$Component[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.transactions.ReferenceStateRef extends java.lang.Object
@@ -8240,7 +8240,7 @@ public final class net.corda.core.utilities.OpaqueBytesSubSequence extends net.c
 ##
 @CordaSerializable
 public final class net.corda.core.utilities.ProgressTracker extends java.lang.Object
-  public <init>(net.corda.core.utilities.ProgressTracker.Step...)
+  public <init>(net.corda.core.utilities.ProgressTracker$Step...)
   public final void endWithError(Throwable)
   @NotNull
   public final java.util.List getAllSteps()
@@ -8259,7 +8259,7 @@ public final class net.corda.core.utilities.ProgressTracker extends java.lang.Ob
   public final net.corda.core.utilities.ProgressTracker getParent()
   public final int getStepIndex()
   @NotNull
-  public final net.corda.core.utilities.ProgressTracker.Step[] getSteps()
+  public final net.corda.core.utilities.ProgressTracker$Step[] getSteps()
   @NotNull
   public final rx.Observable getStepsTreeChanges()
   public final int getStepsTreeIndex()
@@ -9388,12 +9388,16 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.identity.CordaX500Name component1()
   @Nullable
   public final net.corda.core.utilities.NetworkHostAndPort component10()
   @NotNull
   public final java.util.Map component11()
+  @NotNull
+  public final java.util.Collection component12()
   @NotNull
   public final java.util.List component2()
   @NotNull
@@ -9420,6 +9424,8 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort)
   @NotNull
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
+  @NotNull
+  public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection)
   public boolean equals(Object)
   @NotNull
   public final java.util.Collection getAdditionalCordapps()
@@ -9427,6 +9433,8 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public final java.util.Map getCustomOverrides()
   @NotNull
   public final java.util.Map getFlowOverrides()
+  @NotNull
+  public final java.util.Collection getLegacyContracts()
   @Nullable
   public final String getLogLevelOverride()
   @NotNull
@@ -9453,15 +9461,21 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   @NotNull
   public final net.corda.testing.driver.NodeParameters withFlowOverrides(java.util.Map)
   @NotNull
+  public final net.corda.testing.driver.NodeParameters withLegacyContracts(java.util.Collection)
+  @NotNull
   public final net.corda.testing.driver.NodeParameters withLogLevelOverride(String)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withMaximumHeapSize(String)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withProvidedName(net.corda.core.identity.CordaX500Name)
   @NotNull
+  public final net.corda.testing.driver.NodeParameters withRpcAddress(net.corda.core.utilities.NetworkHostAndPort)
+  @NotNull
   public final net.corda.testing.driver.NodeParameters withRpcUsers(java.util.List)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withStartInSameProcess(Boolean)
+  @NotNull
+  public final net.corda.testing.driver.NodeParameters withSystemProperties(java.util.Map)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withVerifierType(net.corda.testing.driver.VerifierType)
 ##
@@ -10091,9 +10105,13 @@ public final class net.corda.testing.node.TestClock extends net.corda.node.Mutab
 public abstract class net.corda.testing.node.TestCordapp extends java.lang.Object
   public <init>()
   @NotNull
+  public abstract net.corda.testing.node.TestCordapp asSigned()
+  @NotNull
   public static final net.corda.testing.node.TestCordapp findCordapp(String)
   @NotNull
   public abstract java.util.Map getConfig()
+  @NotNull
+  public static final net.corda.testing.node.TestCordapp of(java.net.URI)
   @NotNull
   public abstract net.corda.testing.node.TestCordapp withConfig(java.util.Map)
   @NotNull
@@ -10103,6 +10121,8 @@ public static final class net.corda.testing.node.TestCordapp$Companion extends j
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final net.corda.testing.node.TestCordapp findCordapp(String)
+  @NotNull
+  public final net.corda.testing.node.TestCordapp of(java.net.URI)
 ##
 public final class net.corda.testing.node.UnstartedMockNode extends java.lang.Object
   public <init>(net.corda.testing.node.internal.InternalMockNetwork$MockNode, kotlin.jvm.internal.DefaultConstructorMarker)
