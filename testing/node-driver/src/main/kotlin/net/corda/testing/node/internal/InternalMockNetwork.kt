@@ -84,6 +84,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import org.hibernate.internal.SessionFactoryRegistry
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -621,6 +622,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             }
             messagingNetwork.stop()
         }
+        SessionFactoryRegistry.INSTANCE.clearRegistrations()
     }
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
