@@ -86,7 +86,6 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
         initialise()
         while (true) {
             val request = channel.readCordaSerializable(VerificationRequest::class)
-            log.debug { "Received $request" }
             verifyTransaction(request)
         }
     }
