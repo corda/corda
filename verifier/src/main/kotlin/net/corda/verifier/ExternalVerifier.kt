@@ -124,7 +124,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
     }
 
     private fun createAppClassLoader(): ClassLoader {
-        val cordappJarUrls = (baseDirectory / "cordapps").listDirectoryEntries("*.jar")
+        val cordappJarUrls = (baseDirectory / "legacy-contracts").listDirectoryEntries("*.jar")
                 .stream()
                 .map { it.toUri().toURL() }
                 .toTypedArray()
