@@ -101,7 +101,7 @@ class TransactionBuilderDriverTest {
                     additionalCordapps = listOf(currentContracts),
                     legacyContracts = listOf(legacyContracts)
             )).getOrThrow()
-            
+
             val nodeBob = startNode(NodeParameters(
                     BOB_NAME,
                     additionalCordapps = listOf(currentContracts),
@@ -190,7 +190,7 @@ class TransactionBuilderDriverTest {
                 destination,
                 false,
                 defaultNotaryIdentity
-        ).returnValue.getOrThrow(20.seconds).stx
+        ).returnValue.getOrThrow().stx
     }
 
 
