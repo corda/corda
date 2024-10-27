@@ -203,7 +203,7 @@ class ExternalVerificationUnsignedCordappsTest {
                     clientRpcConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
                     version = "4.11"
             ))
-            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), currentCordapps))
+            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), currentCordapps, legacyCordapps))
         }
 
         @AfterClass
