@@ -26,7 +26,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
@@ -102,8 +101,7 @@ class TransactionBuilderDriverTest {
                     additionalCordapps = listOf(currentContracts),
                     legacyContracts = listOf(legacyContracts)
             )).getOrThrow()
-
-            // Start the node with the legacy CorDapp but without the dependency
+            
             val nodeBob = startNode(NodeParameters(
                     BOB_NAME,
                     additionalCordapps = listOf(currentContracts),
