@@ -13,7 +13,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.delete
 import net.corda.coretesting.internal.modifyJarManifest
 import net.corda.coretesting.internal.useZipFile
