@@ -24,8 +24,10 @@ import net.corda.coretesting.internal.matchers.rpc.willThrow
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
+import org.junit.Ignore
 import org.junit.Test
 
+@Ignore("Explicit contract upgrade not supported in 4.12")
 class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     companion object {
         private val classMockNet = InternalMockNetwork(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()))

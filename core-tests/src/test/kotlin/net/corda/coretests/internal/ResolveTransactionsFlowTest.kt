@@ -240,6 +240,7 @@ class ResolveTransactionsFlowTest {
     }
 
     @Test(timeout=300_000)
+    @Ignore("Need to pass legacy contracts to internal mock network & need to create a legacy contract for test below")
 	fun `can resolve a chain of transactions containing a contract upgrade transaction`() {
         val tx = contractUpgradeChain()
         var numUpdates = 0

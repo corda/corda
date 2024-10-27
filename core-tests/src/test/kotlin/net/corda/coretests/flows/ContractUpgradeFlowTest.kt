@@ -47,9 +47,11 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
+import org.junit.Ignore
 import org.junit.Test
 import java.util.Currency
 
+@Ignore("Explicit contract upgrade not supported in 4.12")
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
     companion object {

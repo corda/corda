@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.internal.hash
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.toPath
@@ -12,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.delete
 import net.corda.coretesting.internal.modifyJarManifest
 import net.corda.coretesting.internal.useZipFile
@@ -22,9 +24,14 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
@@ -81,7 +88,8 @@ class TransactionBuilderDriverTest {
         internalDriver(
                 cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
                 startNodesInProcess = false,
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false))
         ) {
             val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
             val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
@@ -95,15 +103,24 @@ class TransactionBuilderDriverTest {
                     legacyContracts = listOf(legacyContracts)
             )).getOrThrow()
 
+            // Start the node with the legacy CorDapp but without the dependency
+            val nodeBob = startNode(NodeParameters(
+                    BOB_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts,legacyDependency)
+            )).getOrThrow()
+            val bobParty = nodeBob.nodeInfo.singleIdentity()
+
+
             // First make sure the missing dependency causes an issue
             assertThatThrownBy {
-                createTransaction(node)
+                createTransaction(node, bobParty)
             }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
 
             // Upload the missing dependency
             legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
 
-            val stx = createTransaction(node)
+            val stx = createTransaction(node, bobParty)
             assertThat(stx.tx.legacyAttachments).contains(legacyContracts.jarFile.hash, legacyDependency.jarFile.hash)
         }
     }
@@ -167,15 +184,15 @@ class TransactionBuilderDriverTest {
         )
     }
 
-    private fun DriverDSLImpl.createTransaction(node: NodeHandle): SignedTransaction {
+    private fun DriverDSLImpl.createTransaction(node: NodeHandle, destination: Party =  defaultNotaryIdentity): SignedTransaction {
         return node.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
                 1.DOLLARS,
                 OpaqueBytes.of(0x00),
-                defaultNotaryIdentity,
+                destination,
                 false,
                 defaultNotaryIdentity
-        ).returnValue.getOrThrow().stx
+        ).returnValue.getOrThrow(20.seconds).stx
     }
 
 
