@@ -193,17 +193,18 @@ class ExternalVerificationUnsignedCordappsTest {
         fun startNodes() {
             // The 4.11 finance CorDapp jars
             val legacyCordapps = listOf(unsignedResourceJar("corda-finance-contracts-4.11.jar"), smokeTestResource("corda-finance-workflows-4.11.jar"))
+            val legacyCordappsWithoutContracts = listOf(smokeTestResource("corda-finance-workflows-4.11.jar"))
             // The current version finance CorDapp jars
             val currentCordapps = listOf(unsignedResourceJar("corda-finance-contracts.jar"), smokeTestResource("corda-finance-workflows.jar"))
 
-            notary = factory.createNotaries(nodeParams(DUMMY_NOTARY_NAME, currentCordapps))[0]
+            notary = factory.createNotaries(nodeParams(DUMMY_NOTARY_NAME, currentCordapps, legacyCordapps))[0]
             oldNode = factory.createNode(nodeParams(
                     CordaX500Name("Old", "Delhi", "IN"),
                     legacyCordapps,
                     clientRpcConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
                     version = "4.11"
             ))
-            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), currentCordapps, legacyCordapps))
+            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), currentCordapps, legacyCordappsWithoutContracts))
         }
 
         @AfterClass
