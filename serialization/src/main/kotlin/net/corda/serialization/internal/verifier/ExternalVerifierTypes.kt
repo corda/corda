@@ -52,7 +52,7 @@ sealed class ExternalVerifierInbound {
             val ctx: CoreTransaction,
             val ctxInputsAndReferences: Map<StateRef, SerializedTransactionState>
     ) : ExternalVerifierInbound() {
-        override fun toString(): String = "VerificationRequest(ctx=$ctx)"
+        override fun toString(): String = "VerificationRequest(transaction id=${ctx.id})"
     }
 
     data class PartiesResult(val parties: List<Party?>) : ExternalVerifierInbound()

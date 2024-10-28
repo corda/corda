@@ -86,7 +86,7 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
         initialise()
         while (true) {
             val request = channel.readCordaSerializable(VerificationRequest::class)
-            safeLog { log.debug { "Received $request" }}
+            log.debug { "Received $request" }
             verifyTransaction(request)
         }
     }
@@ -143,10 +143,10 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
                 is ContractUpgradeWireTransaction -> ctx.verifyInProcess(verificationContext)
                 else -> throw IllegalArgumentException("${ctx.toSimpleString()} not supported")
             }
-            safeLog { log.info("${ctx.toSimpleString()} verified") }
+            log.info("${ctx.toSimpleString()} verified")
             Try.Success(Unit)
         } catch (t: Throwable) {
-            safeLog { log.info("${request.ctx.toSimpleString()} failed to verify", t) }
+            log.info("${request.ctx.toSimpleString()} failed to verify", t)
             Try.Failure(t)
         }
         channel.writeCordaSerializable(VerificationResult(result))
@@ -222,15 +222,6 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
             inline fun <reified T : Any> Set<String>?.load(classLoader: ClassLoader?): Set<T> {
                 return this?.mapToSet { loadClassOfType<T>(it, classLoader = classLoader).kotlin.objectOrNewInstance() } ?: emptySet()
             }
-        }
-    }
-
-    private inline fun safeLog(block: () -> Unit) {
-        try {
-            block()
-        }
-        catch (ex: Exception) {
-            log.error("Exception raised while logging", ex)
         }
     }
 }
