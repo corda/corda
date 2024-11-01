@@ -385,11 +385,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @CordaInternal
     @JvmSynthetic
-    internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult {
+    internal fun tryVerify(verificationSupport: NodeVerificationSupport, disableWarnings: Boolean = false): VerificationResult {
         return when {
             legacyAttachments.isEmpty() -> {
                 log.debug { "${toSimpleString()} will be verified in-process" }
-                InProcess(Try.on { verifyInProcess(verificationSupport) })
+                InProcess(Try.on { verifyInProcess(verificationSupport, disableWarnings) })
             }
             nonLegacyAttachments.isEmpty() -> {
                 log.debug { "${toSimpleString()} will be verified by the external verifer" }
@@ -397,7 +397,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             }
             else -> {
                 log.debug { "${toSimpleString()} will be verified both in-process and by the external verifer" }
-                val inProcessResult = Try.on { verifyInProcess(verificationSupport) }
+                val inProcessResult = Try.on { verifyInProcess(verificationSupport, disableWarnings) }
                 val externalResult = Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) }
                 InProcessAndExternal(inProcessResult, externalResult)
             }
@@ -406,31 +406,31 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @CordaInternal
     @JvmSynthetic
-    internal fun verifyInProcess(verificationSupport: VerificationSupport): LedgerTransaction {
+    internal fun verifyInProcess(verificationSupport: VerificationSupport, disableWarnings: Boolean): LedgerTransaction {
         val ltx = toLedgerTransactionInternal(verificationSupport)
         try {
             ltx.verify()
         } catch (e: NoClassDefFoundError) {
-            checkReverifyAllowed(e)
+            checkReverifyAllowed(e, disableWarnings)
             val missingClass = e.message ?: throw e
             log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
             reverifyWithFixups(ltx, verificationSupport, missingClass)
         } catch (e: NotSerializableException) {
-            checkReverifyAllowed(e)
+            checkReverifyAllowed(e, disableWarnings)
             retryVerification(e, e, ltx, verificationSupport)
         } catch (e: TransactionDeserialisationException) {
-            checkReverifyAllowed(e)
+            checkReverifyAllowed(e, disableWarnings)
             retryVerification(e.cause, e, ltx, verificationSupport)
         }
         return ltx
     }
 
-    private fun checkReverifyAllowed(ex: Throwable) {
+    private fun checkReverifyAllowed(ex: Throwable, disableWarnings: Boolean) {
         // If that transaction was created with and after Corda 4 then just fail.
         // The lenient dependency verification is only supported for Corda 3 transactions.
         // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
         if (networkParametersHash != null) {
-            log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
+            if (!disableWarnings) log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
             throw ex
         }
     }

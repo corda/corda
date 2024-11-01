@@ -243,7 +243,7 @@ open class TransactionBuilder(
      */
     private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
         log.debug { "Checking if there are any missing attachment dependencies for transaction ${wireTx.id}..." }
-        val verificationResult = wireTx.tryVerify(serviceHub)
+        val verificationResult = wireTx.tryVerify(serviceHub, true)
         // Check both legacy and non-legacy components are working, and try to add any missing dependencies if either are not.
         (verificationResult.inProcessResult as? Failure)?.let { (inProcessException) ->
             return addMissingDependency(inProcessException, wireTx, false, serviceHub, tryCount)
