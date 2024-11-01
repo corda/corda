@@ -305,8 +305,8 @@ private constructor(
                 ContractUpgradeLedgerTransaction(
                         inputs,
                         wtx.notary,
-                        legacyContractAttachment,
-                        upgradedContractAttachment,
+                        legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
+                        upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId),
                         wtx.id,
                         wtx.privacySalt,
                         sigs,
