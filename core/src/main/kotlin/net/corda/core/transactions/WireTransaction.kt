@@ -30,7 +30,6 @@ import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.equivalent
-import net.corda.core.internal.flatMapToSet
 import net.corda.core.internal.getGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
@@ -190,19 +189,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @JvmSynthetic
     internal fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
         // Look up public keys to authenticated identities.
-        val authenticatedCommands = if (verificationSupport.isInProcess) {
-            commands.lazyMapped { cmd, _ ->
+        if (!verificationSupport.isInProcess) {
+            val signersGroup: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP))
+            if (signersGroup.isNotEmpty()) {
+                // Pre-fetch all signing keys if the signers component group is present (Corda 4+)
+                verificationSupport.getParties(signersGroup.flatten().toSet())
+            }
+        }
+        val authenticatedCommands = commands.lazyMapped { cmd, _ ->
                 val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
                 CommandWithParties(cmd.signers, parties, cmd.value)
             }
-        } else {
-            val allSigners = commands.flatMapToSet { it.signers }
-            val allParties = verificationSupport.getParties(allSigners)
-            commands.map { cmd ->
-                val parties = cmd.signers.mapNotNull { allParties[allSigners.indexOf(it)] }
-                CommandWithParties(cmd.signers, parties, cmd.value)
-            }
-        }
 
         // Ensure that the lazy mappings will use the correct SerializationContext.
         val serializationFactory = SerializationFactory.defaultFactory

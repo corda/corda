@@ -10,7 +10,6 @@ import net.corda.core.internal.mapToSet
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.toSynchronised
-import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationContext
@@ -45,19 +44,14 @@ import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.Verifi
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetNetworkParameters
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetParties
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachments
-import net.corda.serialization.internal.verifier.loadCustomSerializationScheme
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
-import java.net.URLClassLoader
 import java.nio.channels.SocketChannel
-import java.nio.file.Path
 import java.security.PublicKey
 import java.util.Optional
-import kotlin.io.path.div
-import kotlin.io.path.listDirectoryEntries
 
 @Suppress("MagicNumber")
-class ExternalVerifier(private val baseDirectory: Path, private val channel: SocketChannel) {
+class ExternalVerifier(private val channel: SocketChannel) {
     companion object {
         private val log = contextLogger()
     }
@@ -69,7 +63,6 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
     private val networkParametersMap: OptionalCache<SecureHash, NetworkParameters>
     private val trustedClassAttachments: Cache<String, List<SecureHash>>
 
-    private lateinit var appClassLoader: ClassLoader
     private lateinit var currentNetworkParameters: NetworkParameters
     private lateinit var rotatedKeys: RotatedKeys
 
@@ -102,39 +95,15 @@ class ExternalVerifier(private val baseDirectory: Path, private val channel: Soc
         val initialisation = channel.readCordaSerializable(Initialisation::class)
         log.info("Received $initialisation")
 
-        appClassLoader = createAppClassLoader()
-
-        // Then use the initialisation message to create the correct serialization context
-        _contextSerializationEnv.set(null)
-        _contextSerializationEnv.set(SerializationEnvironment.with(
-                verifierSerializationFactory(initialisation, appClassLoader).apply {
-                    initialisation.customSerializationSchemeClassName?.let {
-                        registerScheme(loadCustomSerializationScheme(it, appClassLoader))
-                    }
-                },
-                p2pContext = AMQP_P2P_CONTEXT.withClassLoader(appClassLoader)
-        ))
-
-        attachmentFixups.load(appClassLoader)
-
         currentNetworkParameters = initialisation.currentNetworkParameters
         networkParametersMap.put(initialisation.serializedCurrentNetworkParameters.hash, Optional.of(currentNetworkParameters))
         rotatedKeys = initialisation.rotatedKeys
         log.info("External verifier initialised")
     }
 
-    private fun createAppClassLoader(): ClassLoader {
-        val cordappJarUrls = (baseDirectory / "legacy-contracts").listDirectoryEntries("*.jar")
-                .stream()
-                .map { it.toUri().toURL() }
-                .toTypedArray()
-        log.debug { "CorDapps: ${cordappJarUrls?.joinToString()}" }
-        return URLClassLoader(cordappJarUrls, javaClass.classLoader)
-    }
-
     @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
-        val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this,
+        val verificationContext = ExternalVerificationContext(attachmentsClassLoaderCache, this,
                 request.ctxInputsAndReferences, rotatedKeys)
         val result: Try<Unit> = try {
             val ctx = request.ctx

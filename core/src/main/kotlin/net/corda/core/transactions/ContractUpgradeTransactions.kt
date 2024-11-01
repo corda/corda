@@ -33,6 +33,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction.FilteredComponent
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Companion.calculateUpgradedState
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.INPUTS
@@ -281,30 +282,39 @@ private constructor(
         fun resolve(verificationSupport: VerificationSupport,
                     wtx: ContractUpgradeWireTransaction,
                     sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
-            val inputs = wtx.inputs.map(verificationSupport::getStateAndRef)
+
             val (legacyContractAttachment, upgradedContractAttachment) = verificationSupport.getAttachments(listOf(
                     wtx.legacyContractAttachmentId,
                     wtx.upgradedContractAttachmentId
             ))
             val networkParameters = verificationSupport.getNetworkParameters(wtx.networkParametersHash)
                     ?: throw TransactionResolutionException(wtx.id)
-            val upgradedContract = loadUpgradedContract(wtx.upgradedContractClassName, wtx.id, verificationSupport.appClassLoader)
-            return ContractUpgradeLedgerTransaction(
-                    inputs,
-                    wtx.notary,
-                    legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
-                    upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId),
-                    wtx.id,
-                    wtx.privacySalt,
-                    sigs,
+
+            return AttachmentsClassLoaderBuilder.withAttachmentsClassLoaderContext(
+                    listOf(
+                            legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
+                            upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId)
+                    ),
                     networkParameters,
-                    upgradedContract
-            )
+                    wtx.id,
+                    verificationSupport::isAttachmentTrusted,
+                    attachmentsClassLoaderCache = verificationSupport.attachmentsClassLoaderCache
+            ) { serializationContext ->
+                val inputs = wtx.inputs.map(verificationSupport::getStateAndRef)
+                val upgradedContract = loadUpgradedContract(wtx.upgradedContractClassName, wtx.id, serializationContext.deserializationClassLoader)
+                ContractUpgradeLedgerTransaction(
+                        inputs,
+                        wtx.notary,
+                        legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
+                        upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId),
+                        wtx.id,
+                        wtx.privacySalt,
+                        sigs,
+                        networkParameters,
+                        upgradedContract)
+            }
         }
 
-        // TODO There is an inconsistency with the class loader used with this method. Transaction resolution uses the app class loader,
-        //  whilst TransactionStorageVerification.getContractUpdateOutput uses an attachments class loder comprised of the the legacy and
-        //  upgraded attachments
         @CordaInternal
         @JvmSynthetic
         internal fun loadUpgradedContract(className: ContractClassName, id: SecureHash, classLoader: ClassLoader): UpgradedContract<ContractState, *> {

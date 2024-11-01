@@ -13,21 +13,26 @@ import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.coretesting.internal.matchers.rpc.willReturn
+import net.corda.coretesting.internal.matchers.rpc.willThrow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.coretesting.internal.matchers.rpc.willReturn
-import net.corda.coretesting.internal.matchers.rpc.willThrow
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.RPCDriverDSL
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.rpcDriver
+import net.corda.testing.node.internal.rpcTestUser
+import net.corda.testing.node.internal.startRpcClient
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
 
-@Ignore("Explicit contract upgrade not supported in 4.12")
 class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     companion object {
         private val classMockNet = InternalMockNetwork(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()))

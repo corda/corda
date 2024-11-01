@@ -12,12 +12,13 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import java.security.PublicKey
 
 class ExternalVerificationContext(
-        override val appClassLoader: ClassLoader,
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
         private val externalVerifier: ExternalVerifier,
         private val transactionInputsAndReferences: Map<StateRef, SerializedTransactionState>,
         override val rotatedKeys: RotatedKeys
 ) : VerificationSupport {
+    override val appClassLoader: ClassLoader get() = throw NotImplementedError("Cannot call appClassLoader")
+
     override val isInProcess: Boolean get() = false
 
     override fun getParties(keys: Collection<PublicKey>): List<Party?> = externalVerifier.getParties(keys)

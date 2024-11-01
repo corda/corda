@@ -58,7 +58,6 @@ import kotlin.io.path.div
 import kotlin.io.path.fileAttributesViewOrNull
 import kotlin.io.path.isExecutable
 import kotlin.io.path.isWritable
-import kotlin.io.path.notExists
 
 /**
  * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
@@ -117,12 +116,6 @@ class ExternalVerifierHandleImpl(
     }
 
     private fun startServer() {
-        val legacyContractsPath = (baseDirectory / "legacy-contracts")
-        if (legacyContractsPath.notExists()) {
-            log.error("Failed to start external verifier because $legacyContractsPath does not exist. Please create a legacy-contracts " +
-                    "directory under $baseDirectory and place your legacy contracts into this directory. See the documentation for details.")
-            throw IOException("Cannot start external verifier because $legacyContractsPath does not exist.")
-        }
         if (::socketFile.isInitialized) return
         // Try to create the UNIX domain file in /tmp to keep the full path under the 100 char limit. If we don't have access to it then
         // fallback to the temp dir specified by the JVM and hope it's short enough.

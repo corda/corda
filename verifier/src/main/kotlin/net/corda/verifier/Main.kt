@@ -26,7 +26,7 @@ object Main {
             val channel = SocketChannel.open(StandardProtocolFamily.UNIX)
             channel.connect(UnixDomainSocketAddress.of(socketFile))
             log.info("Connected to node on UNIX domain file $socketFile")
-            ExternalVerifier(baseDirectory, channel).run()
+            ExternalVerifier(channel).run()
         } catch (t: Throwable) {
             log.error("Unexpected error which has terminated the verifier", t)
             exitProcess(1)
