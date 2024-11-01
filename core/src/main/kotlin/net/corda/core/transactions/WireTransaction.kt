@@ -406,7 +406,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @CordaInternal
     @JvmSynthetic
-    internal fun verifyInProcess(verificationSupport: VerificationSupport, disableWarnings: Boolean): LedgerTransaction {
+    internal fun verifyInProcess(verificationSupport: VerificationSupport, disableWarnings: Boolean = false): LedgerTransaction {
         val ltx = toLedgerTransactionInternal(verificationSupport)
         try {
             ltx.verify()
