@@ -287,14 +287,13 @@ private constructor(
                     wtx.legacyContractAttachmentId,
                     wtx.upgradedContractAttachmentId
             ))
+            if (legacyContractAttachment == null) throw AttachmentResolutionException(wtx.legacyContractAttachmentId)
+            if (upgradedContractAttachment == null) throw AttachmentResolutionException(wtx.upgradedContractAttachmentId)
             val networkParameters = verificationSupport.getNetworkParameters(wtx.networkParametersHash)
                     ?: throw TransactionResolutionException(wtx.id)
 
             return AttachmentsClassLoaderBuilder.withAttachmentsClassLoaderContext(
-                    listOf(
-                            legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
-                            upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId)
-                    ),
+                    listOf(legacyContractAttachment, upgradedContractAttachment),
                     networkParameters,
                     wtx.id,
                     verificationSupport::isAttachmentTrusted,
@@ -305,8 +304,8 @@ private constructor(
                 ContractUpgradeLedgerTransaction(
                         inputs,
                         wtx.notary,
-                        legacyContractAttachment ?: throw AttachmentResolutionException(wtx.legacyContractAttachmentId),
-                        upgradedContractAttachment ?: throw AttachmentResolutionException(wtx.upgradedContractAttachmentId),
+                        legacyContractAttachment,
+                        upgradedContractAttachment,
                         wtx.id,
                         wtx.privacySalt,
                         sigs,
