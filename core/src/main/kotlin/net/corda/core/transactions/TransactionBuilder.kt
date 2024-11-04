@@ -657,7 +657,9 @@ open class TransactionBuilder(
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
+        (constraints.count { it is SignatureAttachmentConstraint } > 1) &&
+                (constraints.filterIsInstance<SignatureAttachmentConstraint>().map { serviceHub?.toVerifyingServiceHub()?.rotatedKeys?.rotateToHash(it.key) ?: it.key}.toSet().size > 1)
+            ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
@@ -672,6 +674,10 @@ open class TransactionBuilder(
 
         // When all input states have the same constraint.
         constraints.size == 1 -> constraints.single()
+
+        // if we are here then the multiple SignatureAttachmentConstraint keys must be rotations of each other due to above check
+        (constraints.count { it is SignatureAttachmentConstraint } > 1)
+            -> constraints.filterIsInstance<SignatureAttachmentConstraint>().first { it == makeSignatureAttachmentConstraint(attachmentToUse.signerKeys) }
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }

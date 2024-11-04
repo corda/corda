@@ -75,6 +75,8 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
         }
     }
 
+    fun rotateToHash(key: PublicKey) = rotate(key.hash.sha256())
+
     private fun rotate(key: SecureHash): SecureHash {
         return rotateMap[key] ?: key
     }
