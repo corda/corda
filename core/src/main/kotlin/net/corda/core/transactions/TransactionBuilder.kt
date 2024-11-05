@@ -571,7 +571,7 @@ open class TransactionBuilder(
 
         // Sanity check that the selected attachment actually passes.
 
-        if (!defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
+        if (!isSatisfiedByWithNoWarnForSigConstraint(defaultOutputConstraint, constraintAttachment)) {
             // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
             if (defaultOutputConstraint is SignatureAttachmentConstraint && services.toVerifyingServiceHub().rotatedKeys.canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys)) {
                 return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
