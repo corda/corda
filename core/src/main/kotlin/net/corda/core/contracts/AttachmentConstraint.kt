@@ -114,12 +114,21 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
  */
 @KeepForDJVM
 data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment): Boolean {
+    override fun isSatisfiedBy(attachment: Attachment) = isSatisfiedBy(attachment, disableWarnings = false)
+    fun isSatisfiedBy(attachment: Attachment, disableWarnings: Boolean): Boolean {
         log.debug("Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}")
         return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
-            log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
+            if (!disableWarnings) log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
             false
         }
         else true
+    }
+}
+
+fun isSatisfiedByWithNoWarnForSigConstraint(constraint: AttachmentConstraint, attachment: Attachment): Boolean {
+    return if (constraint is SignatureAttachmentConstraint) {
+        constraint.isSatisfiedBy(attachment, true)
+    } else {
+        constraint.isSatisfiedBy(attachment)
     }
 }
