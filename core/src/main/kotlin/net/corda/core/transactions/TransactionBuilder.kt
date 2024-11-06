@@ -658,7 +658,7 @@ open class TransactionBuilder(
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
         (constraints.count { it is SignatureAttachmentConstraint } > 1) &&
-                (constraints.filterIsInstance<SignatureAttachmentConstraint>().map { serviceHub?.toVerifyingServiceHub()?.rotatedKeys?.rotateToHash(it.key) ?: it.key}.toSet().size > 1)
+                (constraints.filterIsInstance<SignatureAttachmentConstraint>().map { serviceHub?.retrieveRotatedKeys()?.rotateToHash(it.key) ?: it.key}.toSet().size > 1)
             ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 

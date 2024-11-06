@@ -79,6 +79,7 @@ class ContractWithRotatedKeyTest {
         val keyStoreDir1 = SelfCleaningDir()
         val keyStoreDir2 = SelfCleaningDir()
 
+        // Note the alias below is different in 4.12 and above and it needs to match the alias used internally
         val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="alias1")
         val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="alias1")
 
@@ -142,8 +143,9 @@ class ContractWithRotatedKeyTest {
         val keyStoreDir1 = SelfCleaningDir()
         val keyStoreDir2 = SelfCleaningDir()
 
-        val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="1-testcordapp-rsa")
-        val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="1-testcordapp-rsa")
+        // Note the alias below is different in 4.12 and above and it needs to match the alias used internally
+        val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="alias1")
+        val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="alias1")
 
         val unsignedFinanceCorDapp1 = cordappWithPackages("net.corda.finance", "migration", "META-INF.services")
         val unsignedFinanceCorDapp2 = cordappWithPackages("net.corda.finance", "migration", "META-INF.services").copy(versionId = 2)
