@@ -28,6 +28,7 @@ import net.corda.core.contracts.TransactionVerificationException.TransactionMiss
 import net.corda.core.contracts.TransactionVerificationException.TransactionNonMatchingEncumbranceException
 import net.corda.core.contracts.TransactionVerificationException.TransactionNotaryMismatchEncumbranceException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
+import net.corda.core.contracts.isSatisfiedByWithNoWarnForSigConstraint
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentWithContext
@@ -432,7 +433,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
 
             if (HashAttachmentConstraint.disableHashConstraints && constraint is HashAttachmentConstraint)
                 logger.warnOnce("Skipping hash constraints verification.")
-            else if (!constraint.isSatisfiedBy(constraintAttachment)) {
+            else if (!isSatisfiedByWithNoWarnForSigConstraint(constraint, constraintAttachment)) {
                 verifyConstraintUsingRotatedKeys(constraint, constraintAttachment, contract)
             }
         }
