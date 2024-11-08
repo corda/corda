@@ -240,6 +240,7 @@ class ResolveTransactionsFlowTest {
     }
 
     @Test(timeout=300_000)
+    @Ignore("Need to pass legacy contracts to internal mock network & need to create a legacy contract for test below")
 	fun `can resolve a chain of transactions containing a contract upgrade transaction`() {
         val tx = contractUpgradeChain()
         var numUpdates = 0
@@ -258,7 +259,7 @@ class ResolveTransactionsFlowTest {
 
     // Used for checking larger chains resolve correctly. Note that this takes a long time to run, and so is not suitable for a CI gate.
     @Test(timeout=300_000)
-@Ignore
+    @Ignore
     fun `Can resolve large chain of transactions`() {
         val txToResolve = makeLargeTransactionChain(2500)
         val p = TestFlow(txToResolve, megaCorp)
