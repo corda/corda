@@ -142,6 +142,7 @@ class ContractWithRotatedKeyTest {
     fun `transaction can be created with multiple contract input states from rotated CorDapps`() {
         val keyStoreDir1 = SelfCleaningDir()
         val keyStoreDir2 = SelfCleaningDir()
+
         val packageOwnerKey1 = keyStoreDir1.path.generateKey(alias="1-testcordapp-rsa")
         val packageOwnerKey2 = keyStoreDir2.path.generateKey(alias="1-testcordapp-rsa")
 
