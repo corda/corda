@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_AL
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.checkValidity
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import java.io.IOException
 import java.math.BigInteger
 import java.nio.file.NoSuchFileException
@@ -54,8 +54,8 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         if (configuration.devMode) {
             configuration.configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
-            // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
+            // we should re-synchronise DefaultCryptoService with the updated keystore file.
+            if (cryptoService is DefaultCryptoService) {
                 cryptoService.resyncKeystore()
             }
         }

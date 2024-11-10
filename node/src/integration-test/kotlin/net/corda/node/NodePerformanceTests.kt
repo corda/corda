@@ -31,7 +31,6 @@ import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.streams.toList
 
 @Ignore("Run these locally")
 class NodePerformanceTests {

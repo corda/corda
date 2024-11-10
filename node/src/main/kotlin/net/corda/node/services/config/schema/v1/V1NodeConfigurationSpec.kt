@@ -8,7 +8,6 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
-import net.corda.node.services.config.NodeConfigurationImpl.Defaults.reloadCheckpointAfterSuspend
 import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {

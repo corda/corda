@@ -95,7 +95,8 @@ import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.time.Instant
-import java.util.*
+import java.util.Currency
+import java.util.UUID
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
@@ -256,6 +257,7 @@ private data class StxJson(
 private interface WireTransactionMixin
 
 private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
+    @Suppress("INVISIBLE_MEMBER")
     override fun serialize(value: WireTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
         gen.writeObject(WireTransactionJson(
                 value.digestService,
@@ -265,7 +267,7 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.outputs,
                 value.commands,
                 value.timeWindow,
-                value.attachments,
+                value.legacyAttachments.map { "$it-legacy" } + value.nonLegacyAttachments.map { it.toString() },
                 value.references,
                 value.privacySalt,
                 value.networkParametersHash
@@ -276,15 +278,18 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
 private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): WireTransaction {
         val wrapper = parser.readValueAs<WireTransactionJson>()
+        // We're not concerned with backwards compatibility for any JSON string that was created with 4.11 and being materialised in 4.12.
+        val (legacyAttachments, newerAttachments) = wrapper.attachments.partition { it.endsWith("-legacy") }
         val componentGroups = createComponentGroups(
                 wrapper.inputs,
                 wrapper.outputs,
                 wrapper.commands,
-                wrapper.attachments,
+                newerAttachments.map(SecureHash::parse),
                 wrapper.notary,
                 wrapper.timeWindow,
                 wrapper.references,
-                wrapper.networkParametersHash
+                wrapper.networkParametersHash,
+                legacyAttachments.map { SecureHash.parse(it.removeSuffix("-legacy")) }
         )
         return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }
@@ -297,10 +302,11 @@ private class WireTransactionJson(@get:JsonInclude(Include.NON_NULL) val digestS
                                   val outputs: List<TransactionState<*>>,
                                   val commands: List<Command<*>>,
                                   val timeWindow: TimeWindow?,
-                                  val attachments: List<SecureHash>,
+                                  val attachments: List<String>,
                                   val references: List<StateRef>,
                                   val privacySalt: PrivacySalt,
-                                  val networkParametersHash: SecureHash?)
+                                  val networkParametersHash: SecureHash?
+)
 
 private interface TransactionStateMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)

@@ -5,9 +5,9 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
@@ -18,18 +18,24 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startNode
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+import kotlin.io.path.readLines
+import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.useLines
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class BootTests {
     @Test(timeout=300_000)
@@ -58,13 +64,13 @@ class BootTests {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
-            val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
+            val logFile = logFolder.useDirectoryEntries {  it.single { a -> a.isRegularFile() && a.name.startsWith("node") } }
             // Start second Alice, should fail
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            val numberOfNodesThatLogged = logFile.readLines { it.filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count() }
+            val numberOfNodesThatLogged = logFile.useLines { lines -> lines.count { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it } }
             assertEquals(1, numberOfNodesThatLogged)
         }
     }
@@ -79,7 +85,7 @@ class BootTests {
         )) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val aliceCertDir = alice.baseDirectory / "certificates"
-            (aliceCertDir / "nodekeystore.jks").delete()
+            (aliceCertDir / "nodekeystore.jks").deleteExisting()
             val cert = CertificateStoreStubs.Signing.withCertificatesDirectory(aliceCertDir).get(true)
             // Creating a new certificate store does not populate that store with the node certificate path. If the node certificate path is
             // missing, the node will fail to start but not because the legal identity is missing. To test that a missing legal identity
@@ -91,9 +97,9 @@ class BootTests {
                 startNode(providedName = ALICE_NAME).getOrThrow()
             }
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
-            val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
-            val lines = logFile.readLines { lines -> lines.filter { NODE_IDENTITY_KEY_ALIAS in it }.toArray() }
-            assertTrue(lines.count() > 0)
+            val logFile = logFolder.useDirectoryEntries { it.single { a -> a.isRegularFile() && a.name.startsWith("node") } }
+            val lines = logFile.readLines().filter { NODE_IDENTITY_KEY_ALIAS in it }
+            assertThat(lines).hasSizeGreaterThan(0)
         }
     }
 

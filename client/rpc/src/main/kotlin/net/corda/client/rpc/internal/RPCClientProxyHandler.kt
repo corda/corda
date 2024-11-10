@@ -150,7 +150,6 @@ internal class RPCClientProxyHandler(
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
             // Notify listeners of the observables that the connection is being terminated.
             try {
@@ -300,7 +299,7 @@ internal class RPCClientProxyHandler(
     class FailoverHandler(private val detected: () -> Unit = {},
                           private val completed: () -> Unit = {},
                           private val failed: () -> Unit = {}): FailoverEventListener {
-        override fun failoverEvent(eventType: FailoverEventType?) {
+        override fun failoverEvent(eventType: FailoverEventType) {
             when (eventType) {
                 FailoverEventType.FAILURE_DETECTED -> { detected() }
                 FailoverEventType.FAILOVER_COMPLETED -> { completed() }
@@ -346,7 +345,7 @@ internal class RPCClientProxyHandler(
                     impersonatedActor,
                     rpcClientTelemetry.telemetryService.getCurrentTelemetryData()
             )
-            val replyFuture = SettableFuture.create<Any>()
+            val replyFuture = SettableFuture.create<Any?>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
             }
@@ -589,7 +588,6 @@ internal class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            @Suppress("TooGenericExceptionCaught")
             try {
                 sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
             } catch(ex: Exception) {
@@ -654,9 +652,9 @@ internal class RPCClientProxyHandler(
         producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
-        clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
+        clientAddress = SimpleString.of("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
         log.debug { "Client address: $clientAddress" }
-        consumerSession!!.createQueue(QueueConfiguration(clientAddress).setAddress(clientAddress).setRoutingType(RoutingType.ANYCAST)
+        consumerSession!!.createQueue(QueueConfiguration.of(clientAddress).setAddress(clientAddress).setRoutingType(RoutingType.ANYCAST)
                 .setTemporary(true).setDurable(false))
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)

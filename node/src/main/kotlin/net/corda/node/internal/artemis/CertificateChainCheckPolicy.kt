@@ -79,7 +79,7 @@ sealed class CertificateChainCheckPolicy {
     class UsernameMustMatchCommonNameCheck : Check {
         lateinit var username: String
         override fun checkCertificateChain(theirChain: Array<java.security.cert.X509Certificate>) {
-            if (!theirChain.any { certificate -> CordaX500Name.parse(certificate.subjectDN.name).commonName == username }) {
+            if (!theirChain.any { certificate -> CordaX500Name.parse(certificate.getSubjectX500Principal().name).commonName == username }) {
                 throw CertificateException("Client certificate does not match login username.")
             }
         }
