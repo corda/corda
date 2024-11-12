@@ -105,7 +105,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        rpcUsers = ext.rpcUsers
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.partiesFromName",
+                                                                             "InvokeRpc.notaryPartyFromX500Name",
+                                                                             "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.openAttachment",
+                                                                             "InvokeRpc.uploadAttachment",
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.startTrackedFlowDynamic",
+                                                                             "InvokeRpc.nodeInfo"]]]
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -115,7 +123,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        rpcUsers = ext.rpcUsers
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.partiesFromName",
+                                                                             "InvokeRpc.notaryPartyFromX500Name",
+                                                                             "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.openAttachment",
+                                                                             "InvokeRpc.uploadAttachment",
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.startTrackedFlowDynamic",
+                                                                             "InvokeRpc.nodeInfo"]]]
         rpcSettings {
             address "localhost:10009"
             adminAddress "localhost:10010"
@@ -125,7 +141,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        rpcUsers = ext.rpcUsers
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.partiesFromName",
+                                                                             "InvokeRpc.notaryPartyFromX500Name",
+                                                                             "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.openAttachment",
+                                                                             "InvokeRpc.uploadAttachment",
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.startTrackedFlowDynamic",
+                                                                             "InvokeRpc.nodeInfo"]]]
         rpcSettings {
             address "localhost:10012"
             adminAddress "localhost:10013"
@@ -137,7 +161,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=NonLogging Bank,L=London,C=GB"
         p2pPort 10025
-        rpcUsers = ext.rpcUsers
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                             "InvokeRpc.partiesFromName",
+                                                                             "InvokeRpc.notaryPartyFromX500Name",
+                                                                             "InvokeRpc.attachmentExists",
+                                                                             "InvokeRpc.openAttachment",
+                                                                             "InvokeRpc.uploadAttachment",
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.startTrackedFlowDynamic",
+                                                                             "InvokeRpc.nodeInfo"]]]
         rpcSettings {
             address "localhost:10026"
             adminAddress "localhost:10027"
