@@ -42,6 +42,7 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     implementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcutil-lts8on:${bouncycastle_version}"
 
     testImplementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"

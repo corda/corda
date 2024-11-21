@@ -17,6 +17,7 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     testImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     testImplementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcutil-lts8on:${bouncycastle_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
