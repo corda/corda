@@ -56,6 +56,7 @@ dependencies {
     // AssertJ: for fluent assertions for testing
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.bouncycastle:bcpkix-lts8on:$bouncycastle_version"
+    testImplementation "org.bouncycastle:bcutil-lts8on:$bouncycastle_version"
     testImplementation "org.ow2.asm:asm:$asm_version"
 
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"

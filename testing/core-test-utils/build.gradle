@@ -19,6 +19,7 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     implementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcutil-lts8on:${bouncycastle_version}"
 
     implementation "org.slf4j:slf4j-api:$slf4j_version"
     implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
