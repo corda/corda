@@ -26,7 +26,7 @@ results in
 If no image variant is specified, all available image variants will be built.
 
 The default repository for all images is `corda/corda` and you will need official R3 credentials 
-for Artifactory to push there. [Ross Nicoll](ross.nicoll@r3.com) (or other Artifactory administrators) can assist with this if needed,
+for Artifactory to push there. R3's Artifactory administrators can assist with this if needed,
 otherwise you can override the repository name using the `docker.image.repository` Gradle property.
 
 e.g.

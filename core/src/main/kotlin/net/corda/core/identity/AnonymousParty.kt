@@ -22,4 +22,11 @@ class AnonymousParty(owningKey: PublicKey) : Destination, AbstractParty(owningKe
     override fun nameOrNull(): CordaX500Name? = null
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = "Anonymous(${owningKey.toStringShort()})"
+
+    companion object {
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
+        fun create(owningKey: PublicKey): AnonymousParty = interner.intern(AnonymousParty(owningKey))
+    }
 }

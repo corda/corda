@@ -142,7 +142,7 @@ class FlowCreator(
         senderUUID: String?): Flow<A> {
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
-        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
+        val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler, serializedTelemetry = (flowStart as? FlowStart.Initiated)?.initiatingMessage?.serializedTelemetry)
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = createTransientValues(flowId, resultFuture)
         flowLogic.stateMachine = flowStateMachineImpl
@@ -180,7 +180,7 @@ class FlowCreator(
             return when(flowState) {
                 is FlowState.Unstarted -> {
                     val logic = deserializeFlowState(flowState.frozenFlowLogic)
-                    FlowStateMachineImpl(runId, logic, scheduler)
+                    FlowStateMachineImpl(runId, logic, scheduler, serializedTelemetry = null)
                 }
                 is FlowState.Started -> deserializeFlowState(flowState.frozenFiber)
                 // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.

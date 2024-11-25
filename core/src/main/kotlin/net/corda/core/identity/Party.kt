@@ -45,4 +45,16 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, Abstra
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()
     fun description() = "$name (owningKey = ${owningKey.toStringShort()})"
+
+    companion object {
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
+        fun create(name: CordaX500Name, owningKey: PublicKey): Party = interner.intern(Party(name, owningKey))
+
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
+        fun create(certificate: X509Certificate): Party = interner.intern(Party(certificate))
+    }
 }

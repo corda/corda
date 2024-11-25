@@ -31,6 +31,7 @@ import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
+import net.corda.node.services.config.TelemetryConfiguration
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.schema.parsers.attempt
 import net.corda.node.services.config.schema.parsers.badValue
@@ -230,6 +231,18 @@ internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDap
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
         val config = configuration.withOptions(options)
         return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
+    }
+}
+
+internal object TelemetryConfigurationSpec : Configuration.Specification<TelemetryConfiguration>("TelemetryConfiguration") {
+    private val openTelemetryEnabled by boolean()
+    private val simpleLogTelemetryEnabled by boolean()
+    private val spanStartEndEventsEnabled by boolean()
+    private val copyBaggageToTags by boolean()
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<TelemetryConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(TelemetryConfiguration(config[openTelemetryEnabled], config[simpleLogTelemetryEnabled], config[spanStartEndEventsEnabled], config[copyBaggageToTags]))
     }
 }
 

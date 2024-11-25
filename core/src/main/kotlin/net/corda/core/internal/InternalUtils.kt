@@ -77,7 +77,6 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.collections.LinkedHashSet
 import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -165,7 +164,7 @@ fun InputStream.hash(): SecureHash {
             }
             md.update(buffer, 0, count)
         }
-        SecureHash.SHA256(md.digest())
+        SecureHash.createSHA256(md.digest())
     }
 }
 

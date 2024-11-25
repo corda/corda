@@ -299,6 +299,9 @@ class ReconnectingCordaRPCOps private constructor(
                 currentRPCConnection?.forceClose()
             }
         }
+        override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+            return currentRPCConnection?.getTelemetryHandle(telemetryClass)
+        }
         fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {

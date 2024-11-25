@@ -22,6 +22,12 @@ interface RPCConnection<out I : RPCOps> : Closeable {
     val serverProtocolVersion: Int
 
     /**
+     * Returns the configured openTelemetry global. Returns null if opentelemetry has not been configured.
+     */
+    fun <T> getTelemetryHandle(telemetryClass: Class<T>): T?
+
+
+    /**
      * Closes this client gracefully by sending a notification to the server, so it can immediately clean up resources.
      * If the server is not available this method may block for a short period until it's clear the server is not
      * coming back.

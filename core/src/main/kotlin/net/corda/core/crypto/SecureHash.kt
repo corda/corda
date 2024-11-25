@@ -3,9 +3,12 @@
 package net.corda.core.crypto
 
 import io.netty.util.concurrent.FastThreadLocal
+import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
+import net.corda.core.internal.utilities.Internable
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
@@ -66,7 +69,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
 
         override fun generate(data: ByteArray): SecureHash {
-            return HASH(algorithm, digestAs(algorithm, data))
+            return interner.intern(HASH(algorithm, digestAs(algorithm, data)))
         }
     }
 
@@ -110,7 +113,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         return if(concatAlgorithm == SHA2_256) {
             concatBytes.sha256()
         } else {
-            HASH(concatAlgorithm, digestAs(concatAlgorithm, concatBytes))
+            interner.intern(HASH(concatAlgorithm, digestAs(concatAlgorithm, concatBytes)))
         }
     }
 
@@ -121,11 +124,14 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     fun reHash() : SecureHash = hashAs(algorithm, bytes)
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
-    companion object {
+    companion object : Internable<SecureHash> {
         const val SHA2_256 = "SHA-256"
         const val SHA2_384 = "SHA-384"
         const val SHA2_512 = "SHA-512"
         const val DELIMITER = ':'
+
+        @CordaInternal
+        override val interner = PrivateInterner<SecureHash>()
 
         /**
          * Converts a SecureHash hash value represented as a {algorithm:}hexadecimal [String] into a [SecureHash].
@@ -149,6 +155,14 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
+        @JvmStatic
+        internal fun deintern(hash: SecureHash): SecureHash {
+            return when (hash) {
+                is SHA256 -> SHA256(hash.bytes)
+                else -> HASH(hash.algorithm, hash.bytes)
+            }
+        }
+
         /**
          * @param algorithm [MessageDigest] algorithm name, in uppercase.
          * @param value Hash value as a hexadecimal string.
@@ -157,7 +171,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             val digestLength = digestFor(algorithm).digestLength
             val data = value.parseAsHex()
             return when (data.size) {
-                digestLength -> HASH(algorithm, data)
+                digestLength -> interner.intern(HASH(algorithm, data))
                 else -> throw IllegalArgumentException("Provided string is ${data.size} bytes not $digestLength bytes in hex: $value")
             }
         }
@@ -171,11 +185,17 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         fun parse(str: String?): SHA256 {
             return str?.toUpperCase()?.parseAsHex()?.let {
                 when (it.size) {
-                    32 -> SHA256(it)
+                    32 -> interner.intern(SHA256(it))
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
                 }
             } ?: throw IllegalArgumentException("Provided string is null")
         }
+
+        /**
+         * Factory method for SHA256 to be used in preference to the constructor.
+         */
+        @JvmStatic
+        fun createSHA256(bytes: ByteArray): SHA256 = interner.intern(SHA256(bytes))
 
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
@@ -202,9 +222,9 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         fun hashAs(algorithm: String, bytes: ByteArray): SecureHash {
             val hashBytes = digestAs(algorithm, bytes)
             return if (algorithm == SHA2_256) {
-                SHA256(hashBytes)
+                interner.intern(SHA256(hashBytes))
             } else {
-                HASH(algorithm, hashBytes)
+                interner.intern(HASH(algorithm, hashBytes))
             }
         }
 
@@ -222,7 +242,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             } else {
                 val digest = digestFor(algorithm).get()
                 val hash = digest.componentDigest(bytes)
-                HASH(algorithm, hash)
+                interner.intern(HASH(algorithm, hash))
             }
         }
 
@@ -240,7 +260,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             } else {
                 val digest = digestFor(algorithm).get()
                 val hash = digest.nonceDigest(bytes)
-                HASH(algorithm, hash)
+                interner.intern(HASH(algorithm, hash))
             }
         }
 
@@ -249,7 +269,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun sha256(bytes: ByteArray) = SHA256(digestAs(SHA2_256, bytes))
+        fun sha256(bytes: ByteArray) = interner.intern(SHA256(digestAs(SHA2_256, bytes)))
 
         /**
          * Computes the SHA-256 hash of the [ByteArray], and then computes the SHA-256 hash of the hash.
@@ -282,7 +302,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
                 randomSHA256()
             } else {
                 val digest = digestFor(algorithm)
-                HASH(algorithm, digest.get().digest(secureRandomBytes(digest.digestLength)))
+                interner.intern(HASH(algorithm, digest.get().digest(secureRandomBytes(digest.digestLength))))
             }
         }
 
@@ -291,7 +311,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * This field provides more intuitive access from Java.
          */
         @JvmField
-        val zeroHash: SHA256 = SHA256(ByteArray(32) { 0.toByte() })
+        val zeroHash: SHA256 = interner.intern(SHA256(ByteArray(32) { 0.toByte() }))
 
         /**
          * A SHA-256 hash value consisting of 32 0x00 bytes.
@@ -305,7 +325,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * This field provides more intuitive access from Java.
          */
         @JvmField
-        val allOnesHash: SHA256 = SHA256(ByteArray(32) { 255.toByte() })
+        val allOnesHash: SHA256 = interner.intern(SHA256(ByteArray(32) { 255.toByte() }))
 
         /**
          * A SHA-256 hash value consisting of 32 0xFF bytes.
@@ -323,8 +343,8 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             return hashConstants.getOrPut(algorithm) {
                 val digestLength = digestFor(algorithm).digestLength
                 HashConstants(
-                        zero = HASH(algorithm, ByteArray(digestLength)),
-                        allOnes = HASH(algorithm, ByteArray(digestLength) { 255.toByte() })
+                        zero = interner.intern(HASH(algorithm, ByteArray(digestLength))),
+                        allOnes = interner.intern(HASH(algorithm, ByteArray(digestLength) { 255.toByte() }))
                 )
             }
         }

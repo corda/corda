@@ -9,22 +9,38 @@ import com.google.common.primitives.Ints
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.*
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
-import net.corda.serialization.internal.*
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.CheckpointSerializationContextImpl
+import net.corda.serialization.internal.CordaSerializationEncoding
+import net.corda.serialization.internal.encodingNotPermittedFormat
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
-import net.corda.coretesting.internal.rigorousMock
 import org.apache.commons.lang3.SystemUtils
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -36,9 +52,13 @@ import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.time.Instant
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.test.*
+import java.util.Collections
+import java.util.Random
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
@@ -129,6 +149,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val deserialisedSignature = deserialisedKeyPair.sign(bitsToSign)
         deserialisedSignature.verify(bitsToSign)
         assertThatThrownBy { deserialisedSignature.verify(wrongBits) }
+        assertSame(keyPair.public, deserialisedKeyPair.public)
     }
 
     @Test(timeout=300_000)
@@ -178,7 +199,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
     }
 
     @Test(timeout=300_000)
-	fun `serialize - deserialize SignableData`() {
+    fun `serialize - deserialize SignableData`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
 
@@ -186,15 +207,33 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val serializedMetaData = meta.checkpointSerialize(context).bytes
         val meta2 = serializedMetaData.checkpointDeserialize<SignableData>(context)
         assertEquals(meta2, meta)
+        assertSame(meta.txId, meta2.txId)
     }
 
-    @Test(timeout=300_000)
-	fun `serialize - deserialize Logger`() {
+    @Test(timeout = 300_000)
+    fun `serialize - deserialize internables`() {
+        val list: List<Any> = listOf(
+                SecureHash.randomSHA256(),
+                CordaX500Name.parse("O=bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name"),
+                Party.create(CordaX500Name.parse("O=bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name"), Crypto.generateKeyPair().public),
+                AnonymousParty.create(Crypto.generateKeyPair().public),
+                SignatureAttachmentConstraint.create(Crypto.generateKeyPair().public)
+        )
+
+        val serializedList = list.checkpointSerialize(context).bytes
+        val list2 = serializedList.checkpointDeserialize<List<Any>>(context)
+        list.zip(list2).forEach { (original, deserialized) ->
+            assertSame(original, deserialized, "${original.javaClass} not interned")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `serialize - deserialize Logger`() {
         val storageContext: CheckpointSerializationContext = context
         val logger = LoggerFactory.getLogger("aName")
         val logger2 = logger.checkpointSerialize(storageContext).checkpointDeserialize(storageContext)
         assertEquals(logger.name, logger2.name)
-        assertTrue(logger === logger2)
+        assertSame(logger, logger2)
     }
 
     @CordaSerializable

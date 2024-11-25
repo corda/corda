@@ -100,6 +100,7 @@ dependencies {
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
 
+    implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
@@ -309,7 +310,8 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**")
+            "rx**",
+            "io.opentelemetry.**")
 }
 
 jar {

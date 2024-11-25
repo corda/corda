@@ -20,6 +20,7 @@ import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.telemetry.TelemetryStatusCode
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -110,6 +111,7 @@ internal class RPCClientProxyHandler(
         private val impersonatedActor: Actor?,
         private val targetLegalIdentity: CordaX500Name?,
         private val notificationDistributionMux: DistributionMux<out RPCOps>,
+        private val rpcClientTelemetry: RPCClientTelemetry,
         private val cacheFactory: NamedCacheFactory = ClientCacheFactory()
 ) : InvocationHandler {
 
@@ -330,6 +332,8 @@ internal class RPCClientProxyHandler(
         val replyId = InvocationId.newInstance()
         val methodFqn = produceMethodFullyQualifiedName(method)
         callSiteMap?.set(replyId, CallSite(methodFqn))
+
+        val telemetryId = rpcClientTelemetry.telemetryService.startSpanForFlow("client-$methodFqn", emptyMap())
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
@@ -339,7 +343,8 @@ internal class RPCClientProxyHandler(
                     replyId,
                     sessionId,
                     externalTrace,
-                    impersonatedActor
+                    impersonatedActor,
+                    rpcClientTelemetry.telemetryService.getCurrentTelemetryData()
             )
             val replyFuture = SettableFuture.create<Any>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
@@ -353,13 +358,18 @@ internal class RPCClientProxyHandler(
             sendMessage(request)
             return replyFuture.getOrThrow()
         } catch (e: RuntimeException) {
+            rpcClientTelemetry.telemetryService.recordException(telemetryId, e)
+            rpcClientTelemetry.telemetryService.setStatus(telemetryId, TelemetryStatusCode.ERROR, e.message ?: "RuntimeException occurred")
             // Already an unchecked exception, so just rethrow it
             throw e
         } catch (e: Exception) {
+            rpcClientTelemetry.telemetryService.recordException(telemetryId, e)
+            rpcClientTelemetry.telemetryService.setStatus(telemetryId, TelemetryStatusCode.ERROR, e.message ?: "Exception occurred")
             // This must be a checked exception, so wrap it
             throw RPCException(e.message ?: "", e)
         } finally {
             callSiteMap?.remove(replyId)
+            rpcClientTelemetry.telemetryService.endSpanForFlow(telemetryId)
         }
     }
 

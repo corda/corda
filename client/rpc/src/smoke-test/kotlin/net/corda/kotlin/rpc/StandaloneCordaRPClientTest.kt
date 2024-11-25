@@ -118,7 +118,7 @@ class StandaloneCordaRPClientTest {
 
         val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
             it.copyTo(NULL_OUTPUT_STREAM)
-            SecureHash.SHA256(it.hash().asBytes())
+            SecureHash.createSHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)
     }
@@ -133,7 +133,7 @@ class StandaloneCordaRPClientTest {
 
         val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
             it.copyTo(NULL_OUTPUT_STREAM)
-            SecureHash.SHA256(it.hash().asBytes())
+            SecureHash.createSHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)
     }
