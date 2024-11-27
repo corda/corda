@@ -1,7 +1,6 @@
 package net.corda.node.logging
 
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -16,6 +15,7 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.div
 
 class IssueCashLoggingTests {
 

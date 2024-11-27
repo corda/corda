@@ -2,22 +2,14 @@ package net.corda.node.services.rpc
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
 import junit.framework.TestCase.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
-import net.corda.core.internal.inputStream
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -40,11 +32,18 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.zip.ZipInputStream
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.inputStream
 
 class CheckpointDumperImplTest {
 
@@ -64,13 +63,13 @@ class CheckpointDumperImplTest {
     private lateinit var services: ServiceHub
     private lateinit var checkpointStorage: DBCheckpointStorage
 
-    private val mockAfterStartEvent = {
+    private val mockAfterStartEvent = run {
         val nodeServicesContextMock = mock<NodeServicesContext>()
-        whenever(nodeServicesContextMock.tokenizableServices).doReturn(emptyList<SerializeAsToken>())
+        whenever(nodeServicesContextMock.tokenizableServices).doReturn(emptyList())
         val eventMock = mock<NodeLifecycleEvent.AfterNodeStart<*>>()
         whenever(eventMock.nodeServicesContext).doReturn(nodeServicesContextMock)
         eventMock
-    }()
+    }
 
     @Before
     fun setUp() {
@@ -140,7 +139,7 @@ class CheckpointDumperImplTest {
 
     private fun checkDumpFile() {
         ZipInputStream(file.inputStream()).use { zip ->
-            val entry = zip.nextEntry
+            val entry = zip.nextEntry!!
             assertThat(entry.name, containsSubstring("json"))
             val content = zip.readFully()
             assertThat(String(content), containsSubstring(organisation))

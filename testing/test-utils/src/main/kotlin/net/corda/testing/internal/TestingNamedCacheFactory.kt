@@ -16,12 +16,12 @@ class TestingNamedCacheFactory private constructor(private val sizeOverride: Lon
     override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory = TestingNamedCacheFactory(sizeOverride, metricRegistry, this.nodeConfiguration)
     override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory = TestingNamedCacheFactory(sizeOverride, this.metricRegistry, nodeConfiguration)
 
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         // Does not check metricRegistry or nodeConfiguration, because for tests we don't care.
         return caffeine.maximumSize(sizeOverride).build<K, V>()
     }
 
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         // Does not check metricRegistry or nodeConfiguration, because for tests we don't care.
         val configuredCaffeine = when (name) {
             "DBTransactionStorage_transactions" -> caffeine.maximumWeight(1.MB)

@@ -3,6 +3,7 @@ package net.corda.core.utilities
 import net.corda.core.crypto.AddressFormatException
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.junit.Test
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
@@ -54,7 +55,7 @@ class EncodingUtilsTest {
 
     @Test(timeout=300_000)
 	fun `decoding lowercase and mixed HEX`() {
-        val testHexStringLowercase = testHexString.toLowerCase()
+        val testHexStringLowercase = testHexString.lowercase(Locale.getDefault())
         assertEquals(testHexString.hexToRealString(), testHexStringLowercase.hexToRealString())
 
         val testHexStringMixed = testHexString.replace('C', 'c')
