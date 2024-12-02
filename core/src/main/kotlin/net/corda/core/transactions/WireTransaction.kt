@@ -28,6 +28,7 @@ import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.equivalent
 import net.corda.core.internal.getGroup
@@ -196,10 +197,15 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 verificationSupport.getParties(signersGroup.flatten().toSet())
             }
         }
-        val authenticatedCommands = commands.lazyMapped { cmd, _ ->
-                val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
-                CommandWithParties(cmd.signers, parties, cmd.value)
-            }
+
+        val lazyCommands: List<Command<*>> by lazy { deserialiseCommands(componentGroups, digestService = digestService) }
+        val commandsComponentGroup = componentGroups.getGroup(COMMANDS_GROUP)
+        val commandComponents = commandsComponentGroup?.components ?: emptyList()
+        val authenticatedCommands = commandComponents.lazyMapped { _, index ->
+            val cmd = lazyCommands[index]
+            val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
+            CommandWithParties(cmd.signers, parties, cmd.value)
+        }
 
         // Ensure that the lazy mappings will use the correct SerializationContext.
         val serializationFactory = SerializationFactory.defaultFactory

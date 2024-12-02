@@ -87,7 +87,7 @@ class ExternalVerifier(private val channel: SocketChannel) {
         // Use a preliminary serialization context to receive the initialisation message
         _contextSerializationEnv.set(SerializationEnvironment.with(
                 verifierSerializationFactory(),
-                p2pContext = AMQP_P2P_CONTEXT
+                p2pContext = AMQP_P2P_CONTEXT.withoutCarpenter()
         ))
 
         log.info("Waiting for initialisation message from node...")
