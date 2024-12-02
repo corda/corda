@@ -5,15 +5,11 @@ import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.eagerDeserialise
 import net.corda.core.serialization.MissingAttachmentsException
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 
 class LazyMappedListTest {
-
-    @get:Rule
-    val exception: ExpectedException = ExpectedException.none()
 
     @Test(timeout=300_000)
 	fun `LazyMappedList works`() {
@@ -44,14 +40,13 @@ class LazyMappedListTest {
 
     @Test(timeout=300_000)
 	fun testMissingAttachments() {
-        exception.expect(MissingAttachmentsException::class.java)
-        exception.expectMessage("Uncatchable!")
-
-        val lazyList = (0 until 5).toList().lazyMapped<Int, Int> { _, _ ->
-            throw MissingAttachmentsException(emptyList(), "Uncatchable!")
+        val anException = assertThrows<MissingAttachmentsException> {
+            val lazyList = (0 until 5).toList().lazyMapped<Int, Int> { _, _ ->
+                throw MissingAttachmentsException(emptyList(), "Uncatchable!")
+            }
+            lazyList.eagerDeserialise { _, _ -> -999 }
         }
-
-        lazyList.eagerDeserialise { _, _ -> -999 }
+        assertEquals("Uncatchable!", anException.message)
     }
 
     @Test(timeout=300_000)

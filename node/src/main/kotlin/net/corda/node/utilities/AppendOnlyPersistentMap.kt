@@ -1,8 +1,6 @@
 package net.corda.node.utilities
 
 import com.github.benmanes.caffeine.cache.LoadingCache
-import com.github.benmanes.caffeine.cache.Weigher
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -10,7 +8,6 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.Session
 import org.hibernate.internal.SessionImpl
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -22,7 +19,8 @@ import java.util.stream.Stream
  *
  * This class relies heavily on the fact that compute operations in the cache are atomic for a particular key.
  */
-abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
+@Suppress("TooManyFunctions")
+abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -249,7 +247,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         cache.invalidateAll()
     }
 
-    fun clear(id: SecureHash) = cache.invalidate(id)
+    fun clear(id: K) = cache.invalidate(id)
 
     // Helpers to know if transaction(s) are currently writing the given key.
     private fun weAreWriting(key: K): Boolean = pendingKeys[key]?.transactions?.contains(contextTransaction) ?: false
@@ -326,9 +324,9 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         }
 
         // No one is writing, but we haven't looked in the database yet.  This can only be when there are no writers.
-        class Unknown<K, T>(private val map: AppendOnlyPersistentMapBase<K, T, *, *>,
-                            private val key: K,
-                            private val _valueLoader: () -> T?) : Transactional<T>() {
+        class Unknown<K : Any, T>(private val map: AppendOnlyPersistentMapBase<K, T, *, *>,
+                                  private val key: K,
+                                  private val _valueLoader: () -> T?) : Transactional<T>() {
             override val value: T
                 get() = valueWithoutIsolationDelegate.value ?: throw NoSuchElementException("Not present")
             override val isPresent: Boolean
@@ -351,11 +349,11 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
         // Written in a transaction (uncommitted) somewhere, but there's a small window when this might be seen after commit,
         // hence the committed flag.
-        class InFlight<K, T>(private val map: AppendOnlyPersistentMapBase<K, T, *, *>,
-                             private val key: K,
-                             val weight: Int,
-                             private val _readerValueLoader: () -> T?,
-                             private val _writerValueLoader: () -> T = { throw IllegalAccessException("No value loader provided") }) : Transactional<T>() {
+        class InFlight<K : Any, T>(private val map: AppendOnlyPersistentMapBase<K, T, *, *>,
+                                   private val key: K,
+                                   val weight: Int,
+                                   private val _readerValueLoader: () -> T?,
+                                   private val _writerValueLoader: () -> T = { throw IllegalAccessException("No value loader provided") }) : Transactional<T>() {
 
             // A flag to indicate this has now been committed, but hasn't yet been replaced with Committed.  This also
             // de-duplicates writes of the Committed value to the cache.
@@ -363,10 +361,10 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
             // What to do if a non-writer needs to see the value and it hasn't yet been committed to the database.
             // Can be updated into a no-op once evaluated.
-            private val readerValueLoader = AtomicReference<() -> T?>(_readerValueLoader)
+            private val readerValueLoader = AtomicReference(_readerValueLoader)
             // What to do if a writer needs to see the value and it hasn't yet been committed to the database.
             // Can be updated into a no-op once evaluated.
-            private val writerValueLoader = AtomicReference<() -> T>(_writerValueLoader)
+            private val writerValueLoader = AtomicReference(_writerValueLoader)
 
             fun alsoWrite(_value: T) {
                 // Make the lazy loader the writers see actually just return the value that has been set.
@@ -382,11 +380,11 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                     // and then stop saying the transaction is writing the key.
                     tx.onCommit {
                         strongMap.cache.asMap().computeIfPresent(strongKey) { _, transactional: Transactional<T> ->
-                            if (transactional is Transactional.InFlight<*, T>) {
+                            if (transactional is InFlight<*, T>) {
                                 transactional.committed.set(true)
                                 val value = transactional.peekableValue
                                 if (value != null) {
-                                    Transactional.Committed(value)
+                                    Committed(value)
                                 } else {
                                     transactional
                                 }
@@ -447,7 +445,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 }
 
 // Open for tests to override
-open class AppendOnlyPersistentMap<K, V, E, out EK>(
+open class AppendOnlyPersistentMap<K : Any, V, E, out EK>(
         cacheFactory: NamedCacheFactory,
         name: String,
         toPersistentEntityKey: (K) -> EK,
@@ -466,7 +464,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 }
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
-class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+class WeightBasedAppendOnlyPersistentMap<K : Any, V, E, out EK>(
         cacheFactory: NamedCacheFactory,
         name: String,
         toPersistentEntityKey: (K) -> EK,
@@ -485,7 +483,7 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
     override val cache = NonInvalidatingWeightBasedCache(
             cacheFactory = cacheFactory,
             name = name,
-            weigher = Weigher { key, value: Transactional<V> ->
+            weigher = { key, value: Transactional<V> ->
                 value.shallowSize + if (value is Transactional.InFlight<*, *>) {
                     value.weight * 2
                 } else {
