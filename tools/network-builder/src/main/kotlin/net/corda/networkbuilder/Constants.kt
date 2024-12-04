@@ -8,6 +8,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.microsoft.azure.management.resources.ResourceGroup
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
+import java.util.Locale
 
 class Constants {
 
@@ -42,7 +43,7 @@ class Constants {
         const val REGION_ARG_NAME = "REGION"
 
         fun ResourceGroup.restFriendlyName(): String {
-            return this.name().replace(ALPHA_NUMERIC_ONLY_REGEX, "").toLowerCase()
+            return this.name().replace(ALPHA_NUMERIC_ONLY_REGEX, "").lowercase(Locale.getDefault())
         }
     }
 }

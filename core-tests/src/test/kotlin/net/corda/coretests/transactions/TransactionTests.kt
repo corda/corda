@@ -1,7 +1,7 @@
 package net.corda.coretests.transactions
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
@@ -205,7 +205,7 @@ class TransactionTests(private val digestService : DigestService) {
         val attachments = listOf(ContractAttachment(object : AbstractAttachment({
             (AttachmentsClassLoaderTests::class.java.getResource(ISOLATED_JAR) ?: fail("Missing $ISOLATED_JAR")).openStream().readBytes()
         }, TESTDSL_UPLOADER) {
-            @Suppress("OverridingDeprecatedMember")
+            @Suppress("OVERRIDE_DEPRECATION")
             override val signers: List<Party> = emptyList()
             override val signerKeys: List<PublicKey> = emptyList()
             override val size: Int = 1234

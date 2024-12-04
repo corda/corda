@@ -21,11 +21,14 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.Test
+import java.io.Serializable
 import java.sql.SQLTransientConnectionException
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
+
+    private fun interface SerializableLambda2<S, T, R> : (S, T) -> R, Serializable
 
     @Test(timeout = 300_000)
     fun `external operation`() {
@@ -254,7 +257,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         @Suspendable
         override fun testCode() {
             val e = createException()
-            await(ExternalOperation(serviceHub) { _, _ -> throw e })
+            await<Nothing>(ExternalOperation(serviceHub, (SerializableLambda2 { _, _ -> throw e })))
         }
 
         private fun createException() = when (exceptionType) {
@@ -270,7 +273,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any = try {
-            await(ExternalOperation(serviceHub) { _, _ ->
+            await<Nothing>(ExternalOperation(serviceHub) { _, _ ->
                 throw IllegalStateException("threw exception in background process")
             })
         } catch (e: IllegalStateException) {
@@ -284,7 +287,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any =
-            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+            await<Nothing>(ExternalOperation(serviceHub) { serviceHub, _ ->
                 serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
             })
     }
@@ -292,11 +295,10 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
-        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun testCode(): Any {
             try {
-                await(ExternalOperation(serviceHub) { _, _ ->
+                await<Nothing>(ExternalOperation(serviceHub) { _, _ ->
                     serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
                 })
             } catch (e: NullPointerException) {

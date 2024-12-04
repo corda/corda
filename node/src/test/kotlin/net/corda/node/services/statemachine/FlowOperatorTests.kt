@@ -579,7 +579,6 @@ class FlowOperatorTests {
             private val expectedPayload: String,
             private val future: CompletableFuture<Unit>
     ) : MessagingServiceSpy() {
-        @Suppress("TooGenericExceptionCaught")
         override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
             try {
                 val sessionMessage = message.data.bytes.deserialize<InitialSessionMessage>()

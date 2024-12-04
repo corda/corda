@@ -1,10 +1,9 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.rigorousMock
@@ -40,6 +39,7 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -233,7 +233,7 @@ class ArtemisMessagingTest {
                     MetricRegistry(),
                     TestingNamedCacheFactory(),
                     isDrainingModeOn = { false },
-                    drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>(),
+                    drainingModeWasChangedEvents = PublishSubject.create(),
                     terminateOnConnectionError = false,
                     timeoutConfig = P2PMessagingClient.TimeoutConfig(10.seconds, 10.seconds, 10.seconds)).apply {
                 config.configureWithDevSSLCertificate()

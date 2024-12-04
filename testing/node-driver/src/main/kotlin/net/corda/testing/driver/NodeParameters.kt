@@ -25,7 +25,7 @@ import net.corda.testing.node.User
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
  */
-@Suppress("unused")
+@Suppress("unused", "TooManyFunctions")
 data class NodeParameters(
         val providedName: CordaX500Name? = null,
         val rpcUsers: List<User> = emptyList(),
@@ -37,7 +37,8 @@ data class NodeParameters(
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
         val rpcAddress: NetworkHostAndPort? = null,
-        val systemProperties: Map<String, String> = emptyMap()
+        val systemProperties: Map<String, String> = emptyMap(),
+        val legacyContracts: Collection<TestCordapp> = emptySet()
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -54,6 +55,9 @@ data class NodeParameters(
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
+    fun withRpcAddress(rpcAddress: NetworkHostAndPort?): NodeParameters = copy(rpcAddress = rpcAddress)
+    fun withSystemProperties(systemProperties: Map<String, String>): NodeParameters = copy(systemProperties = systemProperties)
+    fun withLegacyContracts(legacyContracts: Collection<TestCordapp>): NodeParameters = copy(legacyContracts = legacyContracts)
 
     constructor(
             providedName: CordaX500Name?,
@@ -221,4 +225,58 @@ data class NodeParameters(
             logLevelOverride = logLevelOverride,
             rpcAddress = rpcAddress,
             systemProperties = systemProperties)
+
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String? = null,
+            rpcAddress: NetworkHostAndPort? = null,
+            systemProperties: Map<String, String> = emptyMap()
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            additionalCordapps,
+            flowOverrides,
+            logLevelOverride,
+            rpcAddress,
+            systemProperties,
+            legacyContracts = emptySet())
+
+    @Suppress("LongParameterList")
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String? = null,
+            rpcAddress: NetworkHostAndPort? = null,
+            systemProperties: Map<String, String> = emptyMap()
+    ) = this.copy(
+            providedName = providedName,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            customOverrides = customOverrides,
+            startInSameProcess = startInSameProcess,
+            maximumHeapSize = maximumHeapSize,
+            additionalCordapps = additionalCordapps,
+            flowOverrides = flowOverrides,
+            logLevelOverride = logLevelOverride,
+            rpcAddress = rpcAddress,
+            systemProperties = systemProperties,
+            legacyContracts = legacyContracts)
+
 }

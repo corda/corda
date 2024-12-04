@@ -131,7 +131,6 @@ class StartedFlowTransition(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun sendAndReceiveTransition(flowIORequest: FlowIORequest.SendAndReceive): TransitionResult {
         val sessionIdToMessage = LinkedHashMap<SessionId, SerializedBytes<Any>>()
         val sessionIdToSession = LinkedHashMap<SessionId, FlowSessionImpl>()
@@ -195,7 +194,6 @@ class StartedFlowTransition(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun receiveTransition(flowIORequest: FlowIORequest.Receive): TransitionResult {
         return builder {
             val sessionIdToSession = LinkedHashMap<SessionId, FlowSessionImpl>()
@@ -279,9 +277,7 @@ class StartedFlowTransition(
         var index = 0
         for (sourceSessionId in sessionIdToSession.keys) {
             val sessionState = checkpoint.checkpointState.sessions[sourceSessionId]
-            if (sessionState == null) {
-                return freshErrorTransition(CannotFindSessionException(sourceSessionId))
-            }
+                    ?: return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             if (sessionState !is SessionState.Uninitiated) {
                 continue
             }
