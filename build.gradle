@@ -56,7 +56,6 @@ buildscript {
             'org.opentest4j**'
     ]
 
-
     ext.capsule_version = constants.getProperty("capsuleVersion")
     ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
     ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
