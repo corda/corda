@@ -2,35 +2,34 @@ package net.corda.node.utilities.registration
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.createSelfSignedCACertificate
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.node.services.config.NotaryConfig
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import org.assertj.core.api.Assertions.*
+import net.corda.testing.internal.createDevIntermediateCaCertPath
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -39,13 +38,18 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.lang.IllegalStateException
-import java.nio.file.Files
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.nio.file.FileSystem
+import java.nio.file.Files
 import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -104,17 +108,17 @@ class NetworkRegistrationHelperTest {
         val trustStore = config.p2pSslOptions.trustStore.get()
 
         nodeKeystore.run {
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertThat(CertRole.extract(this[X509Utilities.CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
+            assertFalse(contains(CORDA_INTERMEDIATE_CA))
+            assertFalse(contains(CORDA_ROOT_CA))
+            assertFalse(contains(CORDA_CLIENT_TLS))
+            assertThat(CertRole.extract(this[CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
         }
 
         sslKeystore.run {
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
-            val nodeTlsCertChain = query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }
+            assertFalse(contains(CORDA_CLIENT_CA))
+            assertFalse(contains(CORDA_INTERMEDIATE_CA))
+            assertFalse(contains(CORDA_ROOT_CA))
+            val nodeTlsCertChain = query { getCertificateChain(CORDA_CLIENT_TLS) }
             assertThat(nodeTlsCertChain).hasSize(4)
             // The TLS cert has the same subject as the node CA cert
             assertThat(CordaX500Name.build(nodeTlsCertChain[0].subjectX500Principal)).isEqualTo(nodeLegalName)
@@ -122,9 +126,9 @@ class NetworkRegistrationHelperTest {
         }
 
         trustStore.run {
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertThat(this[X509Utilities.CORDA_ROOT_CA]).isEqualTo(rootAndIntermediateCA.first.certificate)
+            assertFalse(contains(CORDA_CLIENT_CA))
+            assertFalse(contains(CORDA_INTERMEDIATE_CA))
+            assertThat(this[CORDA_ROOT_CA]).isEqualTo(rootAndIntermediateCA.first.certificate)
         }
     }
 
@@ -208,10 +212,10 @@ class NetworkRegistrationHelperTest {
         val serviceIdentityAlias = DISTRIBUTED_NOTARY_KEY_ALIAS
 
         nodeKeystore.run {
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
+            assertFalse(contains(CORDA_INTERMEDIATE_CA))
+            assertFalse(contains(CORDA_ROOT_CA))
+            assertFalse(contains(CORDA_CLIENT_TLS))
+            assertFalse(contains(CORDA_CLIENT_CA))
             assertThat(CertRole.extract(this[serviceIdentityAlias])).isEqualTo(CertRole.SERVICE_IDENTITY)
         }
     }
@@ -242,12 +246,12 @@ class NetworkRegistrationHelperTest {
 
         // Mock out the registration service to ensure notary service registration is handled correctly
         createRegistrationHelper(CertRole.NODE_CA, notaryNodeConfig) {
-            when {
-                it.subject == nodeLegalName.toX500Name() -> {
+            when (it.subject) {
+                nodeLegalName.toX500Name() -> {
                     val certType = CertificateType.values().first { it.role == CertRole.NODE_CA }
                     createCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType)
                 }
-                it.subject == notaryServiceLegalName.toX500Name() -> {
+                notaryServiceLegalName.toX500Name() -> {
                     val certType = CertificateType.values().first { it.role == CertRole.SERVICE_IDENTITY }
                     createCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType, legalName = notaryServiceLegalName)
                 }
@@ -258,10 +262,10 @@ class NetworkRegistrationHelperTest {
         val nodeKeystore = config.signingCertificateStore.get()
 
         nodeKeystore.run {
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
+            assertFalse(contains(CORDA_INTERMEDIATE_CA))
             assertFalse(contains(CORDA_ROOT_CA))
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertThat(CertRole.extract(this[X509Utilities.CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
+            assertFalse(contains(CORDA_CLIENT_TLS))
+            assertThat(CertRole.extract(this[CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
             assertThat(CertRole.extract(this[DISTRIBUTED_NOTARY_KEY_ALIAS])).isEqualTo(CertRole.SERVICE_IDENTITY)
         }
     }

@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
@@ -19,10 +18,7 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
         val log = contextLogger()
     }
 
-    private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(
-            Caffeine.newBuilder(),
-            "PublicKeyToOwningIdentityCache_cache"
-    )
+    private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>("PublicKeyToOwningIdentityCache_cache")
 
     /**
      * Return the owning identity associated with a given key.
