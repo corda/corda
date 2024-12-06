@@ -502,8 +502,6 @@ allprojects {
                     if (details.requested.group == 'org.apache.commons') {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
-                        } else if (details.requested.name == "commons-text") {
-                            details.useVersion commons_text_version
                         }
                     }
                 }
