@@ -31,7 +31,6 @@ class ExceptionsErrorCodeFunctionsTest {
         for (i in (0..10)) {
             assertThat(message.formattedMessage, contains("$EXCEPTION_MESSAGE $i".toRegex()))
         }
-        @Suppress("DEPRECATION")
         assertEquals(message.format, originalMessage.format)
         assertEquals(message.parameters, originalMessage.parameters)
         assertEquals(message.throwable, originalMessage.throwable)
