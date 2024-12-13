@@ -34,7 +34,6 @@ fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
         error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
             val logMessage = this.formattedMessage
             val message = error.walkExceptionCausedByList().asSequence().mapNotNull(Throwable::message).joinToString(" - ")
-            @Suppress("DEPRECATION")
             CompositeMessage("$logMessage - $message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
         }
         else -> this
