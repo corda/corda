@@ -28,18 +28,6 @@ fun Throwable.walkExceptionCausedByList() : Iterator<Throwable> {
     }
 }
 
-fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
-
-    return when {
-        error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
-            val logMessage = this.formattedMessage
-            val message = error.walkExceptionCausedByList().asSequence().mapNotNull(Throwable::message).joinToString(" - ")
-            CompositeMessage("$logMessage - $message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
-        }
-        else -> this
-    }
-}
-
 fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersion.platformEditionCode}/${CordaVersion.semanticVersion}/${errorCode()}"
 
 fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
