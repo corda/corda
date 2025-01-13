@@ -69,8 +69,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val quasarExcludePackages by string().list().optional().withDefaultValue(Defaults.quasarExcludePackages)
     private val reloadCheckpointAfterSuspend by boolean().optional().withDefaultValue(Defaults.reloadCheckpointAfterSuspend)
     private val networkParametersPath by string().mapValid(::toPath).optional()
-    @Suppress("unused")
-    private val custom by nestedObject().optional()
+    private val custom by nested(CustomConfigurationSpec).optional().withDefaultValue(Defaults.custom)
     @Suppress("unused")
     private val systemProperties by nestedObject().optional()
 
@@ -97,6 +96,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     verifierType = config[verifierType],
                     flowTimeout = config[flowTimeout],
                     telemetry = config[telemetry],
+                    custom = config[custom],
                     rpcSettings = config[rpcSettings],
                     messagingServerAddress = config[messagingServerAddress],
                     notary = config[notary],
