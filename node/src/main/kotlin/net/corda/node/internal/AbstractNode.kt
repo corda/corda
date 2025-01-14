@@ -1178,7 +1178,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     inner class ServiceHubImpl : SingletonSerializeAsToken(), ServiceHubInternal, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
-        override val externalVerifierHandle = ExternalVerifierHandleImpl(this, configuration.baseDirectory, configuration.custom.externalVerifierJvmArgs).also { runOnStop += it::close }
+        // Check for null as mock nodes may return null for configuration.custom (incl from customer code).
+        override val externalVerifierHandle = ExternalVerifierHandleImpl(this, configuration.baseDirectory, configuration.custom?.externalVerifierJvmArgs ?: emptyList()).also { runOnStop += it::close }
         override val identityService: IdentityService get() = this@AbstractNode.identityService
         override val keyManagementService: KeyManagementService get() = this@AbstractNode.keyManagementService
         override val schemaService: SchemaService get() = this@AbstractNode.schemaService

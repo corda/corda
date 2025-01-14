@@ -4,6 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.CustomConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.events.NodeSchedulerService
@@ -138,6 +139,7 @@ class NodeH2SecurityTests {
         whenever(config.effectiveH2Settings).thenAnswer { NodeH2Settings(address) }
         whenever(config.telemetry).thenReturn(mock())
         whenever(config.myLegalName).thenReturn(CordaX500Name(null, "client-${address.toString()}", "Corda", "London", null, "GB"))
+        whenever(config.custom).thenReturn(CustomConfiguration())
     }
 
     private inner class MockNode : Node(config, VersionInfo.UNKNOWN, false) {
