@@ -38,6 +38,7 @@ import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.config.CustomConfiguration
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
@@ -487,6 +488,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
+            doReturn(CustomConfiguration()).whenever(it).custom
             doReturn(TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false)).whenever(it).telemetry
             parameters.configOverrides(it)
         }
