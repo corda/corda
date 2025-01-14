@@ -676,6 +676,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
         doReturn(false).whenever(it).reloadCheckpointAfterSuspend
         doReturn(emptyList<RotatedCorDappSignerKeyConfiguration>()).whenever(it).rotatedCordappSignerKeys
+        doReturn(CustomConfiguration()).whenever(it).custom
     }
 }
 
