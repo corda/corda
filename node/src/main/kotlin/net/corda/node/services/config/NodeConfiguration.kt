@@ -44,7 +44,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
     val telemetry: TelemetryConfiguration
-    val custom: CustomConfiguration
+    val custom: CustomConfiguration?
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
