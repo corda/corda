@@ -12,6 +12,7 @@ import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.services.config.CustomConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -85,6 +86,7 @@ class NetworkRegistrationHelperTest {
             doReturn(null).whenever(it).tlsCertCrlIssuer
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(null).whenever(it).notary
+            doReturn(CustomConfiguration()).whenever(it).custom
         }
     }
 

@@ -44,6 +44,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
     val telemetry: TelemetryConfiguration
+    val custom: CustomConfiguration?
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
@@ -227,6 +228,11 @@ data class TelemetryConfiguration(
         val simpleLogTelemetryEnabled: Boolean,
         val spanStartEndEventsEnabled: Boolean,
         val copyBaggageToTags: Boolean
+)
+
+data class CustomConfiguration(
+        val jvmArgs: List<String> = emptyList(),
+        val externalVerifierJvmArgs: List<String> = emptyList()
 )
 
 /**

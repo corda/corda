@@ -64,7 +64,8 @@ import kotlin.io.path.isWritable
  */
 class ExternalVerifierHandleImpl(
         private val verificationSupport: NodeVerificationSupport,
-        private val baseDirectory: Path
+        private val baseDirectory: Path,
+        private val jvmArgsFromConfig: List<String>
 ) : ExternalVerifierHandle {
     companion object {
         private val log = contextLogger()
@@ -207,6 +208,7 @@ class ExternalVerifierHandleImpl(
             val command = ArrayList<String>()
             command += "${Path(System.getProperty("java.home"), "bin", "java")}"
             command += inheritedJvmArgs
+            command += jvmArgsFromConfig
 
             // Build list of 3rd party jars
             val legacyJarsPath = baseDirectory / "legacy-jars"

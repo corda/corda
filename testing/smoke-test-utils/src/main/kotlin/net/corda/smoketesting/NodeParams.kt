@@ -42,6 +42,9 @@ class NodeParams @JvmOverloads constructor(
                 .withValue("useTestClock", valueFor(true))
                 .withValue("jarDirs", valueFor(jarDirs.map(Path::absolutePathString)))
                 .withValue("devMode", valueFor(devMode))
+                .withValue("custom", empty()
+                        .withValue("externalVerifierJvmArgs", valueFor(listOf("-Duser.name=Alice")))
+                        .root())
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
         } else {

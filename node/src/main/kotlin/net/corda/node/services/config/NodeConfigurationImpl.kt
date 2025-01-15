@@ -44,6 +44,7 @@ data class NodeConfigurationImpl(
         override val verifierType: VerifierType,
         override val flowTimeout: FlowTimeoutConfiguration,
         override val telemetry: TelemetryConfiguration = Defaults.telemetry,
+        override val custom: CustomConfiguration = Defaults.custom,
         override val p2pAddress: NetworkHostAndPort,
         override val additionalP2PAddresses: List<NetworkHostAndPort> = Defaults.additionalP2PAddresses,
         private val rpcAddress: NetworkHostAndPort? = Defaults.rpcAddress,
@@ -138,6 +139,7 @@ data class NodeConfigurationImpl(
                 exportHibernateJMXStatistics = devMode
         )
         val telemetry = TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false)
+        val custom: CustomConfiguration = CustomConfiguration()
     }
 
     companion object {
