@@ -26,6 +26,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.legacy.workflows.LegacyIssuanceFlow
+import net.corda.legacy.workflows.LegacyIssuanceWithSystemEnvVarFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
@@ -139,9 +140,21 @@ class ExternalVerificationSignedCordappsTest {
         currentNode.assertTransactionsWereVerified(BOTH, issuanceStateRef.txhash)
     }
 
+    @Test(timeout = 300_000)
+    fun `validate external verifier started with system environment variable defined`() {
+        val issuanceStateRef = checkSystemEnvVarDefined(currentNode)
+        currentNode.assertTransactionsWereVerified(BOTH, issuanceStateRef.txhash)
+    }
+
     private fun legacyJackonIssuance(issuer: NodeProcess): StateRef {
         val issuerRpc = issuer.connect(superUser).proxy
         val issuanceStateRef = issuerRpc.startFlowDynamic(LegacyIssuanceFlow::class.java, 2).returnValue.getOrThrow() as StateRef
+        return issuanceStateRef
+    }
+
+    private fun checkSystemEnvVarDefined(issuer: NodeProcess): StateRef {
+        val issuerRpc = issuer.connect(superUser).proxy
+        val issuanceStateRef = issuerRpc.startFlowDynamic(LegacyIssuanceWithSystemEnvVarFlow::class.java, 2).returnValue.getOrThrow() as StateRef
         return issuanceStateRef
     }
 
