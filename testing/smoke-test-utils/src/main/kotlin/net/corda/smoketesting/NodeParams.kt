@@ -43,7 +43,8 @@ class NodeParams @JvmOverloads constructor(
                 .withValue("jarDirs", valueFor(jarDirs.map(Path::absolutePathString)))
                 .withValue("devMode", valueFor(devMode))
                 .withValue("custom", empty()
-                        .withValue("externalVerifierJvmArgs", valueFor(listOf("-Duser.name=Alice")))
+                        .withValue("externalVerifierJvmArgs", valueFor(listOf("-Duser.name=Alice", "-Dbird.size=big")))
+                        .withValue("jvmArgs", valueFor(listOf("-Duser.name=Alice", "-Dbird.size=big")))
                         .root())
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
