@@ -116,6 +116,7 @@ see changes to this list.
 * Kai-Michael Schramm
 * Karel Hajek (Barclays Capital)
 * karnauskas
+* Karsten Leonhardt (Commerzbank AG)
 * Kasia Streich (R3)
 * Kat Baker (R3)
 * Keerthi Nelaturu (Scotiabank)
