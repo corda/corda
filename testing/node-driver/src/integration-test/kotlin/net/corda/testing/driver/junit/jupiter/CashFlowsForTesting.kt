@@ -37,7 +37,7 @@ class CashFlowsForTesting(cordaDriverJunitJupiter: CordaDriverJunitJupiter) {
     private val alice = aliceNode.nodeInfo.legalIdentities.first()
 
     fun bankOfCordaIssues(
-        amountToIssue: Amount<Currency> = 2000.DOLLARS
+            amountToIssue: Amount<Currency> = 2000.DOLLARS
     ) {
 
         bankOfCordaNode.rpc.startFlowDynamic(
@@ -46,11 +46,10 @@ class CashFlowsForTesting(cordaDriverJunitJupiter: CordaDriverJunitJupiter) {
                 ref,
                 defaultNotaryIdentity
         ).returnValue.getOrThrow()
-
     }
 
     fun paySomeCash(
-        forceException: Boolean = false
+            forceException: Boolean = false
     ) {
 
         val expectedPayment = 500.DOLLARS
@@ -62,16 +61,16 @@ class CashFlowsForTesting(cordaDriverJunitJupiter: CordaDriverJunitJupiter) {
         val (_, vaultUpdatesBankClient) = aliceNode.rpc.vaultTrackBy<Cash.State>(criteria)
 
         bankOfCordaNode.rpc.startFlowDynamic(
-            CashPaymentFlow::class.java,
-            expectedPayment,
-            alice
+                CashPaymentFlow::class.java,
+                expectedPayment,
+                alice
         ).returnValue.getOrThrow()
 
         // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
         // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
         vaultUpdatesBoc.expectEvents {
             expect { (consumed, produced) ->
-                if(forceException) {
+                if (forceException) {
                     // use this to check whether exceptions are correctly thrown
                     assertThat(consumed).hasSize(2)
                 } else {
@@ -93,5 +92,4 @@ class CashFlowsForTesting(cordaDriverJunitJupiter: CordaDriverJunitJupiter) {
             }
         }
     }
-
 }

@@ -19,10 +19,10 @@ import java.time.Duration
  * has been executed.
  */
 class CordaDriverJunitJupiterConfig(
-    val parametersForNodes: List<NodeParameters>,
-    val driverParameters: DriverParameters,
-    val maxTimeForNodeToBeStarted: Duration? = null,
-    val useTempDriverDirectory: Boolean = true
+        val parametersForNodes: List<NodeParameters>,
+        val driverParameters: DriverParameters,
+        val maxTimeForNodeToBeStarted: Duration? = null,
+        val useTempDriverDirectory: Boolean = true
 ) {
     /**
      * Build an [CordaDriverJunitJupiterImpl] instance from this [CordaDriverJunitJupiterConfig] instance.

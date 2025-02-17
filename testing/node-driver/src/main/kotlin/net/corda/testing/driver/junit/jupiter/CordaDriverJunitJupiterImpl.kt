@@ -28,20 +28,20 @@ import java.time.Duration
  * @constructor
  */
 class CordaDriverJunitJupiterImpl(
-    override val parametersForNodes: List<NodeParameters>,
-    override val driverParameters: DriverParameters = DriverParameters(),
-    override val maxTimeForNodeToBeStarted: Duration? = null,
-    override val useTempDriverDirectory: Boolean = false
+        override val parametersForNodes: List<NodeParameters>,
+        override val driverParameters: DriverParameters = DriverParameters(),
+        override val maxTimeForNodeToBeStarted: Duration? = null,
+        override val useTempDriverDirectory: Boolean = false
 ) : CordaDriverJunitJupiter {
 
     /**
      * Construct [CordaDriverJunitJupiterImpl] from a [CordaDriverJunitJupiterConfig] instance.
      */
-    constructor(cordaDriverJunitJupiterConfig: CordaDriverJunitJupiterConfig): this(
-        cordaDriverJunitJupiterConfig.parametersForNodes,
-        cordaDriverJunitJupiterConfig.driverParameters,
-        cordaDriverJunitJupiterConfig.maxTimeForNodeToBeStarted,
-        cordaDriverJunitJupiterConfig.useTempDriverDirectory
+    constructor(cordaDriverJunitJupiterConfig: CordaDriverJunitJupiterConfig) : this(
+            cordaDriverJunitJupiterConfig.parametersForNodes,
+            cordaDriverJunitJupiterConfig.driverParameters,
+            cordaDriverJunitJupiterConfig.maxTimeForNodeToBeStarted,
+            cordaDriverJunitJupiterConfig.useTempDriverDirectory
     )
 
     init {
@@ -67,11 +67,13 @@ class CordaDriverJunitJupiterImpl(
              * configures a single Corda node.
              */
             private var parametersForNodes: MutableList<NodeParameters> = mutableListOf()
+
             /**
              * Driver parameters such as Cordapps to load,
              * network parameters ...
              */
             private var driverParameters: DriverParameters = DriverParameters()
+
             /**
              * Maximum time to wait for the Corda future of
              * the Corda start node process to finish until
@@ -79,12 +81,14 @@ class CordaDriverJunitJupiterImpl(
              * is treated as no time limitation.
              */
             private var maxTimeForNodeToBeStarted: Duration? = null
+
             /**
              * If true, driver files are stored in a temporary
              * directory which will be deleted after the test
              * has been executed.
              */
             var useTempDriverDirectory: Boolean = false
+
             /**
              * configure multiple nodes at once by providing
              * a list of node parameters elements, where each element
@@ -93,6 +97,7 @@ class CordaDriverJunitJupiterImpl(
             fun configureNodes(nodeConfigurationsToAdd: List<NodeParameters>) {
                 parametersForNodes.addAll(nodeConfigurationsToAdd)
             }
+
             /**
              * provide the node parameters for a single node. This node
              * configuration is appended to previously provided node parameters.
@@ -100,12 +105,14 @@ class CordaDriverJunitJupiterImpl(
             fun addNodeConfiguration(nodeConfigurationToAdd: NodeParameters) {
                 parametersForNodes.add(nodeConfigurationToAdd)
             }
+
             /**
              * Set Corda driver parameters.
              */
             fun setDriverParameters(driverParametersToSet: DriverParameters) {
                 driverParameters = driverParametersToSet
             }
+
             /**
              * Set maximum time to wait for the Corda future of
              * the Corda start node process to finish until
@@ -121,24 +128,25 @@ class CordaDriverJunitJupiterImpl(
              */
             fun build(): CordaDriverJunitJupiterImpl {
                 return CordaDriverJunitJupiterImpl(
-                    parametersForNodes = parametersForNodes,
-                    driverParameters = driverParameters,
-                    maxTimeForNodeToBeStarted = maxTimeForNodeToBeStarted,
-                    useTempDriverDirectory = useTempDriverDirectory
+                        parametersForNodes = parametersForNodes,
+                        driverParameters = driverParameters,
+                        maxTimeForNodeToBeStarted = maxTimeForNodeToBeStarted,
+                        useTempDriverDirectory = useTempDriverDirectory
                 )
             }
         }
 
-        fun <T: Any> catchAndRethrowExceptions(block: () -> T): T {
-             return try {
+        fun <T : Any> catchAndRethrowExceptions(block: () -> T): T {
+            return try {
                 block()
             } catch (ex: Exception) {
-                when(ex) {
+                when (ex) {
                     is InvocationTargetException -> throw ex.targetException
                     is OnCompletedFailedException,
                     is OnErrorFailedException,
                     is OnErrorThrowable,
                     is OnErrorNotImplementedException -> throw ex.cause ?: NullPointerException(ex.localizedMessage)
+
                     else -> throw ex
                 }
             }
@@ -153,9 +161,9 @@ class CordaDriverJunitJupiterImpl(
     private var cordaDefaultNotaryHandle: NotaryHandle? = null
 
     override fun interceptTestMethod(
-        invocation: InvocationInterceptor.Invocation<Void>,
-        invocationContext: ReflectiveInvocationContext<Method>,
-        extensionContext: ExtensionContext
+            invocation: InvocationInterceptor.Invocation<Void>,
+            invocationContext: ReflectiveInvocationContext<Method>,
+            extensionContext: ExtensionContext
     ) {
 
         try {
@@ -163,31 +171,30 @@ class CordaDriverJunitJupiterImpl(
             val testInstance = extensionContext.requiredTestInstance
 
             fun <T : Annotation> invokeAnnotatedMethods(
-                annotationType: Class<out T>
+                    annotationType: Class<out T>
             ) {
 
                 findAnnotatedMethods(
-                    testClass,
-                    annotationType,
-                    HierarchyTraversalMode.TOP_DOWN
+                        testClass,
+                        annotationType,
+                        HierarchyTraversalMode.TOP_DOWN
                 ).forEach { method ->
                     catchAndRethrowExceptions {
                         method.invoke(
-                            testInstance
+                                testInstance
                         )
                     }
                 }
             }
 
             driver(
-                defaultParameters = driverParameters.copy(driverDirectory = driverDirectory)
+                    defaultParameters = driverParameters.copy(driverDirectory = driverDirectory)
             ) {
 
                 invokeAnnotatedMethods(BeforeNodeInitInCordaDriverContext::class.java)
 
                 cordaNodeHandles = catchAndRethrowExceptions {
-                    parametersForNodes.map {
-                        nodeParameters ->
+                    parametersForNodes.map { nodeParameters ->
                         startNode(nodeParameters).getOrThrow(maxTimeForNodeToBeStarted)
                     }
                 }
@@ -210,25 +217,23 @@ class CordaDriverJunitJupiterImpl(
 
             if (useTempDriverDirectory) {
                 Files.walk(driverDirectory)
-                    // The reverse order places the directory itself
-                    // at the end ->
-                    // the directory is deleted as last element
-                    // ensuring it is empty at the time of deletion
-                    .sorted(Comparator.reverseOrder())
-                    .forEach { path -> Files.deleteIfExists(path) }
+                        // The reverse order places the directory itself
+                        // at the end ->
+                        // the directory is deleted as last element
+                        // ensuring it is empty at the time of deletion
+                        .sorted(Comparator.reverseOrder())
+                        .forEach { path -> Files.deleteIfExists(path) }
             }
         }
-
     }
 
     override fun getCordaNodeHandlesOrNull(): List<NodeHandle>? = cordaNodeHandles
 
     override fun getCordaNodeHandlesOrThrow(): List<NodeHandle> =
-        cordaNodeHandles ?: throw IllegalArgumentException("The parties' Corda node handles have not been initialized.")
+            cordaNodeHandles ?: throw IllegalArgumentException("The parties' Corda node handles have not been initialized.")
 
     override fun getDefaultCordaNotaryHandleOrNull(): NotaryHandle? = cordaDefaultNotaryHandle
 
     override fun getDefaultCordaNotaryHandleOrThrow(): NotaryHandle =
             cordaDefaultNotaryHandle ?: throw IllegalArgumentException("The default Corda notary handle is not available.")
-
 }

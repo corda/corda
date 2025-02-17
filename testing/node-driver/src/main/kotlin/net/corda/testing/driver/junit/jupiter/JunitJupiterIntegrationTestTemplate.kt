@@ -28,5 +28,4 @@ abstract class JunitJupiterIntegrationTestTemplate {
             Pair(party.name, party)
         }.associateBy({ it.first }, { it.second })
     }
-
 }

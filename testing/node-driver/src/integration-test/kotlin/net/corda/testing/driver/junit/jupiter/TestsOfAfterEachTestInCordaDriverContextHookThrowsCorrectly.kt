@@ -9,14 +9,13 @@ import rx.exceptions.OnErrorNotImplementedException
 import java.util.concurrent.TimeUnit
 
 @Timeout(300_000, unit = TimeUnit.MILLISECONDS)
-class TestsOfAfterEachTestInCordaDriverContextHookThrowsCorrectly: JunitJupiterIntegrationTestTemplate() {
+class TestsOfAfterEachTestInCordaDriverContextHookThrowsCorrectly : JunitJupiterIntegrationTestTemplate() {
 
     companion object {
 
         @JvmField
         @RegisterExtension
         val cordaDriverJunitJupiterStatic = cordaDriverJunitJupiterTestConfig.buildDriver()
-
     }
 
     override val cordaDriverJunitJupiter: CordaDriverJunitJupiter
@@ -33,6 +32,6 @@ class TestsOfAfterEachTestInCordaDriverContextHookThrowsCorrectly: JunitJupiterI
     }
 
     @Test
-    fun `empty test to test correct thowing behaviour of 'AfterEachTestInCordaDriverContext'`() {}
-
+    fun `empty test to test correct thowing behaviour of 'AfterEachTestInCordaDriverContext'`() {
+    }
 }

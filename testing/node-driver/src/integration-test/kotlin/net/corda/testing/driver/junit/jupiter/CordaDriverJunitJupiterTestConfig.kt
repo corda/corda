@@ -9,19 +9,19 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 
 val cordaDriverJunitJupiterTestConfig = CordaDriverJunitJupiterConfig(
         parametersForNodes = listOf(
-            NodeParameters(
-                ALICE_NAME
-            ),
-            NodeParameters(
-                BOC_NAME
-            )
+                NodeParameters(
+                        ALICE_NAME
+                ),
+                NodeParameters(
+                        BOC_NAME
+                )
         ),
         driverParameters = DriverParameters(
-            cordappsForAllNodes = FINANCE_CORDAPPS,
-            isDebug = true,
-            startNodesInProcess = true,
-            networkParameters = testNetworkParameters(
-                minimumPlatformVersion = 4
-            )
+                cordappsForAllNodes = FINANCE_CORDAPPS,
+                isDebug = true,
+                startNodesInProcess = true,
+                networkParameters = testNetworkParameters(
+                        minimumPlatformVersion = 4
+                )
         )
 )
