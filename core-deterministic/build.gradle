@@ -49,8 +49,8 @@ dependencies {
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
-    deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
-    deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcprov-jdk18on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcpkix-jdk18on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
 }
 
@@ -81,6 +81,9 @@ def patchCore = tasks.register('patchCore', Zip) {
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/contracts/CordaRotatedKeys.class'
+        exclude 'net/corda/core/contracts/RotatedKeysKt.class'
+        exclude 'net/corda/core/contracts/RotatedKeys.class'
         exclude 'net/corda/core/internal/utilities/PrivateInterner*.class'
     }
 

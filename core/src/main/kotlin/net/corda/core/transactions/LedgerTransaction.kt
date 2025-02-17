@@ -9,7 +9,9 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
@@ -33,6 +35,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.internal.AttachmentsClassLoaderForRotatedKeysOnlyImpl
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
@@ -98,6 +101,8 @@ private constructor(
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
         val digestService: DigestService
 ) : FullTransaction() {
+
+    val rotatedKeys = attachmentsClassLoaderCache?.rotatedKeys ?: CordaRotatedKeys.keys
 
     /**
      * Old version of [LedgerTransaction] constructor for ABI compatibility.
@@ -198,7 +203,8 @@ private constructor(
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters?,
                 references: List<StateAndRef<ContractState>>,
-                digestService: DigestService): LedgerTransaction {
+                digestService: DigestService,
+                rotatedKeys: RotatedKeys): LedgerTransaction {
             return LedgerTransaction(
                 inputs = protect(inputs),
                 outputs = protect(outputs),
@@ -215,7 +221,7 @@ private constructor(
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
                 verifierFactory = ::NoOpVerifier,
-                attachmentsClassLoaderCache = null,
+                attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl(rotatedKeys),
                 digestService = digestService
                 // This check accesses input states and must run on the LedgerTransaction
                 // instance that is verified, not on the outer LedgerTransaction shell.
@@ -871,7 +877,8 @@ private class BasicVerifier(
                     privacySalt = ltx.privacySalt,
                     networkParameters = ltx.networkParameters,
                     references = deserializedReferences,
-                    digestService = ltx.digestService
+                    digestService = ltx.digestService,
+                    rotatedKeys = ltx.rotatedKeys
                 )
             }
         }

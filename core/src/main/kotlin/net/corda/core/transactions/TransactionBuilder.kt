@@ -15,7 +15,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.contracts.CordaRotatedKeys
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -523,20 +525,25 @@ open class TransactionBuilder(
         require(automaticConstraintPropagation) { "Contract $contractClassName was marked with @NoConstraintPropagation, which means the constraint of the output states has to be set explicitly." }
 
         // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
-        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+        val (defaultOutputConstraint, constraintAttachment) = selectDefaultOutputConstraintAndConstraintAttachment(contractClassName,
+                inputStates, attachmentToUse, services)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
-        require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) { "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachmentId" }
+        require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
+            "Selected output constraint: $defaultOutputConstraint not satisfying $attachmentToUse"
+        }
 
         val resolvedOutputStates = outputStates.map {
             val outputConstraint = it.constraint
+
             if (outputConstraint in automaticConstraints) {
                 it.copy(constraint = defaultOutputConstraint)
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, attachmentToUse)) { "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}" }
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, attachmentToUse, getRotatedKeys(serviceHub))) {
+                        "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}"
+                    }
                 }
                 require(outputConstraint.isSatisfiedBy(constraintAttachment)) { "Output state constraint check fails. $outputConstraint" }
                 it
@@ -544,6 +551,35 @@ open class TransactionBuilder(
         }
 
         return Pair(selectedAttachmentId, resolvedOutputStates)
+    }
+
+    private fun getRotatedKeys(services: ServiceHub?): RotatedKeys {
+        return services?.let { services.retrieveRotatedKeys() } ?: CordaRotatedKeys.keys.also {
+            log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                    "state pointers outside of flows. If you are writing a unit test then pass in a " +
+                    "MockServices instance.")
+        }
+    }
+
+    private fun selectDefaultOutputConstraintAndConstraintAttachment( contractClassName: ContractClassName,
+                                               inputStates: List<TransactionState<ContractState>>?,
+                                               attachmentToUse: ContractAttachment,
+                                               services: ServicesForResolution): Pair<AttachmentConstraint, AttachmentWithContext> {
+
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+
+        // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
+        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+
+        // Sanity check that the selected attachment actually passes.
+
+        if (!isSatisfiedByWithNoWarnForSigConstraint(defaultOutputConstraint, constraintAttachment)) {
+            // The defaultOutputConstraint is the input constraint by the attachment in use currently may have a rotated key
+            if (defaultOutputConstraint is SignatureAttachmentConstraint && (getRotatedKeys(serviceHub).canBeTransitioned(defaultOutputConstraint.key, constraintAttachment.signerKeys))) {
+                return Pair(makeSignatureAttachmentConstraint(attachmentToUse.signerKeys), constraintAttachment)
+            }
+        }
+        return Pair(defaultOutputConstraint, constraintAttachment)
     }
 
     /**
@@ -621,7 +657,9 @@ open class TransactionBuilder(
         constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
 
         // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
-        constraints.count { it is SignatureAttachmentConstraint } > 1 ->
+        (constraints.count { it is SignatureAttachmentConstraint } > 1) &&
+                (constraints.filterIsInstance<SignatureAttachmentConstraint>().map { serviceHub?.retrieveRotatedKeys()?.rotateToHash(it.key) ?: it.key}.toSet().size > 1)
+            ->
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
@@ -636,6 +674,10 @@ open class TransactionBuilder(
 
         // When all input states have the same constraint.
         constraints.size == 1 -> constraints.single()
+
+        // if we are here then the multiple SignatureAttachmentConstraint keys must be rotations of each other due to above check
+        (constraints.count { it is SignatureAttachmentConstraint } > 1)
+            -> constraints.filterIsInstance<SignatureAttachmentConstraint>().first { it == makeSignatureAttachmentConstraint(attachmentToUse.signerKeys) }
 
         else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
     }

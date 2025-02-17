@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
@@ -24,6 +25,8 @@ interface ServiceHubCoreInternal : ServiceHub {
     fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
 
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
+
+    val rotatedKeys: RotatedKeys
 }
 
 interface TransactionsResolver {

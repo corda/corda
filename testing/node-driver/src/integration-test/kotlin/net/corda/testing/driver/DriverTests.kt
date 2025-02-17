@@ -140,15 +140,41 @@ class DriverTests {
         }
     }
 
+    /**
+     * The uniqueness of nodes by the DSL is checked using the node organisation name and, if specified,
+     * the organisation unit name.
+     * All other X500 components are ignored in this regard.
+     */
     @Test(timeout=300_000)
 	fun `driver rejects multiple nodes with the same organisation name`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
             assertThatIllegalArgumentException().isThrownBy {
-                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
+                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", locality = "Newcastle", country = "GB"))().getOrThrow()
             }
         }
     }
+
+    @Test(timeout=300_000)
+    fun `driver allows multiple nodes with the same organisation name but different organisation unit name`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", organisationUnit = "Eric", locality = "New York", country = "US", state = null))().getOrThrow()
+            assertThatCode {
+                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", organisationUnit = "Ernie", locality = "Newcastle", country = "GB", state = null))().getOrThrow()
+            }.doesNotThrowAnyException()
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `driver rejects multiple nodes with the same organisation name and organisation unit name`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", organisationUnit = "Eric", locality = "New York", country = "US", state = null))().getOrThrow()
+            assertThatIllegalArgumentException().isThrownBy {
+                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", organisationUnit = "Eric", locality = "Newcastle", country = "GB", state = null))().getOrThrow()
+            }
+        }
+    }
+    /** **** **/
 
     @Test(timeout=300_000)
 	fun `driver allows reusing names of nodes that have been stopped`() {

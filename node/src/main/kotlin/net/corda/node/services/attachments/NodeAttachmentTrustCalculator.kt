@@ -3,6 +3,8 @@ package net.corda.node.services.attachments
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.CordaRotatedKeys
+import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.services.AttachmentId
@@ -24,15 +26,17 @@ class NodeAttachmentTrustCalculator(
     private val attachmentStorage: AttachmentStorageInternal,
     private val database: CordaPersistence?,
     cacheFactory: NamedCacheFactory,
-    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
+    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
+    private val rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting
     constructor(
-        attachmentStorage: AttachmentStorageInternal,
-        cacheFactory: NamedCacheFactory,
-        blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
-    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys)
+            attachmentStorage: AttachmentStorageInternal,
+            cacheFactory: NamedCacheFactory,
+            blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList(),
+            rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
+    ) : this(attachmentStorage, null, cacheFactory, blacklistedAttachmentSigningKeys, rotatedKeys)
 
     // A cache for caching whether a signing key is trusted
     private val trustedKeysCache = cacheFactory.buildNamed<PublicKey, Boolean>(
@@ -52,9 +56,31 @@ class NodeAttachmentTrustCalculator(
                     signersCondition = Builder.equal(listOf(signer)),
                     uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS)
                 )
-                attachmentStorage.queryAttachments(queryCriteria).isNotEmpty()
+                (attachmentStorage.queryAttachments(queryCriteria).isNotEmpty() ||
+                    calculateTrustUsingRotatedKeys(signer))
             }!!
         }
+    }
+
+    private fun calculateTrustUsingRotatedKeys(signer: PublicKey): Boolean {
+        val db = checkNotNull(database) {
+            // This should never be hit, except for tests that have not been setup correctly to test internal code
+            "CordaPersistence has not been set"
+        }
+        return db.transaction {
+            getTrustedAttachments().use { trustedAttachments ->
+                for ((_, trustedAttachmentFromDB) in trustedAttachments) {
+                    if (canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB, signer)) {
+                        return@transaction true
+                    }
+                }
+            }
+            return@transaction false
+        }
+    }
+
+    private fun canTrustedAttachmentAndAttachmentSignerBeTransitioned(trustedAttachmentFromDB: Attachment, signer: PublicKey): Boolean {
+        return trustedAttachmentFromDB.signerKeys.any { signerKeyFromDB -> rotatedKeys.canBeTransitioned(signerKeyFromDB, signer) }
     }
 
     override fun calculateAllTrustInfo(): List<AttachmentTrustInfo> {

@@ -47,6 +47,7 @@ import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.RotatedCorDappSignerKeyConfiguration
 import net.corda.node.services.config.TelemetryConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
@@ -85,6 +86,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import org.hibernate.internal.SessionFactoryRegistry
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -506,6 +508,18 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         return node
     }
 
+    fun hideNode(
+            node: TestStartedNode
+    ) {
+        _nodes.remove(node.internals)
+    }
+
+    fun unhideNode(
+            node: TestStartedNode
+    ) {
+        _nodes.add(node.internals)
+    }
+
     fun restartNode(
             node: TestStartedNode,
             parameters: InternalMockNodeParameters = InternalMockNodeParameters(),
@@ -611,6 +625,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             }
             messagingNetwork.stop()
         }
+        SessionFactoryRegistry.INSTANCE.clearRegistrations()
     }
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
@@ -662,6 +677,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
         doReturn(false).whenever(it).reloadCheckpointAfterSuspend
+        doReturn(emptyList<RotatedCorDappSignerKeyConfiguration>()).whenever(it).rotatedCordappSignerKeys
     }
 }
 
