@@ -36,6 +36,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
@@ -411,7 +412,7 @@ class VaultObserverExceptionTest {
                     testControlFuture.complete(true)
                 }
                 startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = true).getOrThrow()
-                assert(testControlFuture.getOrThrow(waitForFlowDuration))
+                assertThat(testControlFuture.getOrThrow(waitForFlowDuration)).isTrue()
             } else {
                 throw IllegalStateException("Out of process node is still up and running!")
             }
