@@ -229,6 +229,10 @@ sealed class InvocationOrigin {
     }
 }
 
+
+/**
+ * Represents the type of system invocation context.
+ */
 @CordaSerializable
 enum class SystemContextType(val description: String) {
     SYSTEM_STARTUP("System Startup"),
