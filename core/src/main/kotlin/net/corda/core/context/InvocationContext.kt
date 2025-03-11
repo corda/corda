@@ -229,6 +229,7 @@ sealed class InvocationOrigin {
     }
 }
 
+@CordaSerializable
 enum class SystemContextType(val description: String) {
     SYSTEM_STARTUP("System Startup"),
     SYSTEM_MAINTENANCE("System Maintenance"),
