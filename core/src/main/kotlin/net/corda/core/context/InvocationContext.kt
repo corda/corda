@@ -102,6 +102,12 @@ data class InvocationContext(
          */
         @JvmStatic
         fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(InvocationOrigin.Shell, trace, null, externalTrace)
+
+        /**
+         * Creates an [InvocationContext] with [InvocationOrigin.System] origin.
+         */
+        @JvmStatic
+        fun system(type: SystemContextType, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.System(type), trace, null, externalTrace)
     }
 
     /**
@@ -214,6 +220,23 @@ sealed class InvocationOrigin {
     object Shell : InvocationOrigin() {
         override fun principal() = Principal { "Shell User" }
     }
+
+    /**
+     *  Origin was System
+     */
+    data class System(val systemContextType: SystemContextType): InvocationOrigin() {
+        override fun principal() = Principal { systemContextType.description }
+    }
+}
+
+
+/**
+ * Represents the type of system invocation context.
+ */
+@CordaSerializable
+enum class SystemContextType(val description: String) {
+    SYSTEM_STARTUP("System Startup"),
+    SYSTEM_MAINTENANCE("System Maintenance"),
 }
 
 /**
