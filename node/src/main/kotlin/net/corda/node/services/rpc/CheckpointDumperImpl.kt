@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.jsonObject
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.context.SystemContextType
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
@@ -425,7 +426,8 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             val peer: CordaX500Name? = null,
             val service: String? = null,
             val scheduled: ScheduledStateRef? = null,
-            val shell: InvocationOrigin.Shell? = null
+            val shell: InvocationOrigin.Shell? = null,
+            val system: SystemContextType? = null
     )
 
     private fun InvocationOrigin.toOrigin(): Origin {
@@ -435,6 +437,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             is InvocationOrigin.Service -> Origin(service = serviceClassName)
             is InvocationOrigin.Scheduled -> Origin(scheduled = scheduledState)
             is InvocationOrigin.Shell -> Origin(shell = this)
+            is InvocationOrigin.System -> Origin(system = systemContextType)
         }
     }
 
