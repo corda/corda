@@ -269,9 +269,6 @@ open class Node(configuration: NodeConfiguration,
                 User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
         }
 
-        // When using external Artemis, the node's p2pSslOptions are no longer used for RPC.
-        val rpcSslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
-
         val messageBroker = if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress
                     ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
@@ -282,7 +279,7 @@ open class Node(configuration: NodeConfiguration,
                         threadPoolName = "P2PAndRPCServer",
                         rpcAddresses = BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress),
                         rpcSecurityManager = securityManager,
-                        rpcSslOptions = rpcSslOptions)
+                        rpcSslOptions = configuration.p2pSslOptions)
             }
         } else {
             null

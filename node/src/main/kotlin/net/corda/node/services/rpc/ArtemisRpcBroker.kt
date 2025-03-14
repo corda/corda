@@ -4,7 +4,6 @@ import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
