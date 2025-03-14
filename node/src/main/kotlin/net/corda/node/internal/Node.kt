@@ -244,8 +244,11 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    override fun startMessagingService(rpcOps: List<RPCOps>, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
-        require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
+    @Suppress("LongMethod", "ComplexMethod", "NestedBlockDepth")
+    override fun startMessagingService(rpcOps: List<RPCOps>, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?,
+                                       networkParameters: NetworkParameters) {
+        require(nodeInfo.legalIdentities.size in 1..2)
+                                                     { "Currently nodes must have a primary address and optionally one serviced address" }
 
         network as P2PMessagingClient
 
@@ -266,15 +269,26 @@ open class Node(configuration: NodeConfiguration,
                 User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
         }
 
+        // When using external Artemis, the node's p2pSslOptions are no longer used for RPC.
+        val rpcSslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
+
         val messageBroker = if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress
                     ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, journalBufferTimeout)
+            if (configuration.rpcOptions.standAloneBroker) {
+                ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, journalBufferTimeout)
+            } else {
+                ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, journalBufferTimeout,
+                        threadPoolName = "P2PAndRPCServer",
+                        rpcAddresses = BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress),
+                        rpcSecurityManager = securityManager,
+                        rpcSslOptions = rpcSslOptions)
+            }
         } else {
             null
         }
 
-        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
+        val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker || messageBroker != null) {
             BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress)
         } else {
             startLocalRpcBroker(securityManager)
