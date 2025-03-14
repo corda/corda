@@ -6,6 +6,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
@@ -13,12 +14,19 @@ import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.P2P_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
+import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
 import net.corda.node.internal.artemis.NodeJaasConfig
 import net.corda.node.internal.artemis.P2PJaasConfig
+import net.corda.node.internal.artemis.RPCJaasConfig
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
 import net.corda.node.internal.artemis.UserValidationPlugin
 import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.p2pArtemisSslOptions
+import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
+import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.useArtemisSslConfig
+import net.corda.node.services.rpc.RolesAdderOnLogin
 import net.corda.node.services.rpc.RpcBrokerConfiguration.Companion.queueConfigurations
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.RPCApi
@@ -76,6 +84,7 @@ class ArtemisMessagingServer(
         private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON,
         private val remotingThreads: Int? = null,
         private val rpcAddresses: BrokerAddresses? = null,
+        val rpcSecurityManager: RPCSecurityManager? = null,
         val rpcSslOptions: MutualSslConfiguration? = null,
 ) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
@@ -103,6 +112,7 @@ class ArtemisMessagingServer(
 
     override fun stop() = mutex.locked {
         activeMQServer.stop()
+        rpcSecurityManager?.close()
         running = false
     }
 
@@ -114,7 +124,7 @@ class ArtemisMessagingServer(
     @Suppress("ThrowsCount", "NestedBlockDepth")
     private fun configureAndStartServer() {
         val artemisConfig = createArtemisConfig()
-        val securityManager = createArtemisSecurityManager()
+        val securityManager = createArtemisSecurityManager(artemisConfig.loginListener)
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
@@ -144,8 +154,13 @@ class ArtemisMessagingServer(
         log.info("P2P messaging server listening on $messagingServerAddress")
     }
 
+    internal abstract class P2PBrokerConfig : SecureArtemisConfiguration() {
+        abstract val loginListener: (String) -> Unit
+    }
+
     @Suppress("ComplexMethod", "MagicNumber")
-    private fun createArtemisConfig() = object : SecureArtemisConfiguration() {
+    private fun createArtemisConfig() = object : P2PBrokerConfig() {
+        override val loginListener: (String) -> Unit
 
         init {
             name = if (rpcAddresses != null) "P2PAndRPC" else "P2P"
@@ -164,13 +179,13 @@ class ArtemisMessagingServer(
                 RevocationConfig.Mode.OFF
             }
             val trustManagerFactory = trustManagerFactoryWithRevocation(
-                    config.p2pSslOptions.trustStore.get(),
+                    config.p2pArtemisSslOptions().trustStore.get(),
                     RevocationConfigImpl(revocationMode),
                     distPointCrlSource
             )
             addAcceptorConfiguration(p2pAcceptorTcpTransport(
                     NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
-                    config.p2pSslOptions,
+                    config.p2pArtemisSslOptions(),
                     trustManagerFactory,
                     threadPoolName = threadPoolName,
                     trace = trace,
@@ -213,7 +228,7 @@ class ArtemisMessagingServer(
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
-    private fun SecureArtemisConfiguration.configureAddressSecurity(): SecureArtemisConfiguration {
+    private fun P2PBrokerConfig.configureAddressSecurity(): P2PBrokerConfig {
         val nodeInternalP2PRole = Role(NODE_P2P_ROLE, true, true, true, true, true, true, true, true, true, true, false, false)
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalP2PRole, restrictedRole(PEER_ROLE, send = true))
         if (rpcAddresses != null) {
@@ -234,9 +249,9 @@ class ArtemisMessagingServer(
                 deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue, false, false)
     }
 
-    private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = config.p2pSslOptions.keyStore.get().value.internal
-        val trustStore = config.p2pSslOptions.trustStore.get().value.internal
+    private fun createArtemisSecurityManager(loginListener: (String) -> Unit): ActiveMQJAASSecurityManager {
+        val keyStore = config.p2pArtemisSslOptions().keyStore.get().value.internal
+        val trustStore = config.p2pArtemisSslOptions().trustStore.get().value.internal
         val revocationMode = when {
             config.crlCheckArtemisServer && config.crlCheckSoftFail -> RevocationConfig.Mode.SOFT_FAIL
             config.crlCheckArtemisServer && !config.crlCheckSoftFail -> RevocationConfig.Mode.HARD_FAIL
@@ -247,9 +262,12 @@ class ArtemisMessagingServer(
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore, revocationMode),
-                        NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
+                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore, revocationMode),
+                        BrokerJaasLoginModule.NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
                 )
+                if (rpcSecurityManager != null) {
+                    options[RPC_SECURITY_CONFIG] = RPCJaasConfig(rpcSecurityManager, loginListener, config.rpcOptions.useSsl)
+                }
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }
         }
