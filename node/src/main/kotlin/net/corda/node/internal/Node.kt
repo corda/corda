@@ -327,6 +327,8 @@ open class Node(configuration: NodeConfiguration,
                 advertisedAddress = nodeInfo.addresses[0],
                 maxMessageSize = networkParameters.maxMessageSize
         )
+
+        if (rpcBroker == null) rpcBroker = messageBroker
     }
 
     private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters): BridgeControlListener {
