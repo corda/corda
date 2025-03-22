@@ -16,6 +16,7 @@ import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SigningFunction
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
@@ -93,12 +94,9 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     )
 
     private data class CommitRequest(
-            val states: List<StateRef>,
-            val txId: SecureHash,
+            val txParts: TransactionParts,
             val callerIdentity: Party,
             val requestSignature: NotarisationRequestSignature,
-            val timeWindow: TimeWindow?,
-            val references: List<StateRef>,
             val future: OpenFuture<UniquenessProvider.Result>)
 
     @Entity
@@ -177,17 +175,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
      * Returns a future that will complete once the request is processed, containing the commit [Result].
      */
     override fun commit(
-            states: List<StateRef>,
-            txId: SecureHash,
+            txParts: TransactionParts,
             callerIdentity: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?,
-            references: List<StateRef>
+            requestSignature: NotarisationRequestSignature
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
-        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
+        val request = CommitRequest(txParts, callerIdentity, requestSignature, future)
         requestQueue.put(request)
-        log.debug { "Request added to queue. TxId: $txId" }
+        log.debug { "Request added to queue. TxId: ${txParts.id}" }
         return future
     }
 
@@ -222,25 +217,18 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         return conflictingStates
     }
 
-    private fun commitOne(
-            states: List<StateRef>,
-            txId: SecureHash,
-            callerIdentity: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?,
-            references: List<StateRef>
-    ) {
+    private fun commitOne(txParts: TransactionParts, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
         database.transaction {
-            logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
+            logRequest(txParts.id, callerIdentity, requestSignature)
+            val conflictingStates = findAlreadyCommitted(txParts.inputs, txParts.references, commitLog)
             if (conflictingStates.isNotEmpty()) {
-                if (states.isEmpty()) {
-                    handleReferenceConflicts(txId, conflictingStates)
+                if (txParts.inputs.isEmpty()) {
+                    handleReferenceConflicts(txParts.id, conflictingStates)
                 } else {
-                    handleConflicts(txId, conflictingStates)
+                    handleConflicts(txParts.id, conflictingStates)
                 }
             } else {
-                handleNoConflicts(timeWindow, states, txId, commitLog)
+                handleNoConflicts(txParts.timeWindow, txParts.inputs, txParts.id, commitLog)
             }
         }
     }
@@ -290,7 +278,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun decrementQueueSize(request: CommitRequest): Int {
-        val nrStates = request.states.size + request.references.size
+        val nrStates = request.txParts.inputs.size + request.txParts.references.size
         nrQueuedStates.addAndGet(-nrStates)
         return nrStates
     }
@@ -299,7 +287,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         val numStates = decrementQueueSize(request)
         try {
             val duration = elapsedTime {
-                commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+                commitOne(request.txParts, request.callerIdentity, request.requestSignature)
             }
             val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
             throughputHistory.update(maxOf(statesPerMinute, 1))
@@ -320,7 +308,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        val signedTx = signTransaction(request.txId)
+        val signedTx = signTransaction(request.txParts.id)
         request.future.set(UniquenessProvider.Result.Success(signedTx))
     }
 }

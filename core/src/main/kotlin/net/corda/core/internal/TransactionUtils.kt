@@ -23,6 +23,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
@@ -217,6 +218,51 @@ fun createComponentGroups(inputs: List<StateRef>,
 private fun MutableList<ComponentGroup>.addListGroup(type: ComponentGroupEnum, list: List<Any>, serialize: (Any, Int) -> SerializedBytes<Any>) {
     if (list.isNotEmpty()) {
         add(ComponentGroup(type.ordinal, list.lazyMapped(serialize)))
+    }
+}
+
+fun getComponentNonces(group: ComponentGroup, digestService: DigestService, privacySalt: PrivacySalt): List<SecureHash> {
+    return if (digestService.hashAlgorithm == SecureHash.SHA2_256) {
+        group.components.mapIndexed { componentIndex, componentBytes ->
+            digestService.componentHash(componentBytes, privacySalt, group.groupIndex, componentIndex)
+        }
+    } else {
+        List(group.components.size) { componentIndex -> digestService.computeNonce(privacySalt, group.groupIndex, componentIndex) }
+    }
+}
+
+inline fun getComponentHashes(group: ComponentGroup, digestService: DigestService, nonce: (Int) -> SecureHash): List<SecureHash> {
+    return group.components.mapIndexed { componentIndex, componentBytes ->
+        digestService.componentHash(nonce(componentIndex), componentBytes)
+    }
+}
+
+fun getMerkleRoot(hashes: List<SecureHash>, digestService: DigestService): SecureHash {
+    return MerkleTree.getMerkleTree(hashes, digestService).hash
+}
+
+inline fun getGroupHashesFromMerkleRoots(componentGroups: Collection<ComponentGroup>,
+                                         digestService: DigestService,
+                                         merkleRoot: (ComponentGroup) -> SecureHash): List<SecureHash> {
+    val hashes = ArrayList<SecureHash>(componentGroups.size)
+    // Even if empty and not used, we should at least send oneHashes for each known
+    // or received but unknown (thus, bigger than known ordinal) component groups.
+    val allOnesHash = digestService.allOnesHash
+    val maxGroupIndex = componentGroups.maxOf { it.groupIndex }
+    for (groupIndex in 0..maxGroupIndex) {
+        val componentGroup = componentGroups.find { it.groupIndex == groupIndex }
+        hashes.add(componentGroup?.let(merkleRoot) ?: allOnesHash)
+    }
+    return hashes
+}
+
+fun getGroupHashes(componentGroups: Collection<ComponentGroup>,
+                   privacySalt: PrivacySalt,
+                   digestService: DigestService = DigestService.default): List<SecureHash> {
+    return getGroupHashesFromMerkleRoots(componentGroups, digestService) { group ->
+        val nonces = getComponentNonces(group, digestService, privacySalt)
+        val hashes = getComponentHashes(group, digestService, nonces::get)
+        getMerkleRoot(hashes, digestService)
     }
 }
 

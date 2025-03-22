@@ -1,7 +1,6 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.TimeWindow
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryError
@@ -9,9 +8,9 @@ import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
-import net.corda.core.transactions.WireTransaction
 import java.time.Duration
 
 /**
@@ -22,9 +21,7 @@ import java.time.Duration
  */
 open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
-        val stx = requestPayload.signedTransaction
-        val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
-        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references, stx.networkParametersHash)
+        return TransactionParts.Signed(requestPayload.signedTransaction)
     }
 
     /**

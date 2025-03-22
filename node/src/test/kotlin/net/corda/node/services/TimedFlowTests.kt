@@ -1,15 +1,15 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
@@ -17,6 +17,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
@@ -38,11 +39,20 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.security.PublicKey
 import java.time.Duration
 import java.util.concurrent.Future
@@ -272,10 +282,10 @@ class TimedFlowTests {
     private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
         override val uniquenessProvider = object : UniquenessProvider {
             /** A dummy commit method that immediately returns a success message. */
-            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
+            override fun commit(txParts: TransactionParts, callerIdentity: Party, requestSignature: NotarisationRequestSignature): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
-                        signTransaction(txId)
+                        signTransaction(txParts.id)
                     }
                     set(UniquenessProvider.Result.Success(signature))
                 }
@@ -286,12 +296,9 @@ class TimedFlowTests {
 
         @Suspendable
         override fun commitInputStates(
-                inputs: List<StateRef>,
-                txId: SecureHash,
+                txParts: TransactionParts,
                 caller: Party,
                 requestSignature: NotarisationRequestSignature,
-                timeWindow: TimeWindow?,
-                references: List<StateRef>
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
@@ -302,7 +309,7 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
+                return super.commitInputStates(txParts, caller, requestSignature)
             }
             return UniquenessProvider.Result.Failure(NotaryError.General(Throwable("leave me alone")))
         }

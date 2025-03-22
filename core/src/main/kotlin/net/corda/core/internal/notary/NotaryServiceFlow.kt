@@ -2,18 +2,26 @@ package net.corda.core.internal.notary
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toStringShort
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotarisationResponse
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import java.lang.IllegalStateException
 import java.time.Duration
 
 /**
@@ -56,13 +64,13 @@ abstract class NotaryServiceFlow(
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
 
         val commitStatus = try {
-            val tx: TransactionParts = validateRequest(requestPayload)
-            val request = NotarisationRequest(tx.inputs, tx.id)
+            val txParts = validateRequest(requestPayload)
+            val request = NotarisationRequest(txParts.inputs, txParts.id)
             validateRequestSignature(request, requestPayload.requestSignature)
 
             verifyTransaction(requestPayload)
 
-            val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
+            val eta = service.getEstimatedWaitTime(txParts.inputs.size + txParts.references.size)
             if (counterpartyCanHandleBackPressure()) {
                 if (eta > etaThreshold) {
                     otherSideSession.send(WaitTimeUpdate(eta))
@@ -76,13 +84,7 @@ abstract class NotaryServiceFlow(
                 }
             }
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#call:commitInputStates", flowLogic = this) {
-                service.commitInputStates(
-                        tx.inputs,
-                        tx.id,
-                        otherSideSession.counterparty,
-                        requestPayload.requestSignature,
-                        tx.timeWindow,
-                        tx.references)
+                service.commitInputStates(txParts, otherSideSession.counterparty, requestPayload.requestSignature)
             }
         } catch (e: NotaryInternalException) {
             logError(e.error)
@@ -153,19 +155,6 @@ abstract class NotaryServiceFlow(
         logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         otherSideSession.send(NotarisationResponse(listOf(signature)))
     }
-
-    /**
-     * The minimum amount of information needed to notarise a transaction. Note that this does not include
-     * any sensitive transaction details.
-     */
-    protected data class TransactionParts(
-            val id: SecureHash,
-            val inputs: List<StateRef>,
-            val timeWindow: TimeWindow?,
-            val notary: Party?,
-            val references: List<StateRef> = emptyList(),
-            val networkParametersHash: SecureHash?
-    )
 
     private fun logError(error: NotaryError) {
         val errorCause = when (error) {

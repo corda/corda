@@ -16,6 +16,9 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.getGroupHashes
+import net.corda.core.internal.getMerkleRoot
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
@@ -234,6 +237,35 @@ fun fakeAttachment(filePath1: String, content1: String, filePath2: String, conte
         js.closeEntry()
     }
     return bs.toByteArray()
+}
+
+fun fakeTransactionParts(inputs: List<StateRef>,
+                         timeWindow: TimeWindow? = null,
+                         references: List<StateRef> = emptyList(),
+                         notary: Party? = null,
+                         networkParametersHash: SecureHash? = null,
+                         privacySalt: PrivacySalt = PrivacySalt()): TransactionParts {
+    val componentGroups = createComponentGroups(
+            inputs,
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            notary,
+            timeWindow,
+            references,
+            networkParametersHash
+    )
+    val componentGroupHashes = getGroupHashes(componentGroups, privacySalt)
+    val id = getMerkleRoot(componentGroupHashes, DigestService.default)
+    return object : TransactionParts {
+        override val id: SecureHash get() = id
+        override val componentGroupHashes: List<SecureHash> get() = componentGroupHashes
+        override val inputs: List<StateRef> get() = inputs
+        override val timeWindow: TimeWindow? get() = timeWindow
+        override val notary: Party? get() = notary
+        override val references: List<StateRef> get() = references
+        override val networkParametersHash: SecureHash? get() = networkParametersHash
+    }
 }
 
 /** If [effectiveSerializationEnv] is not set, runs the block with a new [SerializationEnvironmentRule]. */

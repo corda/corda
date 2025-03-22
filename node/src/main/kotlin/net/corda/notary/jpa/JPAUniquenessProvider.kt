@@ -14,6 +14,7 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
@@ -154,28 +155,32 @@ class JPAUniquenessProvider(
      * Returns a future that will complete once the requestEntity is processed, containing the commit [Result].
      */
     override fun commit(
-            states: List<StateRef>,
-            txId: SecureHash,
+            txParts: TransactionParts,
             callerIdentity: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?,
-            references: List<StateRef>
+            requestSignature: NotarisationRequestSignature
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
-        val requestEntities = Request(consumingTxHash = txId.toString(),
+        val consumingTxHash = txParts.id.toString()
+        val requestEntities = Request(consumingTxHash = consumingTxHash,
                 partyName = callerIdentity.name.toString(),
                 requestSignature = requestSignature.serialize(context = SerializationDefaults.STORAGE_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)).bytes,
                 requestDate = clock.instant(),
                 workerNodeX500Name = notaryWorkerName.toString())
-        val stateEntities = states.map {
-            CommittedState(
-                    encodeStateRef(it),
-                    txId.toString()
-            )
+        val stateEntities = txParts.inputs.map {
+            CommittedState(encodeStateRef(it), consumingTxHash)
         }
-        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future, requestEntities, stateEntities)
 
-        requestQueue.put(request)
+        requestQueue.put(CommitRequest(
+                txParts.inputs,
+                txParts.id,
+                callerIdentity,
+                requestSignature,
+                txParts.timeWindow,
+                txParts.references,
+                future,
+                requestEntities,
+                stateEntities
+        ))
 
         return future
     }

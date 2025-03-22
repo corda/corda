@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.getGroup
+import net.corda.core.internal.getMerkleRoot
 import net.corda.core.internal.getRequiredGroup
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -250,7 +251,7 @@ class FilteredTransaction internal constructor(
         verificationCheck(groupHashes.isNotEmpty()) { "At least one component group hash is required" }
         // Verify the top level Merkle tree (group hashes are its leaves, including allOnesHash for empty list or null
         // components in WireTransaction).
-        verificationCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
+        verificationCheck(getMerkleRoot(groupHashes, digestService) == id) {
             "Top level Merkle tree cannot be verified against transaction's id"
         }
 
@@ -310,10 +311,10 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }, digestService).hash
+            val groupFullRoot = getMerkleRoot(group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }, digestService)
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
-            visibilityCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
+            visibilityCheck(getMerkleRoot(groupHashes, digestService) == id) {
                 "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id"
             }
         }

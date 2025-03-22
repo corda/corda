@@ -31,7 +31,11 @@ import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.equivalent
+import net.corda.core.internal.getComponentHashes
+import net.corda.core.internal.getComponentNonces
 import net.corda.core.internal.getGroup
+import net.corda.core.internal.getGroupHashesFromMerkleRoots
+import net.corda.core.internal.getMerkleRoot
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.mapToSet
@@ -320,15 +324,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * in the wire transaction.
      */
     internal val groupHashes: List<SecureHash> by lazy {
-        val listOfLeaves = mutableListOf<SecureHash>()
-        // Even if empty and not used, we should at least send oneHashes for each known
-        // or received but unknown (thus, bigger than known ordinal) component groups.
-        val allOnesHash = digestService.allOnesHash
-        for (i in 0..componentGroups.maxOf { it.groupIndex }) {
-            val root = groupsMerkleRoots[i] ?: allOnesHash
-            listOfLeaves.add(root)
-        }
-        listOfLeaves
+        getGroupHashesFromMerkleRoots(componentGroups, digestService) { groupsMerkleRoots[it.groupIndex]!! }
     }
 
     /**
@@ -340,24 +336,27 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val groupsMerkleRoots: Map<Int, SecureHash> by lazy {
-        availableComponentHashes.entries.associate { it.key to MerkleTree.getMerkleTree(it.value, digestService).hash }
+        availableComponentHashes.mapValues { (_, hashes) -> getMerkleRoot(hashes, digestService) }
     }
 
     /**
      * Calculate nonces for every transaction component, including new fields (due to backwards compatibility support) we cannot process.
      * Nonce are computed in the following way:
+     *
      * nonce1 = H(salt || path_for_1st_component)
+     *
      * nonce2 = H(salt || path_for_2nd_component)
+     *
      * etc.
+     *
      * Thus, all of the nonces are "independent" in the sense that knowing one or some of them, you can learn
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        if (digestService.hashAlgorithm == SecureHash.SHA2_256) {
-            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
-        } else {
-            componentGroups.associate { it.groupIndex to List(it.components.size) { internalIndex -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
-        }
+        componentGroups.associateBy(
+                ComponentGroup::groupIndex,
+                { componentGroup -> getComponentNonces(componentGroup, digestService, privacySalt) }
+        )
     }
 
     /**
@@ -366,7 +365,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
+        componentGroups.associateBy(
+                ComponentGroup::groupIndex,
+                { componentGroup ->
+                    val nonces = availableComponentNonces[componentGroup.groupIndex]!!
+                    getComponentHashes(componentGroup, digestService, nonces::get)
+                }
+        )
     }
 
     /**

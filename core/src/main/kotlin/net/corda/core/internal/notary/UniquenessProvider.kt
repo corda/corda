@@ -1,8 +1,6 @@
 package net.corda.core.internal.notary
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
@@ -18,14 +16,7 @@ typealias SigningFunction = (SecureHash) -> TransactionSignature
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction. */
-    fun commit(
-            states: List<StateRef>,
-            txId: SecureHash,
-            callerIdentity: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow? = null,
-            references: List<StateRef> = emptyList()
-    ): CordaFuture<Result>
+    fun commit(txParts: TransactionParts, callerIdentity: Party, requestSignature: NotarisationRequestSignature): CordaFuture<Result>
 
     /**
      * Estimated time of request processing. A uniqueness provider that is aware of their own throughput can return

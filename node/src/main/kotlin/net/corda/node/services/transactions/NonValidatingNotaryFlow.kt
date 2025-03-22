@@ -11,6 +11,7 @@ import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.node.NetworkParameters
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.CoreTransaction
@@ -33,11 +34,9 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
     private val minPlatformVersion get() = serviceHub.networkParameters.minimumPlatformVersion
 
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
-        val tx = requestPayload.coreTransaction
-        return when (tx) {
-            is FilteredTransaction -> TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
-            is ContractUpgradeFilteredTransaction,
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, networkParametersHash = tx.networkParametersHash)
+        return when (val tx = requestPayload.coreTransaction) {
+            is FilteredTransaction -> TransactionParts.Filtered(tx)
+            is ContractUpgradeFilteredTransaction, is NotaryChangeWireTransaction -> TransactionParts.Core(tx)
             else -> throw unexpectedTransactionType(tx)
         }
     }

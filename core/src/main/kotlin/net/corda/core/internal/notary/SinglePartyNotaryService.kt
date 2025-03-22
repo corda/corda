@@ -1,8 +1,6 @@
 package net.corda.core.internal.notary
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -30,15 +28,12 @@ abstract class SinglePartyNotaryService : NotaryService() {
     /** Handles input state uniqueness checks. */
     protected abstract val uniquenessProvider: UniquenessProvider
 
-    /** Attempts to commit the specified transaction [txId]. */
+    /** Attempts to commit the specified transaction. */
     @Suspendable
     open fun commitInputStates(
-            inputs: List<StateRef>,
-            txId: SecureHash,
+            txParts: TransactionParts,
             caller: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?,
-            references: List<StateRef>
+            requestSignature: NotarisationRequestSignature
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -47,17 +42,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
-        val result = callingFlow.await(
-                CommitOperation(
-                        this,
-                        inputs,
-                        txId,
-                        caller,
-                        requestSignature,
-                        timeWindow,
-                        references
-                )
-        )
+        val result = callingFlow.await(CommitOperation(this, txParts, caller, requestSignature))
 
         if (result is Result.Failure) {
             throw NotaryInternalException(result.error)
@@ -78,18 +63,14 @@ abstract class SinglePartyNotaryService : NotaryService() {
      * This object will be included in the flow checkpoint.
      */
     @CordaSerializable
-    class CommitOperation(
+    private class CommitOperation(
             val service: SinglePartyNotaryService,
-            val inputs: List<StateRef>,
-            val txId: SecureHash,
+            val txParts: TransactionParts,
             val caller: Party,
-            val requestSignature: NotarisationRequestSignature,
-            val timeWindow: TimeWindow?,
-            val references: List<StateRef>
+            val requestSignature: NotarisationRequestSignature
     ) : FlowExternalAsyncOperation<Result> {
-
         override fun execute(deduplicationId: String): CompletableFuture<Result> {
-            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references).toCompletableFuture()
+            return service.uniquenessProvider.commit(txParts, caller, requestSignature).toCompletableFuture()
         }
     }
 

@@ -2,6 +2,7 @@ package net.corda.node.services.transactions
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
@@ -12,7 +13,6 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.randomHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -42,6 +42,7 @@ import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.fakeTransactionParts
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockKeyManagementService
@@ -77,7 +78,6 @@ class UniquenessProviderTests(
     val testSerialization = SerializationEnvironmentRule(inheritable = true)
 
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
-    private val txID = digestService.randomHash()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
     private lateinit var testClock: TestClock
     private lateinit var uniquenessProvider: UniquenessProvider
@@ -114,11 +114,11 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `rejects transaction before time window is valid`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val timeWindow = TimeWindow.between(
                 Clock.systemUTC().instant().plus(30.minutes),
                 Clock.systemUTC().instant().plus(60.minutes))
-        expectInvalidTimeWindow(emptyList(), firstTxId, timeWindow)
+        expectInvalidTimeWindow(tx1Salt, emptyList(), timeWindow)
 
         // Once time window behaviour has changed, we should add an additional test case here to check
         // that retry within time window still fails. We can't do that now because currently it will
@@ -126,47 +126,47 @@ class UniquenessProviderTests(
 
         // Retry still fails after advancing past time window
         testClock.advanceBy(90.minutes)
-        expectInvalidTimeWindow(emptyList(), firstTxId, timeWindow)
+        expectInvalidTimeWindow(tx1Salt, emptyList(), timeWindow)
     }
 
     @Test(timeout=300_000)
     fun `commits transaction within time window`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
-        expectCommitSuccess(emptyList(), firstTxId, timeWindow)
+        expectCommitSuccess(tx1Salt, emptyList(), timeWindow)
 
         // Retry is successful whilst still within time window
         testClock.advanceBy(10.minutes)
-        expectCommitSuccess(emptyList(), firstTxId, timeWindow)
+        expectCommitSuccess(tx1Salt, emptyList(), timeWindow)
 
         // Retry is successful after time window has expired
         testClock.advanceBy(80.minutes)
-        expectCommitSuccess(emptyList(), firstTxId, timeWindow)
+        expectCommitSuccess(tx1Salt, emptyList(), timeWindow)
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction after time window has expired`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
-        expectInvalidTimeWindow(emptyList(), firstTxId, timeWindow)
+        expectInvalidTimeWindow(tx1Salt, emptyList(), timeWindow)
 
         // Retry still fails at a later time
         testClock.advanceBy(10.minutes)
-        expectInvalidTimeWindow(emptyList(), firstTxId, timeWindow)
+        expectInvalidTimeWindow(tx1Salt, emptyList(), timeWindow)
     }
 
     @Test(timeout=300_000)
     fun `time window only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = digestService.randomHash()
-        val secondTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
+        val tx2Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
-        val validFuture1 = commit(emptyList(), firstTxId, timeWindow)
-        val validFuture2 = commit(emptyList(), firstTxId, timeWindow)
-        val invalidFuture1 = commit(emptyList(), secondTxId, invalidTimeWindow)
-        val invalidFuture2 = commit(emptyList(), secondTxId, invalidTimeWindow)
+        val validFuture1 = commit(tx1Salt, emptyList(), timeWindow).first
+        val validFuture2 = commit(tx1Salt, emptyList(), timeWindow).first
+        val invalidFuture1 = commit(tx2Salt, emptyList(), invalidTimeWindow).first
+        val invalidFuture2 = commit(tx2Salt, emptyList(), invalidTimeWindow).first
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
         assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
@@ -179,53 +179,53 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `commits transaction with unused reference states`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(emptyList(), firstTxId, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), references = listOf(referenceState))
 
         // Idempotency: can re-notarise successfully.
-        expectCommitSuccess(emptyList(), firstTxId, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), references = listOf(referenceState))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used reference states`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(listOf(referenceState), firstTxId, references = emptyList())
+        val tx1Id = expectCommitSuccess(tx1Salt, listOf(referenceState), references = emptyList())
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = digestService.randomHash()
-        val consumedStates = expectConflict(emptyList(), secondTxId, references = listOf(referenceState))
-        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), REFERENCE_INPUT_STATE))
+        val tx2Salt = PrivacySalt()
+        val consumedStates = expectConflict(tx2Salt, emptyList(), references = listOf(referenceState))
+        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), REFERENCE_INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `commits retry transaction when reference states were spent since initial transaction`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(emptyList(), firstTxId, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), references = listOf(referenceState))
 
         // Spend reference state
-        val secondTxId = digestService.randomHash()
-        expectCommitSuccess(listOf(referenceState), secondTxId, references = emptyList())
+        val tx2Salt = PrivacySalt()
+        expectCommitSuccess(tx2Salt, listOf(referenceState), references = emptyList())
 
         // Retry referencing the now spent state still succeeds
-        expectCommitSuccess(emptyList(), firstTxId, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), references = listOf(referenceState))
     }
 
     @Test(timeout=300_000)
     fun `reference state only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = digestService.randomHash()
-        val secondTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
+        val tx2Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        val validFuture3 = commit(emptyList(), firstTxId, references = listOf(referenceState))
-        val validFuture4 = commit(emptyList(), firstTxId, references = listOf(referenceState))
-        val validFuture1 = commit(emptyList(), secondTxId, references = listOf(referenceState))
-        val validFuture2 = commit(emptyList(), secondTxId, references = listOf(referenceState))
+        val validFuture3 = commit(tx1Salt, emptyList(), references = listOf(referenceState)).first
+        val validFuture4 = commit(tx1Salt, emptyList(), references = listOf(referenceState)).first
+        val validFuture1 = commit(tx2Salt, emptyList(), references = listOf(referenceState)).first
+        val validFuture2 = commit(tx2Salt, emptyList(), references = listOf(referenceState)).first
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
         assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
@@ -238,93 +238,94 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `commits transaction with unused reference states and valid time window`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
-        expectCommitSuccess(emptyList(), firstTxId, timeWindow, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), timeWindow, references = listOf(referenceState))
 
         // The reference state gets consumed.
-        expectCommitSuccess(listOf(referenceState), digestService.randomHash(), timeWindow)
+        expectCommitSuccess(PrivacySalt(), listOf(referenceState), timeWindow)
 
         // Idempotency: can re-notarise successfully.
         testClock.advanceBy(90.minutes)
-        expectCommitSuccess(emptyList(), firstTxId, timeWindow, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, emptyList(), timeWindow, references = listOf(referenceState))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with unused reference states and invalid time window`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
-        expectInvalidTimeWindow(emptyList(), firstTxId, invalidTimeWindow, references = listOf(referenceState))
+        expectInvalidTimeWindow(tx1Salt, emptyList(), invalidTimeWindow, references = listOf(referenceState))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used reference states and valid time window`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(listOf(referenceState), firstTxId, references = emptyList())
+        val tx1Id = expectCommitSuccess(tx1Salt, listOf(referenceState), references = emptyList())
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
-        val consumedStates = expectConflict(emptyList(), secondTxId, timeWindow, references = listOf(referenceState))
-        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), REFERENCE_INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, emptyList(), timeWindow, references = listOf(referenceState))
+        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), REFERENCE_INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used reference states and invalid time window`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(listOf(referenceState), firstTxId, references = emptyList())
+        val tx1Id = expectCommitSuccess(tx1Salt, listOf(referenceState), references = emptyList())
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
-        val consumedStates = expectConflict(emptyList(), secondTxId, invalidTimeWindow, references = listOf(referenceState))
-        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), REFERENCE_INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, emptyList(), invalidTimeWindow, references = listOf(referenceState))
+        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), REFERENCE_INPUT_STATE))
     }
 
     /* Group D: only input states */
 
     @Test(timeout=300_000)
     fun `commits transaction with unused inputs`() {
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
 
-        expectCommitSuccess(listOf(inputState), txID)
+        expectCommitSuccess(tx1Salt, listOf(inputState))
 
         // Idempotency: can re-notarise successfully.
-        expectCommitSuccess(listOf(inputState), txID)
+        expectCommitSuccess(tx1Salt, listOf(inputState))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used inputs`() {
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
 
         val inputs = listOf(inputState)
-        val firstTxId = txID
-        expectCommitSuccess(inputs, firstTxId)
+        val tx1Id = expectCommitSuccess(tx1Salt, inputs)
 
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
 
-        val consumedStates = expectConflict(inputs, secondTxId)
-        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, inputs)
+        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `input state only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = digestService.randomHash()
-        val secondTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
+        val tx2Salt = PrivacySalt()
         val inputState = generateStateRef()
 
-        val validFuture1 = commit(listOf(inputState), firstTxId)
-        val validFuture2 = commit(listOf(inputState), firstTxId)
-        val invalidFuture1 = commit(listOf(inputState), secondTxId)
-        val invalidFuture2 = commit(listOf(inputState), secondTxId)
+        val validFuture1 = commit(tx1Salt, listOf(inputState)).first
+        val validFuture2 = commit(tx1Salt, listOf(inputState)).first
+        val invalidFuture1 = commit(tx2Salt, listOf(inputState)).first
+        val invalidFuture2 = commit(tx2Salt, listOf(inputState)).first
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
         assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
@@ -337,130 +338,132 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `commits transaction with unused inputs and valid time window`() {
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
-        expectCommitSuccess(listOf(inputState), txID, timeWindow)
+        expectCommitSuccess(tx1Salt, listOf(inputState), timeWindow)
 
         // Idempotency: can re-notarise successfully later.
         testClock.advanceBy(90.minutes)
-        expectCommitSuccess(listOf(inputState), txID, timeWindow)
+        expectCommitSuccess(tx1Salt, listOf(inputState), timeWindow)
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with unused inputs and invalid time window`() {
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
-        expectInvalidTimeWindow(listOf(inputState), txID, invalidTimeWindow)
+        expectInvalidTimeWindow(tx1Salt, listOf(inputState), invalidTimeWindow)
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used inputs and valid time window`() {
         val inputState = generateStateRef()
         val inputs = listOf(inputState)
-        val firstTxId = txID
-        expectCommitSuccess(inputs, firstTxId)
+        val tx1Salt = PrivacySalt()
+        val tx1Id = expectCommitSuccess(tx1Salt, inputs)
 
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
 
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
-        val consumedStates = expectConflict(inputs, secondTxId, timeWindow)
-        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, inputs, timeWindow)
+        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with previously used inputs and invalid time window`() {
         val inputState = generateStateRef()
         val inputs = listOf(inputState)
-        val firstTxId = txID
-        expectCommitSuccess(inputs, firstTxId)
+        val tx1Salt = PrivacySalt()
+        val tx1Id = expectCommitSuccess(tx1Salt, inputs)
 
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
 
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
-        val consumedStates = expectConflict(inputs, secondTxId, invalidTimeWindow)
-        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, inputs, invalidTimeWindow)
+        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), INPUT_STATE))
     }
 
     /* Group F: input & reference states */
 
     @Test(timeout=300_000)
     fun `commits transaction with unused input & reference states`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
-        expectCommitSuccess(listOf(inputState), firstTxId, timeWindow, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, listOf(inputState), timeWindow, references = listOf(referenceState))
 
         // Idempotency: can re-notarise successfully.
         testClock.advanceBy(90.minutes)
-        expectCommitSuccess(listOf(inputState), firstTxId, timeWindow, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, listOf(inputState), timeWindow, references = listOf(referenceState))
     }
 
     @Test(timeout=300_000)
     fun `re-notarise after reference state is spent`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
-        expectCommitSuccess(listOf(inputState), firstTxId, timeWindow, references = listOf(referenceState))
+        expectCommitSuccess(tx1Salt, listOf(inputState), timeWindow, references = listOf(referenceState))
 
         // Spend the reference state.
-        expectCommitSuccess(listOf(referenceState), digestService.randomHash(), timeWindow)
+        expectCommitSuccess(PrivacySalt(), listOf(referenceState), timeWindow)
 
         // Idempotency: can re-notarise successfully
         testClock.advanceBy(90.minutes)
-        val result = commit(listOf(inputState), firstTxId, timeWindow, references = listOf(referenceState)).get()
+        val result = commit(tx1Salt, listOf(inputState), timeWindow, references = listOf(referenceState)).first.get()
         // Known failure - this should return success. Will be fixed in a future release.
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with unused reference states and used input states`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(listOf(inputState), firstTxId, references = emptyList())
+        val tx1Id = expectCommitSuccess(tx1Salt, listOf(inputState), references = emptyList())
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
-        val consumedStates = expectConflict(listOf(inputState), secondTxId, timeWindow, references = listOf(referenceState))
-        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, listOf(inputState), timeWindow, references = listOf(referenceState))
+        assertThat(consumedStates[inputState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `rejects transaction with used reference states and unused input states`() {
-        val firstTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
 
-        expectCommitSuccess(listOf(referenceState), firstTxId, references = emptyList())
+        val tx1Id = expectCommitSuccess(tx1Salt, listOf(referenceState), references = emptyList())
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = digestService.randomHash()
+        val tx2Salt = PrivacySalt()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
-        val consumedStates = expectConflict(listOf(inputState), secondTxId, timeWindow, references = listOf(referenceState))
-        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(firstTxId.reHash(), REFERENCE_INPUT_STATE))
+        val consumedStates = expectConflict(tx2Salt, listOf(inputState), timeWindow, references = listOf(referenceState))
+        assertThat(consumedStates[referenceState]).isEqualTo(StateConsumptionDetails(tx1Id.reHash(), REFERENCE_INPUT_STATE))
     }
 
     @Test(timeout=300_000)
     fun `input and reference state transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = digestService.randomHash()
-        val secondTxId = digestService.randomHash()
+        val tx1Salt = PrivacySalt()
+        val tx2Salt = PrivacySalt()
         val referenceState = generateStateRef()
 
         // Ensure batch contains duplicates
-        val validFuture1 = commit(emptyList(), secondTxId, references = listOf(referenceState))
-        val validFuture2 = commit(emptyList(), secondTxId, references = listOf(referenceState))
-        val validFuture3 = commit(listOf(referenceState), firstTxId)
+        val validFuture1 = commit(tx2Salt, emptyList(), references = listOf(referenceState)).first
+        val validFuture2 = commit(tx2Salt, emptyList(), references = listOf(referenceState)).first
+        val validFuture3 = commit(tx1Salt, listOf(referenceState)).first
 
         // Attempt to use the reference state after it has been consumed
-        val validFuture4 = commit(emptyList(), digestService.randomHash(), references = listOf(referenceState))
+        val validFuture4 = commit(PrivacySalt(), emptyList(), references = listOf(referenceState)).first
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
         assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
@@ -476,10 +479,10 @@ class UniquenessProviderTests(
     fun `signs transactions correctly`() {
         (1..10).map {
             val inputState1 = generateStateRef()
-            val firstTxId = digestService.randomHash()
+            val txSalt = PrivacySalt()
             val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
-            Pair(firstTxId, commit(listOf(inputState1), firstTxId, timeWindow))
-        }.forEach { (txId, future) ->
+            commit(txSalt, listOf(inputState1), timeWindow)
+        }.forEach { (future, txId) ->
             val result = future.get()
             assertThat(result).isInstanceOf(Result.Success::class.java)
             val signature = (result as Result.Success).signature
@@ -488,58 +491,64 @@ class UniquenessProviderTests(
     }
 
     private fun commit(
-            states: List<StateRef>,
-            txId: SecureHash,
+            privacySalt: PrivacySalt,
+            inputs: List<StateRef>,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
-    ): CordaFuture<Result> {
-        return uniquenessProvider.commit(states, txId, identity, requestSignature, timeWindow, references)
+    ): Pair<CordaFuture<Result>, SecureHash> {
+        val transactionParts = fakeTransactionParts(inputs, timeWindow, references, privacySalt = privacySalt)
+        val future = uniquenessProvider.commit(transactionParts, identity, requestSignature)
+        return future to transactionParts.id
     }
 
     private fun expectCommitSuccess(
-            states: List<StateRef>,
-            txId: SecureHash,
+            privacySalt: PrivacySalt,
+            inputs: List<StateRef>,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
-    ) {
-        val result = commit(states, txId, timeWindow, references).get()
+    ): SecureHash {
+        val (future, id) = commit(privacySalt, inputs, timeWindow, references)
+        val result = future.get()
         assertThat(result).isInstanceOf(Result.Success::class.java)
         result as Result.Success
-        result.signature.verify(txId)
+        result.signature.verify(id)
+        return id
     }
 
     private fun expectCommitFailure(
-            states: List<StateRef>,
-            txId: SecureHash,
+            privacySalt: PrivacySalt,
+            inputs: List<StateRef>,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
-    ): NotaryError {
-        val result = commit(states, txId, timeWindow, references).get()
+    ): Pair<NotaryError, SecureHash> {
+        val (future, id) = commit(privacySalt, inputs, timeWindow, references)
+        val result = future.get()
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        return (result as Result.Failure).error
+        result as Result.Failure
+        return result.error to id
     }
 
     private fun expectInvalidTimeWindow(
-            states: List<StateRef>,
-            txId: SecureHash,
-            timeWindow: TimeWindow,
+            privacySalt: PrivacySalt,
+            inputs: List<StateRef>,
+            timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ) {
-        val notaryError = expectCommitFailure(states, txId, timeWindow, references)
+        val notaryError = expectCommitFailure(privacySalt, inputs, timeWindow, references).first
         assertThat(notaryError).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
         assertThat((notaryError as NotaryError.TimeWindowInvalid).txTimeWindow).isEqualTo(timeWindow)
     }
 
     private fun expectConflict(
-            states: List<StateRef>,
-            txId: SecureHash,
+            privacySalt: PrivacySalt,
+            inputs: List<StateRef>,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): Map<StateRef, StateConsumptionDetails> {
-        val notaryError = expectCommitFailure(states, txId, timeWindow, references)
+        val (notaryError, id) = expectCommitFailure(privacySalt, inputs, timeWindow, references)
         assertThat(notaryError).isInstanceOf(NotaryError.Conflict::class.java)
         val conflict = notaryError as NotaryError.Conflict
-        assertThat(conflict.txId).isEqualTo(txId)
+        assertThat(conflict.txId).isEqualTo(id)
         return conflict.consumedStates
     }
 }

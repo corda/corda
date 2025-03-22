@@ -22,6 +22,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.SigningFunction
+import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -217,30 +218,27 @@ class RaftUniquenessProvider(
     }
 
     override fun commit(
-            states: List<StateRef>,
-            txId: SecureHash,
+            txParts: TransactionParts,
             callerIdentity: Party,
-            requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?,
-            references: List<StateRef>
+            requestSignature: NotarisationRequestSignature
     ): CordaFuture<UniquenessProvider.Result> {
-        log.debug { "Attempting to commit input states: ${states.joinToString()} for txId: $txId" }
+        log.debug { "Attempting to commit input states: ${txParts.inputs.joinToString()} for txId: ${txParts.id}" }
         val commitCommand = CommitTransaction(
-                states,
-                txId,
+                txParts.inputs,
+                txParts.id,
                 callerIdentity.name.toString(),
                 requestSignature.serialize().bytes,
-                timeWindow,
-                references
+                txParts.timeWindow,
+                txParts.references
         )
         val future = openFuture<UniquenessProvider.Result>()
         client.submit(commitCommand).thenAccept { commitError ->
             val result = if (commitError != null) {
-                log.info("Error occurred while notarising $txId: $commitError")
+                log.info("Error occurred while notarising ${txParts.id}: $commitError")
                 UniquenessProvider.Result.Failure(commitError)
             } else {
-                log.info("All input states of transaction $txId have been committed")
-                UniquenessProvider.Result.Success(signTransaction(txId))
+                log.info("All input states of transaction ${txParts.id} have been committed")
+                UniquenessProvider.Result.Success(signTransaction(txParts.id))
             }
             future.set(result)
         }
