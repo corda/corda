@@ -2,6 +2,7 @@ package net.corda.testing.internal
 
 import net.corda.core.context.AuthServiceId
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -14,15 +15,18 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.expandComponentGroupHashes
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
-import net.corda.core.internal.getGroupHashes
+import net.corda.core.internal.computeComponentGroupNonces
+import net.corda.core.internal.getComponentHashes
 import net.corda.core.internal.getMerkleRoot
 import net.corda.core.internal.notary.TransactionParts
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.coretesting.internal.asTestContextEnv
@@ -239,13 +243,19 @@ fun fakeAttachment(filePath1: String, content1: String, filePath2: String, conte
     return bs.toByteArray()
 }
 
-fun fakeTransactionParts(inputs: List<StateRef>,
-                         timeWindow: TimeWindow? = null,
-                         references: List<StateRef> = emptyList(),
-                         notary: Party? = null,
-                         networkParametersHash: SecureHash? = null,
-                         privacySalt: PrivacySalt = PrivacySalt()): TransactionParts {
-    val componentGroups = createComponentGroups(
+/**
+ * A test [TransactionParts] with an initially consistent and valid transaction ID and ComponentGroup hashes based just on the components
+ * passed in.
+ */
+data class TestTransactionParts(
+        override val inputs: List<StateRef>,
+        override val timeWindow: TimeWindow? = null,
+        override val references: List<StateRef> = emptyList(),
+        override val notary: Party? = null,
+        override val networkParametersHash: SecureHash? = null,
+        val privacySalt: PrivacySalt = PrivacySalt()
+) : TransactionParts {
+    private val componentGroups = createComponentGroups(
             inputs,
             emptyList(),
             emptyList(),
@@ -255,16 +265,20 @@ fun fakeTransactionParts(inputs: List<StateRef>,
             references,
             networkParametersHash
     )
-    val componentGroupHashes = getGroupHashes(componentGroups, privacySalt)
-    val id = getMerkleRoot(componentGroupHashes, DigestService.default)
-    return object : TransactionParts {
-        override val id: SecureHash get() = id
-        override val componentGroupHashes: List<SecureHash> get() = componentGroupHashes
-        override val inputs: List<StateRef> get() = inputs
-        override val timeWindow: TimeWindow? get() = timeWindow
-        override val notary: Party? get() = notary
-        override val references: List<StateRef> get() = references
-        override val networkParametersHash: SecureHash? get() = networkParametersHash
+
+    private val componentGroupNonces = componentGroups.associateBy(ComponentGroup::groupIndex) {
+        computeComponentGroupNonces(it, privacySalt)
+    }
+
+    override val componentGroupHashes: List<SecureHash> = expandComponentGroupHashes(componentGroups, DigestService.default) { group ->
+        val nonces = componentGroupNonces[group.groupIndex]!!
+        getMerkleRoot(getComponentHashes(group, DigestService.default, nonces::get))
+    }
+
+    override val id: SecureHash = getMerkleRoot(componentGroupHashes)
+
+    override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
+        return componentGroupNonces[type.ordinal] ?: emptyList()
     }
 }
 

@@ -1,5 +1,6 @@
 package net.corda.core.internal.notary
 
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -14,6 +15,7 @@ import net.corda.core.transactions.WireTransaction
  * The minimum amount of information needed to notarise a transaction. Note that this does not include
  * any sensitive transaction details.
  */
+// TODO Rename
 interface TransactionParts : NamedByHash {
     val componentGroupHashes: List<SecureHash>
     val inputs: List<StateRef>
@@ -21,6 +23,8 @@ interface TransactionParts : NamedByHash {
     val notary: Party?
     val references: List<StateRef>
     val networkParametersHash: SecureHash?
+
+    fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash>
 
     data class Signed(val tx: SignedTransaction) : TransactionParts, NamedByHash by tx {
         override val componentGroupHashes: List<SecureHash>
@@ -35,6 +39,10 @@ interface TransactionParts : NamedByHash {
             get() = tx.references
         override val networkParametersHash: SecureHash?
             get() = tx.networkParametersHash
+
+        override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
+            return (tx.coreTransaction as? WireTransaction)?.availableComponentNonces?.get(type.ordinal) ?: emptyList()
+        }
     }
 
     data class Filtered(val tx: FilteredTransaction) : TransactionParts, NamedByHash by tx {
@@ -50,6 +58,10 @@ interface TransactionParts : NamedByHash {
             get() = tx.references
         override val networkParametersHash: SecureHash?
             get() = tx.networkParametersHash
+
+        override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
+            return tx.filteredComponentGroups.find { it.groupIndex == type.ordinal }?.nonces ?: emptyList()
+        }
     }
 
     data class Core(val tx: CoreTransaction) : TransactionParts, NamedByHash by tx {
@@ -65,5 +77,9 @@ interface TransactionParts : NamedByHash {
             get() = tx.references
         override val networkParametersHash: SecureHash?
             get() = tx.networkParametersHash
+
+        override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
+            return emptyList()
+        }
     }
 }

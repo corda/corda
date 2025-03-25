@@ -221,13 +221,17 @@ private fun MutableList<ComponentGroup>.addListGroup(type: ComponentGroupEnum, l
     }
 }
 
-fun getComponentNonces(group: ComponentGroup, digestService: DigestService, privacySalt: PrivacySalt): List<SecureHash> {
+fun computeComponentGroupNonces(componentGroup: ComponentGroup,
+                                privacySalt: PrivacySalt,
+                                digestService: DigestService = DigestService.default): List<SecureHash> {
     return if (digestService.hashAlgorithm == SecureHash.SHA2_256) {
-        group.components.mapIndexed { componentIndex, componentBytes ->
-            digestService.componentHash(componentBytes, privacySalt, group.groupIndex, componentIndex)
+        componentGroup.components.mapIndexed { componentIndex, componentBytes ->
+            digestService.componentHash(componentBytes, privacySalt, componentGroup.groupIndex, componentIndex)
         }
     } else {
-        List(group.components.size) { componentIndex -> digestService.computeNonce(privacySalt, group.groupIndex, componentIndex) }
+        List(componentGroup.components.size) { componentIndex ->
+            digestService.computeNonce(privacySalt, componentGroup.groupIndex, componentIndex)
+        }
     }
 }
 
@@ -237,13 +241,13 @@ inline fun getComponentHashes(group: ComponentGroup, digestService: DigestServic
     }
 }
 
-fun getMerkleRoot(hashes: List<SecureHash>, digestService: DigestService): SecureHash {
+fun getMerkleRoot(hashes: List<SecureHash>, digestService: DigestService = DigestService.default): SecureHash {
     return MerkleTree.getMerkleTree(hashes, digestService).hash
 }
 
-inline fun getGroupHashesFromMerkleRoots(componentGroups: Collection<ComponentGroup>,
-                                         digestService: DigestService,
-                                         merkleRoot: (ComponentGroup) -> SecureHash): List<SecureHash> {
+inline fun expandComponentGroupHashes(componentGroups: Collection<ComponentGroup>,
+                                      digestService: DigestService,
+                                      componentGroupHash: (ComponentGroup) -> SecureHash): List<SecureHash> {
     val hashes = ArrayList<SecureHash>(componentGroups.size)
     // Even if empty and not used, we should at least send oneHashes for each known
     // or received but unknown (thus, bigger than known ordinal) component groups.
@@ -251,19 +255,9 @@ inline fun getGroupHashesFromMerkleRoots(componentGroups: Collection<ComponentGr
     val maxGroupIndex = componentGroups.maxOf { it.groupIndex }
     for (groupIndex in 0..maxGroupIndex) {
         val componentGroup = componentGroups.find { it.groupIndex == groupIndex }
-        hashes.add(componentGroup?.let(merkleRoot) ?: allOnesHash)
+        hashes.add(componentGroup?.let(componentGroupHash) ?: allOnesHash)
     }
     return hashes
-}
-
-fun getGroupHashes(componentGroups: Collection<ComponentGroup>,
-                   privacySalt: PrivacySalt,
-                   digestService: DigestService = DigestService.default): List<SecureHash> {
-    return getGroupHashesFromMerkleRoots(componentGroups, digestService) { group ->
-        val nonces = getComponentNonces(group, digestService, privacySalt)
-        val hashes = getComponentHashes(group, digestService, nonces::get)
-        getMerkleRoot(hashes, digestService)
-    }
 }
 
 typealias SerializedTransactionState = SerializedBytes<TransactionState<ContractState>>

@@ -40,9 +40,9 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.TestTransactionParts
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.fakeTransactionParts
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockKeyManagementService
@@ -496,9 +496,9 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): Pair<CordaFuture<Result>, SecureHash> {
-        val transactionParts = fakeTransactionParts(inputs, timeWindow, references, privacySalt = privacySalt)
-        val future = uniquenessProvider.commit(transactionParts, identity, requestSignature)
-        return future to transactionParts.id
+        val txParts = TestTransactionParts(inputs, timeWindow, references, privacySalt = privacySalt)
+        val future = uniquenessProvider.commit(txParts, identity, requestSignature)
+        return future to txParts.id
     }
 
     private fun expectCommitSuccess(
@@ -507,12 +507,12 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): SecureHash {
-        val (future, id) = commit(privacySalt, inputs, timeWindow, references)
+        val (future, txId) = commit(privacySalt, inputs, timeWindow, references)
         val result = future.get()
         assertThat(result).isInstanceOf(Result.Success::class.java)
         result as Result.Success
-        result.signature.verify(id)
-        return id
+        result.signature.verify(txId)
+        return txId
     }
 
     private fun expectCommitFailure(
@@ -521,11 +521,11 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): Pair<NotaryError, SecureHash> {
-        val (future, id) = commit(privacySalt, inputs, timeWindow, references)
+        val (future, txId) = commit(privacySalt, inputs, timeWindow, references)
         val result = future.get()
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         result as Result.Failure
-        return result.error to id
+        return result.error to txId
     }
 
     private fun expectInvalidTimeWindow(
@@ -545,10 +545,10 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): Map<StateRef, StateConsumptionDetails> {
-        val (notaryError, id) = expectCommitFailure(privacySalt, inputs, timeWindow, references)
+        val (notaryError, txId) = expectCommitFailure(privacySalt, inputs, timeWindow, references)
         assertThat(notaryError).isInstanceOf(NotaryError.Conflict::class.java)
         val conflict = notaryError as NotaryError.Conflict
-        assertThat(conflict.txId).isEqualTo(id)
+        assertThat(conflict.txId).isEqualTo(txId)
         return conflict.consumedStates
     }
 }

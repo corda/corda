@@ -32,9 +32,9 @@ import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.equivalent
 import net.corda.core.internal.getComponentHashes
-import net.corda.core.internal.getComponentNonces
+import net.corda.core.internal.computeComponentGroupNonces
 import net.corda.core.internal.getGroup
-import net.corda.core.internal.getGroupHashesFromMerkleRoots
+import net.corda.core.internal.expandComponentGroupHashes
 import net.corda.core.internal.getMerkleRoot
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
@@ -324,7 +324,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * in the wire transaction.
      */
     internal val groupHashes: List<SecureHash> by lazy {
-        getGroupHashesFromMerkleRoots(componentGroups, digestService) { groupsMerkleRoots[it.groupIndex]!! }
+        expandComponentGroupHashes(componentGroups, digestService) { groupsMerkleRoots[it.groupIndex]!! }
     }
 
     /**
@@ -353,10 +353,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associateBy(
-                ComponentGroup::groupIndex,
-                { componentGroup -> getComponentNonces(componentGroup, digestService, privacySalt) }
-        )
+        componentGroups.associateBy(ComponentGroup::groupIndex) { componentGroup ->
+            computeComponentGroupNonces(componentGroup, privacySalt, digestService)
+        }
     }
 
     /**
@@ -365,13 +364,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associateBy(
-                ComponentGroup::groupIndex,
-                { componentGroup ->
-                    val nonces = availableComponentNonces[componentGroup.groupIndex]!!
-                    getComponentHashes(componentGroup, digestService, nonces::get)
-                }
-        )
+        componentGroups.associateBy(ComponentGroup::groupIndex) { componentGroup ->
+            val nonces = availableComponentNonces[componentGroup.groupIndex]!!
+            getComponentHashes(componentGroup, digestService, nonces::get)
+        }
     }
 
     /**
