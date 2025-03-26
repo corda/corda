@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.readObject
 import net.corda.core.internal.signWithCertPath
+import net.corda.core.internal.zipExact
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationContext
@@ -149,8 +150,7 @@ class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parame
         }
 
         // notary specified by keystore path (+password)
-        require(notaryKeyStores.size == notaryKeyPasswords.size)
-        val n2: List<NotaryInfo> = notaryKeyStores.zip(notaryKeyPasswords) { path, password ->
+        val n2: List<NotaryInfo> = notaryKeyStores.zipExact(notaryKeyPasswords) { path, password ->
             val party = identityFromKeyStore(path.toFile(), password)
             NotaryInfo(party, false)
         }

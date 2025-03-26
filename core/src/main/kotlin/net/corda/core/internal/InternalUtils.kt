@@ -180,6 +180,11 @@ inline fun <K, V> Iterable<V>.groupByMultipleKeys(
     return map
 }
 
+inline fun <T, R, V> Collection<T>.zipExact(other: Collection<R>, transform: (T, R) -> V): List<V> {
+    require(this.size == other.size) { "Collections must have the same size" }
+    return this.zip(other, transform)
+}
+
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */

@@ -10,15 +10,19 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sign
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.expandComponentGroupHashes
+import net.corda.core.internal.computeComponentGroupNonces
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
-import net.corda.core.internal.computeComponentGroupNonces
+import net.corda.core.internal.expandComponentGroupHashes
 import net.corda.core.internal.getComponentHashes
 import net.corda.core.internal.getMerkleRoot
 import net.corda.core.internal.notary.TransactionParts
@@ -244,18 +248,17 @@ fun fakeAttachment(filePath1: String, content1: String, filePath2: String, conte
 }
 
 /**
- * A test [TransactionParts] with an initially consistent and valid transaction ID and ComponentGroup hashes based just on the components
- * passed in.
+ * Create a [TestTransactionParts] with a consistent and valid transaction ID and ComponentGroup hashes based just on the components passed
+ * in.
  */
-data class TestTransactionParts(
-        override val inputs: List<StateRef>,
-        override val timeWindow: TimeWindow? = null,
-        override val references: List<StateRef> = emptyList(),
-        override val notary: Party? = null,
-        override val networkParametersHash: SecureHash? = null,
-        val privacySalt: PrivacySalt = PrivacySalt()
-) : TransactionParts {
-    private val componentGroups = createComponentGroups(
+fun testTransactionParts(inputs: List<StateRef>,
+                         timeWindow: TimeWindow? = null,
+                         references: List<StateRef> = emptyList(),
+                         notary: Party? = null,
+                         networkParametersHash: SecureHash? = null,
+                         privacySalt: PrivacySalt = PrivacySalt(),
+                         signers: List<Pair<KeyPair, SignatureMetadata>> = emptyList()): TestTransactionParts {
+    val componentGroups = createComponentGroups(
             inputs,
             emptyList(),
             emptyList(),
@@ -265,21 +268,41 @@ data class TestTransactionParts(
             references,
             networkParametersHash
     )
-
-    private val componentGroupNonces = componentGroups.associateBy(ComponentGroup::groupIndex) {
+    val componentGroupNonces = componentGroups.associateBy(ComponentGroup::groupIndex) {
         computeComponentGroupNonces(it, privacySalt)
     }
-
-    override val componentGroupHashes: List<SecureHash> = expandComponentGroupHashes(componentGroups, DigestService.default) { group ->
+    val componentGroupHashes = expandComponentGroupHashes(componentGroups, DigestService.default) { group ->
         val nonces = componentGroupNonces[group.groupIndex]!!
         getMerkleRoot(getComponentHashes(group, DigestService.default, nonces::get))
     }
+    val txId = getMerkleRoot(componentGroupHashes)
+    val signatures = signers.map { (keyPair, signatureMetadata) -> keyPair.sign(SignableData(txId, signatureMetadata)) }
+    return TestTransactionParts(
+            txId,
+            inputs,
+            timeWindow,
+            references,
+            notary,
+            networkParametersHash,
+            componentGroupHashes,
+            componentGroupNonces,
+            signatures
+    )
+}
 
-    override val id: SecureHash = getMerkleRoot(componentGroupHashes)
 
-    override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
-        return componentGroupNonces[type.ordinal] ?: emptyList()
-    }
+data class TestTransactionParts(
+        override val id: SecureHash,
+        override val inputs: List<StateRef>,
+        override val timeWindow: TimeWindow?,
+        override val references: List<StateRef>,
+        override val notary: Party?,
+        override val networkParametersHash: SecureHash?,
+        override val componentGroupHashes: List<SecureHash>,
+        val componentGroupNonces: Map<Int, List<SecureHash>>,
+        override val signatures: List<TransactionSignature>
+) : TransactionParts {
+    override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> = componentGroupNonces[type.ordinal]!!
 }
 
 /** If [effectiveSerializationEnv] is not set, runs the block with a new [SerializationEnvironmentRule]. */

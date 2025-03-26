@@ -40,9 +40,9 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.TestTransactionParts
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.testTransactionParts
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockKeyManagementService
@@ -496,7 +496,7 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): Pair<CordaFuture<Result>, SecureHash> {
-        val txParts = TestTransactionParts(inputs, timeWindow, references, privacySalt = privacySalt)
+        val txParts = testTransactionParts(inputs, timeWindow, references, privacySalt = privacySalt)
         val future = uniquenessProvider.commit(txParts, identity, requestSignature)
         return future to txParts.id
     }
