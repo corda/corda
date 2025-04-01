@@ -349,9 +349,9 @@ open class TransactionBuilder(
 
         val attachments = serviceHub.getTrustedClassAttachments(missingClass)
         val attachment = if (isLegacy) {
-            // Any attachment which contains the class but isn't a non-legacy CorDapp is *probably* the legacy attachment we're looking for
-            val nonLegacyCordapps = serviceHub.cordappProvider.cordapps.mapToSet { it.jarHash }
-            attachments.firstOrNull { it.id !in nonLegacyCordapps }
+            // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
+            val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
+            attachments.firstOrNull { it.id in legacyContractCordapps } 
         } else {
             attachments.firstOrNull()
         }
