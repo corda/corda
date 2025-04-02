@@ -47,6 +47,7 @@ interface TransactionParts : NamedByHash {
         override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
             return (tx.coreTransaction as? WireTransaction)?.availableComponentNonces?.get(type.ordinal) ?: emptyList()
         }
+        override fun toString(): String = "TransactionParts.Signed($id)"
     }
 
     data class Filtered(val tx: FilteredTransaction) : TransactionParts, NamedByHash by tx {
@@ -64,10 +65,10 @@ interface TransactionParts : NamedByHash {
             get() = tx.groupHashes
         override val signatures: List<TransactionSignature>
             get() = emptyList()
-
         override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
             return tx.filteredComponentGroups.find { it.groupIndex == type.ordinal }?.nonces ?: emptyList()
         }
+        override fun toString(): String = "TransactionParts.Filtered($id)"
     }
 
     data class Core(val tx: CoreTransaction) : TransactionParts, NamedByHash by tx {
@@ -85,9 +86,9 @@ interface TransactionParts : NamedByHash {
             get() = emptyList()
         override val signatures: List<TransactionSignature>
             get() = emptyList()
-
         override fun getComponentGroupNonces(type: ComponentGroupEnum): List<SecureHash> {
             return emptyList()
         }
+        override fun toString(): String = "TransactionParts.Core($id)"
     }
 }
