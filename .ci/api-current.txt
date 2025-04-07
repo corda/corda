@@ -10087,6 +10087,13 @@ public final class net.corda.testing.node.TestClock extends net.corda.node.Mutab
   public final synchronized void advanceBy(java.time.Duration)
   public final synchronized void setTo(java.time.Instant)
 ##
+public interface net.corda.core.node.services.statemachine.FlowSchedulerMapper
+    @NotNull
+    public abstract String getScheduler(net.corda.core.context.InvocationContext, Class, net.corda.core.identity.CordaX500Name)
+##
+public @interface net.corda.core.node.services.statemachine.FlowThreadPool
+    public abstract String value()
+##
 @DoNotImplement
 public abstract class net.corda.testing.node.TestCordapp extends java.lang.Object
   public <init>()
