@@ -224,7 +224,12 @@ dependencies {
     integrationTestImplementation "de.javakaffee:kryo-serializers:$kryo_serializer_version"
     integrationTestImplementation "junit:junit:$junit_version"
     integrationTestImplementation "org.assertj:assertj-core:${assertj_version}"
-    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${protonj_version}"
+    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${qpid_version}"
+    // Allow access to simple SOCKS Server for integration testing
+    integrationTestImplementation("io.netty:netty-example:$netty_version") {
+        exclude group: "io.netty", module: "netty-tcnative"
+        exclude group: "ch.qos.logback", module: "logback-classic"
+    }
 
     // used by FinalityFlowErrorHandlingTest
     slowIntegrationTestImplementation project(':testing:cordapps:cashobservers')

@@ -2,11 +2,17 @@ package net.corda.node.services.rpc
 
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.debug
-import net.corda.node.internal.artemis.*
+import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
+import net.corda.node.internal.artemis.NodeJaasConfig
+import net.corda.node.internal.artemis.RPCJaasConfig
+import net.corda.node.internal.artemis.isBindingError
+import net.corda.node.services.messaging.InterceptingActiveMQJAASSecurityManager
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
@@ -22,7 +28,7 @@ import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
 
 class ArtemisRpcBroker internal constructor(
-        address: NetworkHostAndPort,
+        private val address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,
         private val sslOptions: BrokerRpcSslOptions?,
         private val useSsl: Boolean,
@@ -32,7 +38,8 @@ class ArtemisRpcBroker internal constructor(
         private val jmxEnabled: Boolean = false,
         private val baseDirectory: Path,
         private val nodeConfiguration: MutualSslConfiguration,
-        private val shouldStartLocalShell: Boolean) : ArtemisBroker {
+        private val shouldStartLocalShell: Boolean,
+) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
@@ -107,7 +114,8 @@ class ArtemisRpcBroker internal constructor(
                 return arrayOf(AppConfigurationEntry(name, AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options))
             }
         }
-        return ActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig)
+        return InterceptingActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig, -1, address.port, adminAddressOptional?.port
+                ?: -1)
     }
 }
 
