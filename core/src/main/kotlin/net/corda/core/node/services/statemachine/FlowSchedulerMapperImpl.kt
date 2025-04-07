@@ -12,18 +12,18 @@ import net.corda.core.utilities.loggerFor
  * This class maps flows to schedulers based on the presence of the `@FlowThreadPool` annotation and the origin of the invocation.
  * If no annotation is present, or if the specified thread pool is not configured, the invocation origin thread pool is used as a fallback.
  *
- * @property threadPoolNameToThreadPoolSizeMap A map of available thread pools and their sizes, used to determine the available thread pools.
+ * @property additionalThreadPoolNameList A list of the available thread pools.
  */
-class FlowSchedulerMapperImpl(threadPoolNameToThreadPoolSizeMap: Map<String, Int>) : FlowSchedulerMapper {
-    private val availablePools = getAvailablePools(threadPoolNameToThreadPoolSizeMap)
+class FlowSchedulerMapperImpl(additionalThreadPoolNameList: Set<String>) : FlowSchedulerMapper {
+    private val availablePools = getAvailablePools(additionalThreadPoolNameList)
 
     companion object {
         private val log = loggerFor<FlowSchedulerMapperImpl>()
         private const val DEFAULT_POOL = "default"
     }
 
-    private fun getAvailablePools(threadPoolNameToThreadPoolSizeMap: Map<String, Int>): Set<String> {
-        val poolsSet = threadPoolNameToThreadPoolSizeMap.keys.toSet() + DEFAULT_POOL
+    private fun getAvailablePools(additionalThreadPoolNameList: Set<String>): Set<String> {
+        val poolsSet = additionalThreadPoolNameList + DEFAULT_POOL
 
         log.info("Available flow thread pools: $poolsSet")
         return poolsSet
