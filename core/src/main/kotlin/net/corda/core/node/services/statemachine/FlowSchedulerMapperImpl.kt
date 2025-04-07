@@ -23,9 +23,7 @@ class FlowSchedulerMapperImpl(threadPoolNameToThreadPoolSizeMap: Map<String, Int
     }
 
     private fun getAvailablePools(threadPoolNameToThreadPoolSizeMap: Map<String, Int>): Set<String> {
-        val poolsSet = mutableSetOf(DEFAULT_POOL)
-        val additionalFlowThreadPoolSet = threadPoolNameToThreadPoolSizeMap.map { it.key }.toSet()
-        poolsSet.addAll(additionalFlowThreadPoolSet)
+        val poolsSet = threadPoolNameToThreadPoolSizeMap.keys.toSet() + DEFAULT_POOL
 
         log.info("Available flow thread pools: $poolsSet")
         return poolsSet
