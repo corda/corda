@@ -8,6 +8,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.hash
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.node.services.statemachine.FlowSchedulerMapper
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -41,7 +42,8 @@ data class CordappImpl(
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
         private val explicitCordappClasses: List<String> = emptyList(),
-        val isVirtual: Boolean = false
+        val isVirtual: Boolean = false,
+        override val flowSchedulerMappers: List<FlowSchedulerMapper> = emptyList()
 ) : Cordapp {
     override val jarPath: URL
         get() = jarFile.toUri().toURL()
