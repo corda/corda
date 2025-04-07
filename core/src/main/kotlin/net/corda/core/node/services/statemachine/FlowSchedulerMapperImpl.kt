@@ -7,7 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
 
 /**
- * Default implementation of [FlowSchedulerMapper].
+ * Default implementation of [FlowSchedulerMapper]. This class is only intended for Enterprise users.
  *
  * This class maps flows to schedulers based on the presence of the `@FlowThreadPool` annotation and the origin of the invocation.
  * If no annotation is present, or if the specified thread pool is not configured, the invocation origin thread pool is used as a fallback.
