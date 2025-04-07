@@ -43,7 +43,7 @@ data class CordappImpl(
         val isLoaded: Boolean = true,
         private val explicitCordappClasses: List<String> = emptyList(),
         val isVirtual: Boolean = false,
-        override val flowSchedulerMappers: List<FlowSchedulerMapper> = emptyList()
+        override val flowSchedulerMappers: List<Class<out FlowSchedulerMapper>> = emptyList()
 ) : Cordapp {
     override val jarPath: URL
         get() = jarFile.toUri().toURL()

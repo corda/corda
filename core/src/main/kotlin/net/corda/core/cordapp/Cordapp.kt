@@ -62,7 +62,7 @@ interface Cordapp {
     val jarHash: SecureHash.SHA256
     val minimumPlatformVersion: Int
     val targetPlatformVersion: Int
-    val flowSchedulerMappers: List<FlowSchedulerMapper>
+    val flowSchedulerMappers: List<Class<out FlowSchedulerMapper>>
 
     /**
      * Further information about the CorDapp extracted from its MANIFEST. The sub-types [Default], [Contract] and [Workflow] determine what
