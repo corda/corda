@@ -1,7 +1,8 @@
-package net.corda.core.flows
+package net.corda.core.flows.scheduler.mapper
 
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
 
