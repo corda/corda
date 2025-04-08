@@ -8,7 +8,6 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
-
 /**
  * Common Gradle arguments for all Gradle executions
  */
