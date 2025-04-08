@@ -1,4 +1,4 @@
-package net.corda.core.node.services.statemachine
+package net.corda.core.node.flows
 
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
