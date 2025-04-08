@@ -8,6 +8,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+
 /**
  * Common Gradle arguments for all Gradle executions
  */
@@ -47,9 +48,26 @@ pipeline {
         CORDA_USE_CACHE = "corda-remotes"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
         JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
+        SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
+        SNYK_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
+        C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
     }
 
     stages {
+        
+        stage('Snyk Security') {
+            steps {
+                script {
+                    // Invoke Snyk for each Gradle sub project we wish to scan
+                    def modulesToScan = ['node', 'capsule']
+                    modulesToScan.each { module ->
+                        snykSecurityScan("${env.SNYK_API_KEY}",
+                        "--sub-project=$module --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'", true, true)
+                    }
+                }
+            }
+        }
+        
         stage('Compile') {
             steps {
                 authenticateGradleWrapper()
