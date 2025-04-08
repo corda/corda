@@ -552,6 +552,9 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
 public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
+public final class net.corda.core.contracts.AttachmentConstraintKt extends java.lang.Object
+  public static final boolean isSatisfiedByWithNoWarnForSigConstraint(net.corda.core.contracts.AttachmentConstraint, net.corda.core.contracts.Attachment)
+##
 @CordaSerializable
 public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
@@ -709,6 +712,12 @@ public final class net.corda.core.contracts.ContractsDSL extends java.lang.Objec
   public static final java.util.List select(java.util.Collection, java.security.PublicKey, net.corda.core.identity.AbstractParty)
   public static final java.util.List select(java.util.Collection, java.util.Collection, java.util.Collection)
   public static final net.corda.core.contracts.MoveCommand verifyMoveCommand(java.util.List, java.util.List)
+##
+public final class net.corda.core.contracts.CordaRotatedKeys extends java.lang.Object
+  @NotNull
+  public final net.corda.core.contracts.RotatedKeys getKeys()
+  @NotNull
+  public static final net.corda.core.contracts.CordaRotatedKeys INSTANCE
 ##
 @CordaSerializable
 public interface net.corda.core.contracts.FungibleAsset extends net.corda.core.contracts.FungibleState, net.corda.core.contracts.OwnableState
@@ -868,6 +877,37 @@ public final class net.corda.core.contracts.Requirements extends java.lang.Objec
   public static final net.corda.core.contracts.Requirements INSTANCE
 ##
 @CordaSerializable
+public final class net.corda.core.contracts.RotatedKeys extends net.corda.core.serialization.SingletonSerializeAsToken
+  public <init>()
+  public <init>(java.util.List)
+  public <init>(java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public final boolean canBeTransitioned(java.security.PublicKey, java.security.PublicKey)
+  public final boolean canBeTransitioned(java.security.PublicKey, java.util.List)
+  public final boolean canBeTransitioned(java.util.List, java.util.List)
+  @NotNull
+  public final java.util.List component1()
+  @NotNull
+  public final net.corda.core.contracts.RotatedKeys copy(java.util.List)
+  public boolean equals(Object)
+  @NotNull
+  public final java.util.List getRotatedSigningKeys()
+  public int hashCode()
+  @NotNull
+  public final net.corda.core.crypto.SecureHash rotateToHash(java.security.PublicKey)
+  @NotNull
+  public String toString()
+##
+public final class net.corda.core.contracts.RotatedKeysKt extends java.lang.Object
+  @NotNull
+  public static final String DEV_CORDAPP_CODE_SIGNING_STR = "AA59D829F2CA8FDDF5ABEA40D815F937E3E54E572B65B93B5C216AE6594E7D6B"
+  @NotNull
+  public static final String NEW_NON_PROD_CORDAPP_CODE_SIGNING_STR = "B710A80780A12C52DF8A0B4C2247E08907CCA5D0F19AB1E266FE7BAEA9036790"
+  @NotNull
+  public static final String NEW_PROD_CORDAPP_CODE_SIGNING_STR = "01EFA14B42700794292382C1EEAC9788A26DAFBCCC98992C01D5BC30EEAACD28"
+  @NotNull
+  public static final String PROD_CORDAPP_CODE_SIGNING_STR = "EB4989E7F861FEBEC242E6C24CF0B51C41E108D2C4479D296C5570CB8DAD3EE0"
+##
+@CordaSerializable
 public interface net.corda.core.contracts.SchedulableState extends net.corda.core.contracts.ContractState
   @Nullable
   public abstract net.corda.core.contracts.ScheduledActivity nextScheduledActivity(net.corda.core.contracts.StateRef, net.corda.core.flows.FlowLogicRefFactory)
@@ -924,6 +964,7 @@ public final class net.corda.core.contracts.SignatureAttachmentConstraint extend
   public final java.security.PublicKey getKey()
   public int hashCode()
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
+  public final boolean isSatisfiedBy(net.corda.core.contracts.Attachment, boolean)
   @NotNull
   public String toString()
   @NotNull
@@ -1399,6 +1440,8 @@ public interface net.corda.core.cordapp.Cordapp
   public abstract java.util.List getCordappClasses()
   @NotNull
   public abstract java.util.Set getCustomSchemas()
+  @NotNull
+  public abstract java.util.List getFlowSchedulerMappers()
   @NotNull
   public abstract net.corda.core.cordapp.Cordapp$Info getInfo()
   @NotNull
@@ -3971,6 +4014,23 @@ public final class net.corda.core.flows.WrappedFlowExternalOperation extends jav
   public final net.corda.core.flows.FlowExternalOperation getOperation()
   @NotNull
   public final net.corda.core.internal.ServiceHubCoreInternal getServiceHub()
+##
+public interface net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
+  @NotNull
+  public abstract String getScheduler(net.corda.core.context.InvocationContext, Class, net.corda.core.identity.CordaX500Name)
+##
+public final class net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl extends java.lang.Object implements net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
+  public <init>(java.util.Set)
+  @NotNull
+  public String getScheduler(net.corda.core.context.InvocationContext, Class, net.corda.core.identity.CordaX500Name)
+  @NotNull
+  public static final net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl$Companion Companion
+##
+public static final class net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+##
+public @interface net.corda.core.flows.scheduler.mapper.FlowThreadPool
+  public abstract String value()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -7560,6 +7620,8 @@ public final class net.corda.core.transactions.LedgerTransaction extends net.cor
   public final java.util.List getReferenceStates()
   @NotNull
   public java.util.List getReferences()
+  @NotNull
+  public final net.corda.core.contracts.RotatedKeys getRotatedKeys()
   @Nullable
   public final net.corda.core.contracts.TimeWindow getTimeWindow()
   @NotNull
@@ -9388,12 +9450,16 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.identity.CordaX500Name component1()
   @Nullable
   public final net.corda.core.utilities.NetworkHostAndPort component10()
   @NotNull
   public final java.util.Map component11()
+  @NotNull
+  public final java.util.Collection component12()
   @NotNull
   public final java.util.List component2()
   @NotNull
@@ -9420,6 +9486,8 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort)
   @NotNull
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
+  @NotNull
+  public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, java.util.Collection)
   public boolean equals(Object)
   @NotNull
   public final java.util.Collection getAdditionalCordapps()
@@ -9427,6 +9495,8 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public final java.util.Map getCustomOverrides()
   @NotNull
   public final java.util.Map getFlowOverrides()
+  @NotNull
+  public final java.util.Collection getLegacyContracts()
   @Nullable
   public final String getLogLevelOverride()
   @NotNull
@@ -9453,15 +9523,21 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   @NotNull
   public final net.corda.testing.driver.NodeParameters withFlowOverrides(java.util.Map)
   @NotNull
+  public final net.corda.testing.driver.NodeParameters withLegacyContracts(java.util.Collection)
+  @NotNull
   public final net.corda.testing.driver.NodeParameters withLogLevelOverride(String)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withMaximumHeapSize(String)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withProvidedName(net.corda.core.identity.CordaX500Name)
   @NotNull
+  public final net.corda.testing.driver.NodeParameters withRpcAddress(net.corda.core.utilities.NetworkHostAndPort)
+  @NotNull
   public final net.corda.testing.driver.NodeParameters withRpcUsers(java.util.List)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withStartInSameProcess(Boolean)
+  @NotNull
+  public final net.corda.testing.driver.NodeParameters withSystemProperties(java.util.Map)
   @NotNull
   public final net.corda.testing.driver.NodeParameters withVerifierType(net.corda.testing.driver.VerifierType)
 ##
@@ -9942,6 +10018,8 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.node.services.NetworkParametersService getNetworkParametersService()
   @NotNull
+  public final net.corda.core.contracts.RotatedKeys getRotatedKeys()
+  @NotNull
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
   public net.corda.core.internal.telemetry.TelemetryServiceImpl getTelemetryService()
@@ -10091,9 +10169,13 @@ public final class net.corda.testing.node.TestClock extends net.corda.node.Mutab
 public abstract class net.corda.testing.node.TestCordapp extends java.lang.Object
   public <init>()
   @NotNull
+  public abstract net.corda.testing.node.TestCordapp asSigned()
+  @NotNull
   public static final net.corda.testing.node.TestCordapp findCordapp(String)
   @NotNull
   public abstract java.util.Map getConfig()
+  @NotNull
+  public static final net.corda.testing.node.TestCordapp of(java.net.URI)
   @NotNull
   public abstract net.corda.testing.node.TestCordapp withConfig(java.util.Map)
   @NotNull
@@ -10103,6 +10185,8 @@ public static final class net.corda.testing.node.TestCordapp$Companion extends j
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final net.corda.testing.node.TestCordapp findCordapp(String)
+  @NotNull
+  public final net.corda.testing.node.TestCordapp of(java.net.URI)
 ##
 public final class net.corda.testing.node.UnstartedMockNode extends java.lang.Object
   public <init>(net.corda.testing.node.internal.InternalMockNetwork$MockNode, kotlin.jvm.internal.DefaultConstructorMarker)
