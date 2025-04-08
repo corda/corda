@@ -3,12 +3,12 @@ package net.corda.core.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.hash
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.node.services.statemachine.FlowSchedulerMapper
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer

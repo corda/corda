@@ -4,9 +4,9 @@ import net.corda.core.DoNotImplement
 import net.corda.core.cordapp.Cordapp.Info.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
 import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.node.services.statemachine.FlowSchedulerMapper
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
