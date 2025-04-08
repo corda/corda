@@ -25,14 +25,13 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.node.User
+import net.corda.testing.internal.isQuasarAgentSpecified import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
 import java.time.Duration
@@ -194,11 +193,6 @@ class FlowRetryTest {
             assertEquals(-1, GeneralExternalFailureFlow.retryCount)
         }
     }
-}
-
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
 }
 
 class ExceptionToCauseFiniteRetry : ConstraintViolationException("Faked violation", SQLException("Fake"), "Fake name")
