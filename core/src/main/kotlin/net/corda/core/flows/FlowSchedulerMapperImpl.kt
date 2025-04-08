@@ -1,8 +1,7 @@
-package net.corda.core.node.flows
+package net.corda.core.flows
 
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.loggerFor
 
