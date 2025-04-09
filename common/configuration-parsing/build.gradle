@@ -3,6 +3,8 @@ apply plugin: 'corda.common-publishing'
 
 description 'Corda common-configuration-parsing module'
 
+//connelm/snyk-merge-branch update to trigger snyk delta
+
 dependencies {
     implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 
