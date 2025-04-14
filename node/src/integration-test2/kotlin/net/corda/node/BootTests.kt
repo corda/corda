@@ -47,7 +47,7 @@ class BootTests {
         fun NodeHandle.attemptJavaDeserialization() {
             CordaRPCClient(rpcAddress).use(user.username, user.password) { connection ->
                 connection.proxy
-                rpc.startFlow(::ObjectInputStreamFlow).returnValue.getOrThrow()
+                rpc.startFlow(BootTests::ObjectInputStreamFlow).returnValue.getOrThrow()
             }
         }
         driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
