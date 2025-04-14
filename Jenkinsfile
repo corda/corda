@@ -183,6 +183,7 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
+                            authenticateGradleWrapper()
                             steps {
                                 sh script: [
                                         './gradlew',
@@ -226,6 +227,7 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
+                            authenticateGradleWrapper()
                             steps {
                                 sh script: [
                                         './gradlew',
@@ -278,6 +280,7 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
+                            authenticateGradleWrapper()
                             steps {
                                 sh script: [
                                     './gradlew',
