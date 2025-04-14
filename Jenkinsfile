@@ -183,8 +183,8 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
-                            authenticateGradleWrapper()
                             steps {
+                                authenticateGradleWrapper()
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
@@ -227,8 +227,8 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
-                            authenticateGradleWrapper()
                             steps {
+                            authenticateGradleWrapper()
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
@@ -280,8 +280,8 @@ pipeline {
                             }
                         }
                         stage('Recompile') {
-                            authenticateGradleWrapper()
                             steps {
+                                authenticateGradleWrapper()
                                 sh script: [
                                     './gradlew',
                                     COMMON_GRADLE_PARAMS,
