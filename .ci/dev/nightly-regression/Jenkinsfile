@@ -111,24 +111,6 @@ pipeline {
                                 ].join(' ')
                             }
                         }
-                        stage('Smoke Test') {
-                            steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'smokeTest'
-                                ].join(' ')
-                            }
-                        }
-                        stage('Slow Integration Test') {
-                            steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'slowIntegrationTest'
-                                ].join(' ')
-                            }
-                        }
                     }
                 }
                 stage('Same agent') {
@@ -155,6 +137,147 @@ pipeline {
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
                                         'deployNode'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Integration Test 1') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar',
+                                        '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Integration Test 1') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest1'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Integration Test 2') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                            authenticateGradleWrapper()
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar',
+                                        '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Integration Test 2') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest2'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Slow Integration Tests') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh script: [
+                                    './gradlew',
+                                    COMMON_GRADLE_PARAMS,
+                                    'jar',
+                                    '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                    './gradlew',
+                                    COMMON_GRADLE_PARAMS,
+                                    'slowIntegrationTest'
                                 ].join(' ')
                             }
                         }
