@@ -771,7 +771,8 @@ subprojects {
         // published with the same name as their sub-project.
         def projectDict = [
                 "testing:testserver": "corda-testserver",
-                "tools:explorer": "corda-tools-explorer"
+                "tools:explorer": "corda-tools-explorer",
+                "node:capsule": "corda"
         ]
         def lookupName = "${project.parent.name}:${project.name}".toString()
 
