@@ -774,6 +774,14 @@ subprojects {
                 "tools:explorer": "corda-tools-explorer",
                 "node:capsule": "corda"
         ]
+        // map dependency name to actual jar/artifact name
+        def dependencyDict = [
+                "contracts": "corda-finance-contracts",
+                "workflows": "corda-finance-workflows",
+                "cliutils": "corda-tools-cliutils",
+                "worldmap": "worldmap"
+        ]
+
         def lookupName = "${project.parent.name}:${project.name}".toString()
 
         if (projectDict.containsKey(lookupName)) {
@@ -782,11 +790,42 @@ subprojects {
             publishing {
                 publications {
                     "$jarName-jarPublication"(MavenPublication) {
-                        from components.java
                         artifactId = "$jarName-snyk-scanner"
                         pom {
                             name = "$jarName-snyk-scanner"
                             description = "Corda ${project.name} for use with Snyk"
+
+                            // This block controls dependencies that go into the POM,
+                            // since the jar isn't part of the publication.
+                            withXml {
+                                def dependenciesNode = asNode().appendNode('dependencies')
+
+                                def addDeps = { config, scope ->
+                                    configurations[config].allDependencies.each { dep ->
+                                        if (dep.group && dep.name && dep.version) {
+                                            def depNode = dependenciesNode.appendNode('dependency')
+                                            depNode.appendNode('groupId', dep.group)
+
+                                            def artifactId = dep.name
+                                            if (dependencyDict.containsKey(dep.name)) {
+                                                // the the dependency dictionary specifies an artifact name, use it
+                                                artifactId = dependencyDict[dep.name]
+                                            } else if (dep.group == 'net.corda') {
+                                                // otherwise if it's a dependency within corda, prepend with "corda-"
+                                                artifactId = "corda-${dep.name}"
+                                            }
+                                            depNode.appendNode('artifactId', artifactId)
+                                            depNode.appendNode('version', dep.version)
+                                            depNode.appendNode('scope', scope)
+                                        }
+                                    }
+                                }
+
+                                // the dependency scopes to be included in the pom
+                                addDeps('implementation', 'compile')
+                                addDeps('compileOnly', 'provided')
+                                addDeps('runtimeOnly', 'runtime')
+                            }
                         }
                     }
                 }
