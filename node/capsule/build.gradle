@@ -6,6 +6,9 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
+// verifying snyk delta change vs target connelm/disable-synk-delta-feature-branch-4-10 
+// DO NOT MERGE 
+
 description 'Corda standalone node'
 
 evaluationDependsOn(':node')
