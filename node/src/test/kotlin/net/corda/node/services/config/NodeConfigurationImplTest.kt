@@ -1,12 +1,10 @@
 package net.corda.node.services.config
 
-import com.nhaarman.mockito_kotlin.mock
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -21,11 +19,13 @@ import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.kotlin.mock
 import java.io.File
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -116,7 +116,7 @@ class NodeConfigurationImplTest {
     }
 
     private fun getConfig(cfgName: String, overrides: Config = ConfigFactory.empty()): Config {
-        val path = this::class.java.classLoader.getResource(cfgName).toPath()
+        val path = this::class.java.classLoader.getResource(cfgName)!!.toPath()
         return ConfigHelper.loadConfig(
                 baseDirectory = path.parent,
                 configFile = path,
@@ -226,36 +226,34 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `relative base dir leads to correct cordapp directories`() {
-        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
-        val fullPath = File(".").resolve(path).toString()
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toPath()
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
-                "baseDirectory" to fullPath)
+                "baseDirectory" to path.toString())
                 .withFallback(rawConfig)
                 .resolve()
 
         val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
         assertTrue(nodeConfiguration.isValid)
 
-        assertEquals(listOf(fullPath / "./myCorDapps1", fullPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
+        assertEquals(listOf(path / "./myCorDapps1", path / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
     }
 
     @Test(timeout=6_000)
     fun `relative base dir leads to correct default cordapp directory`() {
-        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
-        val fullPath = File(".").resolve(path).toString()
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toPath()
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
-                "baseDirectory" to fullPath)
+                "baseDirectory" to path.toString())
                 .withFallback(rawConfigNoCordapps)
                 .resolve()
 
         val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
         assertTrue(nodeConfiguration.isValid)
 
-        assertEquals(listOf(fullPath / "cordapps"), nodeConfiguration.value().cordappDirectories)
+        assertEquals(listOf(path / "cordapps"), nodeConfiguration.value().cordappDirectories)
     }
 
     @Test(timeout=6_000)

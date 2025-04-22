@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.corda.net/wp-content/themes/corda/assets/images/crda-logo-big.svg" alt="Corda" width="500">
+  <img src="https://corda.net/wp-content/uploads/2021/11/corda-logo.svg" alt="Corda" width="500">
 </p>
 
 <a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_Build_ActiveReleaseBranches_BuildOsRelease45&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_Build_ActiveReleaseBranches_BuildOsRelease45/statusIcon"/></a> [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -25,27 +25,26 @@ However, like all things, Corda must evolve to serve the more stringent needs of
 
 ## Getting started
 
-1. Read the [Getting Started](https://docs.corda.net/getting-set-up.html) documentation
-2. Run the [Example CorDapp](https://docs.corda.net/tutorial-cordapp.html)
-3. Read about Corda's [Key Concepts](https://docs.corda.net/key-concepts.html)
-4. Follow the [Hello, World! tutorial](https://docs.corda.net/hello-world-introduction.html)
+1. Read the [Getting Started](https://docs.r3.com/getting-set-up.html) documentation
+2. Run the [Example CorDapp](https://docs.r3.com/tutorial-cordapp.html)
+3. Read about Corda's [Key Concepts](https://docs.r3.com/key-concepts.html)
+4. Follow the [Hello, World! tutorial](https://docs.r3.com/hello-world-introduction.html)
 
 ## Useful links
 
 * [Project Website](https://corda.net)
 * [Mailing List](https://groups.io/g/corda-dev/)
-* [Documentation](https://docs.corda.net)
+* [Documentation](https://docs.r3.com)
 * [Stack Overflow Tag](https://stackoverflow.com/questions/tagged/corda)
 * [Slack Channel](https://slack.corda.net/)
-* [Twitter](https://twitter.com/Cordablockchain)
-* [Meetups](https://www.meetup.com/pro/corda/)
-* [Training Courses](https://www.corda.net/corda-training/)
+* [Twitter](https://twitter.com/inside_r3)
+* [Training Courses](https://r3certification.com/)
 
 ## Contributing
 
 Corda is an open-source project and contributions are welcome!
 
-To find out how to contribute, please see our [contributing docs](https://docs.r3.com/en/platform/corda/4.8/open-source/contributing.html).
+To find out how to contribute, please see our [contributing docs](https://docs.r3.com/contributing.html).
 
 ## License
 

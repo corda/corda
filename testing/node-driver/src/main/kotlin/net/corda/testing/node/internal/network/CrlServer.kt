@@ -2,6 +2,10 @@
 
 package net.corda.testing.node.internal.network
 
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.Response
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.toX500Name
@@ -24,11 +28,11 @@ import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralNames
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler
+import org.eclipse.jetty.ee10.servlet.ServletHolder
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
@@ -40,10 +44,6 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
 import javax.security.auth.x500.X500Principal
-import javax.ws.rs.GET
-import javax.ws.rs.Path
-import javax.ws.rs.Produces
-import javax.ws.rs.core.Response
 import kotlin.collections.ArrayList
 
 class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
@@ -79,7 +79,7 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
     }
 
     private val server: Server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
-        handler = HandlerCollection().apply {
+        handler = ContextHandlerCollection().apply {
             addHandler(buildServletContextHandler())
         }
     }

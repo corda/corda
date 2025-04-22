@@ -1,12 +1,9 @@
 package net.corda.nodeapi.internal.config
 
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import java.io.InputStream
-import java.io.OutputStream
-import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -21,16 +18,17 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
 
         fun fromInputStream(stream: InputStream, password: String, entryPassword: String): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromInputStream(stream, password), password, entryPassword)
 
-        fun fromResource(storeResourceName: String, password: String, entryPassword: String, classLoader: ClassLoader = Thread.currentThread().contextClassLoader): CertificateStore = fromInputStream(classLoader.getResourceAsStream(storeResourceName), password, entryPassword)
+        fun fromResource(storeResourceName: String,
+                         password: String,
+                         entryPassword: String,
+                         classLoader: ClassLoader = Thread.currentThread().contextClassLoader): CertificateStore {
+            return fromInputStream(classLoader.getResourceAsStream(storeResourceName)!!, password, entryPassword)
+        }
     }
 
     val value: X509KeyStore
     val password: String
     val entryPassword: String
-
-    fun writeTo(stream: OutputStream) = value.internal.store(stream, password.toCharArray())
-
-    fun writeTo(path: Path, vararg options: OpenOption) = path.outputStream(*options)
 
     fun update(action: X509KeyStore.() -> Unit) {
         val result = action.invoke(value)
@@ -80,7 +78,7 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
     }
 
     fun setCertPathOnly(alias: String, certificates: List<X509Certificate>) {
-        // In case CryptoService and CertificateStore share the same KeyStore (i.e., when BCCryptoService is used),
+        // In case CryptoService and CertificateStore share the same KeyStore (i.e., when DefaultCryptoService is used),
         // extract the existing key from the Keystore and store it again along with the new certificate chain.
         // This is because KeyStores do not support updateKeyEntry and thus we cannot update the certificate chain
         // without overriding the key entry.
