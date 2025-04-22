@@ -1,9 +1,6 @@
 @file:JvmName("Structures")
-@file:KeepForDJVM
 package net.corda.core.contracts
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.toStringShort
@@ -45,7 +42,6 @@ interface NamedByHash {
  * of product may differentiate different kinds of asset within the same logical class e.g the currency, or
  * it may just be a type marker for a single custom asset.
  */
-@KeepForDJVM
 @CordaSerializable
 data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
     init {
@@ -72,13 +68,11 @@ fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, di
 /**
  * Return structure for [OwnableState.withNewOwner]
  */
-@KeepForDJVM
 data class CommandAndState(val command: CommandData, val ownableState: OwnableState)
 
 /**
  * A contract state that can have a single owner.
  */
-@KeepForDJVM
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount. */
     val owner: AbstractParty
@@ -89,7 +83,6 @@ interface OwnableState : ContractState {
 // DOCEND 3
 
 /** Something which is scheduled to happen at a point in time. */
-@KeepForDJVM
 interface Scheduled {
     val scheduledAt: Instant
 }
@@ -102,7 +95,6 @@ interface Scheduled {
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
  */
 @CordaSerializable
-@KeepForDJVM
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**
@@ -117,7 +109,6 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
  * for a particular [ContractState] have been processed/fired etc.  If the activity is not "on ledger" then the
  * scheduled activity shouldn't be either.
  */
-@KeepForDJVM
 data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
 // DOCSTART 2
@@ -126,7 +117,6 @@ data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledA
  *
  * This simplifies the job of tracking the current version of certain types of state in e.g. a vault.
  */
-@KeepForDJVM
 interface LinearState : ContractState {
     /**
      * Unique id shared by all LinearState states throughout history within the vaults of all parties.
@@ -136,7 +126,6 @@ interface LinearState : ContractState {
     val linearId: UniqueIdentifier
 }
 // DOCEND 2
-@KeepForDJVM
 interface SchedulableState : ContractState {
     /**
      * Indicate whether there is some activity to be performed at some future point in time with respect to this
@@ -160,7 +149,6 @@ fun ContractState.hash(algorithm: String): SecureHash = SecureHash.hashAs(algori
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
  * transaction defined the state and where in that transaction it was.
  */
-@KeepForDJVM
 @CordaSerializable
 // DOCSTART 8
 data class StateRef(val txhash: SecureHash, val index: Int) {
@@ -169,7 +157,6 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 // DOCEND 8
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
-@KeepForDJVM
 @CordaSerializable
 // DOCSTART 7
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef) {
@@ -179,7 +166,6 @@ data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, va
 // DOCEND 7
 
 /** A wrapper for a [StateAndRef] indicating that it should be added to a transaction as a reference input state. */
-@KeepForDJVM
 data class ReferencedStateAndRef<out T : ContractState>(val stateAndRef: StateAndRef<T>)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
@@ -191,7 +177,6 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-@KeepForDJVM
 @CordaSerializable
 data class PartyAndReference(val party: AbstractParty, val reference: OpaqueBytes) {
     override fun toString() = "$party$reference"
@@ -202,14 +187,12 @@ data class PartyAndReference(val party: AbstractParty, val reference: OpaqueByte
 interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
-@KeepForDJVM
 abstract class TypeOnlyCommandData : CommandData {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
-@KeepForDJVM
 @CordaSerializable
 data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
     // TODO Introduce NonEmptyList?
@@ -224,7 +207,6 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
 }
 
 /** A common move command for contract states which can change owner. */
-@KeepForDJVM
 interface MoveCommand : CommandData {
     /**
      * Contract code the moved state(s) are for the attention of, for example to indicate that the states are moved in
@@ -236,7 +218,6 @@ interface MoveCommand : CommandData {
 
 // DOCSTART 6
 /** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
-@KeepForDJVM
 @CordaSerializable
 data class CommandWithParties<out T : CommandData>(
         val signers: List<PublicKey>,
@@ -256,7 +237,6 @@ data class CommandWithParties<out T : CommandData>(
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
-@KeepForDJVM
 @CordaSerializable
 interface Contract {
     /**
@@ -288,7 +268,6 @@ annotation class LegalProseReference(val uri: String)
  * more than one state).
  * @param NewState the upgraded contract state.
  */
-@KeepForDJVM
 interface UpgradedContract<in OldState : ContractState, out NewState : ContractState> : Contract {
     /**
      * Name of the contract this is an upgraded version of, used as part of verification of upgrade transactions.
@@ -307,7 +286,6 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
  * This interface allows specifying a custom legacy contract constraint for upgraded contracts. The default for [UpgradedContract]
  * is [WhitelistedByZoneAttachmentConstraint].
  */
-@KeepForDJVM
 interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out NewState : ContractState> : UpgradedContract<OldState, NewState> {
     /**
      * A validator for the legacy (pre-upgrade) contract attachments on the transaction.
@@ -325,14 +303,11 @@ interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out 
  * but it is highlighted that one should always ensure it has sufficient entropy.
  */
 @CordaSerializable
-@KeepForDJVM
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** Constructs a salt with a randomly-generated saltLength byte value. */
-    @DeleteForDJVM
     constructor(saltLength: Int) : this(secureRandomBytes(saltLength))
 
     /** Constructs a salt with a randomly-generated 32 byte value. */
-    @DeleteForDJVM
     constructor() : this(MINIMUM_SIZE)
 
     init {
@@ -343,7 +318,6 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
     companion object {
         private const val MINIMUM_SIZE = 32
 
-        @DeleteForDJVM
         @JvmStatic
         fun createFor(algorithm: String): PrivacySalt {
             return PrivacySalt(SecureHash.digestLengthFor(algorithm))
@@ -357,5 +331,4 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
  * @property state A state
  * @property contract The contract that should verify the state
  */
-@KeepForDJVM
 data class StateAndContract(val state: ContractState, val contract: ContractClassName)

@@ -1,11 +1,7 @@
 @file:Suppress("MatchingDeclarationName")
-@file:KeepForDJVM
 @file:JvmName("CryptoUtils")
-
 package net.corda.core.crypto
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.internal.platformSecureRandomFactory
 import net.corda.core.serialization.SerializationDefaults
@@ -32,7 +28,6 @@ import java.security.SignatureException
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature(Crypto.doSign(this, bytesToSign))
 
@@ -45,7 +40,6 @@ fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
@@ -59,12 +53,10 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray): DigitalSignature.WithKey = private.sign(bytesToSign, public)
 
 /** Helper function to sign the bytes of [bytesToSign] with a key pair. */
-@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(bytesToSign.bytes)
 
@@ -76,7 +68,6 @@ fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(byte
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
-@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSign(this, signableData)
 
@@ -151,7 +142,6 @@ operator fun KeyPair.component1(): PrivateKey = this.private
 operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the signature algorithm we use in future. */
-@DeleteForDJVM
 fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 
 /**
@@ -196,7 +186,6 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * or if no strong [SecureRandom] implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
-@DeleteForDJVM
 @Throws(NoSuchAlgorithmException::class)
 fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
 
@@ -241,7 +230,6 @@ object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
  * or if no strong SecureRandom implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
-@DeleteForDJVM
 @Throws(NoSuchAlgorithmException::class)
 fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
 
@@ -249,7 +237,6 @@ fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
  * to avoid potential bugs where the value is used in a context where negative numbers or zero are not expected.
  */
-@DeleteForDJVM
 fun random63BitValue(): Long {
     while (true) {
         val candidate = Math.abs(newSecureRandom().nextLong())

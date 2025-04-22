@@ -13,6 +13,6 @@ import javax.persistence.Converter
  */
 @Converter(autoApply = true)
 class PublicKeyToTextConverter : AttributeConverter<PublicKey, String> {
-    override fun convertToDatabaseColumn(key: PublicKey?): String? = key?.encoded?.toHex()
+    override fun convertToDatabaseColumn(key: PublicKey?): String? = key?.let { Crypto.encodePublicKey(key).toHex() }
     override fun convertToEntityAttribute(text: String?): PublicKey? = text?.let { Crypto.decodePublicKey(it.hexToByteArray()) }
 }

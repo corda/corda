@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -13,5 +12,4 @@ import net.corda.core.serialization.CordaSerializable
  * @param signatureMetadata meta data required.
  */
 @CordaSerializable
-@KeepForDJVM
 data class SignableData(val txId: SecureHash, val signatureMetadata: SignatureMetadata)

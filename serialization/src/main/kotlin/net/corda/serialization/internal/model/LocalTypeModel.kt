@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.model
 
 import java.lang.reflect.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 import java.util.function.Predicate
 
@@ -55,9 +56,9 @@ interface LocalTypeModel {
  *
  * @param typeModelConfiguration Configuration controlling the behaviour of the [LocalTypeModel]'s type inspection.
  */
-class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration): LocalTypeModel {
+class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration) : LocalTypeModel {
 
-    private val typeInformationCache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
+    private val typeInformationCache = ConcurrentHashMap<TypeIdentifier, LocalTypeInformation>()
 
     /**
      * We need to provide the [LocalTypeInformationBuilder] with a temporary local cache, so that it doesn't leak

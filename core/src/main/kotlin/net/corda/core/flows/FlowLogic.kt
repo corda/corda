@@ -3,7 +3,6 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -66,12 +65,10 @@ import java.util.LinkedHashMap
  * relevant database transactions*. Only set this option to true if you know what you're doing.
  */
 @Suppress("DEPRECATION", "DeprecatedCallableAddReplaceWith")
-@DeleteForDJVM
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
 
-    @DeleteForDJVM
     companion object {
         /**
          * Return the outermost [FlowLogic] instance, or null if not in a flow.

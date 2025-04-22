@@ -183,7 +183,7 @@ public class JavaSerializationOutputTests {
 
         DecoderImpl decoder = new DecoderImpl();
 
-        decoder.register(Envelope.Companion.getDESCRIPTOR(), Envelope.Companion);
+        decoder.register(Envelope.Companion.getDESCRIPTOR(), new Envelope.FastPathConstructor(decoder));
         decoder.register(Schema.Companion.getDESCRIPTOR(), Schema.Companion);
         decoder.register(Descriptor.Companion.getDESCRIPTOR(), Descriptor.Companion);
         decoder.register(Field.Companion.getDESCRIPTOR(), Field.Companion);

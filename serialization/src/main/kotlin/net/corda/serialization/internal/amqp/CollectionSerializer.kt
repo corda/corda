@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -16,7 +15,6 @@ import kotlin.collections.LinkedHashSet
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
-@KeepForDJVM
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
 

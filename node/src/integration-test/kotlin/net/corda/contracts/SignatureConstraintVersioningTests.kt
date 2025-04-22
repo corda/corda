@@ -74,7 +74,8 @@ open class SignatureConstraintVersioningTests {
                         minimumPlatformVersion = minimumPlatformVersion,
                         whitelistedContractImplementations = whitelistedAttachmentHashes
                 ),
-                systemProperties = systemProperties
+                systemProperties = systemProperties +
+                        ("net.corda.recordtransaction.signature.verification.disabled" to true.toString())
         ) {
             // create transaction using first Cordapp
             val (nodeName, baseDirectory, issuanceTransaction) = createIssuanceTransaction(cordapp)

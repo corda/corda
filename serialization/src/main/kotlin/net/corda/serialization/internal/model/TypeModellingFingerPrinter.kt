@@ -6,6 +6,7 @@ import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.TypeIdentifier.*
 import java.lang.reflect.ParameterizedType
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A fingerprinter that fingerprints [LocalTypeInformation].
@@ -33,7 +34,7 @@ class TypeModellingFingerPrinter(
         private val classLoader: ClassLoader,
         private val debugEnabled: Boolean = false) : FingerPrinter {
 
-    private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
+    private val cache: MutableMap<TypeIdentifier, String> = ConcurrentHashMap()
 
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
         /*

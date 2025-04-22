@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.serialization.internal.model.DefaultCacheProvider
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The quickest way to find a serializer, if one has already been generated, is to look it up by type descriptor.
@@ -14,9 +14,9 @@ interface DescriptorBasedSerializerRegistry {
     fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
 }
 
-class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry {
+class DefaultDescriptorBasedSerializerRegistry : DescriptorBasedSerializerRegistry {
 
-    private val registry: MutableMap<String, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private val registry: MutableMap<String, AMQPSerializer<Any>> = ConcurrentHashMap()
 
     override fun get(descriptor: String): AMQPSerializer<Any>? = registry[descriptor]
 

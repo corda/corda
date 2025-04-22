@@ -134,8 +134,6 @@ fun <A> rpcDriver(
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
-        djvmBootstrapSource: Path? = null,
-        djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         dsl: RPCDriverDSL.() -> A
 ): A {
@@ -158,8 +156,6 @@ fun <A> rpcDriver(
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
                             cordappsForAllNodes = cordappsForAllNodes,
-                            djvmBootstrapSource = djvmBootstrapSource,
-                            djvmCordaSource = djvmCordaSource,
                             environmentVariables = environmentVariables
                     ), externalTrace
             ),

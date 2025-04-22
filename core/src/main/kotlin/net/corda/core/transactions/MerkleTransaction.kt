@@ -1,7 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaException
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -90,7 +89,6 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
  * @param filteredComponentGroups list of transaction components groups remained after filters are applied to [WireTransaction].
  * @param groupHashes the roots of the transaction component groups.
  */
-@KeepForDJVM
 @CordaSerializable
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
@@ -346,7 +344,6 @@ class FilteredTransaction internal constructor(
  * A FilteredComponentGroup is used to store the filtered list of transaction components of the same type in serialised form.
  * This is similar to [ComponentGroup], but it also includes the corresponding nonce per component.
  */
-@KeepForDJVM
 @CordaSerializable
 data class FilteredComponentGroup(override val groupIndex: Int,
                                   override val components: List<OpaqueBytes>,
@@ -361,7 +358,6 @@ data class FilteredComponentGroup(override val groupIndex: Int,
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@KeepForDJVM
 @CordaSerializable
 class ComponentVisibilityException(val id: SecureHash, val reason: String) : CordaException("Component visibility error for transaction with id:$id. Reason: $reason")
 
@@ -369,16 +365,13 @@ class ComponentVisibilityException(val id: SecureHash, val reason: String) : Cor
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@KeepForDJVM
 @CordaSerializable
 class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")
 
 /** Wrapper over [StateRef] to be used when filtering reference states. */
-@KeepForDJVM
 @CordaSerializable
 data class ReferenceStateRef(val stateRef: StateRef)
 
 /** Wrapper over [SecureHash] to be used when filtering network parameters hash. */
-@KeepForDJVM
 @CordaSerializable
 data class NetworkParametersHash(val hash: SecureHash)
