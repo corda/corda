@@ -764,7 +764,7 @@ artifactory {
 
 // Publish the default jar for fat-jar sub-modules that do not currently publish their dependencies.
 // These are not for external consumption.
-// We must generate a jar which has a pom.xml with a full dependency list for Snyk to evaluate.
+// We must generate a jar which has a pom.xml with a full dependency list for vulnerability tools to evaluate.
 subprojects {
     afterEvaluate { project ->
         // map project to actual jar name, since some sub-project jars are not
@@ -772,6 +772,8 @@ subprojects {
         def projectDict = [
                 "testing:testserver": "corda-testserver",
                 "tools:explorer": "corda-tools-explorer",
+                "opentelemetry:opentelemetry-driver": "corda-opentelemetry-driver",
+                "tools:network-builder": "corda-tools-network-builder",
                 "node:capsule": "corda"
         ]
         def lookupName = "${project.parent.name}:${project.name}".toString()
@@ -783,10 +785,10 @@ subprojects {
                 publications {
                     "$jarName-jarPublication"(MavenPublication) {
                         from components.java
-                        artifactId = "$jarName-snyk-scanner"
+                        artifactId = "$jarName-thin-with-deps"
                         pom {
-                            name = "$jarName-snyk-scanner"
-                            description = "Corda ${project.name} for use with Snyk"
+                            name = "$jarName-thin-with-deps"
+                            description = "Corda ${project.name} for vulnerability checking."
                         }
                     }
                 }
