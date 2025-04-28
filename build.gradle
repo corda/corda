@@ -723,11 +723,52 @@ artifactory {
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
             if (project != rootProject) {
-                publications(project.extensions.publish.name())
+                def pubNames = project.publishing.publications*.name
+                publications(pubNames.toArray(new String[0]))
             }
         }
     }
 }
+
+// Publish the default jar for fat-jar sub-modules that do not currently publish their dependencies.
+// These are not for external consumption.
+// We must generate a jar which has a pom.xml with a full dependency list for vulnerability tools to evaluate.
+subprojects {
+    afterEvaluate { project ->
+        // map project to actual jar name, since some sub-project jars are not
+        // published with the same name as their sub-project.
+        def projectDict = [
+                "testing:testserver": "corda-testserver",
+                "tools:explorer": "corda-tools-explorer",
+                "opentelemetry:opentelemetry-driver": "corda-opentelemetry-driver",
+                "tools:network-builder": "corda-tools-network-builder",
+                "node:capsule": "corda"
+        ]
+        def lookupName = "${project.parent.name}:${project.name}".toString()
+
+        if (projectDict.containsKey(lookupName)) {
+            apply plugin: 'maven-publish'
+            def jarName = projectDict[lookupName]
+            publishing {
+                publications {
+                    "$jarName-jarPublication"(MavenPublication) {
+                        from components.java
+                        artifactId = "$jarName-thin-with-deps"
+                        pom {
+                            name = "$jarName-thin-with-deps"
+                            description = "Corda ${project.name} for vulnerability checking."
+                        }
+                    }
+                }
+            }
+
+            jar {
+                archiveClassifier = 'R3-internal'
+            }
+        }
+    }
+}
+
 
 tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
     baseName = "api-corda"
