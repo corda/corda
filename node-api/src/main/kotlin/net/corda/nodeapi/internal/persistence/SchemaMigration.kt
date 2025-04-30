@@ -5,7 +5,6 @@ import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.Scope
-import liquibase.ThreadLocalScopeManager
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -42,9 +41,6 @@ open class SchemaMigration(
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
-        init {
-            Scope.setScopeManager(ThreadLocalScopeManager())
-        }
 
         @JvmStatic
         protected val mutex = ReentrantLock()
