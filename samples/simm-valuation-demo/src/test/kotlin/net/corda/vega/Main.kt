@@ -12,6 +12,7 @@ import net.corda.testing.driver.driver
  * This does not start any tests but has the nodes running in preparation for a live web demo or to receive commands
  * via the web api.
  */
+@Suppress("UNUSED_PARAMETER")
 fun main(args: Array<String>) {
     driver(DriverParameters(waitForAllNodesToFinish = true)) {
         val (nodeA, nodeB, nodeC) = listOf(
