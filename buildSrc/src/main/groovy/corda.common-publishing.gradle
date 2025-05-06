@@ -36,6 +36,40 @@ if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('
                 }
             }
         }
+
+        // Publish the default jar for fat-jar sub-modules that do not currently publish their dependencies.
+        // These are not for external consumption.
+        // We must generate a jar which has a pom.xml with a full dependency list for vulnerability tools to evaluate.
+        // Only do this for builds done within R3.
+        def projectDict = [
+                "testing:testserver": "corda-testserver",
+                "tools:explorer": "corda-tools-explorer",
+                "opentelemetry:opentelemetry-driver": "corda-opentelemetry-driver",
+                "tools:network-builder": "corda-tools-network-builder",
+                "node:capsule": "corda"
+        ]
+        def lookupName = "${project.parent.name}:${project.name}".toString()
+
+        if (projectDict.containsKey(lookupName)) {
+            pluginManager.apply('maven-publish')
+            def jarName = projectDict[lookupName]
+            publishing {
+                publications {
+                    "$jarName-jarPublication"(MavenPublication) {
+                        from components.java
+                        artifactId = "$jarName-thin-with-deps"
+                        pom {
+                            name = "$jarName-thin-with-deps"
+                            description = "Corda ${project.name} for vulnerability checking."
+                        }
+                    }
+                }
+            }
+
+            jar {
+                archiveClassifier = 'R3-internal'
+            }
+        }
     }
 } else {
     logger.info("External user - using standard maven publishing")
