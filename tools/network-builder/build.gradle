@@ -88,7 +88,7 @@ tasks.register('buildNetworkBuilder') {
 }
 
 jar {
-    enabled = false
+    enabled = true
 }
 
 publishing {
