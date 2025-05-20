@@ -767,23 +767,70 @@ artifactory {
 // We must generate a jar which has a pom.xml with a full dependency list for vulnerability tools to evaluate.
 subprojects {
     afterEvaluate { project ->
-        // map project to actual jar name, since some sub-project jars are not
-        // published with the same name as their sub-project.
+        // List of sub-projects that generate fat jars, and we need to also need a thin-with-deps equivalent.
+        // Note that this is NOT all of the fat jars in this project- merely the ones that are published.
+        // key = parent:project name
+        // value = [name: the name of the jar produced by the project
+        //          capsule: whether the jar is built using capsule; these are treated differently, see below.]
         def projectDict = [
-                "testing:testserver": "corda-testserver",
-                "tools:explorer": "corda-tools-explorer",
-                "opentelemetry:opentelemetry-driver": "corda-opentelemetry-driver",
-                "tools:network-builder": "corda-tools-network-builder",
-                "node:capsule": "corda"
+                "testserver:testcapsule": [name: "corda-testserver", capsule: true],
+                "explorer:capsule": [name: "corda-tools-explorer", capsule: true],
+                "opentelemetry:opentelemetry-driver": [name: "corda-opentelemetry-driver", capsule: false],
+                "tools:bootstrapper": [name: "corda-tools-network-bootstrapper", capsule: false],
+                "tools:network-builder": [name: "corda-tools-network-builder", capsule: false],
+                "node:capsule": [name: "corda", capsule: true]
         ]
         def lookupName = "${project.parent.name}:${project.name}".toString()
 
-        if (projectDict.containsKey(lookupName)) {
+        if (projectDict.containsKey(lookupName) && projectDict[lookupName].capsule) {
+            // Capsule projects do not specify their dependencies directly; the dependencies are
+            // actually defined in their parent project. So, this arm of code generates the POM file
+            // manually by going through the parent dependencies and adding them in to the POM.
             apply plugin: 'maven-publish'
-            def jarName = projectDict[lookupName]
+            def jarName = projectDict[lookupName].name
             publishing {
                 publications {
-                    "$jarName-jarPublication"(MavenPublication) {
+                    "${jarName}-jarPublication"(MavenPublication) {
+                        from components.java
+                        artifactId = "${jarName}-thin-with-deps"
+
+                        pom.withXml {
+                            def rootNode = asNode()
+                            // Add name and description
+                            rootNode.appendNode('name', "${jarName}-thin-with-deps")
+                            rootNode.appendNode('description', "Corda ${project.name} for vulnerability checking.")
+                            // Find or create the <dependencies> node
+                            def dependenciesNode = rootNode.children().find { it.name() == 'dependencies' }
+                            if (!dependenciesNode) {
+                                dependenciesNode = rootNode.appendNode('dependencies')
+                            }
+                            def parentProject = project.parent
+                            if (parentProject != null) {
+                                parentProject.configurations.runtimeClasspath.resolvedConfiguration.firstLevelModuleDependencies.each { dep ->
+                                    // add each dependency as an element in the POM
+                                    def dnode = dependenciesNode.appendNode('dependency')
+                                    dnode.appendNode('groupId', "${dep.moduleGroup}")
+                                    dnode.appendNode('artifactId', "${dep.moduleName}")
+                                    dnode.appendNode('version', "${dep.moduleVersion}")
+                                    dnode.appendNode('scope', 'compile')
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            jar {
+                archiveClassifier = 'R3-internal'
+            }
+        } else if (projectDict.containsKey(lookupName) && !projectDict[lookupName].capsule) {
+            // For non-capsule projects, let the default pom-generation do it's thing;
+            // it gets published as "thin-with-deps".
+            apply plugin: 'maven-publish'
+            def jarName = projectDict[lookupName].name
+            publishing {
+                publications {
+                    "${jarName}-jarPublication"(MavenPublication) {
                         from components.java
                         artifactId = "$jarName-thin-with-deps"
                         pom {
