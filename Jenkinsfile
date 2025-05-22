@@ -3,10 +3,24 @@
  * Jenkins pipeline to build Corda Opensource Pull Requests.
  */
 
-@Library('corda-shared-build-pipeline-steps')
+@Library('corda-shared-build-pipeline-steps@5.3') _
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.enums.BuildEnvironment
+import com.r3.build.enums.BuildOperatingSystem
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+KubernetesAgent k8s = new KubernetesAgent(
+    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
+    KubernetesCluster.JenkinsAgents,
+    1
+).withDocker(
+    1,
+    false,
+    true
+)
 
 /**
  * Common Gradle arguments for all Gradle executions
@@ -28,7 +42,19 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent {
+        kubernetes {
+            cloud k8s.buildCluster.cloudName
+            yaml k8s.JSON
+            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+            idleMinutes 15
+            podRetention always()
+            nodeSelector k8s.nodeSelector
+            label k8s.jenkinsLabel
+            showRawYaml true
+            defaultContainer k8s.defaultContainer.name
+        }
+    }
 
     /*
      * List options in alphabetical order
@@ -53,8 +79,8 @@ pipeline {
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_USE_CACHE = "corda-remotes"
-        JAVA_HOME="/usr/lib/jvm/java-17-amazon-corretto"
-        JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
+        JAVA_8_HOME = "/usr/lib/jvm/zulu8"
     }
 
     stages {
@@ -81,7 +107,17 @@ pipeline {
             parallel {
                 stage('Another agent') {
                     agent {
-                        label 'standard'
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
                     }
                     options {
                         skipDefaultCheckout true
@@ -144,7 +180,17 @@ pipeline {
                 }
                 stage('Another agent for Integration Test 1') {
                     agent {
-                        label 'standard'
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
                     }
                     options {
                         skipDefaultCheckout true
@@ -188,7 +234,17 @@ pipeline {
                 }
                 stage('Another agent for Integration Test 2') {
                     agent {
-                        label 'standard'
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
                     }
                     options {
                         skipDefaultCheckout true
@@ -241,7 +297,17 @@ pipeline {
                 }
                 stage('Another agent for Slow Integration Tests') {
                     agent {
-                        label 'standard'
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
                     }
                     options {
                         skipDefaultCheckout true
