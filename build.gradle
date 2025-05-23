@@ -767,35 +767,107 @@ artifactory {
 // We must generate a jar which has a pom.xml with a full dependency list for vulnerability tools to evaluate.
 subprojects {
     afterEvaluate { project ->
-        // map project to actual jar name, since some sub-project jars are not
-        // published with the same name as their sub-project.
+        // List of sub-projects that generate fat jars, and we need to also need a thin-with-deps equivalent.
+        // Note that this is NOT all of the fat jars in this project- merely the ones that are published
+        // without any dependencies in their POM.
+        //
+        // key = parent:project name
+        // value = [name: the name of the jar produced by the project
+        //          type: the way in which the sub-project is built/published]
+        // where type is one of
+        //              'capsule'   - capsule
+        //              'shadow'    - shadowJar
+        //              'corda'     - corda-publish
         def projectDict = [
-                "testing:testserver": "corda-testserver",
-                "tools:explorer": "corda-tools-explorer",
-                "opentelemetry:opentelemetry-driver": "corda-opentelemetry-driver",
-                "tools:network-builder": "corda-tools-network-builder",
-                "node:capsule": "corda"
+                "testserver:testcapsule":               [name: "corda-testserver", type: 'capsule'],
+                "explorer:capsule":                     [name: "corda-tools-explorer", type: 'capsule'],
+                "opentelemetry:opentelemetry-driver":   [name: "corda-opentelemetry-driver", type: 'shadow'],
+                "tools:network-builder":                [name: "corda-tools-network-builder", type: 'shadow'],
+                "node:capsule":                         [name: "corda", type: 'capsule'],
+                "corda-project:confidential-identities": [name: "corda-confidential-identities", type: 'corda'],
+                "finance:contracts":                    [name: "corda-finance-contracts", type: 'corda'],
+                "finance:workflows":                    [name: "corda-finance-workflows", type: 'corda']
         ]
         def lookupName = "${project.parent.name}:${project.name}".toString()
 
         if (projectDict.containsKey(lookupName)) {
-            apply plugin: 'maven-publish'
-            def jarName = projectDict[lookupName]
-            publishing {
-                publications {
-                    "$jarName-jarPublication"(MavenPublication) {
-                        from components.java
-                        artifactId = "$jarName-thin-with-deps"
-                        pom {
-                            name = "$jarName-thin-with-deps"
-                            description = "Corda ${project.name} for vulnerability checking."
+            if (projectDict[lookupName].type == "corda" || projectDict[lookupName].type == "capsule")  {
+                // for 'corda' and 'capsule' types, their dependencies are not readily available so
+                // the POM file has to be crafted manually.
+                // The use of a 'thinWithDepsJarTask' task is to allow Gradle to resolve dependencies when
+                // another sub-project depends on on that is listed above. Without this, there are two
+                // artifacts published at the same 'location'
+                apply plugin: 'maven-publish'
+                group 'net.corda'
+                version "$corda_release_version"
+
+                def jarName = projectDict[lookupName].name
+
+                publishing {
+                    publications {
+                        def thinWithDepsJarTask = project.tasks.register("${jarName}ThinWithDepsJar", Jar) {
+                            archiveClassifier = 'R3-internal' // IMPORTANT: Give it a classifier
+                            from project.sourceSets.main.output // Include compiled classes and resources
+                        }
+                        // Now publish this *distinct* artifact with its custom POM
+                        "${jarName}-thin-with-deps"(MavenPublication) {
+                            // Link to the *newly created* thinWithDepsJarTask's output
+                            artifact(thinWithDepsJarTask.get())
+
+                            // Set coordinates for the thin-with-deps publication
+                            groupId = project.group
+                            artifactId = "${jarName}-thin-with-deps" // Distinct artifactId
+                            version = project.version
+
+                            pom.withXml {
+                                def rootNode = asNode()
+                                rootNode.appendNode('name', "${jarName}-thin-with-deps")
+                                rootNode.appendNode('description', "Corda ${project.name} for vulnerability checking.")
+
+                                def dependenciesNode = rootNode.children().find { it.name() == 'dependencies' }
+                                if (!dependenciesNode) {
+                                    dependenciesNode = rootNode.appendNode('dependencies')
+                                }
+                                def dependenciesProject = project
+                                if (projectDict[lookupName].type == "capsule") {
+                                    dependenciesProject = project.parent
+                                }
+                                if (dependenciesProject != null) {
+                                    dependenciesProject.configurations.runtimeClasspath.allDependencies.each { dep ->
+                                        // only care about external dependencies
+                                        if (dep instanceof ExternalModuleDependency) {
+                                            def dnode = dependenciesNode.appendNode('dependency')
+                                            dnode.appendNode('groupId', "${dep.group}")
+                                            dnode.appendNode('artifactId', "${dep.name}")
+                                            dnode.appendNode('version', "${dep.version}")
+                                            dnode.appendNode('scope', 'compile') // Default to compile scope for direct deps
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            jar {
-                archiveClassifier = 'R3-internal'
+            } else {    // type = 'shadow'
+                // For shadow projects, let the default pom-generation do it's thing;
+                // it gets published as "thin-with-deps".
+                apply plugin: 'maven-publish'
+                def jarName = projectDict[lookupName].name
+                publishing {
+                    publications {
+                        "${jarName}-jarPublication"(MavenPublication) {
+                            from components.java
+                            artifactId = "$jarName-thin-with-deps"
+                            pom {
+                                name = "$jarName-thin-with-deps"
+                                description = "Corda ${project.name} for vulnerability checking."
+                            }
+                        }
+                    }
+                }
+                jar {
+                    archiveClassifier = 'R3-internal'
+                }
             }
         }
     }

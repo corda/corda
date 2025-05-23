@@ -20,9 +20,6 @@ dependencies {
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
     compileOnly "com.typesafe:config:$typesafe_config_version"
     testRuntimeOnly "com.typesafe:config:$typesafe_config_version"
-    
-    // 'implementation' for the benefit of the snyk-scanner POM file
-    implementation "com.typesafe:config:$typesafe_config_version"
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
