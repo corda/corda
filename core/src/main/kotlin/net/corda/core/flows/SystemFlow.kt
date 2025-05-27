@@ -7,4 +7,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
  */
 @Target(CLASS)
 @MustBeDocumented
-annotation class SystemFlow
+annotation class SystemFlow(
+        /**
+         * The class name of the flow that this flow supersedes.
+         */
+        val supersedes: String = ""
+)
