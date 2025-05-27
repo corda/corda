@@ -9,6 +9,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.TransactionBuilder
@@ -116,7 +117,7 @@ class NotaryChangeTests {
         val newState = future.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
-        val recordedTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!
+        val recordedTx = clientNodeA.services.getRequiredTransaction(newState.ref.txhash)
         val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
 
         // Check that all encumbrances have been propagated to the outputs
@@ -140,7 +141,7 @@ class NotaryChangeTests {
 
         // We don't to tx resolution when moving state to another node, so need to add the issue transaction manually
         // to node B. The resolution process is tested later during notarisation.
-        clientNodeB.services.recordTransactions(clientNodeA.services.validatedTransactions.getTransaction(issued.ref.txhash)!!)
+        clientNodeB.services.recordTransactions(clientNodeA.services.getRequiredTransaction(issued.ref.txhash))
 
         val changedNotary = changeNotary(moved, clientNodeB, newNotaryParty)
         val movedBack = moveState(changedNotary, clientNodeB, clientNodeA)

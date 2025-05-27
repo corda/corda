@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
@@ -284,8 +285,8 @@ class CommercialPaperTestsGeneric {
         }
 
         // Propagate the cash transactions to each side.
-        aliceServices.recordTransactions(bigCorpCash.states.map { megaCorpServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
-        megaCorpServices.recordTransactions(aliceCash.states.map { aliceServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        aliceServices.recordTransactions(bigCorpCash.states.map { megaCorpServices.getRequiredTransaction(it.ref.txhash) })
+        megaCorpServices.recordTransactions(aliceCash.states.map { aliceServices.getRequiredTransaction(it.ref.txhash) })
 
         // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` dummyCashIssuer.ref(1)

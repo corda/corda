@@ -12,6 +12,7 @@ import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.permission.PermissionResolver
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Method
+import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KProperty
@@ -54,7 +55,7 @@ internal object RPCPermissionResolver : PermissionResolver {
     private val FLOW_RPC_PERMITTED_START_FLOW_WITH_CLIENT_ID_CALLS = setOf("startFlowWithClientId", "startFlowDynamicWithClientId")
 
     override fun resolvePermission(representation: String): Permission {
-        when (representation.substringBefore(SEPARATOR).toLowerCase()) {
+        when (representation.substringBefore(SEPARATOR).lowercase(Locale.getDefault())) {
             ACTION_INVOKE_RPC -> {
                 val rpcCall = representation.substringAfter(SEPARATOR, "")
                 require(representation.count { it == SEPARATOR } == 1 && rpcCall.isNotEmpty()) { "Malformed permission string" }
@@ -90,7 +91,7 @@ internal object RPCPermissionResolver : PermissionResolver {
      * 3. Methods of specific group: InvokeRpc:com.fully.qualified.package.CustomClientRpcOps#READONLY
      */
     private fun attemptNewStyleParsing(permAsString: String): Permission {
-        return when(permAsString.substringBefore(NEW_STYLE_SEP).toLowerCase()) {
+        return when(permAsString.substringBefore(NEW_STYLE_SEP).lowercase(Locale.getDefault())) {
             ACTION_INVOKE_RPC -> {
                 val interfaceAndMethods = permAsString.substringAfter(NEW_STYLE_SEP, "")
                 val interfaceParts = interfaceAndMethods.split(INTERFACE_SEPARATOR)
@@ -98,7 +99,7 @@ internal object RPCPermissionResolver : PermissionResolver {
                 val methodsMap = requireNotNull(cache.get(interfaceParts[0]))
                     { "Method map for ${interfaceParts[0]} must not be null in the cache. There must have been error processing interface. " +
                             "Please look at the error log lines above." }
-                val lookupKey = interfaceAndMethods.toLowerCase()
+                val lookupKey = interfaceAndMethods.lowercase(Locale.getDefault())
                 val methods = requireNotNull(methodsMap[lookupKey]) { "Cannot find record for " +
                         "'$lookupKey' for interface '${interfaceParts[0]}' in $methodsMap. " +
                         "Please check permissions configuration string '$permAsString' matching class representation." }
@@ -171,9 +172,9 @@ internal object RPCPermissionResolver : PermissionResolver {
             return emptyList()
         }
 
-        val allKey = methodFullName(interfaceClass.java, ACTION_ALL).toLowerCase()
+        val allKey = methodFullName(interfaceClass.java, ACTION_ALL).lowercase(Locale.getDefault())
         val methodFullName = methodFullName(method)
         return listOf(allKey to methodFullName) + // ALL group
-        listOf(methodFullName.toLowerCase() to methodFullName) // Full method names individually
+        listOf(methodFullName.lowercase(Locale.getDefault()) to methodFullName) // Full method names individually
     }
 }

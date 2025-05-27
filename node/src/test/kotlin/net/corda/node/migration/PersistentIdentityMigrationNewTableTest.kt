@@ -1,7 +1,7 @@
 package net.corda.node.migration
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.crypto.Crypto
