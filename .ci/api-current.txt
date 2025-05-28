@@ -3967,6 +3967,7 @@ public class net.corda.core.flows.StateReplacementException extends net.corda.co
   public <init>(String, Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public @interface net.corda.core.flows.SystemFlow
+  public abstract String supersedes()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.TransactionMetadata extends java.lang.Object
