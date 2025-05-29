@@ -19,7 +19,7 @@ dependencies {
 
 jar {
     enabled = true
-    classifier 'thin'
+    classifier 'ignore'
 }
 
 capsule {
