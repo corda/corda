@@ -589,6 +589,7 @@ tasks.register('buildCordappDependenciesZip', Zip) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+
 tasks.register('generateApi', GenerateApi) {
     baseName = "api-corda"
 }
