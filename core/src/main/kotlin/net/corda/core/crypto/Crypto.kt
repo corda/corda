@@ -940,7 +940,7 @@ object Crypto {
     // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
-            is BCECPublicKey, is EdECPublicKey -> publicKeyOnCurve(signatureScheme, key)
+            is BCECPublicKey, is EdECPublicKey, is BCEdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
             else -> throw IllegalArgumentException("Unsupported key type: ${key.javaClass.name}")
         }
