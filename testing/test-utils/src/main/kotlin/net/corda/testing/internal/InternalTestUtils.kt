@@ -22,6 +22,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.computeComponentGroupNonces
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.expandAndTransform
 import net.corda.core.internal.expandComponentGroupHashes
 import net.corda.core.internal.getComponentHashes
 import net.corda.core.internal.getMerkleRoot

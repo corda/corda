@@ -245,19 +245,28 @@ fun getMerkleRoot(hashes: List<SecureHash>, digestService: DigestService = Diges
     return MerkleTree.getMerkleTree(hashes, digestService).hash
 }
 
+/**
+ * Expand and transform the given list of component groups by the given mapper, defaulting to [defaultValue] for groups which are missing.
+ * The returned list is sorted by the group index and its size is based on the biggest group index, rather than the number of
+ * [ComponentGroupEnum] variants. In other words, missing groups with an index larger than the largest are absent, whilst those less
+ * than it are filled in with [defaultValue].
+ */
+inline fun <T> Collection<ComponentGroup>.expandAndTransform(defaultValue: T, mapper: (ComponentGroup) -> T): List<T> {
+    val hashes = ArrayList<T>(size)
+    val maxGroupIndex = maxOf { it.groupIndex }
+    for (groupIndex in 0..maxGroupIndex) {
+        val componentGroup = find { it.groupIndex == groupIndex }
+        hashes.add(componentGroup?.let(mapper) ?: defaultValue)
+    }
+    return hashes
+}
+
 inline fun expandComponentGroupHashes(componentGroups: Collection<ComponentGroup>,
                                       digestService: DigestService,
                                       componentGroupHash: (ComponentGroup) -> SecureHash): List<SecureHash> {
-    val hashes = ArrayList<SecureHash>(componentGroups.size)
     // Even if empty and not used, we should at least send oneHashes for each known
     // or received but unknown (thus, bigger than known ordinal) component groups.
-    val allOnesHash = digestService.allOnesHash
-    val maxGroupIndex = componentGroups.maxOf { it.groupIndex }
-    for (groupIndex in 0..maxGroupIndex) {
-        val componentGroup = componentGroups.find { it.groupIndex == groupIndex }
-        hashes.add(componentGroup?.let(componentGroupHash) ?: allOnesHash)
-    }
-    return hashes
+    return componentGroups.expandAndTransform(digestService.allOnesHash, componentGroupHash)
 }
 
 typealias SerializedTransactionState = SerializedBytes<TransactionState<ContractState>>
