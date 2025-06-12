@@ -10,7 +10,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Root level="${sys:consoleLogLevel}">
+        <Root level="${console_log_level}">
             <AppenderRef ref="STDOUT"/>
         </Root>
     </Loggers>

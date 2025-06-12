@@ -4,7 +4,7 @@
     <Properties>
         <Property name="log_path">${sys:user.home}/demobench</Property>
         <Property name="log_name">demobench</Property>
-        <Property name="archive">${sys:log-path}/archive</Property>
+        <Property name="archive">${log_path}/archive</Property>
         <Property name="console_log_level">error</Property>
         <Property name="default_log_level">info</Property>
     </Properties>
@@ -40,7 +40,7 @@
     </Appenders>
 
     <Loggers>
-        <Root level="${sys:defaultLogLevel}">
+        <Root level="${default_log_level}">
             <AppenderRef ref="RollingFile-Appender"/>
         </Root>
     </Loggers>
