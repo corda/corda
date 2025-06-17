@@ -498,7 +498,6 @@ open class MockServices private constructor(
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
 
-
     // This is kept here for backwards compatibility, otherwise this has no extra utility.
     protected val servicesForResolution: ServicesForResolution get() = verifyingView
 
@@ -560,8 +559,7 @@ open class MockServices private constructor(
     override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
 
     override fun <T> getMetricsRegistry(type: Class<T>): T  = throw UnsupportedOperationException()
-
-
+    
     /**
      * All [ServiceHub]s must also implement [VerifyingServiceHub]. However, since [MockServices] is part of the public API, making it
      * extend [VerifyingServiceHub] would leak internal APIs. Instead we have this private view class and have the `toVerifyingServiceHub`

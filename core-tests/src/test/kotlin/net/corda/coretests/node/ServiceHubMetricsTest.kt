@@ -65,7 +65,6 @@ class ServiceHubMetricsTest {
         assertNotNull(metric)
         assertEquals("Result", result)
         assertEquals("Result", metric.value)
-
     }
 
     @Test(timeout=300_000)
@@ -79,7 +78,6 @@ class ServiceHubMetricsTest {
             assertNotNull(metric)
             assertEquals("Result2", metric.value)
         }
-
     }
 
     class ExternalOperation(val externalLatch: ExternalLatch) : FlowExternalAsyncOperation<Unit> {
