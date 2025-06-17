@@ -117,6 +117,8 @@ dependencies {
     testImplementation "io.netty:netty-common:$netty_version"
     testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    testImplementation "io.dropwizard.metrics:metrics-core:$metrics_version"
+
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
