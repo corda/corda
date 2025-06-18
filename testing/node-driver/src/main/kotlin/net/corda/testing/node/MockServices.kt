@@ -116,6 +116,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentitySer
  * There are a variety of constructors that can be used to supply enough data to simulate a node. Each mock service hub
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
+@Suppress("TooManyFunctions")
 open class MockServices private constructor(
         private val cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
@@ -557,7 +558,8 @@ open class MockServices private constructor(
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
 
-
+    override fun <T> getMetricsRegistry(type: Class<T>): T  = throw UnsupportedOperationException()
+    
     /**
      * All [ServiceHub]s must also implement [VerifyingServiceHub]. However, since [MockServices] is part of the public API, making it
      * extend [VerifyingServiceHub] would leak internal APIs. Instead we have this private view class and have the `toVerifyingServiceHub`
