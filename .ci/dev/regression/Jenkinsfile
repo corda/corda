@@ -3,11 +3,15 @@
  * Jenkins pipeline to build Corda OS release branches and tags.
  * PLEASE NOTE: we DO want to run a build for each commit!!!
  */
-@Library('corda-shared-build-pipeline-steps')
+@Library('corda-shared-build-pipeline-steps@5.3') _
 
 import com.r3.build.utils.GitUtils
 import com.r3.build.enums.SnykOrganisation
 import com.r3.build.utils.SnykUtils
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.enums.BuildEnvironment
+import com.r3.build.enums.BuildOperatingSystem
 
 GitUtils gitUtils = new GitUtils(this)
 SnykUtils snykUtils = new SnykUtils(this)
@@ -19,6 +23,16 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
 def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition" : "Corda Open Source"
+
+KubernetesAgent k8s = new KubernetesAgent(
+    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
+    KubernetesCluster.JenkinsAgents,
+    1
+).withDocker(
+    1,
+    false,
+    true
+)
 
 /**
  * Common Gradle arguments for all Gradle executions
@@ -34,7 +48,19 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent {
+        kubernetes {
+            cloud k8s.buildCluster.cloudName
+            yaml k8s.JSON
+            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+            idleMinutes 15
+            podRetention always()
+            nodeSelector k8s.nodeSelector
+            label k8s.jenkinsLabel
+            showRawYaml true
+            defaultContainer k8s.defaultContainer.name
+        }
+    }
 
     /*
      * List options in alphabetical order
@@ -70,8 +96,8 @@ pipeline {
         SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
         SNYK_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
-        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
-        JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
+        JAVA_8_HOME = "/usr/lib/jvm/zulu8"
     }
 
     stages {
@@ -136,7 +162,17 @@ pipeline {
             parallel {
                 stage('Another agent') {
                     agent {
-                        label 'standard'
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
                     }
                     options {
                         skipDefaultCheckout true
@@ -194,24 +230,6 @@ pipeline {
                                 ].join(' ')
                             }
                         }
-                        stage('Smoke Test') {
-                            steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'smokeTest'
-                                ].join(' ')
-                            }
-                        }
-                        stage('Slow Integration Test') {
-                            steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'slowIntegrationTest'
-                                ].join(' ')
-                            }
-                        }
                     }
                 }
                 stage('Same agent') {
@@ -255,6 +273,177 @@ pipeline {
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
                                         'deployNode'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Integration Test 1') {
+                    agent {
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar',
+                                        '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Integration Test 1') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest1'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Integration Test 2') {
+                    agent {
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                            authenticateGradleWrapper()
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar',
+                                        '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Integration Test 2') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest2'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Another agent for Slow Integration Tests') {
+                    agent {
+                        kubernetes {
+                            cloud k8s.buildCluster.cloudName
+                            yaml k8s.JSON
+                            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                            idleMinutes 15
+                            podRetention always()
+                            nodeSelector k8s.nodeSelector
+                            label k8s.jenkinsLabel
+                            showRawYaml true
+                            defaultContainer k8s.defaultContainer.name
+                        }
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false,allowEmptyResults: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh script: [
+                                    './gradlew',
+                                    COMMON_GRADLE_PARAMS,
+                                    'jar',
+                                    '--parallel'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                    './gradlew',
+                                    COMMON_GRADLE_PARAMS,
+                                    'slowIntegrationTest'
                                 ].join(' ')
                             }
                         }
