@@ -126,7 +126,10 @@ buildscript {
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
+    ext.commons_compress_version = constants.getProperty("commonsCompressVersion")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
+    ext.json_smart_version = constants.getProperty("jsonSmartVersion")
+    ext.azure_version = constants.getProperty("azureVersion")
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
@@ -498,6 +501,17 @@ allprojects {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
                         }
+                        if (details.requested.name == "commons-compress") {
+                            details.useVersion commons_compress_version
+                        }
+                    }
+
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
+                    }
+
+                    if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
+                        details.useVersion json_smart_version
                     }
                 }
 
