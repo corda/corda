@@ -267,6 +267,9 @@ dependencies {
         exclude group: "ch.qos.logback", module: "logback-classic"
     }
 
+    integrationTest1Implementation project(":testing:cordapps:dbfailure:dbfcontracts")
+    integrationTest1Implementation project(":testing:cordapps:missingmigration")
+
     // used by FinalityFlowErrorHandlingTest
     slowIntegrationTestImplementation project(':testing:cordapps:cashobservers')
     // Byteman for runtime (termination) rules injection on the running node
