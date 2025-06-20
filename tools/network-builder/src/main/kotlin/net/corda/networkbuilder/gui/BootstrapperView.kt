@@ -188,6 +188,7 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     private fun setupAzureRegionOptions(): Pair<Map<String, String>, String> {
+        @Suppress("DEPRECATION")
         var networkName1 = RandomStringUtils.randomAlphabetic(4) + "-network"
         val textInputDialog = TextInputDialog(networkName1)
         textInputDialog.title = "Azure Resource Group"
