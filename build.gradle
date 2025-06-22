@@ -126,7 +126,6 @@ buildscript {
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
-    ext.commons_compress_version = constants.getProperty("commonsCompressVersion")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.azure_version = constants.getProperty("azureVersion")

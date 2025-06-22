@@ -188,8 +188,6 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     private fun setupAzureRegionOptions(): Pair<Map<String, String>, String> {
-//        @Suppress("DEPRECATION")
-//        var networkName1 = RandomStringUtils.randomAlphabetic(4) + "-network"
         var networkName1 = run {
             val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
             val random = Random()
