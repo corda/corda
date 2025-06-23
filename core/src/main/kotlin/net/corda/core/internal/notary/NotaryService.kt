@@ -1,6 +1,5 @@
 package net.corda.core.internal.notary
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotaryFlow
@@ -9,7 +8,6 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.security.PublicKey
 
-@DeleteForDJVM
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
     abstract val notaryIdentityKey: PublicKey

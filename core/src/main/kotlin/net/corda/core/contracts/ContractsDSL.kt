@@ -1,8 +1,6 @@
 @file:JvmName("ContractsDSL")
-@file:KeepForDJVM
 package net.corda.core.contracts
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
@@ -18,7 +16,6 @@ import java.util.*
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-@KeepForDJVM
 object Requirements {
     /** Throws [IllegalArgumentException] if the given expression evaluates to false. */
     @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.

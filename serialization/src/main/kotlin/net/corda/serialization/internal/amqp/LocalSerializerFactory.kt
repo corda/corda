@@ -11,6 +11,7 @@ import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 import java.util.function.Predicate
 import javax.annotation.concurrent.ThreadSafe
@@ -111,9 +112,9 @@ class DefaultLocalSerializerFactory(
 
     private data class ActualAndDeclaredType(val actualType: Class<*>, val declaredType: Type)
 
-    private val serializersByActualAndDeclaredType: MutableMap<ActualAndDeclaredType, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    private val serializersByTypeId: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    private val typesByName = DefaultCacheProvider.createCache<String, Optional<LocalTypeInformation>>()
+    private val serializersByActualAndDeclaredType: MutableMap<ActualAndDeclaredType, AMQPSerializer<Any>> = ConcurrentHashMap()
+    private val serializersByTypeId: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = ConcurrentHashMap()
+    private val typesByName = ConcurrentHashMap<String, Optional<LocalTypeInformation>>()
 
     override fun createDescriptor(typeInformation: LocalTypeInformation): Symbol =
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeInformation)}")

@@ -22,6 +22,7 @@ import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.sign
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.canBeTransitionedFrom
@@ -61,6 +62,7 @@ class ConstraintsPropagationTests {
     val testSerialization = SerializationEnvironmentRule()
 
     private companion object {
+        val DUMMY_NOTARY_IDENTITY = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val ALICE = TestIdentity(CordaX500Name("ALICE", "London", "GB"))
         val ALICE_PARTY get() = ALICE.party
@@ -389,7 +391,8 @@ class ConstraintsPropagationTests {
         requireSupportedHashType(wireTransaction)
         val nodeKey = ALICE_PUBKEY
         val sigs = listOf(keyManagementService.sign(
-                SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
+                SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey),
+                DUMMY_NOTARY_IDENTITY.keyPair.sign(SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(DUMMY_NOTARY_IDENTITY.publicKey).schemeNumberID))))
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
 

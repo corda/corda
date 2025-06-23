@@ -1,6 +1,5 @@
 package net.corda.core.contracts
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.SerializableCalculatedProperty
@@ -27,7 +26,6 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException
  * @param T a type that represents the asset in question. This should describe the basic type of the asset
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
-@KeepForDJVM
 interface FungibleAsset<T : Any> : FungibleState<Issued<T>>, OwnableState {
     /**
      * Amount represents a positive quantity of some issued product which can be cash, tokens, assets, or generally

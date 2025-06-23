@@ -1,9 +1,7 @@
-@file:DeleteForDJVM
+
 package net.corda.serialization.internal.carpenter
 
 import com.google.common.base.MoreObjects
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
@@ -26,7 +24,6 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-@DeleteForDJVM
 class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
     @Throws(ClassNotFoundException::class)
@@ -68,7 +65,6 @@ private val moreObjects: String = Type.getInternalName(MoreObjects::class.java)
 private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHelper::class.java)
 
 // Allow us to create alternative ClassCarpenters.
-@KeepForDJVM
 interface ClassCarpenter {
     val whitelist: ClassWhitelist
     val classloader: ClassLoader
@@ -119,7 +115,6 @@ interface ClassCarpenter {
  *
  * Equals/hashCode methods are not yet supported.
  */
-@DeleteForDJVM
 class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: ClassWhitelist,
                          cl: ClassLoader = Thread.currentThread().contextClassLoader,
                          private val lenient: Boolean = false

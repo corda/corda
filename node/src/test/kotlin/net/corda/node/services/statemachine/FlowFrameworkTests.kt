@@ -58,6 +58,7 @@ import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
+import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -124,7 +125,7 @@ class FlowFrameworkTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP),
+            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP, CustomCordapp(setOf("net.corda.node.services.statemachine"))),
             servicePeerAllocationStrategy = RoundRobin()
         )
 

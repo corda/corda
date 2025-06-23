@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.LinkedHashMap
 
 /**
@@ -10,7 +11,7 @@ import kotlin.collections.LinkedHashMap
  */
 class AMQPRemoteTypeModel {
 
-    private val cache: MutableMap<TypeDescriptor, RemoteTypeInformation> = DefaultCacheProvider.createCache()
+    private val cache: MutableMap<TypeDescriptor, RemoteTypeInformation> = ConcurrentHashMap()
 
     /**
      * Interpret a [Schema] to obtain a [Map] of all of the [RemoteTypeInformation] contained therein, indexed by

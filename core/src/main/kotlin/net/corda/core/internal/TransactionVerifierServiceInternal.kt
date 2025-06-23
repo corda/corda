@@ -1,7 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.AttachmentConstraint
@@ -41,7 +39,6 @@ import net.corda.core.utilities.loggerFor
 import java.util.function.Function
 import java.util.function.Supplier
 
-@DeleteForDJVM
 interface TransactionVerifierServiceInternal {
     fun reverifyWithFixups(transaction: LedgerTransaction, missingClass: String?): CordaFuture<*>
 }
@@ -454,12 +451,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
  * its contents, as well as executing all of its smart contracts.
  */
 @Suppress("TooGenericExceptionCaught")
-@KeepForDJVM
 class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
-    // This constructor is used inside the DJVM's sandbox.
-    @Suppress("unused")
-    constructor() : this(ClassLoader.getSystemClassLoader())
-
     // Loads the contract class from the transactionClassLoader.
     private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
         return try {
@@ -476,15 +468,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Fun
                 createContractClass(ltx.id, contractClassName)
             }.map { contractClass ->
                 try {
-                    /**
-                     * This function must execute within the DJVM's sandbox, which does not
-                     * permit user code to invoke [java.lang.reflect.Constructor.newInstance].
-                     * (This would be fixable now, provided the constructor is public.)
-                     *
-                     * [Class.newInstance] is deprecated as of Java 9.
-                     */
-                    @Suppress("deprecation")
-                    contractClass.newInstance()
+                    contractClass.getDeclaredConstructor().newInstance()
                 } catch (e: Exception) {
                     throw ContractCreationError(ltx.id, contractClass.name, e)
                 }

@@ -1,7 +1,5 @@
 package net.corda.core.contracts
 
-import net.corda.core.KeepForDJVM
-
 /**
  * Interface to represent things which are fungible, this means that there is an expectation that these things can
  * be split and merged. That's the only assumption made by this interface.
@@ -25,7 +23,6 @@ import net.corda.core.KeepForDJVM
  * [TokenizableAssetInfo].
  */
 // DOCSTART 1
-@KeepForDJVM
 interface FungibleState<T : Any> : ContractState {
     /**
      * Amount represents a positive quantity of some token which can be cash, tokens, stock, agreements, or generally

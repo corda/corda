@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
@@ -18,7 +17,6 @@ import java.security.cert.X509Certificate
  * not part of the identifier themselves.
  */
 @CordaSerializable
-@KeepForDJVM
 class PartyAndCertificate(val certPath: CertPath) {
     @Transient
     val certificate: X509Certificate

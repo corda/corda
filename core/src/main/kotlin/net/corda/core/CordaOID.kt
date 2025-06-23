@@ -6,7 +6,6 @@ import net.corda.core.crypto.internal.AliasPrivateKey
  * OIDs used for the Corda platform. All entries MUST be defined in this file only and they MUST NOT be removed.
  * If an OID is incorrectly assigned, it should be marked deprecated and NEVER be reused again.
  */
-@KeepForDJVM
 object CordaOID {
     /** Assigned to R3, see http://www.oid-info.com/cgi-bin/display?oid=1.3.6.1.4.1.50530&action=display */
     const val R3_ROOT = "1.3.6.1.4.1.50530"

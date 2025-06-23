@@ -8,6 +8,7 @@ import liquibase.database.Database
 import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
+import liquibase.resource.Resource
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
@@ -84,7 +85,9 @@ class IdenityServiceKeyRotationMigrationTest {
         persist(charlie2.party.dbParty())
 
         Liquibase("migration/node-core.changelog-v20.xml", object : ClassLoaderResourceAccessor() {
-            override fun getResourcesAsStream(path: String) = super.getResourcesAsStream(path)?.firstOrNull()?.let { setOf(it) }
+            override fun getAll(path: String?): List<Resource> {
+                return if(path != null) super.getAll(path).take(1).toList() else emptyList()
+            }
         }, liquibaseDB).update(Contexts().toString())
 
         val dummyKey = Crypto.generateKeyPair().public

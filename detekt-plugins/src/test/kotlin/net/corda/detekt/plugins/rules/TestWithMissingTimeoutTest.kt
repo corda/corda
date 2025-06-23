@@ -20,11 +20,8 @@ class JUnit4Test {
     """.trimIndent()
 
     private val junit5Code = """
-        package net.corda.serialization.djvm
-
         import net.corda.core.serialization.internal._contextSerializationEnv
         import net.corda.core.serialization.serialize
-        import net.corda.serialization.djvm.SandboxType.KOTLIN
         import org.junit.jupiter.api.Assertions.assertEquals
         import org.junit.jupiter.api.Test
         import org.junit.jupiter.api.extension.ExtendWith
@@ -33,7 +30,7 @@ class JUnit4Test {
         import java.util.function.Function
 
         @ExtendWith(LocalSerialization::class)
-        class DeserializeInstantTest : TestBase(KOTLIN) {
+        class DeserializeInstantTest {
             @Test
         	fun `test deserializing instant`() {
                 val instant = Instant.now()

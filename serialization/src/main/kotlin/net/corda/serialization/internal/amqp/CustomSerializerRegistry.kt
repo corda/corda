@@ -6,9 +6,9 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.model.DefaultCacheProvider
 import net.corda.serialization.internal.model.TypeIdentifier
 import java.lang.reflect.Type
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Thrown when a [CustomSerializer] offers to serialize a type for which custom serialization is not permitted, because
@@ -87,7 +87,7 @@ class CachingCustomSerializerRegistry(
         data class CustomSerializerFound(override val serializerIfFound: AMQPSerializer<Any>) : CustomSerializerLookupResult()
     }
 
-    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
+    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = ConcurrentHashMap()
     private val customSerializers: MutableList<SerializerFor> = mutableListOf()
 
     /**
@@ -108,16 +108,8 @@ class CachingCustomSerializerRegistry(
                 register(additional)
             }
 
-            for (alias in customSerializer.deserializationAliases) {
-                val aliasDescriptor = typeDescriptorFor(alias)
-                if (aliasDescriptor != customSerializer.typeDescriptor) {
-                    descriptorBasedSerializerRegistry[aliasDescriptor.toString()] = customSerializer
-                }
-            }
-
             customSerializer
         }
-
     }
 
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {

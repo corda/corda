@@ -22,8 +22,6 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.stream.Collectors.toMap;
 
 public class CordaCaplet extends Capsule {
-    private static final String DJVM_DIR ="djvm";
-
     private Config nodeConfig = null;
     private String baseDir = null;
 
@@ -90,76 +88,10 @@ public class CordaCaplet extends Capsule {
         return null;
     }
 
-    private void installDJVM() {
-        Path djvmDir = Paths.get(baseDir, DJVM_DIR);
-        if (!djvmDir.toFile().mkdir() && !Files.isDirectory(djvmDir)) {
-            log(LOG_VERBOSE, "DJVM directory could not be created");
-        } else {
-            try {
-                Path sourceDir = appDir().resolve(DJVM_DIR);
-                if (Files.isDirectory(sourceDir)) {
-                    installCordaDependenciesForDJVM(sourceDir, djvmDir);
-                    installTransitiveDependenciesForDJVM(appDir(), djvmDir);
-                }
-            } catch (IOException e) {
-                log(LOG_VERBOSE, "Failed to populate directory " + djvmDir.toAbsolutePath());
-                log(LOG_VERBOSE, e);
-            }
-        }
-    }
-
-    private void installCordaDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
-        try (DirectoryStream<Path> directory = Files.newDirectoryStream(sourceDir, file -> Files.isRegularFile(file))) {
-            for (Path sourceFile : directory) {
-                Path targetFile = targetDir.resolve(sourceFile.getFileName());
-                installFile(sourceFile, targetFile);
-            }
-        }
-    }
-
-    private void installTransitiveDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
-        Manifest manifest = getManifest();
-        String[] transitives = manifest.getMainAttributes().getValue("Corda-DJVM-Dependencies").split("\\s++", 0);
-        for (String transitive : transitives) {
-            Path source = sourceDir.resolve(transitive);
-            if (Files.isRegularFile(source)) {
-                installFile(source, targetDir.resolve(transitive));
-            }
-        }
-    }
-
-    private Manifest getManifest() throws IOException {
-        URL capsule = getClass().getProtectionDomain().getCodeSource().getLocation();
-        try (JarInputStream jar = new JarInputStream(capsule.openStream())) {
-            return jar.getManifest();
-        }
-    }
-
-    private void installFile(Path source, Path target) {
-        try {
-            // Forcibly reinstall this dependency.
-            Files.deleteIfExists(target);
-            Files.createSymbolicLink(target, source);
-        } catch (UnsupportedOperationException | IOException e) {
-            copyFile(source, target);
-        }
-    }
-
-    private void copyFile(Path source, Path target) {
-        try {
-            Files.copy(source, target, REPLACE_EXISTING);
-        } catch (IOException e) {
-            //noinspection ResultOfMethodCallIgnored
-            target.toFile().delete();
-            log(LOG_VERBOSE, e);
-        }
-    }
-
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
-        installDJVM();
         return super.prelaunch(jvmArgs, args);
     }
 

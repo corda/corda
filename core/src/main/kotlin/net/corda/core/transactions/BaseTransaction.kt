@@ -1,7 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.DoNotImplement
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
@@ -12,7 +11,6 @@ import java.util.function.Predicate
 /**
  * An abstract class defining fields shared by all transaction types in the system.
  */
-@KeepForDJVM
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
     /** A list of reusable reference data states which can be referred to by other contracts in this transaction. */
