@@ -192,7 +192,7 @@ class BootstrapperView : View("Corda Network Builder") {
             val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
             val random = Random()
             (1..4).map { charPool[random.nextInt(charPool.length)] }.joinToString("")
-        }
+        } + "-network"
         val textInputDialog = TextInputDialog(networkName1)
         textInputDialog.title = "Azure Resource Group"
         networkName1 = textInputDialog.showAndWait().orElseGet { networkName1 }
