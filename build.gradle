@@ -127,6 +127,8 @@ buildscript {
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
+    ext.json_smart_version = constants.getProperty("jsonSmartVersion")
+    ext.azure_version = constants.getProperty("azureVersion")
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
@@ -498,6 +500,25 @@ allprojects {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
                         }
+                    }
+
+                    // SNYK-JAVA-ORGYAML-6056527 / CVE-2022-38749
+                    // SNYK-JAVA-ORGYAML-2806360 / CVE-2022-25857
+                    // vulnerability in snakeyaml@1.18, fixed in snakeyaml@1.31
+                    // snakeyaml@1.18 is a transitive dependency via liquibase@3.6.3
+                    // current latest liquibase@3.9.0 only uses snakeyaml@1.24
+                    // force-upgrade to latest snakeyaml@1.33
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
+                    }
+
+                    // SNYK-JAVA-NETMINIDEV-3369748 / CVE-2023-1370
+                    // vulnerability in json-smart@2.3, fixed in json-smart@2.4.9
+                    // json-smart@2.3 is a transitive dependency via azure@1.22.0
+                    // current latest azure@1.41.1 only uses json-smart@2.4.2
+                    // force-upgrade to latest json-smart@2.5.2
+                    if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
+                        details.useVersion json_smart_version
                     }
                 }
 
