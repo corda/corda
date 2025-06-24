@@ -188,11 +188,8 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     private fun setupAzureRegionOptions(): Pair<Map<String, String>, String> {
-        var networkName1 = run {
-            val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-            val random = Random()
-            (1..4).map { charPool[random.nextInt(charPool.length)] }.joinToString("")
-        } + "-network"
+        val chars = ('A'..'Z') + ('a'..'z')
+        var networkName1 = (1..4).map { chars.random() }.joinToString("") + "-network"
         val textInputDialog = TextInputDialog(networkName1)
         textInputDialog.title = "Azure Resource Group"
         networkName1 = textInputDialog.showAndWait().orElseGet { networkName1 }
