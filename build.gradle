@@ -124,6 +124,8 @@ buildscript {
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
+    ext.json_smart_version = constants.getProperty("jsonSmartVersion")
+    ext.azure_version = constants.getProperty("azureVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
 
     if (JavaVersion.current().isJava8()) {
@@ -494,6 +496,15 @@ allprojects {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
                         }
+                    }
+
+                    // SNYK-JAVA-NETMINIDEV-3369748 / CVE-2023-1370
+                    // vulnerability in json-smart@2.3, fixed in json-smart@2.4.9
+                    // json-smart@2.3 is a transitive dependency via azure@1.22.0
+                    // current latest azure@1.41.1 only uses json-smart@2.4.2
+                    // force-upgrade to latest json-smart@2.5.2
+                    if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
+                        details.useVersion json_smart_version
                     }
                 }
 
