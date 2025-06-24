@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber", "TooGenericExceptionCaught")
+@file:Suppress("MagicNumber")
 
 package net.corda.nodeapi.internal.crypto
 
@@ -7,11 +7,9 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.reader
 import net.corda.core.internal.signWithCert
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
-import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.toHex
@@ -63,14 +61,15 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.ArrayList
 import java.util.Date
 import javax.security.auth.x500.X500Principal
 import kotlin.experimental.and
 import kotlin.experimental.or
+import kotlin.io.path.reader
+import kotlin.io.path.writer
 
 object X509Utilities {
-    // Note that this default value only applies to BCCryptoService. Other implementations of CryptoService may have to use different
+    // Note that this default value only applies to DefaultCryptoService. Other implementations of CryptoService may have to use different
     // schemes (for instance `UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME`).
     val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.EDDSA_ED25519_SHA512
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
@@ -304,10 +303,10 @@ object X509Utilities {
                           crlDistPoint: String? = null,
                           crlIssuer: X500Name? = null): X509Certificate {
         val builder = createPartialCertificate(certificateType, issuer, issuerPublicKey, subject, subjectPublicKey, validityWindow, nameConstraints, crlDistPoint, crlIssuer)
-        return builder.build(issuerSigner).run {
-            require(isValidOn(Date())){"Certificate is not valid at instant now"}
-            toJca()
-        }
+        val certificate = builder.build(issuerSigner).toJca()
+        certificate.checkValidity(Date())
+        certificate.verify(issuerPublicKey)
+        return certificate
     }
 
     /**
@@ -341,18 +340,22 @@ object X509Utilities {
                 validityWindow,
                 nameConstraints,
                 crlDistPoint,
-                crlIssuer)
-        return builder.build(signer).run {
-            require(isValidOn(Date())){"Certificate is not valid at instant now"}
-            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public))){"Invalid signature"}
-            toJca()
-        }
+                crlIssuer
+        )
+        val certificate = builder.build(signer).toJca()
+        certificate.checkValidity(Date())
+        certificate.verify(issuerKeyPair.public)
+        return certificate
     }
 
     /**
      * Create certificate signing request using provided information.
      */
-    fun createCertificateSigningRequest(subject: X500Principal, email: String, publicKey: PublicKey, contentSigner: ContentSigner, certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
+    fun createCertificateSigningRequest(subject: X500Principal,
+                                        email: String,
+                                        publicKey: PublicKey,
+                                        contentSigner: ContentSigner,
+                                        certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
         return JcaPKCS10CertificationRequestBuilder(subject, publicKey)
                 .addAttribute(BCStyle.E, DERUTF8String(email))
                 .addAttribute(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), certRole)
@@ -411,7 +414,7 @@ object X509Utilities {
 }
 
 // Assuming cert type to role is 1:1
-val CertRole.certificateType: CertificateType get() = CertificateType.values().first { it.role == this }
+val CertRole.certificateType: CertificateType get() = CertificateType.entries.first { it.role == this }
 
 /**
  * Convert a [X509Certificate] into BouncyCastle's [X509CertificateHolder].

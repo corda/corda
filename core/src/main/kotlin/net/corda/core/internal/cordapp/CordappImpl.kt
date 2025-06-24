@@ -5,8 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.hash
 import net.corda.core.internal.notary.NotaryService
-import net.corda.core.internal.toPath
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -14,9 +14,12 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
+import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.name
 
 data class CordappImpl(
+        val jarFile: Path,
         override val contractClassNames: List<String>,
         override val initiatedFlows: List<Class<out FlowLogic<*>>>,
         override val rpcFlows: List<Class<out FlowLogic<*>>>,
@@ -29,18 +32,22 @@ data class CordappImpl(
         override val checkpointCustomSerializers: List<CheckpointCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
-        override val jarPath: URL,
         override val info: Cordapp.Info,
-        override val jarHash: SecureHash.SHA256,
         override val minimumPlatformVersion: Int,
         override val targetPlatformVersion: Int,
+        override val jarHash: SecureHash.SHA256 = jarFile.hash,
+        val languageVersion: LanguageVersion = LanguageVersion.Data,
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
         private val explicitCordappClasses: List<String> = emptyList(),
         val isVirtual: Boolean = false
 ) : Cordapp {
-    override val name: String = jarName(jarPath)
+    override val jarPath: URL
+        get() = jarFile.toUri().toURL()
+
+    override val name: String
+        get() = jarName(jarFile)
 
     // TODO: Also add [SchedulableFlow] as a Cordapp class
     override val cordappClasses: List<String> = run {
@@ -48,8 +55,12 @@ data class CordappImpl(
         classList.mapNotNull { it?.name } + contractClassNames + explicitCordappClasses
     }
 
+    override fun equals(other: Any?): Boolean = other is CordappImpl && this.jarHash == other.jarHash
+
+    override fun hashCode(): Int = 31 * jarHash.hashCode()
+
     companion object {
-        fun jarName(url: URL): String = (url.toPath().fileName ?: "").toString().removeSuffix(".jar")
+        fun jarName(url: Path): String = url.name.removeSuffix(".jar")
 
         /** CorDapp manifest entries */
         const val CORDAPP_CONTRACT_NAME = "Cordapp-Contract-Name"
@@ -73,6 +84,7 @@ data class CordappImpl(
 
         @VisibleForTesting
         val TEST_INSTANCE = CordappImpl(
+                jarFile = Paths.get(""),
                 contractClassNames = emptyList(),
                 initiatedFlows = emptyList(),
                 rpcFlows = emptyList(),
@@ -84,7 +96,6 @@ data class CordappImpl(
                 serializationCustomSerializers = emptyList(),
                 checkpointCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
-                jarPath = Paths.get("").toUri().toURL(),
                 info = UNKNOWN_INFO,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash,
