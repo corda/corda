@@ -114,7 +114,10 @@ buildscript {
     ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
+    ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
+    ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     ext.azure_version = constants.getProperty("azureVersion")
+    ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
 
     ext.corda_revision = {
@@ -431,6 +434,23 @@ allprojects {
                         } else {
                             details.useVersion netty_version
                         }
+                    }
+
+                    // SNYK-JAVA-ORGAPACHECOMMONS-10363251 / CVE-2025-48976
+                    // Vulnerability in commons-fileupload2-core@2.0.0-M1
+                    // Is a transitive dependency of commons-fileupload2-jakarta@2.0.0-M1
+                    // Latest jakarta version is still 2.0.0-M1, but fix is in core 2.0.0-M4.
+                    // Need to force core to fixed/latest-available 2.0.0-M4.
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-fileupload2-core') {
+                        details.useVersion "2.0.0-M4"
+                    }
+
+                    // SNYK-JAVA-NETMINIDEV-3369748 / CVE-2023-1370
+                    // vulnerability in json-smart@2.3, fixed in json-smart@2.4.9
+                    // json-smart@2.4.2 is a transitive dependency via azure@1.41.1
+                    // force-upgrade to latest json-smart@2.5.2
+                    if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
+                        details.useVersion json_smart_version
                     }
                 }
 
