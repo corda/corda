@@ -1,7 +1,6 @@
 package net.corda.networkbuilder.gui
 
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
-import java.util.Random
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
