@@ -31,7 +31,7 @@ dependencies {
     testImplementation "junit:junit:$junit_version"
 }
 
-jar.enabled = false
+jar.enabled = true
 
 capsule {
     version capsule_version

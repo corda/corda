@@ -39,9 +39,12 @@ pipeline {
         }
 
         stage('Snyk Delta') {
-            agent { label 'standard' }
+            when {
+                expression {
+                    return CHANGE_TARGET.contains("release/os/")
+                }
+            }
             steps {
-                authenticateGradleWrapper()
                 snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }
         }

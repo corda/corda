@@ -781,7 +781,7 @@ class VaultObserverExceptionTest {
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            val flowHandle = aliceNode.rpc.startFlow(::SubscribingRawUpdatesFlow)
+            val flowHandle = aliceNode.rpc.startFlow(VaultObserverExceptionTest::SubscribingRawUpdatesFlow)
 
             assertFailsWith<CordaRuntimeException>(
                 "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to access VaultService.rawUpdates " +
