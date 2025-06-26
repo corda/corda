@@ -18,7 +18,7 @@ shadowJar {
 }
 
 jar {
-    enabled = false
+    enabled = true
 }
 
 publishing {
@@ -26,7 +26,6 @@ publishing {
         shadow(MavenPublication) { publication ->
             artifactId 'corda-opentelemetry-driver'
             artifact shadowJar
-            from components.java
         }
     }
 }
