@@ -22,7 +22,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -30,8 +34,9 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
-import java.util.*
+import java.util.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
@@ -40,6 +45,7 @@ class NotaryChangeTests {
 
     private lateinit var mockNet: MockNetwork
     private lateinit var oldNotaryNode: StartedMockNode
+    private lateinit var newNotaryNode: StartedMockNode
     private lateinit var clientNodeA: StartedMockNode
     private lateinit var clientNodeB: StartedMockNode
     private lateinit var newNotaryParty: Party
@@ -56,6 +62,7 @@ class NotaryChangeTests {
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         clientA = clientNodeA.info.singleIdentity()
         oldNotaryNode = mockNet.notaryNodes[0]
+        newNotaryNode = mockNet.notaryNodes[1]
         oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
         newNotaryParty = clientNodeA.services.networkMapCache.getNotary(newNotaryName)!!
     }
@@ -72,6 +79,15 @@ class NotaryChangeTests {
         val newState = changeNotary(state, clientNodeA, newNotaryParty)
         assertEquals(newState.state.notary, newNotaryParty)
     }
+
+    @Test(timeout=300_000)
+    fun `non-participant can change notary for a state with single participant`() {
+        val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state.state.notary, oldNotaryParty)
+        val newState = changeNotary(state, clientNodeB, newNotaryParty)
+        assertEquals(newState.state.notary, newNotaryParty)
+    }
+
 
     @Test(timeout=300_000)
 	fun `should change notary for a state with multiple participants`() {
@@ -91,7 +107,7 @@ class NotaryChangeTests {
 
     // TODO: Re-enable the test when parameter currentness checks are in place, ENT-2666.
     @Test(timeout=300_000)
-@Ignore
+    @Ignore
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
 
@@ -132,6 +148,85 @@ class NotaryChangeTests {
                 .map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
 
         assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
+    }
+
+    @Test(timeout = 300_000)
+    fun `should get correct signers for multi party encumbrance if signed by all`(){
+        val issueTx = issueMultiPartyEncumberedState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
+        val newNotary = newNotaryParty
+        val flow = NotaryChangeFlow(state, newNotary)
+        val future = clientNodeA.startFlow(flow)
+        mockNet.runNetwork()
+        val newState = future.getOrThrow()
+        assertEquals(newState.state.notary, newNotary)
+
+        val recordedTx = clientNodeA.services.getRequiredTransaction(newState.ref.txhash)
+        val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
+
+        // Check that all encumbrances have been propagated to the outputs
+        val originalOutputs = issueTx.outputStates
+        val newOutputs = notaryChangeTx.outputStates
+        assertTrue(originalOutputs.size == newOutputs.size && originalOutputs.containsAll(newOutputs))
+
+        // Check if encumbrance linking between states has not changed.
+        val originalLinkedStates = issueTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, issueTx.outputs[it.encumbrance!!].data) }.toSet()
+        val notaryChangeLinkedStates = notaryChangeTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
+
+        assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
+
+    }
+
+    @Test(timeout = 300_000)
+    @Ignore("This is one of the shortcomings of the current implementation")
+    fun `should get correct signers for multi party encumbrance if signed by one`(){
+        val issueTx = issueMultiPartyEncumberedState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        // use the third state, only signed by nodeA
+        val state = StateAndRef(issueTx.outputs[2], StateRef(issueTx.id, 2))
+
+        assertTrue( state.state.data.participants.contains(clientNodeA.info.singleIdentity()),
+                "Expected ${clientNodeA.info.singleIdentity()}, got ${state.state.data.participants}")
+        assertFalse(state.state.data.participants.contains(clientNodeB.info.singleIdentity()))
+        val newNotary = newNotaryParty
+        val flow = NotaryChangeFlow(state, newNotary)
+        val future = clientNodeA.startFlow(flow)
+        mockNet.runNetwork()
+        val newState = future.getOrThrow()
+        assertEquals(newState.state.notary, newNotary)
+
+        val recordedTx = clientNodeA.services.getRequiredTransaction(newState.ref.txhash)
+        assertEquals(3, recordedTx.sigs.size)
+        val recordedSigners = recordedTx.sigs.map{ it.by }
+        assertTrue{recordedSigners.contains(clientNodeA.info.singleIdentity().owningKey)}
+        assertTrue{recordedSigners.contains(clientNodeB.info.singleIdentity().owningKey)}
+        val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
+
+        // Check that all encumbrances have been propagated to the outputs
+        val originalOutputs = issueTx.outputStates
+        val newOutputs = notaryChangeTx.outputStates
+        assertTrue(originalOutputs.size == newOutputs.size && originalOutputs.containsAll(newOutputs))
+
+        // Check if encumbrance linking between states has not changed.
+        val originalLinkedStates = issueTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, issueTx.outputs[it.encumbrance!!].data) }.toSet()
+        val notaryChangeLinkedStates = notaryChangeTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
+
+        assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
+
+    }
+
+    @Test(timeout = 300_000)
+    fun `can resolve state after notary change`(){
+        val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state.state.notary, oldNotaryParty)
+        val newState = changeNotary(state, clientNodeA, newNotaryParty)
+        val loaded = clientNodeA.services.loadState(newState.ref)
+        assertEquals( newState.state.data, loaded.data)
     }
 
     @Test(timeout=300_000)
@@ -176,14 +271,13 @@ class NotaryChangeTests {
     }
 
     private fun issueEncumberedState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party): WireTransaction {
-        val owner = nodeIdentity.ref(0)
-        val stateA = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
-        val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
-        val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
+        val stateA = DummyContract.SingleOwnerState(Random().nextInt(), nodeIdentity)
+        val stateB = DummyContract.SingleOwnerState(Random().nextInt(), nodeIdentity)
+        val stateC = DummyContract.SingleOwnerState(Random().nextInt(), nodeIdentity)
 
         // Ensure encumbrances form a cycle.
         val tx = TransactionBuilder(null).apply {
-            addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
+            addCommand(Command(DummyContract.Commands.Create(), nodeIdentity.owningKey))
             addOutputState(stateA, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 2) // Encumbered by stateB
             addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 0) // Encumbered by stateA
             addOutputState(stateB, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
@@ -222,6 +316,27 @@ fun issueMultiPartyState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryN
     nodeB.services.recordTransactions(stx)
     return stx.tx.outRef(0)
 }
+
+fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): WireTransaction {
+    val participants = listOf(nodeA.info.singleIdentity(), nodeB.info.singleIdentity())
+    val stateA = DummyContract.MultiOwnerState(0, participants)
+    val stateB = DummyContract.SingleOwnerState(Random().nextInt(), nodeA.info.singleIdentity())
+    val stateC = DummyContract.SingleOwnerState(Random().nextInt(), nodeB.info.singleIdentity())
+
+    val tx = TransactionBuilder(notary = notaryIdentity).apply {
+        addCommand(Command(DummyContract.Commands.Create(), nodeA.info.singleIdentity().owningKey))
+        addOutputState(stateA, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 2) // Encumbered by stateB
+        addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 0) // Encumbered by stateA
+        addOutputState(stateB, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
+    }
+    val signedByA = nodeA.services.signInitialTransaction(tx)
+    val signedByAB = nodeB.services.addSignature(signedByA)
+    val stx = notaryNode.services.addSignature(signedByAB, notaryIdentity.owningKey)
+    nodeA.services.recordTransactions(stx)
+    nodeB.services.recordTransactions(stx)
+    return stx.tx
+}
+
 
 fun issueInvalidState(services: ServiceHub, identity: Party, notary: Party): StateAndRef<DummyContract.SingleOwnerState> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
