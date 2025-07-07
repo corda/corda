@@ -1,0 +1,72 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+// Java Persistence API support: create no-arg constructor
+// see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'corda.common-publishing'
+
+description 'Corda notary change - new implementation'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
+    // cordapp project(':finance:workflows')
+    // cordapp project(':finance:contracts')
+    cordaProvided project(':core')
+
+    testImplementation project(':node')
+    testImplementation project(':node-api')
+    testImplementation project(':node-driver')
+    testImplementation project(':serialization')
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.apache.qpid:proton-j:$protonj_version"
+
+    // AssertJ: for fluent assertions for testing
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+}
+
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 4
+    workflow {
+        name "Corda notary change app"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
+    // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-notary-change'
+            from components.cordapp
+            artifact javadocJar
+        }
+    }
+}
