@@ -46,19 +46,24 @@ data class NotaryChangeWireTransaction(
          * may result in a different byte sequence depending on the serialization context.
          */
         val serializedComponents: List<OpaqueBytes>,
-        val digestService: DigestService
+        val digestService: DigestService,
+        val requiredSigningKeys: Set<PublicKey>
 ) : CoreTransaction() {
     /**
      * Old version of [NotaryChangeWireTransaction] constructor for ABI compatibility.
      */
+    @DeprecatedConstructorForDeserialization(2)
+    constructor(serializedComponents: List<OpaqueBytes>, digestService: DigestService) : this(serializedComponents, digestService, emptySet())
+
+
     @DeprecatedConstructorForDeserialization(1)
-    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.sha2_256)
+    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.sha2_256, emptySet())
 
     /**
      * Old version of [NotaryChangeWireTransaction.copy] for ABI compatibility.
      */
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
-        return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256)
+        return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256, requiredSigningKeys)
     }
 
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
@@ -116,7 +121,6 @@ data class NotaryChangeWireTransaction(
         return VerificationResult.InProcess(Try.on {
             // No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation.
             NotaryChangeLedgerTransaction.resolve(verificationSupport, this, emptyList())
-            null
         })
     }
 

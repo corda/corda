@@ -53,11 +53,12 @@ class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
                                      val networkParametersHash: SecureHash,
+                                     val requiredSignatures: Set<PublicKey>,
                                      val digestService: DigestService = DigestService.sha2_256) {
 
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
-        return NotaryChangeWireTransaction(components, digestService)
+        return NotaryChangeWireTransaction(components, digestService, requiredSignatures)
     }
 }
 
