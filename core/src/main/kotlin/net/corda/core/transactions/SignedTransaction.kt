@@ -91,15 +91,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     /** Helper to access the network parameters hash for the contained transaction. */
     val networkParametersHash: SecureHash? get() = coreTransaction.networkParametersHash
 
-    override val requiredSigningKeys: Set<PublicKey>
-        get() {
-            val coreTx = this.coreTransaction
-            return when (coreTx) {
-                is WireTransaction -> coreTx.requiredSigningKeys
-                is NotaryChangeWireTransaction -> coreTx.requiredSigningKeys
-                else -> throw IllegalArgumentException("Invalid input to CollectSignaturesFlow - core tx was ${coreTx::class}")
-            }
-        }
+    override val requiredSigningKeys: Set<PublicKey> = coreTransaction.requiredSigningKeys
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data.

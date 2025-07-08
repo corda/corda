@@ -47,7 +47,7 @@ data class NotaryChangeWireTransaction(
          */
         val serializedComponents: List<OpaqueBytes>,
         val digestService: DigestService,
-        val requiredSigningKeys: Set<PublicKey>
+        override val requiredSigningKeys: Set<PublicKey>
 ) : CoreTransaction() {
     /**
      * Old version of [NotaryChangeWireTransaction] constructor for ABI compatibility.
