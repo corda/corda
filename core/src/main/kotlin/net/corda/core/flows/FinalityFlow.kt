@@ -174,7 +174,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
-        // require(transaction.coreTransaction is WireTransaction)  // Sanity check
+        require(transaction.coreTransaction is WireTransaction || transaction.coreTransaction is NotaryChangeWireTransaction)  // Sanity check
         if (!newApi) {
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "FinalityFlow with FlowSessions. (${serviceHub.getAppContext().cordapp.info})")
@@ -435,9 +435,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun verifyTx(): Set<Party> {
-        val notaryKey = transaction.notary?.owningKey
+        val notary = transaction.notary
         // The notary signature(s) are allowed to be missing but no others.
-        if (notaryKey != null) transaction.verifySignaturesExcept(notaryKey) else transaction.verifyRequiredSignatures()
+        if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
         // verifyInternal returns null if the transaction was verified externally, which *could* happen on a very odd scenerio of a 4.11
         // node creating the transaction but a 4.12 kicking off finality. In that case, we still want a LedgerTransaction object for
