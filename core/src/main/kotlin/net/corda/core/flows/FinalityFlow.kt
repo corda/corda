@@ -17,8 +17,7 @@ import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.NotaryChangeLedgerTransaction
+import net.corda.core.transactions.FullTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -430,33 +429,23 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
     }
 
-    private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {
-        val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
+    private fun extractExternalParticipants(ftx: FullTransaction): Set<Party> {
+        val participants = ftx.outputStates.flatMap { it.participants } + ftx.inputs.map{it.state.data}.flatMap { it.participants }
         return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities.toSet()
     }
-
-    private fun extractExternalParticipants(ltx: NotaryChangeLedgerTransaction): Set<Party> {
-        val participants = ltx.outputStates.flatMap { it.participants }
-        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities.toSet()
-    }
-
 
     private fun verifyTx(): Set<Party> {
         val notaryKey = transaction.notary?.owningKey
         // The notary signature(s) are allowed to be missing but no others.
         if (notaryKey != null) transaction.verifySignaturesExcept(notaryKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
-        val ftx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false)
         // verifyInternal returns null if the transaction was verified externally, which *could* happen on a very odd scenerio of a 4.11
         // node creating the transaction but a 4.12 kicking off finality. In that case, we still want a LedgerTransaction object for
         // recording to the vault, etc. Note that calling verify() on this will fail as it doesn't have the necessary non-legacy attachments
         // for verification by the node.
-        return when (ftx){
-            null -> extractExternalParticipants(transaction.toLedgerTransaction(serviceHub, checkSufficientSignatures = false))
-            is LedgerTransaction -> extractExternalParticipants(ftx)
-            is NotaryChangeLedgerTransaction -> extractExternalParticipants(ftx)
-            else -> throw IllegalArgumentException("Wrong input to FinalityFlow - was expecting LedgerTransaction or NotaryChangeLedgerTransaction, got ${ftx::class}")
-        }
+        val ftx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false) ?:
+            transaction.toLedgerTransaction(serviceHub, checkSufficientSignatures = false)
+        return extractExternalParticipants(ftx)
     }
 }
 
