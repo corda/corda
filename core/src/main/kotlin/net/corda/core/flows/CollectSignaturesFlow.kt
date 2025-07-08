@@ -104,7 +104,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
 
         // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
-        val notaryKey = partiallySignedTx.notaryKey
+        val notaryKey = partiallySignedTx.notary?.owningKey
         // If present, we need to exclude the notary's PublicKey as the notary signature is collected separately with
         // the FinalityFlow.
         val unsigned = if (notaryKey != null) notSigned - notaryKey else notSigned
