@@ -1470,6 +1470,8 @@ public interface net.corda.core.cordapp.Cordapp
   @NotNull
   public abstract java.util.Set getCustomSchemas()
   @NotNull
+  public abstract java.util.List getFlowSchedulerMappers()
+  @NotNull
   public abstract net.corda.core.cordapp.Cordapp$Info getInfo()
   @NotNull
   public abstract java.util.List getInitiatedFlows()
@@ -4060,6 +4062,23 @@ public final class net.corda.core.flows.WrappedFlowExternalOperation extends jav
   public final net.corda.core.flows.FlowExternalOperation getOperation()
   @NotNull
   public final net.corda.core.internal.ServiceHubCoreInternal getServiceHub()
+##
+public interface net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
+  @NotNull
+  public abstract String getScheduler(net.corda.core.context.InvocationContext, Class, net.corda.core.identity.CordaX500Name)
+##
+public final class net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl extends java.lang.Object implements net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
+  public <init>(java.util.Set)
+  @NotNull
+  public String getScheduler(net.corda.core.context.InvocationContext, Class, net.corda.core.identity.CordaX500Name)
+  @NotNull
+  public static final net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl$Companion Companion
+##
+public static final class net.corda.core.flows.scheduler.mapper.FlowSchedulerMapperImpl$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+##
+public @interface net.corda.core.flows.scheduler.mapper.FlowThreadPool
+  public abstract String value()
 ##
 @DoNotImplement
 @CordaSerializable
