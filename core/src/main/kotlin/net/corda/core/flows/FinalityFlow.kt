@@ -442,7 +442,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
 
     private fun verifyTx(): Set<Party> {
-        val notaryKey = transaction.notaryKey
+        val notaryKey = transaction.notary?.owningKey
         // The notary signature(s) are allowed to be missing but no others.
         if (notaryKey != null) transaction.verifySignaturesExcept(notaryKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
@@ -475,7 +475,7 @@ object NotarySigCheck {
     }
 
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
-        val notaryKey = stx.notaryKey
+        val notaryKey = stx.notary?.owningKey
         val signers = stx.sigs.asSequence().map { it.by }.toSet()
         return notaryKey?.isFulfilledBy(signers) != true
     }

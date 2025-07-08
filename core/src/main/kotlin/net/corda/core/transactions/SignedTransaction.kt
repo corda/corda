@@ -101,17 +101,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             }
         }
 
-    val notaryKey: PublicKey?
-        get() {
-            val coreTx = this.coreTransaction
-            return when (coreTx) {
-                is WireTransaction -> coreTx.notary?.owningKey
-                is NotaryChangeWireTransaction -> coreTx.notary.owningKey
-                else -> throw IllegalArgumentException("Invalid input to CollectSignaturesFlow - core tx was ${coreTx::class}")
-            }
-        }
-
-
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data.
         val descriptions = ArrayList<String>()
