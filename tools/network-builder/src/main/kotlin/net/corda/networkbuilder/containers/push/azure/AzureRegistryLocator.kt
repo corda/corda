@@ -1,14 +1,14 @@
 package net.corda.networkbuilder.containers.push.azure
 
-import com.microsoft.azure.management.Azure
-import com.microsoft.azure.management.containerregistry.AccessKeyType
-import com.microsoft.azure.management.containerregistry.Registry
-import com.microsoft.azure.management.resources.ResourceGroup
+import com.azure.resourcemanager.AzureResourceManager
+import com.azure.resourcemanager.containerregistry.models.AccessKeyType
+import com.azure.resourcemanager.containerregistry.models.Registry
+import com.azure.resourcemanager.resources.models.ResourceGroup
 import net.corda.networkbuilder.Constants.Companion.restFriendlyName
 import net.corda.networkbuilder.containers.instance.azure.AzureInstantiator
 import org.slf4j.LoggerFactory
 
-class RegistryLocator(private val azure: Azure,
+class RegistryLocator(private val azure: AzureResourceManager,
                       private val resourceGroup: ResourceGroup) {
 
     val registry: Registry = locateRegistry()

@@ -1,6 +1,7 @@
 package net.corda.networkbuilder.volumes
 
-import com.microsoft.azure.storage.file.CloudFile
+import com.azure.storage.file.share.ShareFileClient
+import com.azure.storage.file.share.models.ShareFileUploadOptions
 import com.typesafe.config.ConfigFactory
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -11,6 +12,7 @@ import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.createDevNetworkMapCa
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -28,8 +30,9 @@ interface Volume {
         internal val keyPair = networkMapCa.keyPair
     }
 
-    fun CloudFile.uploadFromByteArray(array: ByteArray) {
-        this.uploadFromByteArray(array, 0, array.size)
+    fun ShareFileClient.uploadFromByteArray(array: ByteArray) {
+        val inputStream = ByteArrayInputStream(array)
+        this.uploadWithResponse(ShareFileUploadOptions(inputStream), null, null)
     }
 
     fun convertNodeIntoToNetworkParams(notaryFiles: List<Pair<File, File>>): NetworkParameters {

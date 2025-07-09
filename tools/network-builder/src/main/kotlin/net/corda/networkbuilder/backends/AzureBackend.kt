@@ -1,9 +1,11 @@
 package net.corda.networkbuilder.backends
 
-import com.microsoft.azure.CloudException
-import com.microsoft.azure.credentials.AzureCliCredentials
-import com.microsoft.azure.management.Azure
-import com.microsoft.rest.LogLevel
+import com.azure.core.credential.TokenCredential
+import com.azure.core.management.profile.AzureProfile
+import com.azure.resourcemanager.AzureResourceManager
+import com.azure.core.management.AzureEnvironment
+import com.azure.core.management.exception.ManagementException
+import com.azure.identity.AzureCliCredentialBuilder
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.containers.instance.azure.AzureInstantiator
 import net.corda.networkbuilder.containers.push.azure.AzureContainerPusher
@@ -21,12 +23,11 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
 
         val LOG = LoggerFactory.getLogger(AzureBackend::class.java)
 
-        private val azure: Azure = kotlin.run {
-            Azure.configure()
-                    .withLogLevel(LogLevel.NONE)
-                    .authenticate(AzureCliCredentials.create())
-                    .withDefaultSubscription()
-        }
+        private val credential: TokenCredential = AzureCliCredentialBuilder().build()
+        private val profile = AzureProfile(AzureEnvironment.AZURE)
+        private val azure: AzureResourceManager = AzureResourceManager.configure()
+                .authenticate(credential, profile)
+                .withDefaultSubscription()
 
         fun fromContext(context: Context): AzureBackend {
             val resourceGroupName = context.networkName.replace(Constants.ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX, "")
@@ -41,7 +42,7 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
                     LOG.info("Found existing resourceGroup, reusing")
                     foundResourceGroup
                 }
-            } catch (e: CloudException) {
+            } catch (e: ManagementException) {
                 throw RuntimeException(e)
             }
 
