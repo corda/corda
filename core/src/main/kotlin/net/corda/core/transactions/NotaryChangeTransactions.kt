@@ -47,7 +47,7 @@ data class NotaryChangeWireTransaction(
          */
         val serializedComponents: List<OpaqueBytes>,
         val digestService: DigestService,
-        override val requiredSigningKeys: Set<PublicKey>
+        final override val requiredSigningKeys: Set<PublicKey>
 ) : CoreTransaction() {
     /**
      * Old version of [NotaryChangeWireTransaction] constructor for ABI compatibility.
@@ -60,10 +60,14 @@ data class NotaryChangeWireTransaction(
     constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.sha2_256, emptySet())
 
     /**
-     * Old version of [NotaryChangeWireTransaction.copy] for ABI compatibility.
+     * Old versions of [NotaryChangeWireTransaction.copy] for ABI compatibility.
      */
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
         return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256, requiredSigningKeys)
+    }
+
+    fun copy(serializedComponents: List<OpaqueBytes>, digestService: DigestService) : NotaryChangeWireTransaction {
+        return NotaryChangeWireTransaction(serializedComponents, digestService, requiredSigningKeys )
     }
 
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
