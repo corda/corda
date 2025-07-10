@@ -236,6 +236,8 @@ public final class net.corda.core.context.InvocationContext extends java.lang.Ob
   @NotNull
   public static final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
   @NotNull
+  public static final net.corda.core.context.InvocationContext system(net.corda.core.context.SystemContextType, net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @NotNull
   public String toString()
   @NotNull
   public static final net.corda.core.context.InvocationContext$Companion Companion
@@ -278,6 +280,8 @@ public static final class net.corda.core.context.InvocationContext$Companion ext
   public final net.corda.core.context.InvocationContext service(String, net.corda.core.identity.CordaX500Name, net.corda.core.context.Trace, net.corda.core.context.Trace)
   @NotNull
   public final net.corda.core.context.InvocationContext shell(net.corda.core.context.Trace, net.corda.core.context.Trace)
+  @NotNull
+  public final net.corda.core.context.InvocationContext system(net.corda.core.context.SystemContextType, net.corda.core.context.Trace, net.corda.core.context.Trace)
 ##
 @CordaSerializable
 public abstract class net.corda.core.context.InvocationOrigin extends java.lang.Object
@@ -359,6 +363,31 @@ public static final class net.corda.core.context.InvocationOrigin$Shell extends 
   public java.security.Principal principal()
   @NotNull
   public static final net.corda.core.context.InvocationOrigin$Shell INSTANCE
+##
+@CordaSerializable
+public static final class net.corda.core.context.InvocationOrigin$System extends net.corda.core.context.InvocationOrigin
+  public <init>(net.corda.core.context.SystemContextType)
+  @NotNull
+  public final net.corda.core.context.SystemContextType component1()
+  @NotNull
+  public final net.corda.core.context.InvocationOrigin$System copy(net.corda.core.context.SystemContextType)
+  public boolean equals(Object)
+  @NotNull
+  public final net.corda.core.context.SystemContextType getSystemContextType()
+  public int hashCode()
+  @NotNull
+  public java.security.Principal principal()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.context.SystemContextType extends java.lang.Enum
+  @NotNull
+  public final String getDescription()
+  @NotNull
+  public static kotlin.enums.EnumEntries getEntries()
+  public static net.corda.core.context.SystemContextType valueOf(String)
+  public static net.corda.core.context.SystemContextType[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.context.Trace extends java.lang.Object
@@ -2967,6 +2996,22 @@ public static final class net.corda.core.flows.FlowInitiator$Shell extends net.c
   @NotNull
   public static final net.corda.core.flows.FlowInitiator$Shell INSTANCE
 ##
+@CordaSerializable
+public static final class net.corda.core.flows.FlowInitiator$System extends net.corda.core.flows.FlowInitiator
+  public <init>(net.corda.core.context.SystemContextType)
+  @NotNull
+  public final net.corda.core.context.SystemContextType component1()
+  @NotNull
+  public final net.corda.core.flows.FlowInitiator$System copy(net.corda.core.context.SystemContextType)
+  public boolean equals(Object)
+  @NotNull
+  public String getName()
+  @NotNull
+  public final net.corda.core.context.SystemContextType getSystemContextType()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
 public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   public <init>()
   @Suspendable
@@ -3920,6 +3965,9 @@ public class net.corda.core.flows.StateReplacementException extends net.corda.co
   public <init>(String)
   public <init>(String, Throwable)
   public <init>(String, Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
+##
+public @interface net.corda.core.flows.SystemFlow
+  public abstract String supersedes()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.TransactionMetadata extends java.lang.Object
