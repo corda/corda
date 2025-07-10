@@ -123,7 +123,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     override val id: SecureHash get() = merkleTree.hash
 
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
-    override val requiredSigningKeys: Set<PublicKey>
+    final override val requiredSigningKeys: Set<PublicKey>
         get() {
             val keys = LinkedHashSet<PublicKey>()
             val signersGroup: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP))
