@@ -225,7 +225,7 @@ class NotaryChangeTests {
     var localPath: URI = projectRootDir.toUri().resolve(
             "node/src/test/resources/net/corda/node/services/")
 
-    @Test
+    @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithoutSigners(){
         val resource = "NotaryChangeTest.transactionWithoutSigners"
         val sf = testDefaultFactory()
@@ -247,7 +247,7 @@ class NotaryChangeTests {
 
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithSigners(){
         val resource = "NotaryChangeTest.transactionWithSigners"
         val sf = testDefaultFactory()
@@ -268,7 +268,7 @@ class NotaryChangeTests {
         assertEquals(stateRef, deserializedTx.inputs.first())
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithEmptySigners(){
         val resource = "NotaryChangeTest.transactionWithEmptySigners"
         val sf = testDefaultFactory()
