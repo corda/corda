@@ -30,7 +30,7 @@ artifacts {
 }
 
 jar {
-    enabled = false
+    enabled = true
 }
 
 publish {
