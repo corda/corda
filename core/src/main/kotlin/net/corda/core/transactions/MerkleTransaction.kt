@@ -370,7 +370,7 @@ class FilteredTransaction internal constructor(
     }
 
     override val requiredSigningKeys: Set<PublicKey>
-        get() = TODO("Not yet implemented")
+        get() = throw NotImplementedError("A filtered transaction cannot reveal required signers.")
 }
 
 /**
