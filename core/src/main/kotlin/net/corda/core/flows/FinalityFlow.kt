@@ -430,7 +430,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun extractExternalParticipants(ftx: FullTransaction): Set<Party> {
-        val participants = ftx.outputStates.flatMap { it.participants } + ftx.inputs.map{it.state.data}.flatMap { it.participants }
+        val participants = ftx.outputStates.flatMap { it.participants } + ftx.inputs.map { it.state.data }.flatMap { it.participants }
         return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities.toSet()
     }
 
