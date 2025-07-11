@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.carpenter
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.DeleteForDJVM
 import org.objectweb.asm.Type
 
 /**
@@ -17,7 +16,6 @@ abstract class InterfaceMismatchException(msg: String) : ClassCarpenterException
 class DuplicateNameException(val name: String) : ClassCarpenterException(
         "An attempt was made to register two classes with the name '$name' within the same ClassCarpenter namespace.")
 
-@DeleteForDJVM
 class NullablePrimitiveException(val name: String, val field: Class<out Any>) : ClassCarpenterException(
         "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
 

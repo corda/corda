@@ -1,7 +1,6 @@
 package net.corda.core.contracts
 
 import net.corda.core.CordaInternal
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import java.security.PublicKey
 
@@ -12,7 +11,6 @@ import java.security.PublicKey
  * @property contract The contract name contained within the JAR. A Contract attachment has to contain at least 1 contract.
  * @property additionalContracts Additional contract names contained within the JAR.
  */
-@KeepForDJVM
 class ContractAttachment private constructor(
         val attachment: Attachment,
         val contract: ContractClassName,

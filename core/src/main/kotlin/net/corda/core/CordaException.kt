@@ -4,7 +4,6 @@ import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable
-@KeepForDJVM
 interface CordaThrowable {
     var originalExceptionClassName: String?
     val originalMessage: String?
@@ -13,7 +12,6 @@ interface CordaThrowable {
     fun addSuppressed(suppressed: Array<Throwable>)
 }
 
-@KeepForDJVM
 open class CordaException internal constructor(override var originalExceptionClassName: String? = null,
                                                private var _message: String? = null,
                                                private var _cause: Throwable? = null) : Exception(null, null, true, true), CordaThrowable {
@@ -61,7 +59,6 @@ open class CordaException internal constructor(override var originalExceptionCla
     }
 }
 
-@KeepForDJVM
 open class CordaRuntimeException(override var originalExceptionClassName: String?,
                                  private var _message: String?,
                                  private var _cause: Throwable?) : RuntimeException(null, null, true, true), CordaThrowable {

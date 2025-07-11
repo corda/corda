@@ -24,7 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class PersistentNetworkMapCacheTest {
-    private companion object {
+    internal companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
         val BOB = TestIdentity(BOB_NAME, 80)
         val CHARLIE = TestIdentity(CHARLIE_NAME, 90)

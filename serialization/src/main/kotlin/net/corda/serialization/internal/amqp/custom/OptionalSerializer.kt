@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.util.*
@@ -24,6 +23,5 @@ class OptionalSerializer(
         return Optional.ofNullable(proxy.item)
     }
 
-    @KeepForDJVM
     data class OptionalProxy(val item: Any?)
 }

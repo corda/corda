@@ -10,8 +10,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 
 // This file provides rules that depend on the targetVersion of the current Contract or Flow.
-// Rules defined in this package are automatically removed from the DJVM in core-deterministic,
-// and must be replaced by a deterministic alternative defined within that module.
 
 /**
  * Rule which determines whether [ContractState]s must declare the [Contract] to which they belong (e.g. via the

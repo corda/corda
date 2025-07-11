@@ -1,7 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
@@ -24,13 +22,11 @@ import java.security.MessageDigest
  * @param hashAlgorithm the name of the hash algorithm to be used for the instance
  */
 @CordaSerializable
-@KeepForDJVM
 data class DigestService(val hashAlgorithm: String) {
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }
     }
 
-    @KeepForDJVM
     companion object {
         private const val NONCE_SIZE = 8
         /**
@@ -114,5 +110,4 @@ data class DigestService(val hashAlgorithm: String) {
     }
 }
 
-@DeleteForDJVM
 fun DigestService.randomHash(): SecureHash = SecureHash.random(this.hashAlgorithm)

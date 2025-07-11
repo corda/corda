@@ -1,10 +1,8 @@
 package net.corda.core.serialization
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.KeepForDJVM
 import net.corda.core.node.services.AttachmentId
 
-@KeepForDJVM
 @CordaSerializable
 class MissingAttachmentsRuntimeException(val ids: List<AttachmentId>, message: String?, cause: Throwable?)
     : CordaRuntimeException(message, cause) {

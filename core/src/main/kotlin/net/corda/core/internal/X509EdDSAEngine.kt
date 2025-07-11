@@ -1,9 +1,15 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
+import net.corda.core.crypto.Crypto
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import java.security.*
+import java.security.AlgorithmParameters
+import java.security.InvalidKeyException
+import java.security.MessageDigest
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.SecureRandom
+import java.security.Signature
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.X509EncodedKeySpec
 
@@ -25,12 +31,12 @@ class X509EdDSAEngine : Signature {
     }
 
     override fun engineInitSign(privateKey: PrivateKey) = engine.initSign(privateKey)
-    @DeleteForDJVM
+
     override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) = engine.initSign(privateKey, random)
 
     override fun engineInitVerify(publicKey: PublicKey) {
         val parsedKey = try {
-            publicKey as? EdDSAPublicKey ?: EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
+            publicKey as? EdDSAPublicKey ?: EdDSAPublicKey(X509EncodedKeySpec(Crypto.encodePublicKey(publicKey)))
         } catch (e: Exception) {
             throw (InvalidKeyException(e.message))
         }

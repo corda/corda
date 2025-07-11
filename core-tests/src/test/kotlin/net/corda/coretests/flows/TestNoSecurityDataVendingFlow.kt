@@ -15,7 +15,7 @@ class TestNoSecurityDataVendingFlow(otherSideSession: FlowSession) : DataVending
             // Hack to not send the first message.
             otherSideSession.receive()
         } else {
-            super.sendPayloadAndReceiveDataRequest(this.otherSideSession, payload)
+            super.sendPayloadAndReceiveDataRequest(this.otherSessions.first(), payload)
         }
     }
 }

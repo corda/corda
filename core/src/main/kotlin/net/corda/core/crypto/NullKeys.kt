@@ -1,10 +1,8 @@
 package net.corda.core.crypto
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AnonymousParty
 import java.security.PublicKey
 
-@KeepForDJVM
 object NullKeys {
     object NullPublicKey : PublicKey, Comparable<PublicKey> {
         override fun getAlgorithm() = "NULL"

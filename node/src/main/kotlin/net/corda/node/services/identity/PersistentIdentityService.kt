@@ -47,7 +47,9 @@ import java.security.cert.CertificateNotYetValidException
 import java.security.cert.CollectionCertStoreParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.HashSet
+import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.stream.Stream
@@ -136,7 +138,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                         )
                     },
                     toPersistentEntity = { key: String, value: PublicKey ->
-                        PersistentHashToPublicKey(key, value.encoded)
+                        PersistentHashToPublicKey(key, Crypto.encodePublicKey(value))
                     },
                     persistentEntityClass = PersistentHashToPublicKey::class.java)
         }
