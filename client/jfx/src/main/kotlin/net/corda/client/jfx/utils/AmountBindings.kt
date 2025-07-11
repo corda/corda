@@ -14,13 +14,14 @@ import java.util.stream.Collectors
  * Utility bindings for the [Amount] type, similar in spirit to [Bindings]
  */
 object AmountBindings {
+    @Suppress("SpreadOperator")
     fun <T : Any> sum(amounts: ObservableList<Amount<T>>, token: T): MonadicBinding<Amount<T>> = EasyBind.map(
             Bindings.createLongBinding({
                 amounts.stream().collect(Collectors.summingLong {
                     require(it.token == token)
                     it.quantity
                 })
-            }, arrayOf(amounts))
+            }, *arrayOf(amounts))
     ) { sum -> Amount(sum.toLong(), token) }
 
     fun exchange(
@@ -35,6 +36,7 @@ object AmountBindings {
         }
     }
 
+    @Suppress("SpreadOperator")
     fun sumAmountExchange(
             amounts: ObservableList<Amount<Currency>>,
             currency: ObservableValue<Currency>,
@@ -45,7 +47,7 @@ object AmountBindings {
             EasyBind.map(
                     Bindings.createLongBinding({
                         amounts.stream().collect(Collectors.summingLong { exchange(it) })
-                    }, arrayOf(amounts))
+                    }, *arrayOf(amounts))
             ) { Amount(it.toLong(), currencyValue) }
         }
     }
