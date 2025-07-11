@@ -222,10 +222,10 @@ class NotaryChangeTests {
 
     /*
     Change in NotaryChangeWireTransaction in 4.13 (https://r3-cev.atlassian.net/browse/ENT-13850)
-    The NotaryChangeWireTransaction gets an extra field `requiredSingingKeys` so collect sigantures
+    The NotaryChangeWireTransaction gets an extra field `requiredSigningKeys` so collect signatures
     and finality flow can be adapted to work with NotaryChangeWireTransactions as well as
     normal WireTransactions.
-    These tests use precanned, serialized NotaryChangeWireTransactions from before the change
+    These tests use pre-canned, serialized NotaryChangeWireTransactions from before the change
     and from after the change to prove that the change is forwards and backwards compatible on
     the wire.
      */
