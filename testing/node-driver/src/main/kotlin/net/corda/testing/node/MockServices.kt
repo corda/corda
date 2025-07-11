@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.CordaInternal
 import net.corda.core.contracts.Attachment
@@ -558,7 +559,14 @@ open class MockServices private constructor(
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
 
-    override fun <T> getMetricsRegistry(type: Class<T>): T  = throw UnsupportedOperationException()
+    override fun <T> getMetricsRegistry(type: Class<T>): T {
+        if (type == MetricRegistry::class.java) {
+            @Suppress("UNCHECKED_CAST")
+            return MetricRegistry() as T
+        } else {
+            throw IllegalArgumentException("Only ${MetricRegistry::class.java} is currently supported")
+        }
+    }
     
     /**
      * All [ServiceHub]s must also implement [VerifyingServiceHub]. However, since [MockServices] is part of the public API, making it
