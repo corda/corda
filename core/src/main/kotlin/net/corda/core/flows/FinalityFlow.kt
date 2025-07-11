@@ -458,7 +458,7 @@ object NotarySigCheck {
                 needsNotarisation && hasNoNotarySignature(stx)
             }
 
-            is NotaryChangeWireTransaction -> true
+            is NotaryChangeWireTransaction -> hasNoNotarySignature(stx)
             else -> throw IllegalArgumentException("Wrong input to NotarySigCheck - was expecting WireTransaction or NotaryChangeWireTransaction, got ${coreTx::class}")
         }
     }
