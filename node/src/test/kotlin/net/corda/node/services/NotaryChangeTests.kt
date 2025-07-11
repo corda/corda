@@ -220,11 +220,23 @@ class NotaryChangeTests {
     //       - Transaction contains additional states and commands with business logic
     //       - The transaction type is not a notary change transaction at all.
 
+    /*
+    Change in NotaryChangeWireTransaction in 4.13 (https://r3-cev.atlassian.net/browse/ENT-13850)
+    The NotaryChangeWireTransaction gets an extra field `requiredSingingKeys` so collect sigantures
+    and finality flow can be adapted to work with NotaryChangeWireTransactions as well as
+    normal WireTransactions.
+    These tests use precanned, serialized NotaryChangeWireTransactions from before the change
+    and from after the change to prove that the change is forwards and backwards compatible on
+    the wire.
+     */
+
     // When regenerating the test files this needs to be set to the file system location of the resource files
     @Suppress("UNUSED")
     var localPath: URI = projectRootDir.toUri().resolve(
             "node/src/test/resources/net/corda/node/services/")
 
+    // Read in a serialized NotaryChangeWireTransaction from 4.12 (or earlier)
+    // `requiredSigningKeys` did not exist as a field when serializing
     @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithoutSigners(){
         val resource = "NotaryChangeTest.transactionWithoutSigners"
@@ -247,6 +259,8 @@ class NotaryChangeTests {
 
     }
 
+    // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
+    // populated from https://github.com/corda/corda/pull/7953
     @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithSigners(){
         val resource = "NotaryChangeTest.transactionWithSigners"
@@ -268,6 +282,8 @@ class NotaryChangeTests {
         assertEquals(stateRef, deserializedTx.inputs.first())
     }
 
+    // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
+    // present, but not populated.
     @Test(timeout = 300_000)
     fun deserializeNotaryChangeTransactionWithEmptySigners(){
         val resource = "NotaryChangeTest.transactionWithEmptySigners"
