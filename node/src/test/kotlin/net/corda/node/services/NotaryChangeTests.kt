@@ -4,6 +4,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateReplacementException
@@ -12,25 +13,43 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.amqp.DefaultDescriptorBasedSerializerRegistry
+import net.corda.serialization.internal.amqp.DescriptorBasedSerializerRegistry
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import java.net.URI
 import java.time.Instant
-import java.util.*
+import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -200,6 +219,92 @@ class NotaryChangeTests {
     //       - Multiple states in a single "notary change" transaction
     //       - Transaction contains additional states and commands with business logic
     //       - The transaction type is not a notary change transaction at all.
+
+    /*
+    Change in NotaryChangeWireTransaction in 4.13 (https://r3-cev.atlassian.net/browse/ENT-13850)
+    The NotaryChangeWireTransaction gets an extra field `requiredSigningKeys` so collect signatures
+    and finality flow can be adapted to work with NotaryChangeWireTransactions as well as
+    normal WireTransactions.
+    These tests use pre-canned, serialized NotaryChangeWireTransactions from before the change
+    and from after the change to prove that the change is forwards and backwards compatible on
+    the wire.
+     */
+
+    // When regenerating the test files this needs to be set to the file system location of the resource files
+    @Suppress("UNUSED")
+    var localPath: URI = projectRootDir.toUri().resolve(
+            "node/src/test/resources/net/corda/node/services/")
+
+    // Read in a serialized NotaryChangeWireTransaction from 4.12 (or earlier)
+    // `requiredSigningKeys` did not exist as a field when serializing
+    @Test(timeout = 300_000)
+    fun deserializeNotaryChangeTransactionWithoutSigners(){
+        val resource = "NotaryChangeTest.transactionWithoutSigners"
+        val sf = testDefaultFactory()
+
+        val stateRef = StateRef(SecureHash.create("61A2ECDC1C54F31B7351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
+
+        // uncomment to recreate the data.
+        // This has to be run on a version of Corda that does not have required signers on NotaryChangeWireTransaction
+        // val networkParamsHash = SecureHash.randomSHA256()
+        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash  ).build()
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notaryChangeTx, testSerializationContext).bytes)
+
+        val url = NotaryChangeTests::class.java.getResource(resource)!!
+        val sc2 = url.readBytes()
+        val deserializedTx = DeserializationInput(sf).deserialize(SerializedBytes<NotaryChangeWireTransaction>(sc2), testSerializationContext)
+
+        assertEquals(1, deserializedTx.inputs.size)
+        assertEquals(stateRef, deserializedTx.inputs.first())
+
+    }
+
+    // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
+    // populated from https://github.com/corda/corda/pull/7953
+    @Test(timeout = 300_000)
+    fun deserializeNotaryChangeTransactionWithSigners(){
+        val resource = "NotaryChangeTest.transactionWithSigners"
+        val sf = testDefaultFactory()
+
+        val stateRef = StateRef(SecureHash.create("36C3ECDC1C54F31B7351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
+
+        // uncomment to recreate the data.
+        // This has to be run on a version of Corda that _has_ requiredSigningKeys on NotaryChangeWireTransaction
+        // val networkParamsHash = SecureHash.randomSHA256()
+        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash, setOf(clientA.owningKey)  ).build()
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notaryChangeTx, testSerializationContext).bytes)
+
+        val url = NotaryChangeTests::class.java.getResource(resource)!!
+        val sc2 = url.readBytes()
+        val deserializedTx = DeserializationInput(sf).deserialize(SerializedBytes<NotaryChangeWireTransaction>(sc2), testSerializationContext)
+
+        assertEquals(1, deserializedTx.inputs.size)
+        assertEquals(stateRef, deserializedTx.inputs.first())
+    }
+
+    // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
+    // present, but not populated.
+    @Test(timeout = 300_000)
+    fun deserializeNotaryChangeTransactionWithEmptySigners(){
+        val resource = "NotaryChangeTest.transactionWithEmptySigners"
+        val sf = testDefaultFactory()
+
+        val stateRef = StateRef(SecureHash.create("45D3ECDC1C54F3113351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
+
+        // uncomment to recreate the data
+        // This has to be run on a version of Corda that _has_ requiredSigningKeys on NotaryChangeWireTransaction
+        // val networkParamsHash = SecureHash.randomSHA256()
+        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash, emptySet()).build()
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notaryChangeTx, testSerializationContext).bytes)
+
+        val url = NotaryChangeTests::class.java.getResource(resource)!!
+        val sc2 = url.readBytes()
+        val deserializedTx = DeserializationInput(sf).deserialize(SerializedBytes<NotaryChangeWireTransaction>(sc2), testSerializationContext)
+
+        assertEquals(1, deserializedTx.inputs.size)
+        assertEquals(stateRef, deserializedTx.inputs.first())
+    }
+
 }
 
 fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party): StateAndRef<DummyContract.SingleOwnerState> {
@@ -230,3 +335,22 @@ fun issueInvalidState(services: ServiceHub, identity: Party, notary: Party): Sta
     (services as ServiceHubInternal).recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(stx), disableSignatureVerification = true)
     return stx.tx.outRef(0)
 }
+
+@JvmOverloads
+fun testDefaultFactory(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
+                               DefaultDescriptorBasedSerializerRegistry()) =
+        SerializerFactoryBuilder.build(
+                AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+                descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry).also { it.register(PublicKeySerializer) }
+
+val serializationProperties: MutableMap<Any, Any> = mutableMapOf()
+
+val testSerializationContext = SerializationContextImpl(
+        preferredSerializationVersion = amqpMagic,
+        deserializationClassLoader = ClassLoader.getSystemClassLoader(),
+        whitelist = AllWhitelist,
+        properties = serializationProperties,
+        objectReferencesEnabled = false,
+        useCase = SerializationContext.UseCase.Testing,
+        encoding = null)
