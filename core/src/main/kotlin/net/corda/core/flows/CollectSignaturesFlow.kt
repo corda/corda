@@ -332,7 +332,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 
     @Suspendable
     private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
-        require(signingKeys.all { it in stx.tx.requiredSigningKeys }) {
+        require(signingKeys.all { it in stx.requiredSigningKeys }) {
             "A signature was requested for a key that isn't part of the required signing keys for transaction ${stx.id}"
         }
     }
