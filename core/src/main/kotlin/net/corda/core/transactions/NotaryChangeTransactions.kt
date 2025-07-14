@@ -212,14 +212,12 @@ private constructor(
      */
     private fun checkEncumbrances() {
         val encumberedStates = inputs.asSequence().filter { it.state.encumbrance != null }.associateBy { it.ref }
-        if (encumberedStates.isNotEmpty()) {
-            inputs.forEach { (state, ref) ->
-                if (StateRef(ref.txhash, state.encumbrance!!) !in encumberedStates) {
-                    throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            id,
-                            state.encumbrance,
-                            TransactionVerificationException.Direction.INPUT)
-                }
+        encumberedStates.values.forEach { (state, ref) ->
+            if (StateRef(ref.txhash, state.encumbrance!!) !in encumberedStates) {
+                throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                        id,
+                        state.encumbrance,
+                        TransactionVerificationException.Direction.INPUT)
             }
         }
     }

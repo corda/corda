@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.MoveNotaryFlow
@@ -9,6 +10,7 @@ import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -154,8 +156,16 @@ class MoveNotaryTests {
         mockNet.runNetwork()
 
         return future.getOrThrow().first()
-
     }
+
+    private fun <T: ContractState> moveNotary(states: List<StateAndRef<T>>, node: StartedMockNode, newNotary: Party): List<StateAndRef<T>> {
+        val flow = MoveNotaryFlow(states, newNotary)
+        val future = node.startFlow(flow)
+        mockNet.runNetwork()
+
+        return future.getOrThrow()
+    }
+
 
     private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedMockNode, toNode: StartedMockNode): StateAndRef<DummyContract.SingleOwnerState> {
         val tx = DummyContract.move(state, toNode.info.singleIdentity())
@@ -194,10 +204,56 @@ class MoveNotaryTests {
 
     // TODO: Add more test cases once we have a general flow/service exception handling mechanism:
     //       - A participant is offline/can't be found on the network
-    //       - The requesting party is not a participant
     //       - The requesting party wants to change additional state fields
     //       - Multiple states in a single "notary change" transaction
     //       - Transaction contains additional states and commands with business logic
     //       - The transaction type is not a notary change transaction at all.
+
+
+    // moving notary for two states from the same tx works
+
+    // moving notary for two states from different tx works
+    @Test( timeout = 300_000)
+    fun `should change notary for two states with single participant from different txs`() {
+        val state1 = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state1.state.notary, oldNotaryParty)
+        val state2 = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state2.state.notary, oldNotaryParty)
+
+        val newStates = moveNotary(listOf(state1, state2), clientNodeA, newNotaryParty)
+        assertEquals(2, newStates.size)
+        assertEquals(newStates.first().state.notary, newNotaryParty)
+        assertEquals(state1.state.data.magicNumber, newStates.first().state.data.magicNumber)
+        assertEquals(newStates.last().state.notary, newNotaryParty)
+        assertEquals(state2.state.data.magicNumber, newStates.last().state.data.magicNumber)
+    }
+
+    // moving notary for one encumbered state A and an unencumbered state B returns A', B', encumbrances
+    @Test( timeout = 300_000)
+    fun `Adding encumbrances should not change the order of inputs vs outputs`() {
+        val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
+        val state1 = StateAndRef<DummyContract.SingleOwnerState>(uncheckedCast(issueTx.outputs.first()), StateRef(issueTx.id, 0))
+        assertEquals(state1.state.notary, oldNotaryParty)
+        val state2 = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state2.state.notary, oldNotaryParty)
+
+        val newStates = moveNotary(listOf(state1, state2), clientNodeA, newNotaryParty)
+        assertEquals(2, newStates.size)
+        assertEquals(newStates.first().state.notary, newNotaryParty)
+        assertEquals(state1.state.data.magicNumber, newStates.first().state.data.magicNumber)
+        assertEquals(newStates.last().state.notary, newNotaryParty)
+        assertEquals(state2.state.data.magicNumber, newStates.last().state.data.magicNumber)
+    }
+
+    // moving a state with encumbrances that require different signers works
+
+    // moving a state to the same notary fails
+
+    // moving states that are on different notaries fails
+
+    // moving a state we're not a participant in fails
+
+
+
 }
 

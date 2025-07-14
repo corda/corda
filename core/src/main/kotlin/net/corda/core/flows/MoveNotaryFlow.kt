@@ -47,7 +47,7 @@ class MoveNotaryFlow<out T: ContractState>(
         fun tracker() = ProgressTracker(BUILDING, SIGNING, FINALIZING)
     }
 
-    private val oldNotary = states.map{it.state.notary}.singleOrNull()
+    private val oldNotary = states.map{it.state.notary}.toSet().singleOrNull()
 
     init {
         require(states.isNotEmpty()) { "Notary change flow must receive at least one state to work on" }
