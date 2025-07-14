@@ -67,3 +67,17 @@ class ContractUpgradeHandler(otherSide: FlowSession) : AbstractStateReplacementF
         proposedTx.resolve(serviceHub, stx.sigs)
     }
 }
+
+class MoveNotaryHandler( val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(object : SignTransactionFlow(otherSideSession) {
+
+            override fun checkTransaction(stx: SignedTransaction) {
+                // no op for now
+            }
+        })
+
+        subFlow(ReceiveFinalityFlow(otherSideSession))
+    }
+}
