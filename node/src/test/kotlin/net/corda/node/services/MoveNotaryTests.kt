@@ -357,6 +357,60 @@ class MoveNotaryTests {
         assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
     }
 
+    @Test(timeout = 300_000)
+    fun `notary changing two sets of encumbered states should not mess up encumbrances`(){
+        val tx1 = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
+        val tx2 = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
+
+        val newStates = moveNotary(listOf(tx1.outRef(0), tx2.outRef(0)),clientNodeA, newNotaryParty)
+
+        assertEquals(newStates.size, 2)
+        assertEquals(newStates[0].state.notary, newNotaryParty)
+        assertEquals(newStates[1].state.notary, newNotaryParty)
+
+        val recordedTx = clientNodeA.services.getRequiredTransaction(newStates[0].ref.txhash)
+        assertEquals(3, recordedTx.sigs.size)
+
+        val recordedSigners = recordedTx.sigs.map { it.by }
+        assertTrue { recordedSigners.contains(clientNodeA.info.singleIdentity().owningKey) }
+
+        val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
+        assertEquals(6, notaryChangeTx.outputs.size)
+
+        val result = groupOutputsByEncumbrances(notaryChangeTx.outRefsOfType(DummyContract.SingleOwnerState::class.java))
+        assertEquals(3, result.size)
+        assertEquals(tx1.outputStates.map{(it as DummyContract.SingleOwnerState).magicNumber}.toSet(), result[1].map{ it.second}.toSet())
+        assertEquals(tx2.outputStates.map{(it as DummyContract.SingleOwnerState).magicNumber}.toSet(), result[2].map{ it.second}.toSet())
+    }
+
+    fun groupOutputsByEncumbrances(  outputs: List<StateAndRef<DummyContract.SingleOwnerState>> ) : List<List<Pair<StateRef, Int>>> {
+        val seenStates = mutableSetOf<StateRef>()
+        val result = mutableListOf(mutableListOf<Pair<StateRef, Int>>())
+
+        outputs.forEach {
+            if (!seenStates.add(it.ref)){  // add the state to the list of seen states
+                return@forEach
+            }
+            if (it.state.encumbrance == null){ // if not encumbered, it goes into the first bin of the result
+                result[0].add(it.ref to it.state.data.magicNumber)
+                return@forEach
+            }
+
+            // We have an encumbered state - add a new bin to the result
+            result.add(mutableListOf())
+            var currentState = it
+            while (true){
+                result.last().add(currentState.ref to currentState.state.data.magicNumber) // add state to the new bin
+                val encumbrance = currentState.state.encumbrance!! // get next encumbrance (can't be null because encumbrances need to cyclic)
+                currentState = outputs[encumbrance]  // fetch the encumbering state
+                if (!seenStates.add(currentState.ref)){ // try to add it to seen states - if it's already in, we're done with this set of encumbrances.
+                    break
+                }
+            }
+        }
+        return result
+    }
+
     @Test( timeout = 300_000)
     fun `moving a state to the same notary fails`() {
         val state1 = issueState(clientNodeA.services, clientA, oldNotaryParty)
@@ -403,6 +457,13 @@ class MoveNotaryTests {
 
        assertThatThrownBy {  future.get() }.hasMessageContaining("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters")
     }
+
+    // test receiving flow:
+    // create tx
+    // mock session
+    // use service hub from node b
+    // mock state machine -> subflow
+    // call receiving flow directly
 
     // works with confidential identities
 }
