@@ -15,6 +15,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.transactions.keyService
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -388,6 +389,19 @@ class MoveNotaryTests {
         mockNet.runNetwork()
         assertThatThrownBy{ future.get() }
                 .hasMessage("java.lang.IllegalArgumentException: Cannot request move for state we are not a participant in")
+    }
+
+    @Test( timeout = 300_000)
+    fun `cannot change notary to non-existent notary`(){
+        val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
+
+        val nonExistentNotary = Party.create( CordaX500Name("Pirates", "Concarneau", "FR"), keyService.freshKey())
+
+        val flow = MoveNotaryFlow(listOf(state), nonExistentNotary)
+        val future = clientNodeA.startFlow(flow)
+        mockNet.runNetwork()
+
+       assertThatThrownBy {  future.get() }.hasMessageContaining("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters")
     }
 
     // works with confidential identities
