@@ -74,6 +74,10 @@ class MoveNotaryFlow<out T: ContractState>(
      * The original n states are the first n inputs/outputs, states added due to encumbrances are added at the end
      */
     private fun assembleTx(): Pair<SignedTransaction, Set<AbstractParty>> {
+        require(states.all {
+            serviceHub.keyManagementService.filterMyKeys(it.state.data.participants.map { it.owningKey }).toList().isNotEmpty()
+        }) { "Cannot request move for state we are not a participant in" }
+
         val inputs = resolveEncumbrances()
         val participants = inputs.flatMap { it.state.data.participants }.toSet()
         val tx = NotaryChangeTransactionBuilder(
@@ -85,7 +89,7 @@ class MoveNotaryFlow<out T: ContractState>(
                 serviceHub.digestService
         ).build()
 
-        // TODO: We need a much faster way of finding our key in the transaction
+
         val myKeys = serviceHub.keyManagementService.filterMyKeys(participants.map { it.owningKey })
         return SignedTransaction(tx, myKeys.map{ signTransaction(tx.id, it)}) to participants
     }
