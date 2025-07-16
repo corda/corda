@@ -31,7 +31,7 @@ class AzureSmbVolume(private val azure: AzureResourceManager, private val resour
             .getShareClient("nodeinfos")
             .apply { createIfNotExists() }
 
-    lateinit var networkParamsFolder: ShareDirectoryClient
+    var networkParamsFolder: ShareDirectoryClient
     val shareName: String = shareClient.shareName
     val storageAccountName: String
         get() = resourceGroup.restFriendlyName() + "storageacc"
