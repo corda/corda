@@ -32,6 +32,7 @@ interface Volume {
 
     fun ShareFileClient.uploadFromByteArray(array: ByteArray) {
         val inputStream = ByteArrayInputStream(array)
+        this.create(array.size.toLong())
         this.uploadWithResponse(ShareFileUploadOptions(inputStream), null, null)
     }
 

@@ -13,6 +13,8 @@ import net.corda.networkbuilder.containers.push.azure.RegistryLocator
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.CompletableFuture
 
 data class AzureBackend(override val containerPusher: AzureContainerPusher,
@@ -32,18 +34,23 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
         fun fromContext(context: Context): AzureBackend {
             val resourceGroupName = context.networkName.replace(Constants.ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX, "")
             val resourceGroup = try {
-                LOG.info("Attempting to find existing resourceGroup with name: $resourceGroupName")
-                val foundResourceGroup = azure.resourceGroups().getByName(resourceGroupName)
-
-                if (foundResourceGroup == null) {
-                    LOG.info("No existing resourceGroup found creating new resourceGroup with name: $resourceGroupName")
-                    azure.resourceGroups().define(resourceGroupName).withRegion(context.extraParams[Constants.REGION_ARG_NAME]).create()
+                LOG.info("Attempting to find existing resource group with name: $resourceGroupName")
+                val existingGroup = azure.resourceGroups().getByName(resourceGroupName)
+                LOG.info("Found existing resource group with name $resourceGroupName, reusing")
+                existingGroup
+            } catch (ex: ManagementException) {
+                if (ex.response.statusCode == 404) {
+                    LOG.info("No existing resource group with name $resourceGroupName found. Creating new one.")
+                    val now = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    azure.resourceGroups().define(resourceGroupName)
+                            .withRegion(context.extraParams[Constants.REGION_ARG_NAME])
+                            .withTag("CreatedBy", "Corda Network Builder")
+                            .withTag("CreatedOn", now)
+                            .withTag("NetworkName", context.networkName)
+                            .create()
                 } else {
-                    LOG.info("Found existing resourceGroup, reusing")
-                    foundResourceGroup
+                    throw ex
                 }
-            } catch (e: ManagementException) {
-                throw RuntimeException(e)
             }
 
             val registryLocatorFuture = CompletableFuture.supplyAsync {

@@ -1,5 +1,6 @@
 package net.corda.networkbuilder.containers.instance.azure
 
+import com.azure.core.management.exception.ManagementException
 import com.azure.resourcemanager.AzureResourceManager
 import com.azure.resourcemanager.containerinstance.models.ContainerGroup
 import com.azure.resourcemanager.containerinstance.models.ContainerGroupRestartPolicy
@@ -65,12 +66,21 @@ class AzureInstantiator(private val azure: AzureResourceManager,
     }
 
     fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
-        val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
-        if (existingContainer != null) {
-            LOG.info("Found an existing instance of: $containerName destroying ContainerGroup")
-            azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
+        return try {
+            val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
+            if (existingContainer != null) {
+                LOG.info("Found an existing instance of: $containerName, destroying ContainerGroup")
+                azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
+            }
+            existingContainer
+        } catch (e: ManagementException) {
+            if (e.response.statusCode == 404) {
+                LOG.info("No existing container group found for: $containerName")
+                null
+            } else {
+                throw e
+            }
         }
-        return existingContainer
     }
 
     companion object {

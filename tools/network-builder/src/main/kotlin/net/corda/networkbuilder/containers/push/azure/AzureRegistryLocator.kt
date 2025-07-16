@@ -1,5 +1,6 @@
 package net.corda.networkbuilder.containers.push.azure
 
+import com.azure.core.management.exception.ManagementException
 import com.azure.resourcemanager.AzureResourceManager
 import com.azure.resourcemanager.containerregistry.models.AccessKeyType
 import com.azure.resourcemanager.containerregistry.models.Registry
@@ -15,7 +16,15 @@ class RegistryLocator(private val azure: AzureResourceManager,
 
     private fun locateRegistry(): Registry {
         LOG.info("Attempting to find existing registry with name: ${resourceGroup.restFriendlyName()}")
-        val found = azure.containerRegistries().getByResourceGroup(resourceGroup.name(), resourceGroup.restFriendlyName())
+        val found = try {
+            azure.containerRegistries().getByResourceGroup(resourceGroup.name(), resourceGroup.restFriendlyName())
+        } catch (ex: ManagementException) {
+            if (ex.response.statusCode == 404) {
+                null
+            } else {
+                throw ex
+            }
+        }
 
         return if (found == null) {
             LOG.info("Did not find existing container registry - creating new registry with name ${resourceGroup.restFriendlyName()}")
