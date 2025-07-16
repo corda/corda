@@ -1,11 +1,11 @@
 package net.corda.networkbuilder.containers.instance.azure
 
-import com.microsoft.azure.management.Azure
-import com.microsoft.azure.management.containerinstance.ContainerGroup
-import com.microsoft.azure.management.containerinstance.ContainerGroupRestartPolicy
-import com.microsoft.azure.management.containerregistry.Registry
-import com.microsoft.azure.management.resources.ResourceGroup
-import com.microsoft.rest.ServiceCallback
+import com.azure.core.management.exception.ManagementException
+import com.azure.resourcemanager.AzureResourceManager
+import com.azure.resourcemanager.containerinstance.models.ContainerGroup
+import com.azure.resourcemanager.containerinstance.models.ContainerGroupRestartPolicy
+import com.azure.resourcemanager.containerregistry.models.Registry
+import com.azure.resourcemanager.resources.models.ResourceGroup
 import net.corda.networkbuilder.Constants.Companion.restFriendlyName
 import net.corda.networkbuilder.containers.instance.Instantiator
 import net.corda.networkbuilder.containers.instance.Instantiator.Companion.ADDITIONAL_NODE_INFOS_PATH
@@ -13,12 +13,16 @@ import net.corda.networkbuilder.containers.push.azure.RegistryLocator.Companion.
 import net.corda.networkbuilder.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.function.Supplier
 
-class AzureInstantiator(private val azure: Azure,
+class AzureInstantiator(private val azure: AzureResourceManager,
                         private val registry: Registry,
                         private val azureSmbVolume: AzureSmbVolume,
                         private val resourceGroup: ResourceGroup
 ) : Instantiator {
+    private val executor = Executors.newSingleThreadExecutor()
+
     override fun instantiateContainer(imageId: String,
                                       portsToOpen: List<Int>,
                                       instanceName: String,
@@ -30,9 +34,9 @@ class AzureInstantiator(private val azure: Azure,
         val registryAddress = registry.loginServerUrl()
         val (username, password) = registry.parseCredentials()
         val mountName = "node-setup"
-        return CompletableFuture<Pair<String, Map<Int, Int>>>().also {
-            azure.containerGroups().define(buildIdent(instanceName))
-                    .withRegion(resourceGroup.region())
+        return CompletableFuture.supplyAsync(Supplier {
+            val containerGroup = azure.containerGroups().define(buildIdent(instanceName))
+                    .withRegion(resourceGroup.regionName())
                     .withExistingResourceGroup(resourceGroup)
                     .withLinux()
                     .withPrivateImageRegistry(registryAddress, username, password)
@@ -46,20 +50,14 @@ class AzureInstantiator(private val azure: Azure,
                     .withExternalTcpPorts(*portsToOpen.toIntArray())
                     .withVolumeMountSetting(mountName, ADDITIONAL_NODE_INFOS_PATH)
                     .withEnvironmentVariables(env ?: emptyMap())
-                    .attach().withRestartPolicy(ContainerGroupRestartPolicy.ON_FAILURE)
+                    .attach()
+                    .withRestartPolicy(ContainerGroupRestartPolicy.ON_FAILURE)
                     .withDnsPrefix(buildIdent(instanceName))
-                    .createAsync(object : ServiceCallback<ContainerGroup> {
-                        override fun failure(t: Throwable?) {
-                            it.completeExceptionally(t)
-                        }
-
-                        override fun success(result: ContainerGroup) {
-                            val fqdn = result.fqdn()
-                            LOG.info("Completed instantiation: $instanceName is running at $fqdn with port(s) $portsToOpen exposed")
-                            it.complete(result.fqdn() to portsToOpen.map { port -> port to port }.toMap())
-                        }
-                    })
-        }
+                    .create()
+            val fqdn = containerGroup.fqdn()
+            LOG.info("Completed instantiation: $instanceName is running at $fqdn with port(s) $portsToOpen exposed")
+            fqdn to portsToOpen.associate { it to it }
+        }, executor)
     }
 
     private fun buildIdent(instanceName: String) = "$instanceName-${resourceGroup.restFriendlyName()}"
@@ -69,12 +67,21 @@ class AzureInstantiator(private val azure: Azure,
     }
 
     fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
-        val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
-        if (existingContainer != null) {
-            LOG.info("Found an existing instance of: $containerName destroying ContainerGroup")
-            azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
+        return try {
+            val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
+            if (existingContainer != null) {
+                LOG.info("Found an existing instance of: $containerName, destroying ContainerGroup")
+                azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
+            }
+            existingContainer
+        } catch (e: ManagementException) {
+            if (e.response.statusCode == 404) {
+                LOG.info("No existing container group found for: $containerName")
+                null
+            } else {
+                throw e
+            }
         }
-        return existingContainer
     }
 
     companion object {

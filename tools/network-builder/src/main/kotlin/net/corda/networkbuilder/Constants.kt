@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.microsoft.azure.management.resources.ResourceGroup
-import com.microsoft.azure.management.resources.fluentcore.arm.Region
+import com.azure.resourcemanager.resources.models.ResourceGroup
+import com.azure.core.management.Region
 
 class Constants {
 
@@ -30,7 +30,7 @@ class Constants {
                 })
                 it.addDeserializer(Region::class.java, object : JsonDeserializer<Region>() {
                     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Region {
-                        return Region.findByLabelOrName(p.valueAsString)
+                        return Region.fromName(p.valueAsString)
                     }
                 })
             })

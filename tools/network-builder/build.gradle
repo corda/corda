@@ -40,7 +40,8 @@ configurations {
 }
 
 dependencies {
-    compile "com.microsoft.azure:azure:$azure_version"
+    compile "com.azure.resourcemanager:azure-resourcemanager:$azure_resource_manager_version"
+    compile "com.azure:azure-identity:$azure_identity_version"
     compile "com.github.docker-java:docker-java:$docker_java_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test"
