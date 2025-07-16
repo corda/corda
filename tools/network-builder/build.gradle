@@ -44,8 +44,8 @@ dependencies {
     implementation project(':common-configuration-parsing')
     implementation project(':common-validation')
 
-    implementation "com.azure.resourcemanager:azure-resourcemanager:2.52.0"
-    implementation "com.azure:azure-identity:1.2.0"
+    implementation "com.azure.resourcemanager:azure-resourcemanager:$azure_resource_manager_version"
+    implementation "com.azure:azure-identity:$azure_identity_version"
 
     implementation "com.github.docker-java:docker-java:$docker_java_version"
 
