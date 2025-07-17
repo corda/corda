@@ -3,7 +3,6 @@ package net.corda.testing.dsl
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -12,12 +11,14 @@ import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.verification.ExternalVerifierHandle
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
@@ -27,11 +28,10 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
-import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.node.services.persistence.toInternal
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
@@ -96,7 +96,6 @@ data class TestTransactionDSLInterpreter private constructor(
 
     // Implementing [ServiceHubCoreInternal] allows better use in internal Corda tests
     val services: ServicesForResolution = object : ServiceHubCoreInternal, ServiceHub by ledgerInterpreter.services {
-
         // [validatedTransactions.getTransaction] needs overriding as there are no calls to
         // [ServiceHub.recordTransactions] in the test dsl
         override val validatedTransactions: TransactionStorage =
@@ -110,21 +109,13 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
-        override val rotatedKeys: RotatedKeys = (ledgerInterpreter.services as? ServiceHubCoreInternal)?.rotatedKeys ?: CordaRotatedKeys.keys
+        override val rotatedKeys: RotatedKeys = ledgerInterpreter.services.toVerifyingServiceHub().rotatedKeys
 
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
-                NodeAttachmentTrustCalculator(
-                        attachmentStorage = if (it is MockAttachmentStorage) {
-                            InternalMockAttachmentStorage(it)
-                        } else {
-                            it as AttachmentStorageInternal
-                        },
-                        cacheFactory = TestingNamedCacheFactory(),
-                        rotatedKeys = rotatedKeys
-                )
+                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory(), rotatedKeys = rotatedKeys)
             }
 
         override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =
@@ -134,15 +125,22 @@ data class TestTransactionDSLInterpreter private constructor(
             ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
 
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-            return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
+            return ledgerInterpreter.services.loadStates(stateRefs)
         }
 
-        override val cordappProvider: CordappProvider =
-            ledgerInterpreter.services.cordappProvider
+        override val cordappProvider: CordappProviderInternal
+            get() = ledgerInterpreter.services.cordappProvider as CordappProviderInternal
 
         override val notaryService: NotaryService? = null
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
+
+        override fun loadContractAttachment(stateRef: StateRef): Attachment {
+            return ledgerInterpreter.services.loadContractAttachment(stateRef)
+        }
+
+        override val externalVerifierHandle: ExternalVerifierHandle
+            get() = throw UnsupportedOperationException("Verification of legacy transactions is not supported by TestTransactionDSLInterpreter")
 
         override fun recordUnnotarisedTransaction(txn: SignedTransaction) {}
 
@@ -173,7 +171,6 @@ data class TestTransactionDSLInterpreter private constructor(
 
     override fun reference(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
-        @Suppress("DEPRECATION") // Will remove when feature finalised.
         transactionBuilder.addReferenceState(StateAndRef(state, stateRef).referenced())
     }
 

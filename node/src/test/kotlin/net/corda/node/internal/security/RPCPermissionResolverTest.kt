@@ -5,6 +5,7 @@ import net.corda.node.internal.rpc.proxies.RpcAuthHelper.methodFullName
 import org.junit.Test
 
 import java.time.ZonedDateTime
+import java.util.Locale
 import kotlin.test.assertEquals
 
 class RPCPermissionResolverTest {
@@ -29,7 +30,7 @@ class RPCPermissionResolverTest {
     }
 
     private val readAlphaMethod = methodFullName(Alpha::class.java.getMethod("readAlpha"))
-    private val readAlphaMethodKey = readAlphaMethod.toLowerCase()
+    private val readAlphaMethodKey = readAlphaMethod.lowercase(Locale.getDefault())
 
     @Test(timeout=300_000)
     fun `test Alpha`() {

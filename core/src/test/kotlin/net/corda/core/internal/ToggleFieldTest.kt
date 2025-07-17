@@ -1,9 +1,9 @@
 package net.corda.core.internal
 
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoMoreInteractions
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
