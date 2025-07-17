@@ -4,21 +4,33 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.MoveNotaryFlow
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.transactions.keyService
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
@@ -26,13 +38,14 @@ import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.whenever
+import java.security.PublicKey
 import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -45,9 +58,11 @@ class MoveNotaryTests {
     private lateinit var oldNotaryNode: StartedMockNode
     private lateinit var clientNodeA: StartedMockNode
     private lateinit var clientNodeB: StartedMockNode
+    private lateinit var clientNodeC: StartedMockNode
     private lateinit var newNotaryParty: Party
     private lateinit var oldNotaryParty: Party
     private lateinit var clientA: Party
+    private val nonExistentNotary = Party.create( CordaX500Name("Pirates", "Concarneau", "FR"), keyService.freshKey())
 
     @Before
     fun setUp() {
@@ -57,6 +72,7 @@ class MoveNotaryTests {
         ))
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        clientNodeC = mockNet.createNode(MockNodeParameters(legalName = CHARLIE_NAME))
         clientA = clientNodeA.info.singleIdentity()
         oldNotaryNode = mockNet.notaryNodes[0]
         oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
@@ -90,22 +106,6 @@ class MoveNotaryTests {
         val loadedStateA = clientNodeA.services.loadState(newState.ref)
         val loadedStateB = clientNodeB.services.loadState(newState.ref)
         assertEquals(loadedStateA, loadedStateB)
-    }
-
-    // TODO: Re-enable the test when parameter currentness checks are in place, ENT-2666.
-    @Test(timeout=300_000)
-@Ignore
-    fun `should throw when a participant refuses to change Notary`() {
-        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
-
-        val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
-        val future = clientNodeA.startFlow(flow)
-
-        mockNet.runNetwork()
-
-        assertThatExceptionOfType(StateReplacementException::class.java).isThrownBy {
-            future.getOrThrow()
-        }
     }
 
     @Test(timeout=300_000)
@@ -205,15 +205,7 @@ class MoveNotaryTests {
         return tx.toWireTransaction(services)
     }
 
-    // TODO: Add more test cases once we have a general flow/service exception handling mechanism:
-    //       - A participant is offline/can't be found on the network
-    //       - The requesting party wants to change additional state fields
-    //       - Multiple states in a single "notary change" transaction
-    //       - Transaction contains additional states and commands with business logic
-    //       - The transaction type is not a notary change transaction at all.
-
-
-    @Test(timeout = 314_159)
+    @Test(timeout = 300_000)
     fun `moving notary for two states from the same tx works`(){
         val inputStates = issueTwoStateTx(clientNodeA.services, clientA, oldNotaryParty).outRefsOfType<DummyContract.SingleOwnerState>()
         val newStates  = moveNotary(inputStates, clientNodeA, newNotaryParty)
@@ -223,9 +215,7 @@ class MoveNotaryTests {
         assertEquals(inputStates.first().state.data.magicNumber, newStates.first().state.data.magicNumber)
         assertEquals(newStates.last().state.notary, newNotaryParty)
         assertEquals(inputStates.last().state.data.magicNumber, newStates.last().state.data.magicNumber)
-
     }
-
 
     // moving notary for two states from different tx works
     @Test( timeout = 300_000)
@@ -280,7 +270,6 @@ class MoveNotaryTests {
         assertEquals(newStates[2].state.notary, newNotaryParty)
         assertEquals(state3.state.data.magicNumber, newStates[2].state.data.magicNumber)
     }
-
 
     // moving a state with encumbrances that require different signers works
     @Test(timeout = 300_000)
@@ -383,12 +372,12 @@ class MoveNotaryTests {
         assertEquals(tx2.outputStates.map{(it as DummyContract.SingleOwnerState).magicNumber}.toSet(), result[2].map{ it.second}.toSet())
     }
 
-    fun groupOutputsByEncumbrances(  outputs: List<StateAndRef<DummyContract.SingleOwnerState>> ) : List<List<Pair<StateRef, Int>>> {
+    private fun groupOutputsByEncumbrances(outputs: List<StateAndRef<DummyContract.SingleOwnerState>> ) : List<List<Pair<StateRef, Int>>> {
         val seenStates = mutableSetOf<StateRef>()
         val result = mutableListOf(mutableListOf<Pair<StateRef, Int>>())
 
         outputs.forEach {
-            if (!seenStates.add(it.ref)){  // add the state to the list of seen states
+            if (!seenStates.add(it.ref)){  // add the state to the list of seen states - if it's already in the set, we have already seen it
                 return@forEach
             }
             if (it.state.encumbrance == null){ // if not encumbered, it goes into the first bin of the result
@@ -449,8 +438,6 @@ class MoveNotaryTests {
     fun `cannot change notary to non-existent notary`(){
         val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
 
-        val nonExistentNotary = Party.create( CordaX500Name("Pirates", "Concarneau", "FR"), keyService.freshKey())
-
         val flow = MoveNotaryFlow(listOf(state), nonExistentNotary)
         val future = clientNodeA.startFlow(flow)
         mockNet.runNetwork()
@@ -458,18 +445,150 @@ class MoveNotaryTests {
        assertThatThrownBy {  future.get() }.hasMessageContaining("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters")
     }
 
-    // test receiving flow:
-    // create tx
-    // mock session
-    // use service hub from node b
-    // mock state machine -> subflow
-    // call receiving flow directly
+    // Initiated flow tests - mocking the sending side/flow state machine/flow session so we can send in malicious transactions
+    // that the notary change flow would not build
+    class MockFlowStateMachine<T>(override val serviceHub: ServiceHub) : FlowStateMachine<T> by mock() {
+        override fun <SUBFLOWRETURN> subFlow(currentFlow: FlowLogic<*>, subFlow: FlowLogic<SUBFLOWRETURN>): SUBFLOWRETURN {
+            subFlow.stateMachine = this
+            return subFlow.call()
+        }
 
-    // works with confidential identities
+        override val logger = loggerFor<MockFlowStateMachine<T>>()
+    }
+
+    private fun ServiceHub.signCoreTransaction(tx: CoreTransaction, key: PublicKey): SignedTransaction {
+        val signableData = SignableData(tx.id, SignatureMetadata(this.myInfo.platformVersion, Crypto.findSignatureScheme(key).schemeNumberID))
+        return SignedTransaction(tx, listOf(this.keyManagementService.sign(signableData, key)))
+    }
+
+    @Test(timeout = 300_000)
+    fun `check error on the receiving side - non-existent notary`() {
+        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val transaction = NotaryChangeTransactionBuilder(
+                listOf(state.ref),
+                oldNotaryParty,
+                nonExistentNotary,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        val stx = clientNodeA.services.signCoreTransaction(transaction, clientA.owningKey)
+
+        val flowSession = mock<FlowSession>()
+        whenever(flowSession.receive<Any>()).thenReturn(UntrustworthyData(stx))
+        whenever(flowSession.receive<List<PublicKey>>()).thenReturn(UntrustworthyData(listOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)))
+        whenever(flowSession.counterparty).thenReturn(clientA)
+
+        val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
+
+        val flow = MoveNotaryHandler(flowSession)
+        flow.stateMachine = stateMachine
+
+        assertThatThrownBy { flow.call() }
+                .hasMessage("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters.")
+    }
+
+    @Test(timeout = 300_000)
+    fun `check the signature presence check logic in MoveNotaryHandler`() {
+        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val validTransaction = NotaryChangeTransactionBuilder(
+                listOf(state.ref),
+                oldNotaryParty,
+                newNotaryParty,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        runInitiatorAppropriateSigningCheck(validTransaction)
+
+        val multiEncumberedIssueTx = issueMultiPartyEncumberedState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+        val multiEncumberedTx = NotaryChangeTransactionBuilder(
+                List(multiEncumberedIssueTx.outputStates.size) { i -> StateRef(multiEncumberedIssueTx.id, i) },
+                oldNotaryParty,
+                newNotaryParty,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        runInitiatorAppropriateSigningCheck(multiEncumberedTx)
+    }
+
+    @Test(timeout = 300_000)
+    fun `check the signature presence check logic in MoveNotaryHandler failures`() {
+        val state = issueMultiPartyState(clientNodeC, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val inValidTransaction = NotaryChangeTransactionBuilder(
+                listOf(state.ref),
+                oldNotaryParty,
+                newNotaryParty,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientNodeC.info.singleIdentity().owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        assertThatThrownBy { runInitiatorAppropriateSigningCheck(inValidTransaction) }.hasMessage("Initiator did not sign for all non-encumbered states!")
+
+        val multiEncumberedIssueTx = issueMultiPartyEncumberedState(clientNodeC, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val multiEncumberedTx = NotaryChangeTransactionBuilder(
+                List(multiEncumberedIssueTx.outputStates.size) { i -> StateRef(multiEncumberedIssueTx.id, i) },
+                oldNotaryParty,
+                newNotaryParty,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientNodeC.info.singleIdentity().owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        assertThatThrownBy { runInitiatorAppropriateSigningCheck(multiEncumberedTx) }
+                .hasMessage("Initiator added encumbered state and did not sign for any of the group of encumbered states.")
+    }
+
+    private fun runInitiatorAppropriateSigningCheck(transaction: NotaryChangeWireTransaction) {
+        val stx = clientNodeA.services.signCoreTransaction(transaction, clientA.owningKey)
+
+        val flowSession = mock<FlowSession>()
+        whenever(flowSession.receive<Any>()).thenReturn(UntrustworthyData(stx))
+        whenever(flowSession.receive<List<PublicKey>>()).thenReturn(UntrustworthyData(listOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)))
+        whenever(flowSession.counterparty).thenReturn(clientA)
+
+        val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
+
+        val flow = MoveNotaryHandler(flowSession)
+        flow.stateMachine = stateMachine
+
+        flow.checkInitiatorSignedAppropriately(stx)
+    }
+
+    @Test(timeout = 300_000)
+    fun `check that incomplete encumbrances are caught on the receiving side`() {
+        val issueTx = issueMultiPartyEncumberedState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+
+        val transaction = NotaryChangeTransactionBuilder(
+                listOf(StateRef(issueTx.id, 0)),
+                oldNotaryParty,
+                nonExistentNotary,
+                clientNodeA.services.networkParametersService.currentHash,
+                setOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)
+        ).build()
+
+        val stx = clientNodeA.services.signCoreTransaction(transaction, clientA.owningKey)
+
+        val flowSession = mock<FlowSession>()
+        whenever(flowSession.receive<Any>()).thenReturn(UntrustworthyData(stx))
+        whenever(flowSession.receive<List<PublicKey>>()).thenReturn(UntrustworthyData(listOf(clientA.owningKey, clientNodeB.info.singleIdentity().owningKey)))
+        whenever(flowSession.counterparty).thenReturn(clientA)
+
+        val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
+
+        val flow = MoveNotaryHandler(flowSession)
+        flow.stateMachine = stateMachine
+
+        assertThatThrownBy { flow.call() }
+                .hasMessageContaining("Missing required encumbrance 2 in INPUT, transaction:")
+    }
 }
 
 fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): WireTransaction {
-
     val participants = listOf(nodeA.info.singleIdentity(), nodeB.info.singleIdentity())
     val stateA = DummyContract.MultiOwnerState(0, participants)
     val stateB = DummyContract.SingleOwnerState(Random().nextInt(), nodeA.info.singleIdentity())
@@ -491,7 +610,6 @@ fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNod
 
     return stx.tx
 }
-
 
 fun issueTwoStateTx( services: ServiceHub, participant: Party, notary: Party ) : WireTransaction {
     val stateA = DummyContract.SingleOwnerState(Random().nextInt(), participant)
