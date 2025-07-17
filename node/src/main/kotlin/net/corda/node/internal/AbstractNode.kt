@@ -22,7 +22,6 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.MoveNotaryFlow
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateMachineRunId
@@ -88,7 +87,6 @@ import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
 import net.corda.node.internal.shell.InteractiveShell
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
-import net.corda.node.services.MoveNotaryHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.AuditService
 import net.corda.node.services.api.DummyAuditService
@@ -1056,7 +1054,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
         flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
         flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
-        flowManager.registerInitiatedCoreFlowFactory(MoveNotaryFlow::class, MoveNotaryHandler::class, ::MoveNotaryHandler)
     }
 
     // Ideally we should be disabling the FinalityHandler if it's not needed, to prevent any party from submitting transactions to us without

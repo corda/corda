@@ -10,6 +10,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.MoveNotaryFlow
+import net.corda.core.flows.MoveNotaryResponder
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -482,7 +483,7 @@ class MoveNotaryTests {
 
         val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
 
-        val flow = MoveNotaryHandler(flowSession)
+        val flow = MoveNotaryResponder(flowSession)
         flow.stateMachine = stateMachine
 
         assertThatThrownBy { flow.call() }
@@ -553,7 +554,7 @@ class MoveNotaryTests {
 
         val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
 
-        val flow = MoveNotaryHandler(flowSession)
+        val flow = MoveNotaryResponder(flowSession)
         flow.stateMachine = stateMachine
 
         flow.checkInitiatorSignedAppropriately(stx)
@@ -580,7 +581,7 @@ class MoveNotaryTests {
 
         val stateMachine = MockFlowStateMachine<Unit>(clientNodeB.services)
 
-        val flow = MoveNotaryHandler(flowSession)
+        val flow = MoveNotaryResponder(flowSession)
         flow.stateMachine = stateMachine
 
         assertThatThrownBy { flow.call() }
