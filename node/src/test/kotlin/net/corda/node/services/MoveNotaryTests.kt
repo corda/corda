@@ -62,7 +62,7 @@ class MoveNotaryTests {
     private lateinit var newNotaryParty: Party
     private lateinit var oldNotaryParty: Party
     private lateinit var clientA: Party
-    private val nonExistentNotary = Party.create( CordaX500Name("Pirates", "Concarneau", "FR"), keyService.freshKey())
+    private val nonExistentNotary = Party.create(CordaX500Name("Pirates", "Concarneau", "FR"), keyService.freshKey())
 
     @Before
     fun setUp() {
@@ -84,16 +84,16 @@ class MoveNotaryTests {
         mockNet.stopNodes()
     }
 
-    @Test(timeout=300_000)
-	fun `should change notary for a state with single participant`() {
+    @Test(timeout = 300_000)
+    fun `should change notary for a state with single participant`() {
         val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state.state.notary, oldNotaryParty)
         val newState = moveNotaryForSingleState(state, clientNodeA, newNotaryParty)
         assertEquals(newState.state.notary, newNotaryParty)
     }
 
-    @Test(timeout=300_000)
-	fun `should change notary for a state with multiple participants`() {
+    @Test(timeout = 300_000)
+    fun `should change notary for a state with multiple participants`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
         val newNotary = newNotaryParty
         val flow = MoveNotaryFlow(listOf(state), newNotary)
@@ -108,8 +108,8 @@ class MoveNotaryTests {
         assertEquals(loadedStateA, loadedStateB)
     }
 
-    @Test(timeout=300_000)
-	fun `should not break encumbrance links`() {
+    @Test(timeout = 300_000)
+    fun `should not break encumbrance links`() {
         val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
 
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
@@ -118,7 +118,7 @@ class MoveNotaryTests {
         val future = clientNodeA.startFlow(flow)
         mockNet.runNetwork()
         val newStates = future.getOrThrow()
-        assertTrue(newStates.all{ it.state.notary == newNotary})
+        assertTrue(newStates.all { it.state.notary == newNotary })
 
         val recordedTx = clientNodeA.services.getRequiredTransaction(newStates.first().ref.txhash)
         val notaryChangeTx = recordedTx.resolveNotaryChangeTransaction(clientNodeA.services)
@@ -137,8 +137,8 @@ class MoveNotaryTests {
         assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
     }
 
-    @Test(timeout=300_000)
-	fun `notary change and regular transactions are properly handled during resolution in longer chains`() {
+    @Test(timeout = 300_000)
+    fun `notary change and regular transactions are properly handled during resolution in longer chains`() {
         val issued = issueState(clientNodeA.services, clientA, oldNotaryParty)
         val moved = moveState(issued, clientNodeA, clientNodeB)
 
@@ -161,14 +161,13 @@ class MoveNotaryTests {
         return future.getOrThrow().first()
     }
 
-    private fun <T: ContractState> moveNotary(states: List<StateAndRef<T>>, node: StartedMockNode, newNotary: Party): List<StateAndRef<T>> {
+    private fun <T : ContractState> moveNotary(states: List<StateAndRef<T>>, node: StartedMockNode, newNotary: Party): List<StateAndRef<T>> {
         val flow = MoveNotaryFlow(states, newNotary)
         val future = node.startFlow(flow)
         mockNet.runNetwork()
 
         return future.getOrThrow()
     }
-
 
     private fun moveState(state: StateAndRef<DummyContract.SingleOwnerState>, fromNode: StartedMockNode, toNode: StartedMockNode): StateAndRef<DummyContract.SingleOwnerState> {
         val tx = DummyContract.move(state, toNode.info.singleIdentity())
@@ -206,9 +205,9 @@ class MoveNotaryTests {
     }
 
     @Test(timeout = 300_000)
-    fun `moving notary for two states from the same tx works`(){
+    fun `moving notary for two states from the same tx works`() {
         val inputStates = issueTwoStateTx(clientNodeA.services, clientA, oldNotaryParty).outRefsOfType<DummyContract.SingleOwnerState>()
-        val newStates  = moveNotary(inputStates, clientNodeA, newNotaryParty)
+        val newStates = moveNotary(inputStates, clientNodeA, newNotaryParty)
 
         assertEquals(2, newStates.size)
         assertEquals(newStates.first().state.notary, newNotaryParty)
@@ -218,7 +217,7 @@ class MoveNotaryTests {
     }
 
     // moving notary for two states from different tx works
-    @Test( timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `should change notary for two states with single participant from different txs`() {
         val state1 = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state1.state.notary, oldNotaryParty)
@@ -234,7 +233,7 @@ class MoveNotaryTests {
     }
 
     // moving notary for one encumbered state A and an unencumbered state B returns A', B', encumbrances
-    @Test( timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `Adding encumbrances should not change the order of inputs vs outputs`() {
         val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
         val state1 = StateAndRef<DummyContract.SingleOwnerState>(uncheckedCast(issueTx.outputs.first()), StateRef(issueTx.id, 0))
@@ -251,7 +250,7 @@ class MoveNotaryTests {
     }
 
     // Adding more than one encumbered state does not mess up the ordering
-    @Test( timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `Adding more than one encumbered state does not mess up the ordering`() {
         val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
         val state1 = StateAndRef<DummyContract.SingleOwnerState>(uncheckedCast(issueTx.outputs.first()), StateRef(issueTx.id, 0))
@@ -347,11 +346,11 @@ class MoveNotaryTests {
     }
 
     @Test(timeout = 300_000)
-    fun `notary changing two sets of encumbered states should not mess up encumbrances`(){
+    fun `notary changing two sets of encumbered states should not mess up encumbrances`() {
         val tx1 = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
         val tx2 = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
 
-        val newStates = moveNotary(listOf(tx1.outRef(0), tx2.outRef(0)),clientNodeA, newNotaryParty)
+        val newStates = moveNotary(listOf(tx1.outRef(0), tx2.outRef(0)), clientNodeA, newNotaryParty)
 
         assertEquals(newStates.size, 2)
         assertEquals(newStates[0].state.notary, newNotaryParty)
@@ -368,19 +367,21 @@ class MoveNotaryTests {
 
         val result = groupOutputsByEncumbrances(notaryChangeTx.outRefsOfType(DummyContract.SingleOwnerState::class.java))
         assertEquals(3, result.size)
-        assertEquals(tx1.outputStates.map{(it as DummyContract.SingleOwnerState).magicNumber}.toSet(), result[1].map{ it.second}.toSet())
-        assertEquals(tx2.outputStates.map{(it as DummyContract.SingleOwnerState).magicNumber}.toSet(), result[2].map{ it.second}.toSet())
+        assertEquals(tx1.outputStates.map { (it as DummyContract.SingleOwnerState).magicNumber }.toSet(), result[1].map { it.second }
+                .toSet())
+        assertEquals(tx2.outputStates.map { (it as DummyContract.SingleOwnerState).magicNumber }.toSet(), result[2].map { it.second }
+                .toSet())
     }
 
-    private fun groupOutputsByEncumbrances(outputs: List<StateAndRef<DummyContract.SingleOwnerState>> ) : List<List<Pair<StateRef, Int>>> {
+    private fun groupOutputsByEncumbrances(outputs: List<StateAndRef<DummyContract.SingleOwnerState>>): List<List<Pair<StateRef, Int>>> {
         val seenStates = mutableSetOf<StateRef>()
         val result = mutableListOf(mutableListOf<Pair<StateRef, Int>>())
 
         outputs.forEach {
-            if (!seenStates.add(it.ref)){  // add the state to the list of seen states - if it's already in the set, we have already seen it
+            if (!seenStates.add(it.ref)) {  // add the state to the list of seen states - if it's already in the set, we have already seen it
                 return@forEach
             }
-            if (it.state.encumbrance == null){ // if not encumbered, it goes into the first bin of the result
+            if (it.state.encumbrance == null) { // if not encumbered, it goes into the first bin of the result
                 result[0].add(it.ref to it.state.data.magicNumber)
                 return@forEach
             }
@@ -388,11 +389,11 @@ class MoveNotaryTests {
             // We have an encumbered state - add a new bin to the result
             result.add(mutableListOf())
             var currentState = it
-            while (true){
+            while (true) {
                 result.last().add(currentState.ref to currentState.state.data.magicNumber) // add state to the new bin
                 val encumbrance = currentState.state.encumbrance!! // get next encumbrance (can't be null because encumbrances need to cyclic)
                 currentState = outputs[encumbrance]  // fetch the encumbering state
-                if (!seenStates.add(currentState.ref)){ // try to add it to seen states - if it's already in, we're done with this set of encumbrances.
+                if (!seenStates.add(currentState.ref)) { // try to add it to seen states - if it's already in, we're done with this set of encumbrances.
                     break
                 }
             }
@@ -400,13 +401,12 @@ class MoveNotaryTests {
         return result
     }
 
-    @Test( timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `moving a state to the same notary fails`() {
         val state1 = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state1.state.notary, oldNotaryParty)
         assertThatThrownBy { MoveNotaryFlow(listOf(state1), oldNotaryParty) }.hasMessage("The new notary cannot be the same as the old notary")
     }
-
 
     @Test(timeout = 299_327)
     fun `moving states that are on different notaries fails`() {
@@ -417,32 +417,32 @@ class MoveNotaryTests {
         assertThatThrownBy { MoveNotaryFlow(listOf(state1, state2), newNotaryParty) }.hasMessage("All input states must be on the same notary")
     }
 
-    @Test( timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `Invoking notary change without states fails`() {
         assertThatThrownBy { MoveNotaryFlow(listOf<StateAndRef<ContractState>>(), newNotaryParty) }
                 .hasMessage("Notary change flow must receive at least one state to work on")
     }
 
-    @Test( timeout = 300_000)
-    fun `moving a state we're not a participant in fails`(){
+    @Test(timeout = 300_000)
+    fun `moving a state we're not a participant in fails`() {
         val state1 = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state1.state.notary, oldNotaryParty)
         val flow = MoveNotaryFlow(listOf(state1), newNotaryParty)
         val future = clientNodeB.startFlow(flow)
         mockNet.runNetwork()
-        assertThatThrownBy{ future.get() }
+        assertThatThrownBy { future.get() }
                 .hasMessage("java.lang.IllegalArgumentException: Cannot request move for state we are not a participant in")
     }
 
-    @Test( timeout = 300_000)
-    fun `cannot change notary to non-existent notary`(){
+    @Test(timeout = 300_000)
+    fun `cannot change notary to non-existent notary`() {
         val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
 
         val flow = MoveNotaryFlow(listOf(state), nonExistentNotary)
         val future = clientNodeA.startFlow(flow)
         mockNet.runNetwork()
 
-       assertThatThrownBy {  future.get() }.hasMessageContaining("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters")
+        assertThatThrownBy { future.get() }.hasMessageContaining("The output notary ${nonExistentNotary.description()} is not whitelisted in the attached network parameters")
     }
 
     // Initiated flow tests - mocking the sending side/flow state machine/flow session so we can send in malicious transactions
@@ -611,7 +611,7 @@ fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNod
     return stx.tx
 }
 
-fun issueTwoStateTx( services: ServiceHub, participant: Party, notary: Party ) : WireTransaction {
+fun issueTwoStateTx(services: ServiceHub, participant: Party, notary: Party): WireTransaction {
     val stateA = DummyContract.SingleOwnerState(Random().nextInt(), participant)
     val stateB = DummyContract.SingleOwnerState(Random().nextInt(), participant)
 
