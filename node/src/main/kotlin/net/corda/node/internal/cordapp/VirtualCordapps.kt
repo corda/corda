@@ -3,6 +3,8 @@ package net.corda.node.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.MoveNotaryFlow
+import net.corda.core.flows.MoveNotaryResponder
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
@@ -19,7 +21,12 @@ internal object VirtualCordapp {
     private val coreRpcFlows = listOf(
             ContractUpgradeFlow.Initiate::class.java,
             ContractUpgradeFlow.Authorise::class.java,
-            ContractUpgradeFlow.Deauthorise::class.java
+            ContractUpgradeFlow.Deauthorise::class.java,
+            MoveNotaryFlow::class.java
+    )
+
+    private val coreInitiatedFlows = listOf(
+            MoveNotaryResponder::class.java
     )
 
     /** A Cordapp representing the core package which is not scanned automatically. */
@@ -27,7 +34,7 @@ internal object VirtualCordapp {
         return CordappImpl(
                 jarFile = ContractUpgradeFlow.javaClass.location.toPath(), // Core JAR location
                 contractClassNames = listOf(),
-                initiatedFlows = listOf(),
+                initiatedFlows = coreInitiatedFlows,
                 rpcFlows = coreRpcFlows,
                 serviceFlows = listOf(),
                 schedulableFlows = listOf(),

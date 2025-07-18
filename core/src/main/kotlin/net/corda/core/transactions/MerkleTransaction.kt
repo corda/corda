@@ -368,6 +368,9 @@ class FilteredTransaction internal constructor(
             throw ComponentVisibilityException(id, message.toString())
         }
     }
+
+    override val requiredSigningKeys: Set<PublicKey>
+        get() = throw NotImplementedError("A filtered transaction cannot reveal required signers.")
 }
 
 /**
