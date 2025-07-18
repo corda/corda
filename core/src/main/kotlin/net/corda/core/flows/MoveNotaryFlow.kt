@@ -48,15 +48,16 @@ import java.security.PublicKey
  * - The new notary cannot be the same as the old notary
  */
 @InitiatingFlow
-class MoveNotaryFlow<out T: ContractState>(
+class MoveNotaryFlow<out T : ContractState>(
         val states: List<StateAndRef<T>>,
         val newNotary: Party,
         override val progressTracker: ProgressTracker = tracker()) : FlowLogic<List<StateAndRef<T>>>() {
     companion object {
         object BUILDING : ProgressTracker.Step("Resolving inputs and building transaction")
-        object SIGNING : ProgressTracker.Step("Requesting signatures from other parties"){
+        object SIGNING : ProgressTracker.Step("Requesting signatures from other parties") {
             override fun childProgressTracker() = CollectSignaturesFlow.tracker()
         }
+
         object FINALIZING : ProgressTracker.Step("Invoking finality") {
             override fun childProgressTracker() = FinalityFlow.tracker()
         }
@@ -64,7 +65,7 @@ class MoveNotaryFlow<out T: ContractState>(
         fun tracker() = ProgressTracker(BUILDING, SIGNING, FINALIZING)
     }
 
-    private val oldNotary = states.map{it.state.notary}.toSet().singleOrNull()
+    private val oldNotary = states.map { it.state.notary }.toSet().singleOrNull()
 
     init {
         require(states.isNotEmpty()) { "Notary change flow must receive at least one state to work on" }
@@ -83,7 +84,7 @@ class MoveNotaryFlow<out T: ContractState>(
         val finalized = subFlow(FinalityFlow(fullySigned, sessions, FINALIZING.childProgressTracker()))
         return finalized.resolveBaseTransaction(serviceHub).outputs
                 .take(states.size)
-                .mapIndexed{ index, state -> StateAndRef(uncheckedCast<TransactionState<ContractState>, TransactionState<T>>(state), StateRef(finalized.id, index))}
+                .mapIndexed { index, state -> StateAndRef(uncheckedCast<TransactionState<ContractState>, TransactionState<T>>(state), StateRef(finalized.id, index)) }
     }
 
     /**
@@ -106,25 +107,23 @@ class MoveNotaryFlow<out T: ContractState>(
                 serviceHub.digestService
         ).build()
 
-
         val myKeys = serviceHub.keyManagementService.filterMyKeys(participants.map { it.owningKey })
-        return SignedTransaction(tx, myKeys.map{ signTransaction(tx.id, it)}) to participants
+        return SignedTransaction(tx, myKeys.map { signTransaction(tx.id, it) }) to participants
     }
 
-    private fun signTransaction( id: SecureHash, key: PublicKey) : TransactionSignature {
+    private fun signTransaction(id: SecureHash, key: PublicKey): TransactionSignature {
         val signableData = SignableData(id, SignatureMetadata(serviceHub.myInfo.platformVersion, Crypto.findSignatureScheme(key).schemeNumberID))
         return serviceHub.keyManagementService.sign(signableData, key)
-
     }
 
     /**
      * Find any states encumbered by any of the input states. Process each state at max once.
      * At the end, reorder the ouput to have the original states first, then adding any additional encumbrances.
      */
-    private fun resolveEncumbrances() : List<StateAndRef<T>> {
+    private fun resolveEncumbrances(): List<StateAndRef<T>> {
         val resolvedStates = mutableSetOf<StateAndRef<T>>()
         states.forEach { state ->
-            if (!resolvedStates.contains(state)){
+            if (!resolvedStates.contains(state)) {
                 resolvedStates.addAll(resolveEncumbrancesForOneState(state))
             }
         }
@@ -132,7 +131,7 @@ class MoveNotaryFlow<out T: ContractState>(
     }
 
     /** Resolves the encumbrance state chain for the given [state]. */
-    private fun resolveEncumbrancesForOneState(state: StateAndRef<T>) : Set<StateAndRef<T>> {
+    private fun resolveEncumbrancesForOneState(state: StateAndRef<T>): Set<StateAndRef<T>> {
         val resolvedStates = mutableSetOf(state)
         while (resolvedStates.last().state.encumbrance != null) {
             val encumbranceStateRef = StateRef(resolvedStates.last().ref.txhash, resolvedStates.last().state.encumbrance!!)
@@ -143,12 +142,12 @@ class MoveNotaryFlow<out T: ContractState>(
     }
 
     private fun getParticipantSessions(participants: Set<AbstractParty>): List<FlowSession> {
-        return excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, participants)).map { initiateFlow(it.key)  }
+        return excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, participants)).map { initiateFlow(it.key) }
     }
 }
 
 @InitiatedBy(MoveNotaryFlow::class)
-class MoveNotaryResponder( val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+class MoveNotaryResponder(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(object : SignTransactionFlow(otherSideSession) {
