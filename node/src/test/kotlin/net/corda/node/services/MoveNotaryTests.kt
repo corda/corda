@@ -224,6 +224,26 @@ class MoveNotaryTests {
     }
 
     @Test(timeout = 300_000)
+    fun `vault query works on other participant node after notary move`(){
+        val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
+        val newNotary = newNotaryParty
+        val flow = MoveNotaryFlow(listOf(state), newNotary)
+        val future = clientNodeA.startFlow(flow)
+
+        mockNet.runNetwork()
+
+        val newState = future.getOrThrow().single()
+        assertEquals(newState.state.notary, newNotary)
+        val loadedStateA = clientNodeA.services.loadState(newState.ref)
+        val loadedStateB = clientNodeB.services.loadState(newState.ref)
+        assertEquals(loadedStateA, loadedStateB)
+
+        val page = clientNodeB.services.vaultService.queryBy(DummyContract.MultiOwnerState::class.java)
+        assertEquals(1, page.states.size)
+        assertEquals(newState, page.states.first())
+    }
+
+    @Test(timeout = 300_000)
     fun `moving notary for two states from the same tx works`() {
         issueState(clientNodeA.services, clientA, oldNotaryParty)
         // Making use of the fact that `issueState` issues a tx with two outputs (but returns only one)
