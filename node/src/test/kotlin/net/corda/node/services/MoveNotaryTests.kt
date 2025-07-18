@@ -19,6 +19,9 @@ import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -206,8 +209,26 @@ class MoveNotaryTests {
     }
 
     @Test(timeout = 300_000)
+    fun `vault query works after notary move`(){
+        val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
+        assertEquals(state.state.notary, oldNotaryParty)
+        val newState = moveNotaryForSingleState(state, clientNodeA, newNotaryParty)
+        assertEquals(newState.state.notary, newNotaryParty)
+
+        val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.ASC)))
+
+        val page = clientNodeA.services.vaultService.queryBy(DummyContract.SingleOwnerState::class.java, QueryCriteria.VaultQueryCriteria(), sorting)
+        assertEquals(2, page.states.size)
+        assertEquals( StateRef(state.ref.txhash, 1), page.statesMetadata.first().ref)
+        assertEquals(newState, page.states.last())
+    }
+
+    @Test(timeout = 300_000)
     fun `moving notary for two states from the same tx works`() {
-        val inputStates = issueTwoStateTx(clientNodeA.services, clientA, oldNotaryParty).outRefsOfType<DummyContract.SingleOwnerState>()
+        issueState(clientNodeA.services, clientA, oldNotaryParty)
+        // Making use of the fact that `issueState` issues a tx with two outputs (but returns only one)
+        val inputStates = clientNodeA.services.vaultService.queryBy(DummyContract.SingleOwnerState::class.java).states
+
         val newStates = moveNotary(inputStates, clientNodeA, newNotaryParty)
 
         assertEquals(2, newStates.size)
@@ -609,19 +630,5 @@ fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNod
     nodeA.services.recordTransactions(stx)
     nodeB.services.recordTransactions(stx)
 
-    return stx.tx
-}
-
-fun issueTwoStateTx(services: ServiceHub, participant: Party, notary: Party): WireTransaction {
-    val stateA = DummyContract.SingleOwnerState(Random().nextInt(), participant)
-    val stateB = DummyContract.SingleOwnerState(Random().nextInt(), participant)
-
-    val tx = TransactionBuilder(notary = notary).apply {
-        addCommand(Command(DummyContract.Commands.Create(), participant.owningKey))
-        addOutputState(stateA, DummyContract.PROGRAM_ID, notary)
-        addOutputState(stateB, DummyContract.PROGRAM_ID, notary)
-    }
-    val stx = services.signInitialTransaction(tx)
-    services.recordTransactions(stx)
     return stx.tx
 }
