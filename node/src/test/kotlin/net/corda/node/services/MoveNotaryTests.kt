@@ -36,12 +36,14 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.dummystatecreator.IssueDummyStateMultiparty
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -72,7 +74,7 @@ class MoveNotaryTests {
     fun setUp() {
         mockNet = MockNetwork(MockNetworkParameters(
                 notarySpecs = listOf(MockNetworkNotarySpec(oldNotaryName), MockNetworkNotarySpec(newNotaryName)),
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP)
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testing.dummystatecreator"))
         ))
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
@@ -628,6 +630,31 @@ class MoveNotaryTests {
         assertThatThrownBy { flow.call() }
                 .hasMessageContaining("Missing required encumbrance 2 in INPUT, transaction:")
     }
+
+    @Test( timeout = 300_00 )
+    fun `can move notary for states using confidential identities`(){
+        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty)
+        val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
+        val future = clientNodeA.startFlow(flow)
+
+        mockNet.runNetwork()
+
+        val newState = future.getOrThrow().single()
+        assertEquals(newState.state.notary, newNotaryParty)
+        val loadedStateA = clientNodeA.services.loadState(newState.ref)
+        val loadedStateB = clientNodeB.services.loadState(newState.ref)
+        assertEquals(loadedStateA, loadedStateB)
+
+    }
+
+
+    fun issueMultiPartyConfidentialState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryIdentity: Party) : StateAndRef<DummyContract.MultiOwnerState> {
+        val future = nodeA.startFlow(IssueDummyStateMultiparty( nodeB.info.singleIdentity(), notaryIdentity, true))
+        mockNet.runNetwork()
+
+        return future.get()
+    }
+
 }
 
 fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryNode: StartedMockNode, notaryIdentity: Party): WireTransaction {
@@ -652,3 +679,4 @@ fun issueMultiPartyEncumberedState(nodeA: StartedMockNode, nodeB: StartedMockNod
 
     return stx.tx
 }
+

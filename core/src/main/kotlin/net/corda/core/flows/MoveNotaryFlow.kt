@@ -76,10 +76,11 @@ class MoveNotaryFlow<out T : ContractState>(
     @Suspendable
     override fun call(): List<StateAndRef<T>> {
         progressTracker.currentStep = BUILDING
-        val (stx, participants) = assembleTx()
+        val (stx, participants, myKeys) = assembleTx()
         val sessions = getParticipantSessions(participants)
         progressTracker.currentStep = SIGNING
-        val fullySigned = subFlow(CollectSignaturesFlow(stx, sessions, SIGNING.childProgressTracker()))
+
+        val fullySigned = subFlow(CollectSignaturesFlow(stx, sessions, myKeys, SIGNING.childProgressTracker()))
         progressTracker.currentStep = FINALIZING
         val finalized = subFlow(FinalityFlow(fullySigned, sessions, FINALIZING.childProgressTracker()))
         return finalized.resolveBaseTransaction(serviceHub).outputs
@@ -91,7 +92,7 @@ class MoveNotaryFlow<out T : ContractState>(
      * This assembles the notary change transaction by resolving any encumbered states, adding all inputs and signing it.
      * The original n states are the first n inputs/outputs, states added due to encumbrances are added at the end
      */
-    private fun assembleTx(): Pair<SignedTransaction, Set<AbstractParty>> {
+    private fun assembleTx(): Triple<SignedTransaction, Set<AbstractParty>, Iterable<PublicKey>> {
         require(states.all {
             serviceHub.keyManagementService.filterMyKeys(it.state.data.participants.map { it.owningKey }).toList().isNotEmpty()
         }) { "Cannot request move for state we are not a participant in" }
@@ -108,7 +109,7 @@ class MoveNotaryFlow<out T : ContractState>(
         ).build()
 
         val myKeys = serviceHub.keyManagementService.filterMyKeys(participants.map { it.owningKey })
-        return SignedTransaction(tx, myKeys.map { signTransaction(tx.id, it) }) to participants
+        return Triple(SignedTransaction(tx, myKeys.map { signTransaction(tx.id, it) }), participants, myKeys)
     }
 
     private fun signTransaction(id: SecureHash, key: PublicKey): TransactionSignature {
