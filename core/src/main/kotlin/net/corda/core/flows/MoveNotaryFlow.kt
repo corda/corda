@@ -27,13 +27,25 @@ import net.corda.core.utilities.ProgressTracker
 import java.security.PublicKey
 
 /**
- * A flow to be used for moving a list of states to a different Notary. This is required since all input states to a
- * transaction must point to the same notary.
+ * A flow to be used for moving a list of states to a different Notary.
  *
  * This assembles the transaction for notary replacement and sends out change proposals to all participants
  * of the states. If participants agree to the proposed change, they each sign the transaction.
  * Finally, the transaction containing all signatures is sent back to each participant so they can record it and
  * use the new updated states for future transactions.
+ *
+ * The notary change transaction is constructed in a way that it can _only_ change the notary - it only accepts
+ * inputs and a new notary value. The inputs to this flow need to of type `StateAndRef` - i.e. the requestor
+ * needs to have access to the actual state, not just a state ref.
+ *
+ * If a notary move is requested for an encumbered state, all encumbrances are moved in the same transaction
+ *
+ * The requirements for using the flow are:
+ *
+ * - All input states must be on the same notary
+ * - The initiator needs to be a participant in all states that they request moving for.
+ * - Old and new notary need to be whitelisted notaries on the network, in the current version of the network parameters
+ * - The new notary cannot be the same as the old notary
  */
 @InitiatingFlow
 class MoveNotaryFlow<out T: ContractState>(
