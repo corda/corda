@@ -633,7 +633,23 @@ class MoveNotaryTests {
 
     @Test( timeout = 300_00 )
     fun `can move notary for states using confidential identities`(){
-        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty)
+        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, IssueDummyStateMultiparty.Confidenitality.OLD)
+        val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
+        val future = clientNodeA.startFlow(flow)
+
+        mockNet.runNetwork()
+
+        val newState = future.getOrThrow().single()
+        assertEquals(newState.state.notary, newNotaryParty)
+        val loadedStateA = clientNodeA.services.loadState(newState.ref)
+        val loadedStateB = clientNodeB.services.loadState(newState.ref)
+        assertEquals(loadedStateA, loadedStateB)
+
+    }
+
+    @Test( timeout = 300_00 )
+    fun `can move notary for states using confidential identities without certs`(){
+        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, IssueDummyStateMultiparty.Confidenitality.NEW)
         val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
         val future = clientNodeA.startFlow(flow)
 
@@ -648,8 +664,12 @@ class MoveNotaryTests {
     }
 
 
-    fun issueMultiPartyConfidentialState(nodeA: StartedMockNode, nodeB: StartedMockNode, notaryIdentity: Party) : StateAndRef<DummyContract.MultiOwnerState> {
-        val future = nodeA.startFlow(IssueDummyStateMultiparty( nodeB.info.singleIdentity(), notaryIdentity, true))
+    fun issueMultiPartyConfidentialState(
+            nodeA: StartedMockNode,
+            nodeB: StartedMockNode,
+            notaryIdentity: Party,
+            condidentialIdentities: IssueDummyStateMultiparty.Confidenitality = IssueDummyStateMultiparty.Confidenitality.NONE): StateAndRef<DummyContract.MultiOwnerState> {
+        val future = nodeA.startFlow(IssueDummyStateMultiparty(nodeB.info.singleIdentity(), notaryIdentity, condidentialIdentities))
         mockNet.runNetwork()
 
         return future.get()

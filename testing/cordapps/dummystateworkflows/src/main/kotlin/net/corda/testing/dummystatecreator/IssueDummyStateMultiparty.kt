@@ -11,7 +11,9 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
@@ -20,7 +22,15 @@ import net.corda.testing.core.singleIdentity
 import kotlin.random.Random
 
 @InitiatingFlow
-class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val useConfidentialIdenities: Boolean) : FlowLogic<StateAndRef<DummyContract.MultiOwnerState>>() {
+class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val useConfidentialIdenities: Confidenitality) : FlowLogic<StateAndRef<DummyContract.MultiOwnerState>>() {
+
+    @CordaSerializable
+    enum class Confidenitality {
+        NONE,
+        OLD,
+        NEW
+    }
+
     @Suspendable
     override fun call(): StateAndRef<DummyContract.MultiOwnerState> {
         val session = initiateFlow(counterParty)
@@ -29,11 +39,18 @@ class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val
 
         val myKeys = mutableListOf(serviceHub.myInfo.singleIdentity().owningKey)
 
-        val participants = if (useConfidentialIdenities){
-            val confidentialIdentities = subFlow(SwapIdentitiesFlow(session))
-            myKeys.add(confidentialIdentities[serviceHub.myInfo.singleIdentity()]!!.owningKey)
-            confidentialIdentities.values.toList()
-        } else listOf( serviceHub.myInfo.singleIdentity(), counterParty)
+        val participants = when (useConfidentialIdenities){
+            Confidenitality.OLD -> subFlow(SwapIdentitiesFlow(session))
+            Confidenitality.NEW -> subFlow(AgreeConfidentialKeysFlow(session))
+            else -> emptyMap<Party, AnonymousParty>()
+        }.let {
+            if (it.isEmpty())
+                listOf(serviceHub.myInfo.singleIdentity(), counterParty)
+            else {
+                myKeys.add(it[serviceHub.myInfo.singleIdentity()]!!.owningKey)
+                it.values.toList()
+            }
+        }
 
         val tx = TransactionBuilder(notary)
                 .addOutputState(DummyContract.MultiOwnerState(Random.nextInt(), participants))
@@ -50,9 +67,11 @@ class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val
 class IssueDummyStateResponder(val otherSideSession: FlowSession) : FlowLogic<Unit>(){
     @Suspendable
     override fun call() {
-        val useConfidentialIdenities = otherSideSession.receive<Boolean>().unwrap{it}
-        if (useConfidentialIdenities){
-            subFlow(SwapIdentitiesFlow(otherSideSession))
+        val useConfidentialIdenities = otherSideSession.receive<IssueDummyStateMultiparty.Confidenitality>().unwrap{it}
+        when (useConfidentialIdenities){
+            IssueDummyStateMultiparty.Confidenitality.OLD -> subFlow(SwapIdentitiesFlow(otherSideSession))
+            IssueDummyStateMultiparty.Confidenitality.NEW -> subFlow(AgreeConfidentialKeysFlow(otherSideSession))
+            else -> {}
         }
         subFlow(object: SignTransactionFlow(otherSideSession){
             override fun checkTransaction(stx: SignedTransaction) {
