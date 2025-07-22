@@ -118,6 +118,8 @@ buildscript {
     ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
     ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     ext.azure_version = constants.getProperty("azureVersion")
+    ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
+    ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
 
