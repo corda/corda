@@ -73,8 +73,9 @@ class ServiceHubMetricsTest {
         nodeA = mockNet.restartNode(nodeA, InternalMockNodeParameters(legalName = ALICE_NAME))
         Latch2.latch.countDown()
 
-        val metric = nodeA.internals.metricRegistry.gauges["TestFlow.TestMetric"]
+
         eventuallyAssert {
+            val metric = nodeA.internals.metricRegistry.gauges["TestFlow.TestMetric"]
             assertNotNull(metric)
             assertEquals("Result2", metric.value)
         }
