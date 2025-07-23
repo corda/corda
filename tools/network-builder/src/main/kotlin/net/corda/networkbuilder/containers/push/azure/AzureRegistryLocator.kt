@@ -14,6 +14,7 @@ class RegistryLocator(private val azure: AzureResourceManager,
 
     val registry: Registry = locateRegistry()
 
+    @Suppress("MagicNumber")
     private fun locateRegistry(): Registry {
         LOG.info("Attempting to find existing registry with name: ${resourceGroup.restFriendlyName()}")
         val found = try {

@@ -31,6 +31,7 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
                 .authenticate(credential, profile)
                 .withDefaultSubscription()
 
+        @Suppress("MagicNumber")
         fun fromContext(context: Context): AzureBackend {
             val resourceGroupName = context.networkName.replace(Constants.ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX, "")
             val resourceGroup = try {

@@ -66,6 +66,7 @@ class AzureInstantiator(private val azure: AzureResourceManager,
         return "${buildIdent(instanceName)}.${resourceGroup.region().name()}.azurecontainer.io"
     }
 
+    @Suppress("MagicNumber")
     fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
         return try {
             val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)

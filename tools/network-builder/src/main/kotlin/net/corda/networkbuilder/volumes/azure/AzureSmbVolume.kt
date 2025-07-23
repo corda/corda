@@ -58,6 +58,7 @@ class AzureSmbVolume(private val azure: AzureResourceManager, private val resour
         }
     }
 
+    @Suppress("MagicNumber")
     private fun getStorageAccount(): StorageAccount {
         val existing = try {
             azure.storageAccounts().getByResourceGroup(
