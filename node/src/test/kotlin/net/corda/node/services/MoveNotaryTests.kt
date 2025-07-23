@@ -37,6 +37,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.dummystatecreator.IssueDummyStateMultiparty
+import net.corda.testing.dummystatecreator.IssueDummyStateMultiparty.Confidentiality
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
@@ -633,7 +634,7 @@ class MoveNotaryTests {
 
     @Test( timeout = 300_00 )
     fun `can move notary for states using confidential identities`(){
-        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, IssueDummyStateMultiparty.Confidenitality.OLD)
+        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, Confidentiality.OLD)
         val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
         val future = clientNodeA.startFlow(flow)
 
@@ -649,7 +650,7 @@ class MoveNotaryTests {
 
     @Test( timeout = 300_00 )
     fun `can move notary for states using confidential identities without certs`(){
-        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, IssueDummyStateMultiparty.Confidenitality.NEW)
+        val state = issueMultiPartyConfidentialState(clientNodeA, clientNodeB, oldNotaryParty, Confidentiality.NEW)
         val flow = MoveNotaryFlow(listOf(state), newNotaryParty)
         val future = clientNodeA.startFlow(flow)
 
@@ -668,8 +669,8 @@ class MoveNotaryTests {
             nodeA: StartedMockNode,
             nodeB: StartedMockNode,
             notaryIdentity: Party,
-            condidentialIdentities: IssueDummyStateMultiparty.Confidenitality = IssueDummyStateMultiparty.Confidenitality.NONE): StateAndRef<DummyContract.MultiOwnerState> {
-        val future = nodeA.startFlow(IssueDummyStateMultiparty(nodeB.info.singleIdentity(), notaryIdentity, condidentialIdentities))
+            confidentialIdentities: Confidentiality = Confidentiality.NONE): StateAndRef<DummyContract.MultiOwnerState> {
+        val future = nodeA.startFlow(IssueDummyStateMultiparty(nodeB.info.singleIdentity(), notaryIdentity, confidentialIdentities))
         mockNet.runNetwork()
 
         return future.get()

@@ -22,10 +22,10 @@ import net.corda.testing.core.singleIdentity
 import kotlin.random.Random
 
 @InitiatingFlow
-class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val useConfidentialIdenities: Confidenitality) : FlowLogic<StateAndRef<DummyContract.MultiOwnerState>>() {
+class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val useConfidentialIdenities: Confidentiality) : FlowLogic<StateAndRef<DummyContract.MultiOwnerState>>() {
 
     @CordaSerializable
-    enum class Confidenitality {
+    enum class Confidentiality {
         NONE,
         OLD,
         NEW
@@ -40,8 +40,8 @@ class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val
         val myKeys = mutableListOf(serviceHub.myInfo.singleIdentity().owningKey)
 
         val participants = when (useConfidentialIdenities){
-            Confidenitality.OLD -> subFlow(SwapIdentitiesFlow(session))
-            Confidenitality.NEW -> subFlow(AgreeConfidentialKeysFlow(session))
+            Confidentiality.OLD -> subFlow(SwapIdentitiesFlow(session))
+            Confidentiality.NEW -> subFlow(AgreeConfidentialKeysFlow(session))
             else -> emptyMap<Party, AnonymousParty>()
         }.let {
             if (it.isEmpty())
@@ -67,10 +67,10 @@ class IssueDummyStateMultiparty (val counterParty: Party, val notary: Party, val
 class IssueDummyStateResponder(val otherSideSession: FlowSession) : FlowLogic<Unit>(){
     @Suspendable
     override fun call() {
-        val useConfidentialIdenities = otherSideSession.receive<IssueDummyStateMultiparty.Confidenitality>().unwrap{it}
+        val useConfidentialIdenities = otherSideSession.receive<IssueDummyStateMultiparty.Confidentiality>().unwrap{it}
         when (useConfidentialIdenities){
-            IssueDummyStateMultiparty.Confidenitality.OLD -> subFlow(SwapIdentitiesFlow(otherSideSession))
-            IssueDummyStateMultiparty.Confidenitality.NEW -> subFlow(AgreeConfidentialKeysFlow(otherSideSession))
+            IssueDummyStateMultiparty.Confidentiality.OLD -> subFlow(SwapIdentitiesFlow(otherSideSession))
+            IssueDummyStateMultiparty.Confidentiality.NEW -> subFlow(AgreeConfidentialKeysFlow(otherSideSession))
             else -> {}
         }
         subFlow(object: SignTransactionFlow(otherSideSession){
