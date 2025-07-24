@@ -92,8 +92,8 @@ class ServiceHubMetricsTest {
     class TestFlow(private val externalLatch: ExternalLatch, private val metric : String) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
+            await(ExternalOperation(externalLatch))// Wait for the latch to be released
             registerMetricFromFlow(metric)
-            ExternalOperation(externalLatch)// Wait for the latch to be released
             return getMetricFromFlow()
         }
 
