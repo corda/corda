@@ -70,7 +70,7 @@ class ServiceHubMetricsTest {
         @Suspendable
         override fun call(): String {
             registerMetricFromFlow(metric)
-            var registry: MetricRegistry? = null
+            val registry: MetricRegistry?
             if(getMetricsRegistryDirectly) {
                 registry = serviceHub.getMetricsRegistry(MetricRegistry::class.java)
                 registry.gauges["TestFlow.TestMetric"]?.value as String
