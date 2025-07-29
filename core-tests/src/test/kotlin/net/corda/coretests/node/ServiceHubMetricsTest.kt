@@ -73,6 +73,7 @@ class ServiceHubMetricsTest {
             var registry: MetricRegistry? = null
             if(getMetricsRegistryDirectly) {
                 registry = serviceHub.getMetricsRegistry(MetricRegistry::class.java)
+                registry.gauges["TestFlow.TestMetric"]?.value as String
             }
             sleep(Duration.ZERO)
             return getMetricFromFlow()
