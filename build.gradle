@@ -455,10 +455,11 @@ allprojects {
                         details.useVersion json_smart_version
                     }
 
-                    // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in and upgrade
+                    // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in an upgrade
                     // to Caffeine 3.1.8 to 3.2.1, which causes a plethora of compiler warnings.
-                    // For simplicity, force the caffeine version back to 3.1.8.
-                    // Remove this when it's decided to embrace the newer version of Caffeine.
+                    // For simplicity, force the caffeine version back to 3.1.8, but exclude the legacy projects that
+                    // require a JDK8-compatible version of Caffeine.
+                    // Remove this when it's decided to fully embrace the newer version of Caffeine.
                     if (details.requested.group == 'com.github.ben-manes.caffeine' && details.requested.name == 'caffeine') {
                         if (!projectsToExcludeFromCaffeineForcing.contains(project.name)) {
                             details.useVersion caffeine_version
