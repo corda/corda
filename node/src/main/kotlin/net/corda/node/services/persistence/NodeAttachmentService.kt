@@ -327,7 +327,7 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(id)!!
+        val content = attachmentContentCache.get(id)
         if (content.isPresent) {
             return content.get().first
         }

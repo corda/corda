@@ -233,6 +233,8 @@ allprojects {
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'org.sonarqube'
 
+    tasks.register("allDependencies", DependencyReportTask) {}
+
     allOpen {
         annotations(
                 "javax.persistence.Entity",

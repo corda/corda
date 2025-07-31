@@ -56,25 +56,37 @@ class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMap
 
     private fun updateInfoDB(partyHashCode: SecureHash, partyName: CordaX500Name) {
         database.transaction {
-            if (queryByPartyId(session, partyHashCode) == null) {
+            try {
+                queryByPartyId(session, partyHashCode)
+            } catch (_ : IllegalStateException) {
                 session.save(DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo(partyHashCode.toString(), partyName.toString()))
             }
         }
     }
 
-    private fun queryByCordaX500Name(session: Session, key: CordaX500Name): SecureHash? {
+    private fun queryByCordaX500Name(session: Session, key: CordaX500Name): SecureHash {
         val query = session.createQuery(
                 "FROM ${DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo::class.java.name} WHERE partyName = :partyName",
                 DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo::class.java)
         query.setParameter("partyName", key.toString())
-        return query.resultList.singleOrNull()?.let { SecureHash.parse(it.partyId) }
+        if (query.resultList.count() == 1) {
+            return query.resultList.first().let { SecureHash.parse(it.partyId) }
+        } else {
+            // TBD - IDK how better to handle this
+            throw IllegalStateException("Database query by X500 name returned != 1 result")
+        }
     }
 
-    private fun queryByPartyId(session: Session, key: SecureHash): CordaX500Name? {
+    private fun queryByPartyId(session: Session, key: SecureHash): CordaX500Name {
         val query = session.createQuery(
                 "FROM ${DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo::class.java.name} WHERE partyId = :partyId",
                 DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo::class.java)
         query.setParameter("partyId", key.toString())
-        return query.resultList.singleOrNull()?.partyName?.let { CordaX500Name.parse(it) }
+        if (query.resultList.count() == 1) {
+            return query.resultList.first().partyName.let { CordaX500Name.parse(it) }
+        } else {
+            // TBD - IDK how better to handle this
+            throw IllegalStateException("Database query by party ID returned != 1 result")
+        }
     }
 }

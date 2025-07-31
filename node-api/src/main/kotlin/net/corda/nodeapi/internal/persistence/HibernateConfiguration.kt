@@ -61,7 +61,10 @@ class HibernateConfiguration(
     }
 
     /** @param key must be immutable, not just read-only. */
-    fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
+    fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory {
+        return sessionFactories.get(key, ::makeSessionFactoryForSchemas)
+                ?: throw NullPointerException("No session factory found for key [$key]")
+    }
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(schemas, customClassLoader, attributeConverters, allowHibernateToManageAppSchema)
