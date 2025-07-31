@@ -226,6 +226,8 @@ logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 logger.lifecycle("Building Corda version: {}", corda_release_version)
 logger.lifecycle("User home: {}", System.getProperty('user.home'))
 
+def projectsToExcludeFromCaffeineForcing = ['legacy411','legacy412']
+
 allprojects {
     apply plugin: 'java'
     apply plugin: 'kotlin-allopen'
@@ -451,6 +453,16 @@ allprojects {
                     // force-upgrade to latest json-smart@2.5.2
                     if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
                         details.useVersion json_smart_version
+                    }
+
+                    // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in and upgrade
+                    // to Caffeine 3.1.8 to 3.2.1, which causes a plethora of compiler warnings.
+                    // For simplicity, force the caffeine version back to 3.1.8.
+                    // Remove this when it's decided to embrace the newer version of Caffeine.
+                    if (details.requested.group == 'com.github.ben-manes.caffeine' && details.requested.name == 'caffeine') {
+                        if (!projectsToExcludeFromCaffeineForcing.contains(project.name)) {
+                            details.useVersion caffeine_version
+                        }
                     }
                 }
 
