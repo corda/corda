@@ -28,7 +28,7 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
-            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>()
+            InVMConnector::class.staticField<ExecutorService>("executorService").value = rigorousMock<ExecutorService>()
                     .also {
                 doAnswer {
                     inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
