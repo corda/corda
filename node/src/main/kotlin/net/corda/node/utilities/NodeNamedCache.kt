@@ -82,13 +82,13 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
     @Suppress("UNCHECKED_CAST")
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         checkState(name)
-        return configuredForNamed(caffeine as Caffeine<K, V>, name).build<K, V>()
+        return configuredForNamed(caffeine as Caffeine<K, V>, name).build()
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         checkState(name)
-        return configuredForNamed(caffeine as Caffeine<K, V>, name).build<K, V>(loader)
+        return configuredForNamed(caffeine as Caffeine<K, V>, name).build(loader)
     }
 
     protected open val defaultCacheSize = 1024L
