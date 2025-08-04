@@ -1,13 +1,13 @@
 package net.corda.node.persistence
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.isQuasarAgentSpecified
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType

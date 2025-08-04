@@ -1,6 +1,6 @@
 package net.corda.networkbuilder.cli
 
-import com.microsoft.azure.management.resources.fluentcore.arm.Region
+import com.azure.core.management.Region
 import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.backends.Backend
 import picocli.CommandLine

@@ -1,8 +1,15 @@
-FROM corda/corda-zulu-java1.8-4.4
+FROM corda/open-source:4.12.5-zulu-openjdk
 
 # Copy corda files
 ADD --chown=corda:corda node.conf               /opt/corda/node.conf
 ADD --chown=corda:corda cordapps/               /opt/corda/cordapps
+ADD --chown=corda:corda nodeInfo-*              /opt/corda/
+ADD --chown=corda:corda network-parameters      /opt/corda/
+ADD --chown=corda:corda certificates/           /opt/corda/certificates/
+ADD --chown=corda:corda drivers/                /opt/corda/drivers/
+ADD --chown=corda:corda corda.jar               /opt/corda/
+ADD --chown=corda:corda persistence.mv.db       /opt/corda/
+ADD --chown=corda:corda persistence.trace.db    /opt/corda/
 
 # Copy node info watcher script
 ADD --chown=corda:corda node_info_watcher.sh    /opt/corda/
