@@ -129,6 +129,8 @@ buildscript {
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.azure_version = constants.getProperty("azureVersion")
+    ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
+    ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
