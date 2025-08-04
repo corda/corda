@@ -119,6 +119,7 @@ buildscript {
     ext.azure_version = constants.getProperty("azureVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
+    ext.commons_lang3_version= constants.getProperty("commonsLang3Version")
 
     ext.corda_revision = {
         try {
