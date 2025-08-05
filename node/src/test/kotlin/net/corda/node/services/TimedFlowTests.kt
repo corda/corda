@@ -1,15 +1,18 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
@@ -38,11 +41,20 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.security.PublicKey
 import java.time.Duration
 import java.util.concurrent.Future
@@ -203,7 +215,7 @@ class TimedFlowTests {
                 var exceptionThrown = false
                 try {
                     resultFuture.get(3, TimeUnit.SECONDS)
-                } catch (e: TimeoutException) {
+                } catch (_: TimeoutException) {
                     exceptionThrown = true
                 }
                 assertTrue(exceptionThrown)
@@ -236,7 +248,7 @@ class TimedFlowTests {
                 var exceptionThrown = false
                 try {
                     resultFuture.get(3, TimeUnit.SECONDS)
-                } catch (e: TimeoutException) {
+                } catch (_: TimeoutException) {
                     exceptionThrown = true
                 }
                 assertTrue(exceptionThrown)
@@ -269,10 +281,17 @@ class TimedFlowTests {
      * A test notary service that will just stop forever the first time you invoke its commitInputStates method and will succeed the
      * second time around.
      */
-    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
+    private class TestNotaryService(override val services: ServiceHubInternal,
+                                    override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
         override val uniquenessProvider = object : UniquenessProvider {
             /** A dummy commit method that immediately returns a success message. */
-            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
+            override fun commit(states: List<StateRef>,
+                                txId: SecureHash,
+                                callerIdentity: Party,
+                                requestSignature: NotarisationRequestSignature,
+                                timeWindow: TimeWindow?,
+                                references: List<StateRef>,
+                                notaryInstructions: List<NotaryInstruction>): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
                         signTransaction(txId)
@@ -291,7 +310,8 @@ class TimedFlowTests {
                 caller: Party,
                 requestSignature: NotarisationRequestSignature,
                 timeWindow: TimeWindow?,
-                references: List<StateRef>
+                references: List<StateRef>,
+                notaryInstructions: List<NotaryInstruction>
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
@@ -302,7 +322,7 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
+                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references, notaryInstructions)
             }
             return UniquenessProvider.Result.Failure(NotaryError.General(Throwable("leave me alone")))
         }

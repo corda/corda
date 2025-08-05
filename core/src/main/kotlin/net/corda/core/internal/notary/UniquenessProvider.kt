@@ -1,6 +1,7 @@
 package net.corda.core.internal.notary
 
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
@@ -17,14 +18,22 @@ typealias SigningFunction = (SecureHash) -> TransactionSignature
  * if any of the inputs have already been used in another transaction.
  */
 interface UniquenessProvider {
+    /**
+     * Check if the notary instructions are valid and can be processed by this uniqueness provider. By default notary instructions are not
+     * supported.
+     */
+    fun isNotaryInstructionsValid(notaryInstructions: List<NotaryInstruction>): Boolean = notaryInstructions.isEmpty()
+
     /** Commits all input states of the given transaction. */
+    @Suppress("LongParameterList")
     fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow? = null,
-            references: List<StateRef> = emptyList()
+            timeWindow: TimeWindow?,
+            references: List<StateRef>,
+            notaryInstructions: List<NotaryInstruction>
     ): CordaFuture<Result>
 
     /**

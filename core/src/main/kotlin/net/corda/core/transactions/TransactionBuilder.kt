@@ -88,6 +88,7 @@ open class TransactionBuilder(
         )
     }
 
+    private val notaryInstructions = arrayListOf<NotaryInstruction>()
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private var excludedAttachments: Set<AttachmentId> = emptySet()
@@ -108,6 +109,7 @@ open class TransactionBuilder(
                 references = ArrayList(references),
                 serviceHub = serviceHub
         )
+        t.notaryInstructions.addAll(this.notaryInstructions)
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
         return t
@@ -115,7 +117,7 @@ open class TransactionBuilder(
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    fun withItems(vararg items: Any) = apply {
+    fun withItems(vararg items: Any): TransactionBuilder = apply {
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
@@ -128,6 +130,7 @@ open class TransactionBuilder(
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 is TimeWindow -> setTimeWindow(t)
                 is PrivacySalt -> setPrivacySalt(t)
+                is NotaryInstruction -> addNotaryInstruction(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -218,7 +221,8 @@ open class TransactionBuilder(
                             window,
                             referenceStates,
                             serviceHub.networkParametersService.currentHash,
-                            legacyAttachments
+                            legacyAttachments,
+                            notaryInstructions
                     ),
                     privacySalt,
                     serviceHub.digestService
@@ -351,7 +355,7 @@ open class TransactionBuilder(
         val attachment = if (isLegacy) {
             // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
             val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-            attachments.firstOrNull { it.id in legacyContractCordapps } 
+            attachments.firstOrNull { it.id in legacyContractCordapps }
         } else {
             attachments.firstOrNull()
         }
@@ -804,7 +808,7 @@ open class TransactionBuilder(
      * Note: Reference states are only supported on Corda networks running a minimum platform version of 4.
      * [toWireTransaction] will throw an [IllegalStateException] if called in such an environment.
      */
-    open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>) = apply {
+    open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder = apply {
         val stateAndRef = referencedStateAndRef.stateAndRef
         referencesWithTransactionState.add(stateAndRef.state)
 
@@ -834,24 +838,22 @@ open class TransactionBuilder(
     }
 
     /** Adds an input [StateRef] to the transaction. */
-    open fun addInputState(stateAndRef: StateAndRef<*>) = apply {
+    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder = apply {
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
         inputsWithTransactionState.add(stateAndRef)
         resolveStatePointers(stateAndRef.state)
-        return this
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */
-    fun addAttachment(attachmentId: AttachmentId) = apply {
+    fun addAttachment(attachmentId: AttachmentId): TransactionBuilder = apply {
         attachments.add(attachmentId)
     }
 
     /** Adds an output state to the transaction. */
-    fun addOutputState(state: TransactionState<*>) = apply {
+    fun addOutputState(state: TransactionState<*>): TransactionBuilder = apply {
         outputs.add(state)
         resolveStatePointers(state)
-        return this
     }
 
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */
@@ -892,7 +894,7 @@ open class TransactionBuilder(
     }
 
     /** Adds a [Command] to the transaction. */
-    fun addCommand(arg: Command<*>) = apply {
+    fun addCommand(arg: Command<*>): TransactionBuilder = apply {
         commands.add(arg)
     }
 
@@ -900,16 +902,16 @@ open class TransactionBuilder(
      * Adds a [Command] to the transaction, specified by the encapsulated [CommandData] object and required list of
      * signing [PublicKey]s.
      */
-    fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+    fun addCommand(data: CommandData, vararg keys: PublicKey): TransactionBuilder = addCommand(Command(data, listOf(*keys)))
 
-    fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
+    fun addCommand(data: CommandData, keys: List<PublicKey>): TransactionBuilder = addCommand(Command(data, keys))
 
     /**
      * Sets the [TimeWindow] for this transaction, replacing the existing [TimeWindow] if there is one. To be valid, the
      * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
      * the Timestamp Authority.
      */
-    fun setTimeWindow(timeWindow: TimeWindow) = apply {
+    fun setTimeWindow(timeWindow: TimeWindow): TransactionBuilder = apply {
         check(notary != null) { "Only notarised transactions can have a time-window" }
         window = timeWindow
     }
@@ -923,24 +925,31 @@ open class TransactionBuilder(
      */
     fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
 
-    fun setPrivacySalt(privacySalt: PrivacySalt) = apply {
+    fun setPrivacySalt(privacySalt: PrivacySalt): TransactionBuilder = apply {
         this.privacySalt = privacySalt
     }
 
-    /** Returns an immutable list of input [StateRef]s. */
+    fun addNotaryInstruction(instruction: NotaryInstruction): TransactionBuilder = apply {
+        notaryInstructions.add(instruction)
+    }
+
+    /** Returns a copy of the input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    /** Returns an immutable list of reference input [StateRef]s. */
+    /** Returns a copy of the reference input [StateRef]s. */
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
-    /** Returns an immutable list of attachment hashes. */
+    /** Returns a copy of attachment hashes. */
     fun attachments(): List<AttachmentId> = ArrayList(attachments)
 
-    /** Returns an immutable list of output [TransactionState]s. */
+    /** Returns a copy of the output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s. */
+    /** Returns a copy of the [Command]s. */
     fun commands(): List<Command<*>> = ArrayList(commands)
+
+    /** Returns a copy of the [NotaryInstruction]s */
+    fun notaryInstructions(): List<NotaryInstruction> = ArrayList(notaryInstructions)
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
