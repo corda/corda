@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
@@ -120,28 +121,41 @@ class NotaryFlow {
                     and can't be used for regular transactions.
                 */
                 check(stx.coreTransaction is NotaryChangeWireTransaction) {
-                    "Notary ${notaryParty.description()} is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
+                    "Notary ${notaryParty.description()} is not on the network parameter whitelist. A non-whitelisted notary can only be " +
+                            "used for notary change transactions"
                 }
                 val historicNotary = (serviceHub.networkParametersService as NetworkParametersStorage).getHistoricNotary(notaryParty)
-                        ?: throw IllegalStateException("The notary party ${notaryParty.description()} specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
+                        ?: throw IllegalStateException("The notary party ${notaryParty.description()} specified by transaction " +
+                                "${stx.id}, is not recognised as a current or historic notary.")
                 historicNotary.validating
-            } else serviceHub.networkMapCache.isValidatingNotary(notaryParty)
+            } else {
+                serviceHub.networkMapCache.isValidatingNotary(notaryParty)
+            }
         }
 
         @Suspendable
-        private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
+        private fun sendAndReceiveValidating(session: FlowSession,
+                                             signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
             return receiveResultOrTiming(session)
         }
 
+        @Suppress("RedundantSamConstructor")  // Because the external verifier uses Kotlin 1.2
         @Suspendable
-        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
+        private fun sendAndReceiveNonValidating(notaryParty: Party,
+                                                session: FlowSession,
+                                                signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
-                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is NetworkParametersHash
+                    it is StateRef
+                            || it is ReferenceStateRef
+                            || it is TimeWindow
+                            || it == notaryParty
+                            || it is NetworkParametersHash
+                            || it is NotaryInstruction
                 })
                 else -> ctx
             }

@@ -1,6 +1,7 @@
 package net.corda.core.internal.notary
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
@@ -28,9 +29,10 @@ abstract class SinglePartyNotaryService : NotaryService() {
     protected open val log: Logger get() = staticLog
 
     /** Handles input state uniqueness checks. */
-    protected abstract val uniquenessProvider: UniquenessProvider
+    abstract val uniquenessProvider: UniquenessProvider
 
     /** Attempts to commit the specified transaction [txId]. */
+    @Suppress("LongParameterList")
     @Suspendable
     open fun commitInputStates(
             inputs: List<StateRef>,
@@ -38,14 +40,13 @@ abstract class SinglePartyNotaryService : NotaryService() {
             caller: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            notaryInstructions: List<NotaryInstruction>
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
         // `UniquenessProvider`.
-
-        val callingFlow = FlowLogic.currentTopLevel
-                ?: throw IllegalStateException("This method should be invoked in a flow context.")
+        val callingFlow = checkNotNull(FlowLogic.currentTopLevel) { "This method should be invoked in a flow context." }
 
         val result = callingFlow.await(
                 CommitOperation(
@@ -55,7 +56,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
                         caller,
                         requestSignature,
                         timeWindow,
-                        references
+                        references,
+                        notaryInstructions
                 )
         )
 
@@ -85,18 +87,29 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val caller: Party,
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
-            val references: List<StateRef>
+            val references: List<StateRef>,
+            val notaryInstructions: List<NotaryInstruction>
     ) : FlowExternalAsyncOperation<Result> {
 
         override fun execute(deduplicationId: String): CompletableFuture<Result> {
-            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references).toCompletableFuture()
+            return service.uniquenessProvider.commit(
+                    inputs,
+                    txId,
+                    caller,
+                    requestSignature,
+                    timeWindow,
+                    references,
+                    notaryInstructions
+            ).toCompletableFuture()
         }
     }
 
     /** Sign a single transaction. */
     fun signTransaction(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
+        val signableData = SignableData(
+                txId,
+                SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID)
+        )
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
-
 }

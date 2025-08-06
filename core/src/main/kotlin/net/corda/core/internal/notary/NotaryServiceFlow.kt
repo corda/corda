@@ -1,19 +1,29 @@
 package net.corda.core.internal.notary
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toStringShort
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotarisationResponse
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import java.lang.IllegalStateException
 import java.time.Duration
 
 /**
@@ -82,7 +92,9 @@ abstract class NotaryServiceFlow(
                         otherSideSession.counterparty,
                         requestPayload.requestSignature,
                         tx.timeWindow,
-                        tx.references)
+                        tx.references,
+                        tx.notaryInstructions
+                )
             }
         } catch (e: NotaryInternalException) {
             logError(e.error)
@@ -106,6 +118,7 @@ abstract class NotaryServiceFlow(
             val transaction = extractParts(requestPayload)
             transactionId = transaction.id
             logger.info("Received a notarisation request for Tx [$transactionId] from [${otherSideSession.counterparty.name}]")
+            checkNotaryInstructions(transaction.notaryInstructions)
             checkNotary(transaction.notary)
             checkParameterHash(transaction.networkParametersHash)
             checkInputs(transaction.inputs + transaction.references)
@@ -118,6 +131,12 @@ abstract class NotaryServiceFlow(
 
     /** Extract the common transaction components required for notarisation. */
     protected abstract fun extractParts(requestPayload: NotarisationPayload): TransactionParts
+
+    private fun checkNotaryInstructions(notaryInstructions: List<NotaryInstruction>) {
+        require(service.uniquenessProvider.isNotaryInstructionsValid(notaryInstructions)) {
+            "Notary instructions not supported"
+        }
+    }
 
     /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
@@ -163,7 +182,8 @@ abstract class NotaryServiceFlow(
             val inputs: List<StateRef>,
             val timeWindow: TimeWindow?,
             val notary: Party?,
-            val references: List<StateRef> = emptyList(),
+            val references: List<StateRef>,
+            val notaryInstructions: List<NotaryInstruction>,
             val networkParametersHash: SecureHash?
     )
 

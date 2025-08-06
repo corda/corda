@@ -14,6 +14,7 @@ import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
@@ -197,21 +198,21 @@ class RaftUniquenessProvider(
     }
 
     private fun registerMonitoring() {
-        metrics.register("RaftCluster.ThisServerStatus", Gauge<String> {
+        metrics.register("RaftCluster.ThisServerStatus", Gauge {
             server.state().name
         })
-        metrics.register("RaftCluster.MembersCount", Gauge<Int> {
+        metrics.register("RaftCluster.MembersCount", Gauge {
             server.cluster().members().size
         })
-        metrics.register("RaftCluster.Members", Gauge<List<String>> {
+        metrics.register("RaftCluster.Members", Gauge {
             server.cluster().members().map { it.address().toString() }
         })
 
-        metrics.register("RaftCluster.AvailableMembers", Gauge<List<String>> {
+        metrics.register("RaftCluster.AvailableMembers", Gauge {
             server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.map { it.address().toString() }
         })
 
-        metrics.register("RaftCluster.AvailableMembersCount", Gauge<Int> {
+        metrics.register("RaftCluster.AvailableMembersCount", Gauge {
             server.cluster().members().filter { it.status() == Member.Status.AVAILABLE }.size
         })
     }
@@ -222,7 +223,8 @@ class RaftUniquenessProvider(
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            notaryInstructions: List<NotaryInstruction>
     ): CordaFuture<UniquenessProvider.Result> {
         log.debug { "Attempting to commit input states: ${states.joinToString()} for txId: $txId" }
         val commitCommand = CommitTransaction(

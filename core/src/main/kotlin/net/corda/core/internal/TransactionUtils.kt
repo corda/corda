@@ -8,6 +8,7 @@ import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
@@ -16,6 +17,7 @@ import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -76,7 +78,14 @@ class ContractUpgradeTransactionBuilder(
         private set
 
     fun build(): ContractUpgradeWireTransaction {
-        val components = listOf(inputs, notary, legacyContractAttachmentId, upgradedContractClassName, upgradedContractAttachmentId, networkParametersHash).map { it.serialize() }
+        val components = listOf(
+                inputs,
+                notary,
+                legacyContractAttachmentId,
+                upgradedContractClassName,
+                upgradedContractAttachmentId,
+                networkParametersHash
+        ).map { it.serialize() }
         return ContractUpgradeWireTransaction(components, privacySalt, digestService)
     }
 }
@@ -93,8 +102,9 @@ fun combinedHash(components: Iterable<SecureHash>, digestService: DigestService)
 /**
  * This function knows how to deserialize a transaction component group.
  *
- * In case the [componentGroups] is an instance of [LazyMappedList], this function will just use the original deserialized version, and avoid an unnecessary deserialization.
- * The [forceDeserialize] will force deserialization. In can be used in case the SerializationContext changes.
+ * In case the [componentGroups] is an instance of [LazyMappedList], this function will just use the original deserialized version, and
+ * avoid an unnecessary deserialization. The [forceDeserialize] will force deserialization. In can be used in case the SerializationContext
+ * changes.
  */
 fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
                                         clazz: KClass<T>,
@@ -192,7 +202,8 @@ fun createComponentGroups(inputs: List<StateRef>,
                           references: List<StateRef>,
                           networkParametersHash: SecureHash?,
                           // The old attachments group is now only used to create transaction compatible with 4.11 (or earlier) nodes
-                          legacyAttachments: List<SecureHash> = emptyList()): List<ComponentGroup> {
+                          legacyAttachments: List<SecureHash>,
+                          notaryInstructions: List<NotaryInstruction>): List<ComponentGroup> {
     val serializationFactory = SerializationFactory.defaultFactory
     val serializationContext = serializationFactory.defaultContext
     val serialize = { value: Any, _: Int -> value.serialize(serializationFactory, serializationContext) }
@@ -211,11 +222,16 @@ fun createComponentGroups(inputs: List<StateRef>,
     // Adding signers to their own group. This is required for command visibility purposes: a party receiving
     // a FilteredTransaction can now verify it sees all the commands it should sign.
     componentGroupMap.addListGroup(SIGNERS_GROUP, commands.map { it.signers }, serialize)
-    if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
+    if (networkParametersHash != null) {
+        componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
+    }
+    componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
     return componentGroupMap
 }
 
-private fun MutableList<ComponentGroup>.addListGroup(type: ComponentGroupEnum, list: List<Any>, serialize: (Any, Int) -> SerializedBytes<Any>) {
+private fun MutableList<ComponentGroup>.addListGroup(type: ComponentGroupEnum,
+                                                     list: List<Any>,
+                                                     serialize: (Any, Int) -> SerializedBytes<Any>) {
     if (list.isNotEmpty()) {
         add(ComponentGroup(type.ordinal, list.lazyMapped(serialize)))
     }
@@ -228,7 +244,10 @@ typealias SerializedTransactionState = SerializedBytes<TransactionState<Contract
  * The [serializedState] is the actual component from the original wire transaction.
  */
 data class SerializedStateAndRef(val serializedState: SerializedTransactionState, val ref: StateRef) {
-    fun toStateAndRef(factory: SerializationFactory, context: SerializationContext) = StateAndRef(serializedState.deserialize(factory, context), ref)
+    fun toStateAndRef(factory: SerializationFactory, context: SerializationContext): StateAndRef<ContractState> {
+        return StateAndRef(serializedState.deserialize(factory, context), ref)
+    }
+
     fun toStateAndRef(): StateAndRef<ContractState> {
         val factory = SerializationFactory.defaultFactory
         return toStateAndRef(factory, factory.defaultContext)
@@ -243,7 +262,9 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
         if (serviceHub.networkParameters.minimumPlatformVersion < PlatformVersionSwitches.NETWORK_PARAMETERS_COMPONENT_GROUP) return
         else throw IllegalArgumentException("Transaction for notarisation doesn't contain network parameters hash.")
     } else {
-        serviceHub.networkParametersService.lookup(networkParametersHash) ?: throw IllegalArgumentException("Transaction for notarisation contains unknown parameters hash: $networkParametersHash")
+        requireNotNull(serviceHub.networkParametersService.lookup(networkParametersHash)) {
+            "Transaction for notarisation contains unknown parameters hash: $networkParametersHash"
+        }
     }
 
     // TODO: [ENT-2666] Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.

@@ -7,9 +7,11 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateRef
@@ -108,7 +110,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, DigestService.sha2_256)
+    ) : this(
+            createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null, emptyList(), emptyList()),
+            privacySalt,
+            DigestService.sha2_256
+    )
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -239,6 +245,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedNetworkParameters = verificationSupport.getNetworkParameters(networkParametersHash)
                 ?: throw TransactionResolutionException.UnknownParametersException(id, networkParametersHash!!)
 
+        val notaryInstructions = deserialiseComponentGroup(
+                componentGroups,
+                NotaryInstruction::class,
+                NOTARY_INSTRUCTIONS_GROUP,
+                factory = serializationFactory,
+                context = serializationContext
+        )
+
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
                 outputs,
@@ -250,6 +264,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 privacySalt,
                 resolvedNetworkParameters.toImmutable(),
                 resolvedReferences,
+                notaryInstructions,
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,

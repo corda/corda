@@ -1,6 +1,8 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.NotaryInstruction
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
@@ -34,12 +36,15 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
 
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val tx = requestPayload.coreTransaction
-        return when (tx) {
-            is FilteredTransaction -> TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
-            is ContractUpgradeFilteredTransaction,
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, networkParametersHash = tx.networkParametersHash)
-            else -> throw unexpectedTransactionType(tx)
+        var timeWindow: TimeWindow? = null
+        var notaryInstructions: List<NotaryInstruction> = emptyList()
+        if (tx is FilteredTransaction) {
+            timeWindow = tx.timeWindow
+            notaryInstructions = tx.notaryInstructions
+        } else if (tx !is ContractUpgradeFilteredTransaction && tx !is NotaryChangeWireTransaction) {
+            throw unexpectedTransactionType(tx)
         }
+        return TransactionParts(tx.id, tx.inputs, timeWindow, tx.notary, tx.references, notaryInstructions, tx.networkParametersHash)
     }
 
     override fun verifyTransaction(requestPayload: NotarisationPayload) {
@@ -101,7 +106,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
     }
 
     private fun unexpectedTransactionType(tx: CoreTransaction): IllegalArgumentException {
-        return IllegalArgumentException("Received unexpected transaction type: ${tx::class.java.simpleName}," +
+        return IllegalArgumentException("Received unexpected transaction type: ${tx.javaClass.simpleName}," +
                 "expected either ${FilteredTransaction::class.java.simpleName} or ${NotaryChangeWireTransaction::class.java.simpleName}")
     }
 }
