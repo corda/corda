@@ -50,9 +50,6 @@ import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
 
-@Suppress("EnumValuesSoftDeprecate")  // Because the external verifier uses Kotlin 1.2
-val MAX_COMPONENT_GROUP_INDEX = ComponentGroupEnum.values().size - 1
-
 /** Constructs a [NotaryChangeWireTransaction]. */
 class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,

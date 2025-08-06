@@ -16,6 +16,7 @@ import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.values
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
@@ -27,7 +28,6 @@ import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
 import net.corda.core.identity.Party
-import net.corda.core.internal.MAX_COMPONENT_GROUP_INDEX
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.getGroup
@@ -246,7 +246,7 @@ class FilteredTransaction internal constructor(
                 // including the unknown new components.
                 wtx.componentGroups
                         .asSequence()
-                        .filter { it.groupIndex > MAX_COMPONENT_GROUP_INDEX }
+                        .filter { it.groupIndex >= values().size }
                         .forEach {
                             it.components.forEachIndexed { internalIndex, component -> filter(component, it.groupIndex, internalIndex) }
                         }
