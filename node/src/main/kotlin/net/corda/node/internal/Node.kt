@@ -4,8 +4,6 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jmx.JmxReporter
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
-import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
 import net.corda.cliutils.ShellConstants
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
@@ -535,18 +533,39 @@ open class Node(configuration: NodeConfiguration,
         }.build().start()
     }
 
+    // When we previously hardwired the api in, we were using version 1.1.1 of the newrelic api.
     private fun registerNewRelicReporter(registry: MetricRegistry) {
-        log.info("Registering New Relic JMX Reporter:")
-        val reporter = NewRelicReporter.forRegistry(registry)
-                .name("New Relic Reporter")
-                .filter(MetricFilter.ALL)
-                .attributeFilter(AllEnabledMetricAttributeFilter())
-                .rateUnit(TimeUnit.SECONDS)
-                .durationUnit(TimeUnit.MILLISECONDS)
-                .metricNamePrefix("corda/")
-                .build()
+        try {
+            val reporterClass = Class.forName("com.palominolabs.metrics.newrelic.NewRelicReporter")
+            val builderMethod = reporterClass.getMethod("forRegistry", MetricRegistry::class.java)
+            val builder = builderMethod.invoke(null, registry)
 
-        reporter.start(1, TimeUnit.MINUTES)
+            val builderClass = builder.javaClass
+            builderClass.getMethod("name", String::class.java)
+                    .invoke(builder, "New Relic Reporter")
+            builderClass.getMethod("filter", MetricFilter::class.java)
+                    .invoke(builder, MetricFilter.ALL)
+            val attrFilterClass = Class.forName("com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter")
+            val attrFilter = attrFilterClass.getDeclaredConstructor().newInstance()
+            builderClass.getMethod("attributeFilter", Class.forName("com.palominolabs.metrics.newrelic.MetricAttributeFilter"))
+                    .invoke(builder, attrFilter)
+            builderClass.getMethod("rateUnit", TimeUnit::class.java)
+                    .invoke(builder, TimeUnit.SECONDS)
+            builderClass.getMethod("durationUnit", TimeUnit::class.java)
+                    .invoke(builder, TimeUnit.MILLISECONDS)
+            builderClass.getMethod("metricNamePrefix", String::class.java)
+                    .invoke(builder, "corda/")
+
+            val reporter = builderClass.getMethod("build").invoke(builder)
+            reporter.javaClass.getMethod("start", Long::class.javaPrimitiveType, TimeUnit::class.java)
+                    .invoke(reporter, 1L, TimeUnit.MINUTES)
+
+            log.info("New Relic JMX Reporter started successfully.")
+        } catch (e: ClassNotFoundException) {
+            log.warn("New Relic metrics reporter not on classpath; skipping New Relic metrics integration.", e)
+        } catch (e: Exception) {
+            log.error("Failed to initialize New Relic metrics reporter dynamically.", e)
+        }
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()
