@@ -176,6 +176,8 @@ dependencies {
     implementation 'io.atomix.catalyst:catalyst-netty:1.1.2'
     // Jolokia JVM monitoring agent, required to push logs through slf4j
     implementation "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
+    compileOnly "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
     implementation "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.8.0'

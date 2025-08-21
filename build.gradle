@@ -69,6 +69,7 @@ buildscript {
     ext.caffeine_version = constants.getProperty("caffeineVersion")
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
+    ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
     ext.okhttp_version = constants.getProperty("okhttpVersion")
     ext.netty_version = constants.getProperty("nettyVersion")
     ext.tcnative_version = constants.getProperty("tcnativeVersion")

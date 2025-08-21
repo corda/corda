@@ -533,38 +533,25 @@ open class Node(configuration: NodeConfiguration,
         }.build().start()
     }
 
-    // When we previously hardwired the api in, we were using version 1.1.1 of the newrelic api.
     private fun registerNewRelicReporter(registry: MetricRegistry) {
+        log.info("Registering New Relic JMX Reporter:")
         try {
             val reporterClass = Class.forName("com.palominolabs.metrics.newrelic.NewRelicReporter")
-            val builderMethod = reporterClass.getMethod("forRegistry", MetricRegistry::class.java)
-            val builder = builderMethod.invoke(null, registry)
-
-            val builderClass = builder.javaClass
-            builderClass.getMethod("name", String::class.java)
-                    .invoke(builder, "New Relic Reporter")
-            builderClass.getMethod("filter", MetricFilter::class.java)
-                    .invoke(builder, MetricFilter.ALL)
-            val attrFilterClass = Class.forName("com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter")
-            val attrFilter = attrFilterClass.getDeclaredConstructor().newInstance()
-            builderClass.getMethod("attributeFilter", Class.forName("com.palominolabs.metrics.newrelic.MetricAttributeFilter"))
-                    .invoke(builder, attrFilter)
-            builderClass.getMethod("rateUnit", TimeUnit::class.java)
-                    .invoke(builder, TimeUnit.SECONDS)
-            builderClass.getMethod("durationUnit", TimeUnit::class.java)
-                    .invoke(builder, TimeUnit.MILLISECONDS)
-            builderClass.getMethod("metricNamePrefix", String::class.java)
-                    .invoke(builder, "corda/")
-
-            val reporter = builderClass.getMethod("build").invoke(builder)
-            reporter.javaClass.getMethod("start", Long::class.javaPrimitiveType, TimeUnit::class.java)
-                    .invoke(reporter, 1L, TimeUnit.MINUTES)
-
-            log.info("New Relic JMX Reporter started successfully.")
-        } catch (e: ClassNotFoundException) {
-            log.warn("New Relic metrics reporter not on classpath; skipping New Relic metrics integration.", e)
-        } catch (e: Exception) {
-            log.error("Failed to initialize New Relic metrics reporter dynamically.", e)
+            val forRegistryMethod = reporterClass.getMethod("forRegistry", MetricRegistry::class.java)
+            val reporterBuilder = forRegistryMethod.invoke(null, registry) as com.palominolabs.metrics.newrelic.NewRelicReporter.Builder
+            val reporter = reporterBuilder
+                    .name("New Relic Reporter")
+                    .filter(MetricFilter.ALL)
+                    .attributeFilter(com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter())
+                    .rateUnit(TimeUnit.SECONDS)
+                    .durationUnit(TimeUnit.MILLISECONDS)
+                    .metricNamePrefix("corda/")
+                    .build()
+            reporter.start(1, TimeUnit.MINUTES)
+        }
+        catch (e: ClassNotFoundException) {
+            // This is expected if the New Relic agent is not on the classpath.
+            log.warn("New Relic JMX Reporter not registered, as the New Relic API is not on the classpath.", e)
         }
     }
 
