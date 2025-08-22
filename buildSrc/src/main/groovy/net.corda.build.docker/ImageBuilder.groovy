@@ -43,6 +43,12 @@ class DockerError extends GradleException {
     Integer code
     String msg
 
+    DockerError(Integer code, String msg) {
+        super("Docker error${code != null ? " $code" : ""}: $msg")
+        this.code = code
+        this.msg = msg
+    }
+
     @Override
     String toString() {
         return "Docker error${" " + code ?: ""}: $msg"
