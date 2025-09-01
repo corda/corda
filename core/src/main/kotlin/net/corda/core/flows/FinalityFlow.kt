@@ -455,6 +455,7 @@ object NotarySigCheck {
         return when (coreTx) {
             is WireTransaction -> {
                 val needsNotarisation = coreTx.inputs.isNotEmpty() || coreTx.references.isNotEmpty() || coreTx.timeWindow != null
+                        || coreTx.notaryInstructions.isNotEmpty()
                 needsNotarisation && hasNoNotarySignature(stx)
             }
 
