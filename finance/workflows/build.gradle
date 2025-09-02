@@ -94,6 +94,7 @@ publishing {
             artifactId 'corda-finance-workflows'
             from components.cordapp
             artifact javadocJar
+            artifact sourcesJar
         }
     }
 }
