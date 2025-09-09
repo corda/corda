@@ -2,7 +2,7 @@ package net.corda.networkbuilder.containers.push.azure
 
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.model.PushResponseItem
-import com.microsoft.azure.management.containerregistry.Registry
+import com.azure.resourcemanager.containerregistry.models.Registry
 import net.corda.networkbuilder.containers.push.ContainerPusher
 import net.corda.networkbuilder.containers.push.azure.RegistryLocator.Companion.parseCredentials
 import net.corda.networkbuilder.docker.DockerUtils

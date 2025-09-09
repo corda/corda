@@ -126,6 +126,8 @@ buildscript {
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.azure_version = constants.getProperty("azureVersion")
+    ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
+    ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
 
     if (JavaVersion.current().isJava8()) {
