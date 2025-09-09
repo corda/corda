@@ -13,6 +13,7 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import java.util.concurrent.Future
 
+@Suppress("UNUSED_PARAMETER")
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
     println("Connecting to the recipient node ($address)")

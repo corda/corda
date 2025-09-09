@@ -1,4 +1,6 @@
 @file:JvmName("InternalUtils")
+@file:Suppress("MagicNumber")
+
 package net.corda.core.internal
 
 import net.corda.core.crypto.Crypto
@@ -15,6 +17,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import org.slf4j.Logger
+import org.slf4j.event.Level
 import rx.Observable
 import rx.Observer
 import rx.observers.Subscribers
@@ -23,16 +26,13 @@ import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.io.OutputStream
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
-import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.Proxy
-import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.CopyOption
@@ -53,6 +53,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.Collections
+import java.util.Locale
 import java.util.PrimitiveIterator
 import java.util.Spliterator
 import java.util.Spliterator.DISTINCT
@@ -65,6 +66,8 @@ import java.util.Spliterator.SUBSIZED
 import java.util.Spliterators
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 import java.util.stream.Collectors
 import java.util.stream.Collectors.toCollection
 import java.util.stream.IntStream
@@ -77,7 +80,14 @@ import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
-val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+val Throwable.rootCause: Throwable
+    get() {
+        var root = this
+        while (true) {
+            root = root.cause ?: return root
+        }
+    }
+
 val Throwable.rootMessage: String? get() {
     var message = this.message
     var throwable = cause
@@ -95,8 +105,8 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
 operator fun Duration.times(multiplicand: Double): Duration = Duration.ofNanos((toNanos() * multiplicand).roundToLong())
-fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
+fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -126,20 +136,48 @@ fun <T> List<T>.noneOrSingle(): T? {
     }
 }
 
-/** Returns a random element in the list, or `null` if empty */
-fun <T> List<T>.randomOrNull(): T? {
-    return when (size) {
-        0 -> null
-        1 -> this[0]
-        else -> this[(Math.random() * size).toInt()]
-    }
-}
-
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {
     val i = indexOf(item)
-    require(i != -1){"No such element"}
+    require(i != -1) { "No such element" }
     return i
+}
+
+/**
+ * Similar to [Iterable.map] except it maps to a [Set] which preserves the iteration order.
+ */
+@Suppress("INVISIBLE_MEMBER", "RemoveExplicitTypeArguments")   // Because the external verifier uses Kotlin 1.2
+inline fun <T, R> Collection<T>.mapToSet(transform: (T) -> R): Set<R> {
+    return when (size) {
+        0 -> emptySet()
+        1 -> setOf(transform(first()))
+        else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
+    }
+}
+
+/**
+ * Similar to [Iterable.flatMap] except it maps to a [Set] which preserves the iteration order.
+ */
+inline fun <T, R> Collection<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R> {
+    return if (isEmpty()) emptySet() else flatMapTo(LinkedHashSet(), transform)
+}
+
+/**
+ * Map the elements of the [Iterable] to multiple keys. By default duplicate mappings are not allowed. The returned [Map] preserves the
+ * iteration order of the values.
+ */
+inline fun <K, V> Iterable<V>.groupByMultipleKeys(
+        keysSelector: (V) -> Iterable<K>,
+        onDuplicate: (K, V, V) -> Unit = { key, value1, value2 -> throw IllegalArgumentException("Duplicate mapping for $key ($value1, $value2)") }
+): Map<K, V> {
+    val map = LinkedHashMap<K, V>()
+    for (value in this) {
+        for (key in keysSelector(value)) {
+            val duplicate = map.put(key, value) ?: continue
+            onDuplicate(key, value, duplicate)
+        }
+    }
+    return map
 }
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
@@ -148,7 +186,7 @@ fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.c
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
 /** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
-fun InputStream.hash(): SecureHash {
+fun InputStream.hash(): SecureHash.SHA256 {
     return use {
         val md = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -165,16 +203,9 @@ fun InputStream.hash(): SecureHash {
 
 inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
 
-object NullOutputStream : OutputStream() {
-    override fun write(b: Int) = Unit
-    override fun write(b: ByteArray) = Unit
-    override fun write(b: ByteArray, off: Int, len: Int) = Unit
-}
+fun JarInputStream.entries(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 
-fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
-
-/** Return the sum of an Iterable of [BigDecimal]s. */
-fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else "${take(maxWidth - 1)}…"
 
 /**
  * Returns an Observable that buffers events until subscribed.
@@ -208,8 +239,6 @@ inline fun elapsedTime(block: () -> Unit): Duration {
 
 fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(label, this, body)
 
-// TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
-// returns in the IRSSimulationTest. If not, commit the inline back.
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
@@ -286,7 +315,7 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
 
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
-inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+inline fun <reified T> Stream<out T>.toTypedArray(): Array<out T?>? = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
 inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): Stream<R> {
     return flatMap {
@@ -297,6 +326,8 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
 
 /** Similar to [Collectors.toSet] except the Set is guaranteed to be ordered. */
 fun <T> Stream<T>.toSet(): Set<T> = collect(toCollection { LinkedHashSet<T>() })
+
+val Class<*>.isJdkClass: Boolean get() = module.name?.startsWith("java.") == true
 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
@@ -335,7 +366,8 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
                 it.isAccessible = true
-                uncheckedCast(it.get(null))
+                @Suppress("UNCHECKED_CAST")
+                it.get(null) as T
             } else {
                 null
             }
@@ -365,17 +397,10 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
     val name: String = javaField.name
 
     private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
-        @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-        val accessible = isAccessible
         isAccessible = true
-        try {
-            return action(this)
-        } finally {
-            isAccessible = accessible
-        }
+        return action(this)
     }
 
-    @Throws(NoSuchFieldException::class)
     private fun findField(fieldName: String, clazz: Class<*>?): Field {
         if (clazz == null) {
             throw NoSuchFieldException(fieldName)
@@ -431,9 +456,7 @@ inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
-fun URI.toPath(): Path = Paths.get(this)
-
-fun URL.toPath(): Path = toURI().toPath()
+fun URL.toPath(): Path = Paths.get(toURI())
 
 val DEFAULT_HTTP_CONNECT_TIMEOUT = 30.seconds.toMillis()
 val DEFAULT_HTTP_READ_TIMEOUT = 30.seconds.toMillis()
@@ -529,11 +552,6 @@ fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
 val PublicKey.hash: SecureHash get() = Crypto.encodePublicKey(this).sha256()
 
-/**
- * Extension method for providing a sumBy method that processes and returns a Long
- */
-fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
-
 fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
     val payloadData: T = try {
         val serializer = SerializationDefaults.SERIALIZATION_FACTORY
@@ -559,6 +577,10 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
 fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
 /** @see Collections.synchronizedSet */
 fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronizedSet(this)
+
+fun Collection<*>.equivalent(other: Collection<*>): Boolean {
+    return this.size == other.size && this.containsAll(other) && other.containsAll(this)
+}
 
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
@@ -613,5 +635,20 @@ fun Logger.warnOnce(warning: String) {
     }
 }
 
-const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
-const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
+val Logger.level: Level
+    get() = when {
+        isTraceEnabled -> Level.TRACE
+        isDebugEnabled -> Level.DEBUG
+        isInfoEnabled -> Level.INFO
+        isWarnEnabled -> Level.WARN
+        isErrorEnabled -> Level.ERROR
+        else -> throw IllegalStateException("Unknown logging level")
+    }
+
+const val JAVA_1_2_CLASS_FILE_MAJOR_VERSION = 46
+const val JAVA_8_CLASS_FILE_MAJOR_VERSION = 52
+const val JAVA_17_CLASS_FILE_MAJOR_VERSION = 61
+
+fun String.capitalize(): String = replaceFirstChar { it.titlecase(Locale.getDefault()) }
+
+fun String.decapitalize(): String = replaceFirstChar { it.lowercase(Locale.getDefault()) }

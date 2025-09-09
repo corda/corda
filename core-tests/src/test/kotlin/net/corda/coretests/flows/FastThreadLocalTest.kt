@@ -13,7 +13,7 @@ import net.corda.core.internal.rootCause
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.catchThrowable
 import org.hamcrest.Matchers.lessThanOrEqualTo
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -85,7 +85,7 @@ class FastThreadLocalTest {
     }
 
     private class UnserializableObj {
-        @Suppress("unused")
+        @Suppress("unused", "IMPLICIT_NOTHING_TYPE_ARGUMENT_IN_RETURN_POSITION")
         private val fail: Nothing by lazy { throw UnsupportedOperationException("Nice try.") }
     }
 
