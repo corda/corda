@@ -29,7 +29,10 @@ class DatabaseTransaction(
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
         database.dataSource.connection.apply {
             autoCommit = false
-            transactionIsolation = isolation
+            // only set the transaction isolation level if it's actually changed - setting isn't free.
+            if (transactionIsolation != isolation) {
+                transactionIsolation = isolation
+            }
         }
     }
 

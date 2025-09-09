@@ -49,13 +49,16 @@ abstract class StateMachineErrorHandlingTest {
         counter = 0
     }
 
-    internal fun startDriver(notarySpec: NotarySpec = NotarySpec(DUMMY_NOTARY_NAME), dsl: DriverDSL.() -> Unit) {
+    internal fun startDriver(notarySpec: NotarySpec = NotarySpec(DUMMY_NOTARY_NAME),
+                             extraCordappPackagesToScan: List<String> = emptyList(),
+                             dsl: DriverDSL.() -> Unit) {
         driver(
             DriverParameters(
                 notarySpecs = listOf(notarySpec),
                 startNodesInProcess = false,
                 inMemoryDB = false,
-                systemProperties = mapOf("co.paralleluniverse.fibers.verifyInstrumentation" to "true")
+                systemProperties = mapOf("co.paralleluniverse.fibers.verifyInstrumentation" to "true"),
+                extraCordappPackagesToScan = extraCordappPackagesToScan
             )
         ) {
             dsl()

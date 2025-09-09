@@ -10,10 +10,12 @@ import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -224,6 +226,6 @@ fun issueInvalidState(services: ServiceHub, identity: Party, notary: Party): Sta
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
     tx.setTimeWindow(Instant.now(), 30.seconds)
     val stx = services.signInitialTransaction(tx)
-    services.recordTransactions(stx)
+    (services as ServiceHubInternal).recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(stx), disableSignatureVerification = true)
     return stx.tx.outRef(0)
 }

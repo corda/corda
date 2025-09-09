@@ -3,10 +3,20 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.FungibleState
+import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.ReferencedStateAndRef
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
@@ -15,10 +25,18 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.Vault.RelevancyStatus.*
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.Vault.RelevancyStatus.ALL
+import net.corda.core.node.services.Vault.RelevancyStatus.NOT_RELEVANT
+import net.corda.core.node.services.Vault.RelevancyStatus.RELEVANT
 import net.corda.core.node.services.Vault.StateStatus
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -50,7 +68,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update<U : ContractState> @JvmOverloads constructor(
+    data class Update<U : ContractState> constructor(
             val consumed: Set<StateAndRef<U>>,
             val produced: Set<StateAndRef<U>>,
             val flowId: UUID? = null,
@@ -60,8 +78,21 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
              * differently.
              */
             val type: UpdateType = UpdateType.GENERAL,
-            val references: Set<StateAndRef<U>> = emptySet()
+            val references: Set<StateAndRef<U>> = emptySet(),
+            val consumingTxIds: Map<StateRef, SecureHash> = emptyMap()
     ) {
+        @DeprecatedConstructorForDeserialization(1)
+        @JvmOverloads constructor( consumed: Set<StateAndRef<U>>,
+                     produced: Set<StateAndRef<U>>,
+                     flowId: UUID? = null,
+                     /**
+                      * Specifies the type of update, currently supported types are general and, contract upgrade and notary change.
+                      * Notary change transactions only modify the notary field on states, and potentially need to be handled
+                      * differently.
+                      */
+                     type: UpdateType = UpdateType.GENERAL,
+                     references: Set<StateAndRef<U>> = emptySet()) : this(consumed, produced, flowId, type, references, consumingTxIds = emptyMap())
+
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T } || references.any { it.state.data is T }
 
@@ -87,9 +118,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val combinedConsumed = consumed + (rhs.consumed - produced)
             // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
             val combinedProduced = produced.filter { it !in rhs.consumed }.toSet() + rhs.produced
-            return copy(consumed = combinedConsumed, produced = combinedProduced, references = references + rhs.references)
+            return copy(consumed = combinedConsumed, produced = combinedProduced, references = references + rhs.references, consumingTxIds = consumingTxIds + rhs.consumingTxIds)
         }
-
+        
         override fun toString(): String {
             val sb = StringBuilder()
             sb.appendln("${consumed.size} consumed, ${produced.size} produced")
@@ -107,6 +138,10 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             references.forEach {
                 sb.appendln("${it.ref}: ${it.state}")
             }
+            sb.appendln("Consuming TxIds:")
+            consumingTxIds.forEach {
+                sb.appendln("${it.key}: ${it.value}")
+            }
             return sb.toString()
         }
 
@@ -117,9 +152,19 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 flowId: UUID? = null,
                 type: UpdateType = UpdateType.GENERAL
         ): Update<U> {
-            return Update(consumed, produced, flowId, type, references)
+            return Update(consumed, produced, flowId, type, references, consumingTxIds)
         }
 
+        /** Additional copy method to maintain backwards compatibility. */
+        fun copy(
+                consumed: Set<StateAndRef<U>>,
+                produced: Set<StateAndRef<U>>,
+                flowId: UUID? = null,
+                type: UpdateType = UpdateType.GENERAL,
+                references: Set<StateAndRef<U>> = emptySet()
+        ): Update<U> {
+            return Update(consumed, produced, flowId, type, references, consumingTxIds)
+        }
     }
 
     @CordaSerializable
@@ -168,7 +213,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         fun data(): ByteArray? {
             return when (type()) {
                 Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
-                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key.encoded
+                Type.SIGNATURE -> Crypto.encodePublicKey((constraint as SignatureAttachmentConstraint).key)
                 else -> null
             }
         }
@@ -198,15 +243,28 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *     otherwise it defaults to -1.
      *  4) Status types used in this query: [StateStatus.UNCONSUMED], [StateStatus.CONSUMED], [StateStatus.ALL].
      *  5) Other results as a [List] of any type (eg. aggregate function results with/without group by).
+     *  6) A [StateRef] pointing to the last state of the previous page. Use this to detect if the database has changed whilst loading pages
+     *     by checking it matches your last loaded state.
      *
      *  Note: currently [otherResults] is used only for aggregate functions (in which case, [states] and [statesMetadata] will be empty).
      */
     @CordaSerializable
-    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
-                                           val statesMetadata: List<StateMetadata>,
-                                           val totalStatesAvailable: Long,
-                                           val stateTypes: StateStatus,
-                                           val otherResults: List<Any>)
+    data class Page<T : ContractState> @JvmOverloads constructor(
+            val states: List<StateAndRef<T>>,
+            val statesMetadata: List<StateMetadata>,
+            val totalStatesAvailable: Long,
+            val stateTypes: StateStatus,
+            val otherResults: List<Any>,
+            val previousPageAnchor: StateRef? = null
+    ) {
+        fun copy(states: List<StateAndRef<T>> = this.states,
+                 statesMetadata: List<StateMetadata> = this.statesMetadata,
+                 totalStatesAvailable: Long = this.totalStatesAvailable,
+                 stateTypes: StateStatus = this.stateTypes,
+                 otherResults: List<Any> = this.otherResults): Page<T> {
+            return Page(states, statesMetadata, totalStatesAvailable, stateTypes, otherResults, null)
+        }
+    }
 
     @CordaSerializable
     data class StateMetadata @JvmOverloads constructor(
@@ -299,7 +357,6 @@ interface VaultService {
     /**
      * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
-    @DeleteForDJVM
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         val query = QueryCriteria.VaultQueryCriteria(
                 stateRefs = listOf(ref),

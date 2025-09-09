@@ -469,6 +469,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     object FinalityDoctor : Staff {
+        @Suppress("ComplexMethod")
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler) {
                 log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
@@ -480,7 +481,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         // no need to keep around the flow, since notarisation has already failed at the counterparty.
                         Diagnosis.NOT_MY_SPECIALTY
                     }
+                    isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinalityFlow(newError) -> {
+                        // no need to keep around the flow, since notarisation has already failed at the counterparty.
+                        Diagnosis.NOT_MY_SPECIALTY
+                    }
                     isEndSessionErrorThrownDuringReceiveTransactionFlow(newError) -> {
+                        // Typically occurs if the initiating flow catches a notary exception and ends their flow successfully.
+                        Diagnosis.NOT_MY_SPECIALTY
+                    }
+                    isEndSessionErrorThrownDuringReceiveFinalityFlow(newError) -> {
                         // Typically occurs if the initiating flow catches a notary exception and ends their flow successfully.
                         Diagnosis.NOT_MY_SPECIALTY
                     }
@@ -531,6 +540,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         /**
+         * This method will return true if [ReceiveFinalityFlow] is at the top of the stack during the error.
+         * This may happen in the post-notarisation logic of Two Phase Finality upon receiving a notarisation exception
+         * from the peer running [FinalityFlow].
+         */
+        private fun isErrorThrownDuringReceiveFinalityFlow(error: Throwable): Boolean {
+            val strippedStacktrace = error.stackTrace
+                    .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
+                    .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
+            return strippedStacktrace.isNotEmpty()
+                    && strippedStacktrace.first().className.startsWith(ReceiveFinalityFlow::class.qualifiedName!!)
+        }
+
+        /**
          * Checks if an end session error exception was thrown and that it did so within [ReceiveTransactionFlow].
          *
          * The check for [ReceiveTransactionFlow] is important to ensure that the session didn't end within [ResolveTransactionsFlow] which
@@ -541,6 +563,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return error is UnexpectedFlowEndException
                     && error.message?.contains(StartedFlowTransition.UNEXPECTED_SESSION_END_MESSAGE) == true
                     && isErrorThrownDuringReceiveTransactionFlow(error)
+        }
+
+        /**
+         * Checks if an end session error exception was thrown and that it did so within [ReceiveFinalityFlow].
+         */
+        private fun isEndSessionErrorThrownDuringReceiveFinalityFlow(error: Throwable): Boolean {
+            return error is UnexpectedFlowEndException
+                    && error.message?.contains(StartedFlowTransition.UNEXPECTED_SESSION_END_MESSAGE) == true
+                    && isErrorThrownDuringReceiveFinalityFlow(error)
         }
     }
 

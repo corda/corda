@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -12,7 +11,6 @@ import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 
-@DeleteForDJVM
 @DoNotImplement
 interface FlowStateMachineHandle<FLOWRETURN> {
     val logic: FlowLogic<FLOWRETURN>?
@@ -22,7 +20,6 @@ interface FlowStateMachineHandle<FLOWRETURN> {
 }
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
-@DeleteForDJVM
 @DoNotImplement
 interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     @Suspendable

@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.CustomSerializer
@@ -39,7 +38,6 @@ class CertPathSerializer(
             ?: fromProxy(proxy)
     }
 
-    @KeepForDJVM
     data class CertPathProxy(val type: String, val encoded: ByteArray) {
         override fun hashCode() = (type.hashCode() * 31) + encoded.contentHashCode()
         override fun equals(other: Any?): Boolean {

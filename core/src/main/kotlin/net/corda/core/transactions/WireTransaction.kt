@@ -1,8 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
@@ -60,9 +58,7 @@ import java.util.function.Predicate
  * </ul></p>
  */
 @CordaSerializable
-@KeepForDJVM
 class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
-    @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
     /**
@@ -73,7 +69,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
             ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
-    @DeleteForDJVM
     @JvmOverloads
     constructor(
             inputs: List<StateRef>,
@@ -117,7 +112,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         return services.specialise(
             toLedgerTransactionInternal(
@@ -136,7 +130,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     // Helper for deprecated toLedgerTransaction
-    // TODO: revisit once Deterministic JVM code updated
     @Suppress("UNUSED") // not sure if this field can be removed safely??
     private val missingAttachment: Attachment by lazy {
         object : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER ) {
@@ -168,23 +161,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { null },
                 Attachment::isUploaderTrusted,
                 attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl()
-        )
-    }
-
-    // Especially crafted for TransactionVerificationRequest
-    @CordaInternal
-    internal fun toLtxDjvmInternalBridge(
-            resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveParameters: (SecureHash?) -> NetworkParameters?
-    ): LedgerTransaction {
-        return toLedgerTransactionInternal(
-                { null },
-                resolveAttachment,
-                { stateRef -> resolveStateRef(stateRef)?.serialize() },
-                resolveParameters,
-                { true }, // Any attachment loaded through the DJVM should be trusted
-                null
         )
     }
 
@@ -408,7 +384,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
     }
 
-    @DeleteForDJVM
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")

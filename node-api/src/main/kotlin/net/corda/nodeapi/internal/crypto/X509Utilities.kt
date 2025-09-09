@@ -63,7 +63,8 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.ArrayList
+import java.util.Date
 import javax.security.auth.x500.X500Principal
 import kotlin.experimental.and
 import kotlin.experimental.or
@@ -219,7 +220,7 @@ object X509Utilities {
                                  crlIssuer: X500Name? = null): X509v3CertificateBuilder {
         val serial = generateCertificateSerialNumber()
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(Crypto.encodePublicKey(subjectPublicKey)))
         val role = certificateType.role
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)

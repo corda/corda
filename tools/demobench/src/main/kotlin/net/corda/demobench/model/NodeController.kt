@@ -1,6 +1,5 @@
 package net.corda.demobench.model
 
-import javafx.application.Application.Parameters
 import javafx.application.Platform
 import javafx.beans.binding.IntegerExpression
 import javafx.beans.property.SimpleBooleanProperty
@@ -31,7 +30,6 @@ import java.util.logging.Level
 import kotlin.math.max
 
 class NodeController(
-    djvmEnabled: Boolean = readDJVMEnabled(),
     check: atRuntime = ::checkExists
 ) : Controller() {
     companion object {
@@ -42,22 +40,8 @@ class NodeController(
         private const val MB = 1024 * 1024
         const val maxMessageSize = 10 * MB
         const val maxTransactionSize = 10 * MB
-
-        private fun readDJVMEnabled(): Boolean {
-            return FX.application.parameters?.let(::parseDJVMEnabled) ?: false
-        }
-
-        private fun parseDJVMEnabled(parameters: Parameters): Boolean {
-            val isEnabled = parameters.named["djvm"]
-            return if (isEnabled == null) {
-                parameters.unnamed.contains("--djvm")
-            } else {
-                java.lang.Boolean.parseBoolean(isEnabled)
-            }
-        }
     }
 
-    val djvmEnabled = SimpleBooleanProperty(djvmEnabled)
     val allowHibernateToManageAppSchema = SimpleBooleanProperty(false)
 
     private val jvm by inject<JVMConfig>()
@@ -113,7 +97,6 @@ class NodeController(
                 h2port = nodeData.h2Port.value,
                 issuableCurrencies = nodeData.extraServices.filterIsInstance<CurrencyIssuer>().map { it.currency.toString() },
                 systemProperties = mapOf(
-                    "net.corda.djvm" to djvmEnabled.value,
                     "co.paralleluniverse.fibers.verifyInstrumentation" to false
                 )
         )

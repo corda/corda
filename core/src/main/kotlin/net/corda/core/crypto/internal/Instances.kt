@@ -1,7 +1,5 @@
 package net.corda.core.crypto.internal
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.internal.LazyPool
 import java.security.Provider
@@ -25,13 +23,7 @@ object Instances {
     fun getSignatureInstance(algorithm: String, provider: Provider?) = signatureFactory.borrow(algorithm, provider)
     fun releaseSignatureInstance(sig: Signature) = signatureFactory.release(sig)
 
-    // Used to work around banning of ConcurrentHashMap in DJVM
-    private val signatureFactory: SignatureFactory = try {
-        makeCachingFactory()
-    } catch (e: UnsupportedOperationException) {
-        // Thrown by DJVM for method stubbed out below.
-        makeFactory()
-    }
+    private val signatureFactory: SignatureFactory = CachingSignatureFactory()
 
     // The provider itself is a very bad key class as hashCode() is expensive and contended.  So use name and version instead.
     private data class SignatureKey(val algorithm: String, val providerName: String?, val providerVersion: Double?) {
@@ -39,12 +31,6 @@ object Instances {
                 @Suppress("DEPRECATION") provider?.version) // JDK11: should replace with getVersionStr() (since 9)
     }
 
-    @StubOutForDJVM
-    private fun makeCachingFactory(): SignatureFactory {
-        return CachingSignatureFactory()
-    }
-
-    @DeleteForDJVM
     private class CachingSignatureFactory : SignatureFactory {
         private val signatureInstances = ConcurrentHashMap<SignatureKey, LazyPool<Signature>>()
 

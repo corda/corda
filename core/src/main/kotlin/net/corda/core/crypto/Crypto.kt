@@ -1,10 +1,9 @@
 package net.corda.core.crypto
 
 import net.corda.core.CordaOID
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Instances.withSignature
+import net.corda.core.crypto.internal.PublicKeyCache
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
@@ -12,6 +11,7 @@ import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.providerMap
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.ByteSequence
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -81,7 +81,6 @@ import javax.crypto.spec.SecretKeySpec
  * <li>SPHINCS256_SHA512 (SPHINCS-256 hash-based signature scheme using SHA512 as hash algorithm).
  * </ul>
  */
-@KeepForDJVM
 object Crypto {
     /**
      * RSA PKCS#1 signature scheme using SHA256 for message hashing.
@@ -227,7 +226,6 @@ object Crypto {
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
-    @DeleteForDJVM
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
@@ -281,7 +279,7 @@ object Crypto {
      */
     @JvmStatic
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
-        val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
+        val keyInfo = SubjectPublicKeyInfo.getInstance(encodePublicKey(key))
         return findSignatureScheme(keyInfo.algorithm)
     }
 
@@ -306,7 +304,6 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
@@ -318,7 +315,6 @@ object Crypto {
         return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
     }
 
-    @DeleteForDJVM
     private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
         val encodable = keyInfo.parsePrivateKey() as DLSequence
         val derutF8String = encodable.getObjectAt(0)
@@ -334,7 +330,6 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeySpecException::class)
     fun decodePrivateKey(schemeCodeName: String, encodedKey: ByteArray): PrivateKey {
@@ -373,10 +368,17 @@ object Crypto {
      */
     @JvmStatic
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
-        val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
-        val keyFactory = keyFactory(signatureScheme)
-        return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+        return PublicKeyCache.publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: {
+            val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
+            val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
+            val keyFactory = keyFactory(signatureScheme)
+            convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+        }()
+    }
+
+    @JvmStatic
+    fun encodePublicKey(key: PublicKey): ByteArray {
+        return PublicKeyCache.bytesForCachedPublicKey(key)?.bytes ?: key.encoded
     }
 
     /**
@@ -429,7 +431,6 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray = doSign(findSignatureScheme(privateKey), privateKey, clearData)
@@ -444,7 +445,6 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
@@ -461,7 +461,6 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
@@ -501,7 +500,6 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
@@ -688,7 +686,6 @@ object Crypto {
      * @return a KeyPair for the requested signature scheme code name.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @DeleteForDJVM
     @JvmStatic
     fun generateKeyPair(schemeCodeName: String): KeyPair = generateKeyPair(findSignatureScheme(schemeCodeName))
 
@@ -699,7 +696,6 @@ object Crypto {
      * @return a new [KeyPair] for the requested [SignatureScheme].
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    @DeleteForDJVM
     @JvmOverloads
     @JvmStatic
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
@@ -993,7 +989,8 @@ object Crypto {
     }
 
     private val interner = PrivateInterner<PublicKey>()
-    private fun internPublicKey(key: PublicKey): PublicKey = interner.intern(key)
+    private fun internPublicKey(key: PublicKey): PublicKey = PublicKeyCache.cachePublicKey(interner.intern(key))
+
 
     private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
         return internPublicKey(when (key) {
@@ -1049,7 +1046,6 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for a supported key factory to produce a private key.
      */
-    @DeleteForDJVM
     @JvmStatic
     fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
         return when (key) {
@@ -1086,7 +1082,6 @@ object Crypto {
      * CRL & CSR checks etc.).
      */
     // TODO: perform all cryptographic operations via Crypto.
-    @DeleteForDJVM
     @JvmStatic
     fun registerProviders() {
         providerMap
@@ -1097,7 +1092,6 @@ object Crypto {
         setBouncyCastleRNG()
     }
 
-    @DeleteForDJVM
     private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
     }

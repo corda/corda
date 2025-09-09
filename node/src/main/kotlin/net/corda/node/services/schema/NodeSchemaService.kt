@@ -16,6 +16,8 @@ import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.AesDbEncryptionService
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.PublicKeyHashToExternalId
@@ -29,7 +31,7 @@ import net.corda.node.services.vault.VaultSchemaV1
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
+class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet()) : SchemaService, SingletonSerializeAsToken() {
     // Core Entities used by a Node
     object NodeCore
 
@@ -51,7 +53,11 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
                     PublicKeyHashToExternalId::class.java,
-                    PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java
+                    PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java,
+                    DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java,
+                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java,
+                    DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo::class.java,
+                    AesDbEncryptionService.EncryptionKeyRecord::class.java
             )) {
         override val migrationResource = "node-core.changelog-master"
     }
