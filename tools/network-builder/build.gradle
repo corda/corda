@@ -44,8 +44,8 @@ dependencies {
     implementation project(':common-configuration-parsing')
     implementation project(':common-validation')
 
-    implementation "com.microsoft.azure:azure:$azure_version"
-    implementation "com.github.docker-java:docker-java:$docker_java_version"
+    implementation "com.azure.resourcemanager:azure-resourcemanager:$azure_resource_manager_version"
+    implementation "com.azure:azure-identity:$azure_identity_version"
 
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
