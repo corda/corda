@@ -122,6 +122,7 @@ buildscript {
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
     ext.commons_lang3_version= constants.getProperty("commonsLang3Version")
+    ext.nimbus_oauth2_version= constants.getProperty("nimbusOauth2Version")
 
     ext.corda_revision = {
         try {
@@ -457,6 +458,17 @@ allprojects {
                     if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
                         details.useVersion json_smart_version
                     }
+
+                    // SNYK-JAVA-COMNIMBUSDS-1243767 / CWE-611
+                    // vulnerability in oauth2-oidc-sdk@7.4, fixed in oauth2-oidc-sdk@8.36.2
+                    // oauth2-oidc-sdk@7.4 is a transitive dependency via azure-identity@1.2.0
+                    // azure-identity has been upgraded to 1.2.5 (depends on oauth2-oidc-sdk@8.36)
+                    // force-upgrade to fixed auth2-oidc-sdk@8.36.2.
+                    if (details.requested.group == 'com.nimbusds' && details.requested.name == 'oauth2-oidc-sdk') {
+                        details.useVersion nimbus_oauth2_version
+                    }
+
+
 
                     // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in an upgrade
                     // to Caffeine 3.1.8 to 3.2.1, which causes a plethora of compiler warnings.
