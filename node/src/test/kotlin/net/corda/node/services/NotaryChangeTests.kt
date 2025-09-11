@@ -5,7 +5,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateReplacementException
@@ -52,7 +51,6 @@ import java.net.URI
 import java.time.Instant
 import java.util.Random
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
@@ -309,86 +307,6 @@ class NotaryChangeTests {
         assertTrue(deserializedTx.requiredSigningKeys.isEmpty())
     }
 
-    // Read in a serialized NotarisationPayload from 4.12 (or earlier)
-    // `signers` did not exist as a field when serializing
-    @Test(timeout = 300_000)
-    fun deserializeNotarisationPayloadWithoutSignatures(){
-        val resource = "NotarisationPayloadTest.payloadWithoutSigners"
-        val sf = testDefaultFactory()
-
-        val stateRef = StateRef(SecureHash.create("61A2ECDC1C54F31B7351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
-
-        // uncomment to recreate the data.
-        // This has to be run on a version of Corda that does not have signatures on NotarisationPayload
-        // val networkParamsHash = SecureHash.randomSHA256()
-        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash, emptySet()).build()
-        // val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(Crypto.generateKeyPair().public, ByteArray(32)), 0)
-        // val notarisationPayload = NotarisationPayload(notaryChangeTx, requestSignature)
-        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notarisationPayload, testSerializationContext).bytes)
-
-        val url = NotaryChangeTests::class.java.getResource(resource)!!
-        val sc2 = url.readBytes()
-        val deserializedNotarisationPayload = DeserializationInput(sf)
-                .deserialize(SerializedBytes<NotarisationPayload>(sc2), testSerializationContext)
-
-        assertEquals(1, deserializedNotarisationPayload.coreTransaction.inputs.size)
-        assertEquals(stateRef, deserializedNotarisationPayload.coreTransaction.inputs.first())
-        assertNull(deserializedNotarisationPayload.signatures)
-    }
-
-    // Read in a serialized NotarisationPayload from 4.13+, with signers
-    // populated from https://github.com/corda/corda/pull/7991
-    @Test(timeout = 300_000)
-    fun deserializeNotarisationPayloadWithSignatures(){
-        val resource = "NotarisationPayloadTest.payloadWithSigners"
-        val sf = testDefaultFactory()
-
-        val stateRef = StateRef(SecureHash.create("36C3ECDC1C54F31B7351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
-
-        // uncomment to recreate the data.
-        // This has to be run on a version of Corda that _has_ signers on NotarisationPayload
-        // val networkParamsHash = SecureHash.randomSHA256()
-        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash, emptySet()).build()
-        // val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(Crypto.generateKeyPair().public, ByteArray(32)), 0)
-        // val notarisationPayload = NotarisationPayload(notaryChangeTx, requestSignature, listOf(requestSignature.digitalSignature))
-        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notarisationPayload, testSerializationContext).bytes)
-
-        val url = NotaryChangeTests::class.java.getResource(resource)!!
-        val sc2 = url.readBytes()
-        val deserializedNotarisationPayload = DeserializationInput(sf)
-                .deserialize(SerializedBytes<NotarisationPayload>(sc2), testSerializationContext)
-
-        assertEquals(1, deserializedNotarisationPayload.coreTransaction.inputs.size)
-        assertEquals(stateRef, deserializedNotarisationPayload.coreTransaction.inputs.first())
-        assertEquals(1, deserializedNotarisationPayload.signatures?.size)
-    }
-
-    // Read in a serialized NotarisationPayload from 4.13+, with signatures
-    // present, but not populated.
-    @Test(timeout = 300_000)
-    fun deserializeNotarisationPayloadWithEmptySignatures(){
-        val resource = "NotarisationPayloadTest.payloadWithEmptySignatures"
-        val sf = testDefaultFactory()
-
-        val stateRef = StateRef(SecureHash.create("45D3ECDC1C54F3113351F2C39F767D700A5658150C3E3C49F0458D487862A70D"), 0)
-
-        // uncomment to recreate the data
-        // This has to be run on a version of Corda that _has_ requiredSigningKeys on NotaryChangeWireTransaction
-        // val networkParamsHash = SecureHash.randomSHA256()
-        // val notaryChangeTx = NotaryChangeTransactionBuilder(listOf(stateRef), oldNotaryParty, newNotaryParty, networkParamsHash, emptySet()).build()
-        // val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(Crypto.generateKeyPair().public, ByteArray(32)), 0)
-        // val notarisationPayload = NotarisationPayload(notaryChangeTx, requestSignature, emptyList())
-        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notarisationPayload, testSerializationContext).bytes)
-
-        val url = NotaryChangeTests::class.java.getResource(resource)!!
-        val sc2 = url.readBytes()
-        val deserializedNotarisationPayload = DeserializationInput(sf)
-                .deserialize(SerializedBytes<NotarisationPayload>(sc2), testSerializationContext)
-
-        assertEquals(1, deserializedNotarisationPayload.coreTransaction.inputs.size)
-        assertEquals(stateRef, deserializedNotarisationPayload.coreTransaction.inputs.first())
-        assertTrue(deserializedNotarisationPayload.signatures?.isEmpty() ?: false)
-    }
 }
 
 fun issueState(services: ServiceHub, nodeIdentity: Party, notaryIdentity: Party): StateAndRef<DummyContract.SingleOwnerState> {

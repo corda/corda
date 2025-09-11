@@ -54,13 +54,13 @@ data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.W
 /**
  * Container for the transaction and notarisation request signature.
  * This is the payload that gets sent by a client to a notary service for committing the input states of the [transaction].
- * The optional `signatures` carries the list of the transaction signatures potentially (depending on the notary protocol)
+ * The optional `transactionSignatures` carries the list of the transaction signatures potentially (depending on the notary protocol)
  * required by the notary.
  */
 @CordaSerializable
 data class NotarisationPayload(val transaction: Any,
                                val requestSignature: NotarisationRequestSignature,
-                               val signatures: List<DigitalSignature.WithKey>? = null) {
+                               val transactionSignatures: List<DigitalSignature.WithKey>? = null) {
     init {
         require(transaction is SignedTransaction || transaction is CoreTransaction) {
             "Unsupported transaction type in the notarisation payload: ${transaction.javaClass.simpleName}"
