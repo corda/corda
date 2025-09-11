@@ -7,6 +7,7 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.toDigitalSignatureWithKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.BackpressureAwareTimedFlow
 import net.corda.core.internal.FetchDataFlow
@@ -136,7 +137,13 @@ class NotaryFlow {
         @Suspendable
         private fun sendAndReceiveValidating(session: FlowSession,
                                              signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
-            val payload = NotarisationPayload(stx, signature)
+            val ctx = stx.coreTransaction
+            val signatures = if (ctx is WireTransaction) {
+                stx.sigs.takeIf { ctx.notaryInstructions.isNotEmpty() }?.map { it.toDigitalSignatureWithKey() }
+            } else {
+                null
+            }
+            val payload = NotarisationPayload(stx, signature, signatures)
             subFlow(NotarySendTransactionFlow(session, payload))
             return receiveResultOrTiming(session)
         }
@@ -147,8 +154,8 @@ class NotaryFlow {
                                                 session: FlowSession,
                                                 signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
-            val tx = when (ctx) {
-                is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
+            val (tx, signatures) = when (ctx) {
+                is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction() to null
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
                     it is StateRef
                             || it is ReferenceStateRef
@@ -156,10 +163,10 @@ class NotaryFlow {
                             || it == notaryParty
                             || it is NetworkParametersHash
                             || it is NotaryInstruction
-                })
-                else -> ctx
+                }) to stx.sigs.takeIf { ctx.notaryInstructions.isNotEmpty() }?.map { it.toDigitalSignatureWithKey() }
+                else -> ctx to null
             }
-            session.send(NotarisationPayload(tx, signature))
+            session.send(NotarisationPayload(tx, signature, signatures))
             return receiveResultOrTiming(session)
         }
 
