@@ -49,7 +49,6 @@ import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assumptions.assumeThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -479,8 +478,12 @@ class UniquenessProviderTests(
         // Idempotency: can re-notarise successfully
         testClock.advanceBy(90.minutes)
         val result = commit(listOf(inputState), firstTxId, timeWindow, references = listOf(referenceState)).get()
-        // Known failure - this should return success. Will be fixed in a future release.
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        if (uniquenessProvider is RaftUniquenessProvider || uniquenessProvider is JPAUniquenessProvider) {
+            // Known failures - these implementations will be fixed in future releases
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+        } else {
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
 
         // Idempotency
         assertThat(commit(listOf(inputState), firstTxId, timeWindow, listOf(referenceState)).get()).isEqualTo(result)
@@ -546,9 +549,7 @@ class UniquenessProviderTests(
     /* Group G: input, reference states and time window – covered by previous tests. */
 
     @Test(timeout = 300_000)
-    fun `by default notary instructions are not supported`() {
-        assumeThat(uniquenessProviderFactory.isNotaryInstructionSupported).isFalse
-
+    fun `unknown notary instructions are not supported`() {
         class FakeNotaryInstruction : NotaryInstruction
 
         assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf())).isTrue
@@ -639,8 +640,6 @@ class UniquenessProviderTests(
 }
 
 interface UniquenessProviderFactory : AutoCloseable {
-    val isNotaryInstructionSupported: Boolean
-        get() = false
     fun create(clock: Clock): UniquenessProvider
 }
 
@@ -702,9 +701,8 @@ class JPAUniquenessProviderFactory(private val digestService: DigestService) : U
                 clock,
                 database!!,
                 notaryConfig,
-                notaryWorkerName,
-                ::signBatch
-        )
+                notaryWorkerName
+        ) { signBatch(it, digestService) }
     }
 
     override fun close() {
@@ -712,14 +710,6 @@ class JPAUniquenessProviderFactory(private val digestService: DigestService) : U
     }
 
     override fun toString(): String = "JPA"
-
-    fun signBatch(it: Iterable<SecureHash>): BatchSignature {
-        val root = MerkleTree.getMerkleTree(it.map { it.reHash() }, digestService)
-
-        val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
-        val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
-        return BatchSignature(signature, root)
-    }
 }
 
 var ourKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -735,3 +725,11 @@ fun signSingle(it: SecureHash) = keyService.sign(
                 )
         ), pubKey
 )
+
+fun signBatch(txIds: Iterable<SecureHash>, digestService: DigestService = DigestService.sha2_256): BatchSignature {
+    val root = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService)
+
+    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
+    val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
+    return BatchSignature(signature, root)
+}

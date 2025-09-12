@@ -20,7 +20,7 @@ import org.slf4j.Logger
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
-/** Base implementation for a notary service operated by a singe party. */
+/** Base implementation for a notary service operated by a single party. */
 abstract class SinglePartyNotaryService : NotaryService() {
     companion object {
         private val staticLog = contextLogger()
