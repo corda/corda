@@ -123,6 +123,7 @@ buildscript {
     ext.javaassist_version = constants.getProperty("javaassistVersion")
     ext.commons_lang3_version= constants.getProperty("commonsLang3Version")
     ext.nimbus_oauth2_version= constants.getProperty("nimbusOauth2Version")
+    ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
 
     ext.corda_revision = {
         try {
@@ -442,6 +443,11 @@ allprojects {
                         }
                     }
 
+                    // Keep SnakeYaml in sync with Corda Ent
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
+                    }
+
                     // SNYK-JAVA-ORGAPACHECOMMONS-10363251 / CVE-2025-48976
                     // Vulnerability in commons-fileupload2-core@2.0.0-M1
                     // Is a transitive dependency of commons-fileupload2-jakarta@2.0.0-M1
@@ -467,8 +473,6 @@ allprojects {
                     if (details.requested.group == 'com.nimbusds' && details.requested.name == 'oauth2-oidc-sdk') {
                         details.useVersion nimbus_oauth2_version
                     }
-
-
 
                     // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in an upgrade
                     // to Caffeine 3.1.8 to 3.2.1, which causes a plethora of compiler warnings.
