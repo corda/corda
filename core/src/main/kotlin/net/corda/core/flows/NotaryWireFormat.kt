@@ -61,6 +61,7 @@ data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.W
 data class NotarisationPayload(val transaction: Any,
                                val requestSignature: NotarisationRequestSignature,
                                val transactionSignatures: List<DigitalSignature.WithKey>? = null) {
+    constructor(transaction: Any, requestSignature: NotarisationRequestSignature) : this(transaction, requestSignature, null)
     init {
         require(transaction is SignedTransaction || transaction is CoreTransaction) {
             "Unsupported transaction type in the notarisation payload: ${transaction.javaClass.simpleName}"

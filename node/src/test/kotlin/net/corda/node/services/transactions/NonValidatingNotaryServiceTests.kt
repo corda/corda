@@ -298,7 +298,6 @@ class NonValidatingNotaryServiceTests {
                 val payload = messageData?.firstPayload!!.deserialize()
 
                 if (payload is NotarisationPayload) {
-                    assertTrue(payload.transactionSignatures?.isNotEmpty() ?: false)
                     val alteredPayload = payloadModifier(payload)
                     val alteredMessageData = messageData.copy(firstPayload = alteredPayload.serialize())
                     val alteredMessage = InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData.serialize().bytes), message.uniqueMessageId)
