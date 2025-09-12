@@ -74,10 +74,19 @@ class TransactionBuilderDriverTest {
                 createTransaction(node)
             }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
 
-            // Upload the missing dependency
-            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+            node.stop()
+            FileUtils.deleteDirectory(node.baseDirectory.toFile())
 
-            val stx = createTransaction(node)
+            // Now restart the node with the missing dependency
+            val restartedNode = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(cordapp, dependency),
+            )).getOrThrow()
+
+            // Upload the missing dependency manually as it does not contain a contract so it won't be automatically uploaded
+            dependency.jarFile.inputStream().use(restartedNode.rpc::uploadAttachment)
+
+            val stx = createTransaction(restartedNode)
             assertThat(stx.tx.attachments).contains(cordapp.jarFile.hash, dependency.jarFile.hash)
         }
     }
@@ -116,7 +125,7 @@ class TransactionBuilderDriverTest {
             }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
 
             node.stop()
-            FileUtils.deleteDirectory(node.baseDirectory.toFile());
+            FileUtils.deleteDirectory(node.baseDirectory.toFile())
 
             // Now restart the node with the missing dependency
             val restartedNode = startNode(NodeParameters(
@@ -157,6 +166,116 @@ class TransactionBuilderDriverTest {
             assertThatThrownBy { node.rpc.startFlow(::TwoContractTransactionFlow).returnValue.getOrThrow() }
                     .hasMessageContaining("Transaction being built has a missing legacy attachment")
                     .hasMessageContaining("CommercialPaper")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `prevents addition of a dependency from outside of the CorDapps`() {
+        internalDriver(cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP), startNodesInProcess = false) {
+            val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
+
+            cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node without the missing dependency CorDapp
+            val node = startNode(NodeParameters(ALICE_NAME, additionalCordapps = listOf(cordapp))).getOrThrow()
+
+            // Upload the missing dependency but don't include it in the CorDapps of the node
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Ensure the missing dependency causes an issue
+            assertThatThrownBy {
+                createTransaction(node)
+            }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `prevents addition of a legacy dependency from outside of the legacy CorDapps`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false))
+        ) {
+            val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
+            val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
+
+            currentContracts.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node without the missing legacy dependency CorDapp
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts)
+            )).getOrThrow()
+
+            // Upload the missing legacy dependency but don't include it in the legacy CorDapps of the node
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Ensure the missing dependency causes an issue
+            assertThatThrownBy {
+                createTransaction(node)
+            }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `prevents addition of a dependency when multiple CorDapps contain it`() {
+        internalDriver(cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP), startNodesInProcess = false) {
+            val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
+            val duplicateDependency = TestCordapp.of(dependency.jarFile.toUri()).asSigned() as UriTestCordapp
+
+            cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node with the 2 CorDapps which contain the same missing dependency
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(cordapp, dependency, duplicateDependency)
+            )).getOrThrow()
+
+            // Upload the missing dependencies manually as they do not contain a contract so they won't be automatically uploaded
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+            duplicateDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Ensure the duplicate dependency causes an issue
+            assertThatThrownBy {
+                createTransaction(node)
+            }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/CashUtilities. " +
+                    "Found more than one possible attachments")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `allows addition of a legacy dependency when multiple legacy CorDapps contain it`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false))
+        ) {
+            val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
+            val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
+            val duplicateLegacyDependency = TestCordapp.of(legacyDependency.jarFile.toUri()).asSigned() as UriTestCordapp
+
+            currentContracts.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node with the 2 legacy CorDapps which contain the same missing legacy dependency
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts, legacyDependency, duplicateLegacyDependency)
+            )).getOrThrow()
+
+            // Upload the missing legacy dependencies manually as they do not contain a contract so they won't be automatically uploaded
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+            duplicateLegacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            val stx = createTransaction(node)
+            assertThat(stx.tx.legacyAttachments).contains(legacyContracts.jarFile.hash)
+            assertThat(stx.tx.legacyAttachments).size().isEqualTo(2)
+            assertThat(stx.tx.legacyAttachments).containsAnyOf(legacyDependency.jarFile.hash, duplicateLegacyDependency.jarFile.hash)
         }
     }
 

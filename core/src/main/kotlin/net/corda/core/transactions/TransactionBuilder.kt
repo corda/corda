@@ -348,22 +348,31 @@ open class TransactionBuilder(
         }
 
         val attachments = serviceHub.getTrustedClassAttachments(missingClass)
-        val attachment = if (isLegacy) {
+        val attachmentCandidates = if (isLegacy) {
             // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
             val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-            attachments.firstOrNull { it.id in legacyContractCordapps } 
+            attachments.filter { it.id in legacyContractCordapps }
         } else {
-            attachments.firstOrNull()
+            // Any (non-legacy) missing attachments must also be present in the cordapps folder to be attached to a transaction
+            val nonLegacyCordapps = serviceHub.cordappProvider.cordapps.mapToSet { it.jarHash }
+            attachments.filter { it.id in nonLegacyCordapps }
         }
-
+        // We only want to attach an attachment if we can do it in a deterministic manner. Otherwise, the attachment being added can vary between
+        // nodes which build the same transaction but have attachments in a different order in the database. We only enforce this for non-legacy part of transactions
+        // in order to not break existing CordApps that rely on this mechanic.
+        if (!isLegacy && attachmentCandidates.size > 1) {
+            throw IllegalStateException("Transaction being built has a missing attachment for class " +
+                    "$missingClass. Found more than one possible attachments: ${attachmentCandidates.map { it.id }}. It is impossible to choose one in a deterministic way." +
+                    " Please contact the developer of the CorDapp for further instructions.", originalException)
+        }
+        val attachment = attachmentCandidates.firstOrNull()
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
                     "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
                     "further instructions.", originalException)
         }
-
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
-                        Automatically attaching contract dependency $attachment.
+                        Automatically attaching cordapp dependency $attachment.
                         Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
                     """.trimIndent())
 
