@@ -559,9 +559,19 @@ class UniquenessProviderTests(
             txId: SecureHash,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList(),
-            notaryInstructions: List<NotaryInstruction> = emptyList()
+            notaryInstructions: List<NotaryInstruction> = emptyList(),
+            transactionSignatures: List<DigitalSignature.WithKey>? = null
     ): CordaFuture<Result> {
-        return uniquenessProvider.commit(states, txId, identity, requestSignature, timeWindow, references, notaryInstructions)
+        return uniquenessProvider.commit(
+                states,
+                txId,
+                identity,
+                requestSignature,
+                timeWindow,
+                references,
+                notaryInstructions,
+                transactionSignatures
+        )
     }
 
     private fun expectCommitSuccess(

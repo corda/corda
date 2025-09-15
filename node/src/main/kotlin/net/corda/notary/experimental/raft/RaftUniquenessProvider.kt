@@ -17,7 +17,9 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
@@ -224,7 +226,8 @@ class RaftUniquenessProvider(
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>,
-            notaryInstructions: List<NotaryInstruction>
+            notaryInstructions: List<NotaryInstruction>,
+            transactionSignatures: List<DigitalSignature.WithKey>?
     ): CordaFuture<UniquenessProvider.Result> {
         log.debug { "Attempting to commit input states: ${states.joinToString()} for txId: $txId" }
         val commitCommand = CommitTransaction(

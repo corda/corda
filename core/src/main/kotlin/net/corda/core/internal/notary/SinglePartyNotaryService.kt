@@ -5,6 +5,7 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -41,7 +42,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>,
-            notaryInstructions: List<NotaryInstruction>
+            notaryInstructions: List<NotaryInstruction>,
+            transactionSignatures: List<DigitalSignature.WithKey>?
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -57,7 +59,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
                         requestSignature,
                         timeWindow,
                         references,
-                        notaryInstructions
+                        notaryInstructions,
+                        transactionSignatures
                 )
         )
 
@@ -88,7 +91,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
-            val notaryInstructions: List<NotaryInstruction>
+            val notaryInstructions: List<NotaryInstruction>,
+            val transactionSignatures: List<DigitalSignature.WithKey>?
     ) : FlowExternalAsyncOperation<Result> {
 
         override fun execute(deduplicationId: String): CompletableFuture<Result> {
@@ -99,7 +103,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
                     requestSignature,
                     timeWindow,
                     references,
-                    notaryInstructions
+                    notaryInstructions,
+                    transactionSignatures
             ).toCompletableFuture()
         }
     }
