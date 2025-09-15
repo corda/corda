@@ -52,7 +52,7 @@ class NotarisationPayloadSerializationTests {
 
         // uncomment to recreate the data
         // This has to be run on a version of Corda that _has_ transactionSignatures on NotarisationPayload
-        //  val state = issueState(notaryNode.services, notaryParty, notaryNode.info.singleIdentity())
+        // val state = issueState(notaryNode.services, notaryParty, notaryNode.info.singleIdentity())
         // val tx = TransactionBuilder(notaryParty).apply {
         //     addCommand(dummyCommand())
         //     addInputState(state)
@@ -79,12 +79,17 @@ class NotarisationPayloadSerializationTests {
         // uncomment to recreate the data.
         // This has to be run on a version of Corda that _has_ transactionSignatures on NotarisationPayload
         // val state = issueState(notaryNode.services, notaryParty, notaryNode.info.singleIdentity())
-        // val tx = TransactionBuilder(notaryParty).apply {
+        // val stx = TransactionBuilder(notaryParty).apply {
         //    addCommand(dummyCommand())
         //    addInputState(state)
-        // }.toWireTransaction(notaryNode.services)
+        // }.toSignedTransaction(
+        //         notaryNode.services.keyManagementService,
+        //         notaryParty.owningKey,
+        //        SignatureMetadata(PLATFORM_VERSION, Crypto.findSignatureScheme(notaryParty.owningKey).schemeNumberID),
+        //         notaryNode.services
+        // )
         // val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(Crypto.generateKeyPair().public, ByteArray(32)), 0)
-        // val notarisationPayload = NotarisationPayload(tx, requestSignature, listOf(requestSignature.digitalSignature))
+        // val notarisationPayload = NotarisationPayload(stx.coreTransaction, requestSignature, listOf())
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(notarisationPayload, testSerializationContext).bytes)
 
         val url = NotarisationPayloadSerializationTests::class.java.getResource(resource)!!
