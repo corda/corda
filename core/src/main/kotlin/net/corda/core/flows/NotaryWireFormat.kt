@@ -84,6 +84,10 @@ data class NotarisationPayload(val transaction: Any,
             "${transaction::class.java}, it may be that there is a discrepancy between the configured notary type " +
             "(validating/non-validating) and the one advertised on the network parameters."
     )
+
+    fun copy(transaction: Any, requestSignature: NotarisationRequestSignature) {
+        copy(transaction = transaction, requestSignature = requestSignature, transactionSignatures = transactionSignatures)
+    }
 }
 
 /** Payload returned by the notary service flow to the client. */
