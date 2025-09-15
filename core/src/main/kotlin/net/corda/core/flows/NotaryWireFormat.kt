@@ -85,8 +85,8 @@ data class NotarisationPayload(val transaction: Any,
             "(validating/non-validating) and the one advertised on the network parameters."
     )
 
-    fun copy(transaction: Any, requestSignature: NotarisationRequestSignature) {
-        copy(transaction = transaction, requestSignature = requestSignature, transactionSignatures = transactionSignatures)
+    fun copy(transaction: Any, requestSignature: NotarisationRequestSignature): NotarisationPayload {
+        return copy(transaction = transaction, requestSignature = requestSignature, transactionSignatures = transactionSignatures)
     }
 }
 
