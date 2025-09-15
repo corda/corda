@@ -13,6 +13,7 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.randomHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
@@ -561,7 +562,7 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList(),
             notaryInstructions: List<NotaryInstruction> = emptyList(),
-            transactionSignatures: List<DigitalSignature.WithKey>? = null
+            transactionSignatures: List<TransactionSignature>? = null
     ): CordaFuture<Result> {
         return uniquenessProvider.commit(
                 states,

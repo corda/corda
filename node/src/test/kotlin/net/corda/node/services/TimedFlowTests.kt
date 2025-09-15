@@ -6,8 +6,8 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -293,7 +293,7 @@ class TimedFlowTests {
                                 timeWindow: TimeWindow?,
                                 references: List<StateRef>,
                                 notaryInstructions: List<NotaryInstruction>,
-                                transactionSignatures: List<DigitalSignature.WithKey>?): CordaFuture<UniquenessProvider.Result> {
+                                transactionSignatures: List<TransactionSignature>?): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
                         signTransaction(txId)
@@ -314,7 +314,7 @@ class TimedFlowTests {
                 timeWindow: TimeWindow?,
                 references: List<StateRef>,
                 notaryInstructions: List<NotaryInstruction>,
-                transactionSignatures: List<DigitalSignature.WithKey>?
+                transactionSignatures: List<TransactionSignature>?
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")

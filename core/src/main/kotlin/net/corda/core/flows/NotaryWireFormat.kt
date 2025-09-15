@@ -60,7 +60,7 @@ data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.W
 @CordaSerializable
 data class NotarisationPayload(val transaction: Any,
                                val requestSignature: NotarisationRequestSignature,
-                               val transactionSignatures: List<DigitalSignature.WithKey>? = null) {
+                               val transactionSignatures: List<TransactionSignature>? = null) {
     constructor(transaction: Any, requestSignature: NotarisationRequestSignature) : this(transaction, requestSignature, null)
     init {
         require(transaction is SignedTransaction || transaction is CoreTransaction) {

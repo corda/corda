@@ -7,7 +7,6 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.toDigitalSignatureWithKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.BackpressureAwareTimedFlow
 import net.corda.core.internal.FetchDataFlow
@@ -139,7 +138,7 @@ class NotaryFlow {
                                              signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
             val transactionSignatures = if (ctx is WireTransaction) {
-                stx.sigs.takeIf { ctx.notaryInstructions.isNotEmpty() }?.map { it.toDigitalSignatureWithKey() }
+                stx.sigs
             } else {
                 null
             }
@@ -163,7 +162,7 @@ class NotaryFlow {
                             || it == notaryParty
                             || it is NetworkParametersHash
                             || it is NotaryInstruction
-                }) to stx.sigs.takeIf { ctx.notaryInstructions.isNotEmpty() }?.map { it.toDigitalSignatureWithKey() }
+                }) to stx.sigs
                 else -> ctx to null
             }
             session.send(NotarisationPayload(tx, signature, transactionSignatures))

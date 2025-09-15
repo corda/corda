@@ -5,7 +5,6 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -43,7 +42,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             timeWindow: TimeWindow?,
             references: List<StateRef>,
             notaryInstructions: List<NotaryInstruction>,
-            transactionSignatures: List<DigitalSignature.WithKey>?
+            transactionSignatures: List<TransactionSignature>?
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -92,7 +91,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
             val notaryInstructions: List<NotaryInstruction>,
-            val transactionSignatures: List<DigitalSignature.WithKey>?
+            val transactionSignatures: List<TransactionSignature>?
     ) : FlowExternalAsyncOperation<Result> {
 
         override fun execute(deduplicationId: String): CompletableFuture<Result> {

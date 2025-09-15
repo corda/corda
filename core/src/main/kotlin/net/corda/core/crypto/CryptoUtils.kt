@@ -255,11 +255,6 @@ fun random63BitValue(): Long {
 }
 
 /**
- * A utility method to transform a [TransactionSignature] into a [DigitalSignature.WithKey].
- */
-fun TransactionSignature.toDigitalSignatureWithKey() = DigitalSignature.WithKey(by, bytes)
-
-/**
  * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
  * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
  * from [computeNonce].

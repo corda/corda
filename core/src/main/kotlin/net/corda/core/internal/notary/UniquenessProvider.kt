@@ -4,7 +4,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
@@ -35,7 +34,7 @@ interface UniquenessProvider {
             timeWindow: TimeWindow?,
             references: List<StateRef>,
             notaryInstructions: List<NotaryInstruction>,
-            transactionSignatures: List<DigitalSignature.WithKey>?
+            transactionSignatures: List<TransactionSignature>?
     ): CordaFuture<Result>
 
     /**
