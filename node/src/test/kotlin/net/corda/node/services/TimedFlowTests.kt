@@ -293,7 +293,7 @@ class TimedFlowTests {
                                 timeWindow: TimeWindow?,
                                 references: List<StateRef>,
                                 notaryInstructions: List<NotaryInstruction>,
-                                transactionSignatures: List<TransactionSignature>?): CordaFuture<UniquenessProvider.Result> {
+                                transactionSignatures: List<TransactionSignature>): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
                         signTransaction(txId)
@@ -314,7 +314,7 @@ class TimedFlowTests {
                 timeWindow: TimeWindow?,
                 references: List<StateRef>,
                 notaryInstructions: List<NotaryInstruction>,
-                transactionSignatures: List<TransactionSignature>?
+                transactionSignatures: List<TransactionSignature>
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")

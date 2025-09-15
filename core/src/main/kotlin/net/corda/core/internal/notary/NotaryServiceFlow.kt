@@ -94,7 +94,7 @@ abstract class NotaryServiceFlow(
                         tx.timeWindow,
                         tx.references,
                         tx.notaryInstructions,
-                        requestPayload.transactionSignatures
+                        requestPayload.transactionSignatures ?: emptyList()
                 )
             }
         } catch (e: NotaryInternalException) {

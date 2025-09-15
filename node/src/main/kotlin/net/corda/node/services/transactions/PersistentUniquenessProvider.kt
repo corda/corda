@@ -186,7 +186,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             timeWindow: TimeWindow?,
             references: List<StateRef>,
             notaryInstructions: List<NotaryInstruction>,
-            transactionSignatures: List<TransactionSignature>?
+            transactionSignatures: List<TransactionSignature>
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)

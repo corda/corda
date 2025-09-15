@@ -562,7 +562,7 @@ class UniquenessProviderTests(
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList(),
             notaryInstructions: List<NotaryInstruction> = emptyList(),
-            transactionSignatures: List<TransactionSignature>? = null
+            transactionSignatures: List<TransactionSignature> = emptyList()
     ): CordaFuture<Result> {
         return uniquenessProvider.commit(
                 states,

@@ -136,8 +136,7 @@ class NotaryFlow {
         @Suspendable
         private fun sendAndReceiveValidating(session: FlowSession,
                                              signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
-            val ctx = stx.coreTransaction
-            val transactionSignatures = if (ctx is WireTransaction) {
+            val transactionSignatures = if (stx.coreTransaction is WireTransaction) {
                 stx.sigs
             } else {
                 null

@@ -42,7 +42,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             timeWindow: TimeWindow?,
             references: List<StateRef>,
             notaryInstructions: List<NotaryInstruction>,
-            transactionSignatures: List<TransactionSignature>?
+            transactionSignatures: List<TransactionSignature>
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -91,7 +91,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
             val notaryInstructions: List<NotaryInstruction>,
-            val transactionSignatures: List<TransactionSignature>?
+            val transactionSignatures: List<TransactionSignature>
     ) : FlowExternalAsyncOperation<Result> {
 
         override fun execute(deduplicationId: String): CompletableFuture<Result> {

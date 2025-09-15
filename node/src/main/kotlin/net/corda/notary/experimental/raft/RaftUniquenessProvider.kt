@@ -226,7 +226,7 @@ class RaftUniquenessProvider(
             timeWindow: TimeWindow?,
             references: List<StateRef>,
             notaryInstructions: List<NotaryInstruction>,
-            transactionSignatures: List<TransactionSignature>?
+            transactionSignatures: List<TransactionSignature>
     ): CordaFuture<UniquenessProvider.Result> {
         log.debug { "Attempting to commit input states: ${states.joinToString()} for txId: $txId" }
         val commitCommand = CommitTransaction(
