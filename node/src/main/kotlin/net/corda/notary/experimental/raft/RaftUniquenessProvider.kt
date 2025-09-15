@@ -19,7 +19,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory

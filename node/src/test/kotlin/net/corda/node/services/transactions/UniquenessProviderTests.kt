@@ -554,6 +554,7 @@ class UniquenessProviderTests(
         assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf(FakeNotaryInstruction()))).isFalse
     }
 
+    @Suppress("LongParameterList")
     private fun commit(
             states: List<StateRef>,
             txId: SecureHash,
