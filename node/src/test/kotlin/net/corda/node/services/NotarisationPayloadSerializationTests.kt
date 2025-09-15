@@ -52,7 +52,7 @@ class NotarisationPayloadSerializationTests {
 
         // uncomment to recreate the data
         // This has to be run on a version of Corda that _has_ transactionSignatures on NotarisationPayload
-        // val state = issueState(notaryNode.services, notaryParty, notaryNode.info.singleIdentity())
+        //  val state = issueState(notaryNode.services, notaryParty, notaryNode.info.singleIdentity())
         // val tx = TransactionBuilder(notaryParty).apply {
         //     addCommand(dummyCommand())
         //     addInputState(state)
