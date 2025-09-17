@@ -7,6 +7,7 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -291,7 +292,8 @@ class TimedFlowTests {
                                 requestSignature: NotarisationRequestSignature,
                                 timeWindow: TimeWindow?,
                                 references: List<StateRef>,
-                                notaryInstructions: List<NotaryInstruction>): CordaFuture<UniquenessProvider.Result> {
+                                notaryInstructions: List<NotaryInstruction>,
+                                transactionSignatures: List<TransactionSignature>): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
                         signTransaction(txId)
@@ -311,7 +313,8 @@ class TimedFlowTests {
                 requestSignature: NotarisationRequestSignature,
                 timeWindow: TimeWindow?,
                 references: List<StateRef>,
-                notaryInstructions: List<NotaryInstruction>
+                notaryInstructions: List<NotaryInstruction>,
+                transactionSignatures: List<TransactionSignature>
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
@@ -322,7 +325,16 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references, notaryInstructions)
+                return super.commitInputStates(
+                        inputs,
+                        txId,
+                        caller,
+                        requestSignature,
+                        timeWindow,
+                        references,
+                        notaryInstructions,
+                        transactionSignatures
+                )
             }
             return UniquenessProvider.Result.Failure(NotaryError.General(Throwable("leave me alone")))
         }

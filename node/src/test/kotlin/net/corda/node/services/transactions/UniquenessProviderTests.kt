@@ -13,6 +13,7 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.randomHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
@@ -554,14 +555,25 @@ class UniquenessProviderTests(
         assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf(FakeNotaryInstruction()))).isFalse
     }
 
+    @Suppress("LongParameterList")
     private fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList(),
-            notaryInstructions: List<NotaryInstruction> = emptyList()
+            notaryInstructions: List<NotaryInstruction> = emptyList(),
+            transactionSignatures: List<TransactionSignature> = emptyList()
     ): CordaFuture<Result> {
-        return uniquenessProvider.commit(states, txId, identity, requestSignature, timeWindow, references, notaryInstructions)
+        return uniquenessProvider.commit(
+                states,
+                txId,
+                identity,
+                requestSignature,
+                timeWindow,
+                references,
+                notaryInstructions,
+                transactionSignatures
+        )
     }
 
     private fun expectCommitSuccess(

@@ -6,6 +6,7 @@ import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -161,7 +162,8 @@ class JPAUniquenessProvider(
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>,
-            notaryInstructions: List<NotaryInstruction>
+            notaryInstructions: List<NotaryInstruction>,
+            transactionSignatures: List<TransactionSignature>
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),

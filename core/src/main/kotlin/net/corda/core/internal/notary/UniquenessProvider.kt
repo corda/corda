@@ -33,7 +33,8 @@ interface UniquenessProvider {
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>,
-            notaryInstructions: List<NotaryInstruction>
+            notaryInstructions: List<NotaryInstruction>,
+            transactionSignatures: List<TransactionSignature>
     ): CordaFuture<Result>
 
     /**

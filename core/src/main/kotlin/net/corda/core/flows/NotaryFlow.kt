@@ -136,7 +136,12 @@ class NotaryFlow {
         @Suspendable
         private fun sendAndReceiveValidating(session: FlowSession,
                                              signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
-            val payload = NotarisationPayload(stx, signature)
+            val transactionSignatures = if (stx.coreTransaction is WireTransaction) {
+                stx.sigs
+            } else {
+                null
+            }
+            val payload = NotarisationPayload(stx, signature, transactionSignatures)
             subFlow(NotarySendTransactionFlow(session, payload))
             return receiveResultOrTiming(session)
         }
@@ -147,8 +152,8 @@ class NotaryFlow {
                                                 session: FlowSession,
                                                 signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
-            val tx = when (ctx) {
-                is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
+            val (tx, transactionSignatures) = when (ctx) {
+                is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction() to null
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
                     it is StateRef
                             || it is ReferenceStateRef
@@ -156,10 +161,10 @@ class NotaryFlow {
                             || it == notaryParty
                             || it is NetworkParametersHash
                             || it is NotaryInstruction
-                })
-                else -> ctx
+                }) to stx.sigs
+                else -> ctx to null
             }
-            session.send(NotarisationPayload(tx, signature))
+            session.send(NotarisationPayload(tx, signature, transactionSignatures))
             return receiveResultOrTiming(session)
         }
 
