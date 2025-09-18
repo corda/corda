@@ -28,7 +28,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
-            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>()
+            InVMConnector::class.staticField<ExecutorService>("executorService").value = rigorousMock<ExecutorService>()
                     .also {
                 doAnswer {
                     inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
