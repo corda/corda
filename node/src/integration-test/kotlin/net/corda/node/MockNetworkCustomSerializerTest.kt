@@ -4,6 +4,7 @@ import net.corda.contracts.serialization.custom.Currantsy
 import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.flows.serialization.custom.CustomSerializerFlow
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.internal.assertNotCordaSerializable
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.cordappWithPackages

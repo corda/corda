@@ -34,7 +34,7 @@ class AzureInstantiator(private val azure: AzureResourceManager,
         val registryAddress = registry.loginServerUrl()
         val (username, password) = registry.parseCredentials()
         val mountName = "node-setup"
-        return CompletableFuture.supplyAsync(Supplier {
+        return CompletableFuture.supplyAsync({
             val containerGroup = azure.containerGroups().define(buildIdent(instanceName))
                     .withRegion(resourceGroup.regionName())
                     .withExistingResourceGroup(resourceGroup)
@@ -56,7 +56,7 @@ class AzureInstantiator(private val azure: AzureResourceManager,
                     .create()
             val fqdn = containerGroup.fqdn()
             LOG.info("Completed instantiation: $instanceName is running at $fqdn with port(s) $portsToOpen exposed")
-            fqdn to portsToOpen.associate { it to it }
+            fqdn to portsToOpen.associateWith { it }
         }, executor)
     }
 
