@@ -67,7 +67,7 @@ abstract class NodeBasedTest @JvmOverloads constructor(
 
     @Before
     open fun setUp() {
-        val notaryInfos = notaries.map { NotaryInfo(installNotary(it), true) } // todo only validating ones
+        val notaryInfos = notaries.map { NotaryInfo(installNotary(it), true, null) } // todo only validating ones
         defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(notaries = notaryInfos))
         notaries.mapTo(notaryNodes) { startNode(it) }
     }

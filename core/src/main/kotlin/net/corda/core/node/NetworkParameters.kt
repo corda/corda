@@ -283,7 +283,7 @@ private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, 
  * @property validating Indicates if the notary is validating.
  */
 @CordaSerializable
-data class NotaryInfo(val identity: Party, val validating: Boolean)
+data class NotaryInfo(val identity: Party, val validating: Boolean, val protocol: String?)
 
 /**
  * When a Corda feature cannot be used due to the node's compatibility zone not enforcing a high enough minimum platform

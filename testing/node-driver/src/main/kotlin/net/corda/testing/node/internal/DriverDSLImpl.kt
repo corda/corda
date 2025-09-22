@@ -542,7 +542,7 @@ class DriverDSLImpl(
                     }
                     else -> throw UnsupportedOperationException("Cluster spec ${spec.cluster} not supported by Driver")
                 }
-                Pair(config, NotaryInfo(identity, spec.validating))
+                Pair(config, NotaryInfo(identity, spec.validating, null))
             }
         }
     }
@@ -571,7 +571,7 @@ class DriverDSLImpl(
             if (startNodesInProcess) {
                 executorService.fork {
                     val nodeInfo = Node(config.corda, MOCK_VERSION_INFO, initialiseSerialization = false).generateAndSaveNodeInfo()
-                    Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                    Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating, null))
                 }
             } else {
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
@@ -582,7 +582,7 @@ class DriverDSLImpl(
                         paths.single { it.name.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
                     }
                     val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
-                    Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                    Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating, null))
                 }
             }
         }
