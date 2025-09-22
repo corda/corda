@@ -14,7 +14,6 @@ import net.corda.networkbuilder.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
-import java.util.function.Supplier
 
 class AzureInstantiator(private val azure: AzureResourceManager,
                         private val registry: Registry,
@@ -66,7 +65,6 @@ class AzureInstantiator(private val azure: AzureResourceManager,
         return "${buildIdent(instanceName)}.${resourceGroup.region().name()}.azurecontainer.io"
     }
 
-    @Suppress("MagicNumber")
     fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
         return try {
             val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
