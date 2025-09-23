@@ -405,7 +405,7 @@ constructor(private val initSerEnv: Boolean,
                 val validating = nodeConfig.getBooleanCaseInsensitive("notary.validating")
                 // And the node-info file contains the notary's identity
                 val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
-                NotaryInfo(nodeInfo.notaryIdentity(), validating, null)
+                NotaryInfo(nodeInfo.notaryIdentity(), validating)
             } else {
                 null
             }

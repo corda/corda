@@ -281,9 +281,12 @@ private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, 
  * Data class storing information about notaries available in the network.
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
+ * @property protocol details the protocol to be used with this notary. Not used at the moment.
  */
 @CordaSerializable
-data class NotaryInfo(val identity: Party, val validating: Boolean, val protocol: String?)
+data class NotaryInfo(val identity: Party, val validating: Boolean, val protocol: String?) {
+    constructor(identity: Party, validating: Boolean) : this(identity, validating, null)
+}
 
 /**
  * When a Corda feature cannot be used due to the node's compatibility zone not enforcing a high enough minimum platform

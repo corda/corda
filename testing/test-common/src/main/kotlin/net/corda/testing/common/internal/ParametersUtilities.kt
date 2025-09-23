@@ -47,7 +47,7 @@ fun testNetworkParameters(
  * Note that it returns new network parameters with a different hash.
  */
 fun NetworkParameters.addNotary(party: Party, validating: Boolean = true): NetworkParameters {
-    val notaryInfo = NotaryInfo(party, validating, null)
+    val notaryInfo = NotaryInfo(party, validating)
     val notaryList = notaries + notaryInfo
     return copy(notaries = notaryList)
 }
