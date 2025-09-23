@@ -21,7 +21,7 @@ import java.lang.reflect.Method
  */
 class SerializationEnvironmentExtension(
         private val inheritable: Boolean = false
-) : InvocationInterceptor, ParameterResolver {
+) : BeforeEachCallback, InvocationInterceptor, ParameterResolver {
 
     companion object {
         init {
@@ -37,10 +37,15 @@ class SerializationEnvironmentExtension(
         }
     }
 
-    private var env: SerializationEnvironment? = null
+    private lateinit var env: SerializationEnvironment
 
     val serializationFactory: SerializationFactory
-        get() = env?.serializationFactory ?: throw IllegalStateException("Environment not initialized")
+        get() = env.serializationFactory
+
+    override fun beforeEach(context: ExtensionContext) {
+        // Eager init of environment before parameter resolution
+        env = createTestSerializationEnv()
+    }
 
     /**
      * Wraps the test body in the test serialization environment.
@@ -50,10 +55,7 @@ class SerializationEnvironmentExtension(
             context: ReflectiveInvocationContext<Method>,
             extensionContext: ExtensionContext
     ) {
-        // Ensure env is initialized
-        val environment = env ?: createTestSerializationEnv().also { env = it }
-
-        environment.asTestContextEnv {
+        env.asTestContextEnv {
             invocation.proceed()
         }
     }
@@ -72,10 +74,6 @@ class SerializationEnvironmentExtension(
             parameterContext: ParameterContext,
             extensionContext: ExtensionContext
     ): Any {
-        // Lazily initialize env if needed
-        if (env == null) {
-            env = createTestSerializationEnv()
-        }
-        return env!!.serializationFactory
+        return serializationFactory
     }
 }
