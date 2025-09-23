@@ -4,9 +4,18 @@ import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.coretesting.internal.*
+import net.corda.coretesting.internal.asTestContextEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.testThreadFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
-import org.junit.jupiter.api.extension.*
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.InvocationInterceptor
+import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.api.extension.ParameterResolver
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.whenever
@@ -60,7 +69,7 @@ class SerializationEnvironmentExtension(
         }
     }
 
-    /**
+    /*
      * Allow tests to inject [SerializationFactory] directly as a parameter.
      */
     override fun supportsParameter(
