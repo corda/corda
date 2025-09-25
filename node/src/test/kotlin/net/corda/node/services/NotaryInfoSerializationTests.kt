@@ -10,7 +10,6 @@ import net.corda.testing.core.TestIdentity
 import org.junit.Test
 import java.net.URI
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 class NotaryInfoSerializationTests {
     private val notaryName = CordaX500Name("Notary", "Zurich", "CH")
@@ -49,6 +48,8 @@ class NotaryInfoSerializationTests {
         val resource = "NotaryInfoTest.notaryInfoWithProtocol"
         val sf = testDefaultFactory()
 
+        val expectedNotaryInfo = NotaryInfo(notaryParty, false)
+
         // uncomment to recreate the data
         // This has to be run on a version of Corda that has the `protocol` field in NotaryInfo
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf)
@@ -59,8 +60,7 @@ class NotaryInfoSerializationTests {
         val deserializedNotaryInfo = DeserializationInput(sf)
                 .deserialize(SerializedBytes<NotaryInfo>(sc2), testSerializationContext)
 
-        assertEquals(notaryParty, deserializedNotaryInfo.identity)
-        assertFalse(deserializedNotaryInfo.validating)
+        assertEquals(expectedNotaryInfo, deserializedNotaryInfo)
     }
 
 }
