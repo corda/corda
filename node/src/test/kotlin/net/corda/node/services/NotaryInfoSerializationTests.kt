@@ -31,7 +31,7 @@ class NotaryInfoSerializationTests {
         val expectedNotaryInfo = NotaryInfo(notaryParty, false)
 
         // uncomment to recreate the data
-        // This has to be run on a version of Corda that _has_ protocol in NotaryInfo
+        // This has to be run on a version of Corda that does not have the `protocol` field in NotaryInfo
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(expectedNotaryInfo, testSerializationContext).bytes)
 
         val url = NotaryInfoSerializationTests::class.java.getResource(resource)!!
@@ -50,7 +50,7 @@ class NotaryInfoSerializationTests {
         val sf = testDefaultFactory()
 
         // uncomment to recreate the data
-        // This has to be run on a version of Corda that _has_not_ protocol in NotaryInfo
+        // This has to be run on a version of Corda that has the `protocol` field in NotaryInfo
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf)
         //        .serialize(NotaryInfo(notaryParty, false, "TEST_PROTOCOL"), testSerializationContext).bytes)
 
