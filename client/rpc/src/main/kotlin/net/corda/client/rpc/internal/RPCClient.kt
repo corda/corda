@@ -37,21 +37,24 @@ class RPCClient<I : RPCOps>(
         private val transport: TransportConfiguration,
         private val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-        private val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
+        private val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList(),
+        private val useGlobalThreadPools: Boolean = false
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            useGlobalThreadPools: Boolean = false
+    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext, useGlobalThreadPools = useGlobalThreadPools)
 
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SslConfiguration,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            useGlobalThreadPools: Boolean = false
+    ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext, useGlobalThreadPools = useGlobalThreadPools)
 
     /**
      * A way to create RPC connections to a pool of RPC addresses for resiliency
@@ -60,12 +63,13 @@ class RPCClient<I : RPCOps>(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
             configuration,
             serializationContext,
-            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) }
+            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) }, useGlobalThreadPools = useGlobalThreadPools
     )
 
     companion object {
@@ -95,7 +99,7 @@ class RPCClient<I : RPCOps>(
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
                 reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
-                isUseGlobalPools = nodeSerializationEnv != null
+                isUseGlobalPools = useGlobalThreadPools || nodeSerializationEnv != null
                 // By default RoundRobinConnectionLoadBalancingPolicy is used that picks first endpoint from the pool
                 // at random. This may be undesired and non-deterministic. For more information, see [RoundRobinConnectionPolicy]
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName

@@ -58,7 +58,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param externalTrace external [Trace] for correlation.
  * @param impersonatedActor the actor on behalf of which all the invocations will be made.
  * @param targetLegalIdentity in case of multi-identity RPC endpoint specific legal identity to which the calls must be addressed.
- */
+ * @param useGlobalThreadPools If `true`, Artemis global thread pools are used for all RPC clients. This allows multiple
+ *  connections to share a bounded set of scheduler and worker threads, controlled via Artemis system properties
+ *  (`activemq.artemis.client.global.thread.pool.max.size`,
+ *  `activemq.artemis.client.global.scheduled.thread.pool.core.size`).
+ *  Defaults to `false`, meaning each client creates its own pools.
+ *  */
 class MultiRPCClient<I : RPCOps> private constructor(
         private val hostAndPort: NetworkHostAndPort?,
         private val haAddressPool: List<NetworkHostAndPort>,
@@ -71,7 +76,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
         private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null,
         private val externalTrace: Trace? = null,
         private val impersonatedActor: Actor? = null,
-        private val targetLegalIdentity: CordaX500Name? = null
+        private val targetLegalIdentity: CordaX500Name? = null,
+        private val useGlobalThreadPools: Boolean = false
 ) : AutoCloseable {
 
     private companion object {
@@ -84,14 +90,16 @@ class MultiRPCClient<I : RPCOps> private constructor(
             rpcOpsClass: Class<I>,
             username: String,
             password: String,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
             rpcOpsClass = rpcOpsClass,
             username = username,
             password = password,
-            configuration = configuration
+            configuration = configuration,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     constructor(
@@ -100,7 +108,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             username: String,
             password: String,
             classLoader: ClassLoader,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             rpcOpsClass = rpcOpsClass,
@@ -108,7 +117,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password = password,
             configuration = configuration,
             sslConfiguration = null,
-            classLoader = classLoader
+            classLoader = classLoader,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     constructor(
@@ -117,7 +127,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             username: String,
             password: String,
             sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null
+            classLoader: ClassLoader? = null,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -125,7 +136,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             username = username,
             password = password,
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
@@ -136,7 +148,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password: String,
             configuration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions?,
-            classLoader: ClassLoader? = null
+            classLoader: ClassLoader? = null,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -145,7 +158,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password = password,
             configuration = configuration,
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
@@ -156,7 +170,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password: String,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null
+            classLoader: ClassLoader? = null,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = null,
             haAddressPool = haAddressPool,
@@ -165,7 +180,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password = password,
             configuration = configuration,
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
@@ -180,7 +196,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             classLoader: ClassLoader? = null,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            targetLegalIdentity: CordaX500Name? = null
+            targetLegalIdentity: CordaX500Name? = null,
+            useGlobalThreadPools: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -193,7 +210,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             customSerializers = customSerializers,
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
-            targetLegalIdentity = targetLegalIdentity
+            targetLegalIdentity = targetLegalIdentity,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
@@ -208,7 +226,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             classLoader: ClassLoader? = null,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            targetLegalIdentity: CordaX500Name? = null
+            targetLegalIdentity: CordaX500Name? = null,
+            useGlobalThreadPools: Boolean = false
 
     ) : this(
             hostAndPort = null,
@@ -222,7 +241,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
             customSerializers = customSerializers,
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
-            targetLegalIdentity = targetLegalIdentity
+            targetLegalIdentity = targetLegalIdentity,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     init {
@@ -248,9 +268,11 @@ class MultiRPCClient<I : RPCOps> private constructor(
             haAddressPool.isEmpty() -> RPCClient(
                     ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
                     configuration,
-                    serializationContext)
+                    serializationContext,
+                    useGlobalThreadPools = useGlobalThreadPools
+            )
             else -> {
-                RPCClient(haAddressPool, sslConfiguration, configuration, serializationContext)
+                RPCClient(haAddressPool, sslConfiguration, configuration, serializationContext, useGlobalThreadPools)
             }
         }
     }
