@@ -287,7 +287,7 @@ private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, 
 data class NotaryInfo(val identity: Party, val validating: Boolean, val protocol: String?) {
     constructor(identity: Party, validating: Boolean) : this(identity, validating, null)
 
-    fun copy(identity: Party, validating: Boolean): NotaryInfo = copy(identity = identity, validating = validating, protocol = null)
+    fun copy(identity: Party, validating: Boolean): NotaryInfo = copy(identity = identity, validating = validating, protocol = protocol)
 }
 
 /**
