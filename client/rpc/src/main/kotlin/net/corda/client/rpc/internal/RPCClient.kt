@@ -44,16 +44,30 @@ class RPCClient<I : RPCOps>(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext, useGlobalThreadPools = useGlobalThreadPools)
 
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SslConfiguration,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: SslConfiguration,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext, useGlobalThreadPools = useGlobalThreadPools)
 
     /**
@@ -63,13 +77,29 @@ class RPCClient<I : RPCOps>(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-            useGlobalThreadPools: Boolean = false
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(
             rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
             configuration,
             serializationContext,
-            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) }, useGlobalThreadPools = useGlobalThreadPools
+            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) }
+    )
+
+    /**
+     * A way to create RPC connections to a pool of RPC addresses for resiliency
+     */
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            useGlobalThreadPools: Boolean
+    ) : this(
+            rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
+            configuration,
+            serializationContext,
+            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) },
+            useGlobalThreadPools
     )
 
     companion object {

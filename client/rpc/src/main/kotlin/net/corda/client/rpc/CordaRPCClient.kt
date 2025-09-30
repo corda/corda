@@ -427,8 +427,18 @@ class CordaRPCClient private constructor(
     @JvmOverloads
     constructor(
             hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration
+    )
+
+    @JvmOverloads
+    constructor(
+            hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -439,8 +449,19 @@ class CordaRPCClient private constructor(
     constructor(
             hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            classLoader: ClassLoader
+    ): this(
+            hostAndPort,
+            configuration,
+            null,
+            classLoader = classLoader
+    )
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             classLoader: ClassLoader,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ): this(
             hostAndPort,
             configuration,
@@ -452,8 +473,19 @@ class CordaRPCClient private constructor(
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -467,8 +499,22 @@ class CordaRPCClient private constructor(
             hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions?,
+            classLoader: ClassLoader? = null
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
+
+    @JvmOverloads
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration,
+            sslConfiguration: ClientRpcSslOptions?,
             classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -483,8 +529,22 @@ class CordaRPCClient private constructor(
             haAddressPool: List<NetworkHostAndPort>,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader
+    )
+
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = null,
             haAddressPool = haAddressPool,
@@ -500,8 +560,24 @@ class CordaRPCClient private constructor(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers
+    )
+
+    @JvmOverloads
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
             customSerializers: Set<SerializationCustomSerializer<*, *>>?,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -518,8 +594,24 @@ class CordaRPCClient private constructor(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers
+    )
+
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
             customSerializers: Set<SerializationCustomSerializer<*, *>>?,
-            useGlobalThreadPools: Boolean = false
+            useGlobalThreadPools: Boolean
     ) : this(
             hostAndPort = null,
             haAddressPool = haAddressPool,
