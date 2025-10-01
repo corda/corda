@@ -409,11 +409,31 @@ class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -
  * @param customSerializers a set of [SerializationCustomSerializer]s to be used. If this parameter is specified, then no classpath scanning
  *  will be performed for custom serializers, the provided ones will be used instead. This parameter serves as a more user-friendly option
  *  to specify your serializers and disable the classpath scanning (e.g. for performance reasons).
- * @param useGlobalThreadPools If `true`, Artemis global thread pools are used for all RPC clients. This allows multiple
- *  connections to share a bounded set of scheduler and worker threads, controlled via Artemis system properties
- *  (`activemq.artemis.client.global.thread.pool.max.size`, `activemq.artemis.client.global.scheduled.thread.pool.core.size`).
- *  Defaults to `false`, meaning each client creates its own pools.
- */
+ * @param useGlobalThreadPools If `true`, Artemis global thread pools are used for all RPC clients.
+ * This allows multiple connections to share a bounded set of scheduler and worker threads, rather
+ * than creating dedicated pools per client.
+ *
+ * The global pool sizes can be controlled in two ways:
+ *
+ * 1. **System properties** (evaluated when global executors are first created):
+ *    - `activemq.artemis.client.global.thread.pool.max.size` — maximum number of worker threads
+ *    - `activemq.artemis.client.global.scheduled.thread.pool.core.size` — core scheduled threads
+ *
+ * 2. **Programmatic configuration via static methods on
+ *    [org.apache.activemq.artemis.api.core.client.ActiveMQClient](https://activemq.apache.org/components/artemis/documentation/javadocs/javadoc-latest/org/apache/activemq/artemis/api/core/client/ActiveMQClient.html):**
+ *    - [ActiveMQClient.initializeGlobalThreadPoolProperties] — initialises the global thread pools
+ *      properties from System properties.
+ *    - [ActiveMQClient.setGlobalThreadPoolProperties] — allows programmatical configuration of
+ *      global thread pools properties, such as `globalThreadMaxPoolSize`.
+ *    - [ActiveMQClient.injectPools] — allows supplying custom `ExecutorService` and
+ *      `ScheduledExecutorService` instances to override the global pools entirely.
+ *
+ * To check or update the currently configured pools, follow the static methods in
+ * ActiveMQClient that manage the global executors. These are consulted whenever
+ * `useGlobalThreadPools = true` is set.
+ *
+ * Defaults to `false`, meaning each client creates and manages its own dedicated pools.
+*/
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort?,
         private val haAddressPool: List<NetworkHostAndPort>,
