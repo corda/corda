@@ -454,7 +454,6 @@ class CordaRPCClient private constructor(
             configuration = configuration
     )
 
-
     constructor(
             hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
@@ -466,7 +465,6 @@ class CordaRPCClient private constructor(
             classLoader = classLoader
     )
 
-
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
@@ -477,7 +475,6 @@ class CordaRPCClient private constructor(
             sslConfiguration = sslConfiguration,
             classLoader = classLoader
     )
-
 
     @JvmOverloads
     constructor(
@@ -493,7 +490,6 @@ class CordaRPCClient private constructor(
             classLoader = classLoader
     )
 
-
     @JvmOverloads
     constructor(
             haAddressPool: List<NetworkHostAndPort>,
@@ -507,7 +503,6 @@ class CordaRPCClient private constructor(
             sslConfiguration = sslConfiguration,
             classLoader = classLoader
     )
-
 
     @JvmOverloads
     constructor(
