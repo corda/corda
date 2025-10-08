@@ -119,24 +119,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
             configuration = configuration
     )
 
-    @JvmOverloads
-    constructor(
-            hostAndPort: NetworkHostAndPort,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = hostAndPort,
-            haAddressPool = emptyList(),
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            configuration = configuration,
-            useGlobalThreadPools = useGlobalThreadPools
-    )
-
     constructor(
             hostAndPort: NetworkHostAndPort,
             rpcOpsClass: Class<I>,
@@ -159,25 +141,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
             rpcOpsClass: Class<I>,
             username: String,
             password: String,
-            classLoader: ClassLoader,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = hostAndPort,
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            configuration = configuration,
-            sslConfiguration = null,
-            classLoader = classLoader,
-            useGlobalThreadPools = useGlobalThreadPools
-    )
-
-    constructor(
-            hostAndPort: NetworkHostAndPort,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
             sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null
     ) : this(
@@ -188,25 +151,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
             password = password,
             sslConfiguration = sslConfiguration,
             classLoader = classLoader
-    )
-
-    constructor(
-            hostAndPort: NetworkHostAndPort,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
-            sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = hostAndPort,
-            haAddressPool = emptyList(),
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            sslConfiguration = sslConfiguration,
-            classLoader = classLoader,
-            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
@@ -231,28 +175,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
 
     @JvmOverloads
     constructor(
-            hostAndPort: NetworkHostAndPort,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
-            configuration: CordaRPCClientConfiguration,
-            sslConfiguration: ClientRpcSslOptions?,
-            classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = hostAndPort,
-            haAddressPool = emptyList(),
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            configuration = configuration,
-            sslConfiguration = sslConfiguration,
-            classLoader = classLoader,
-            useGlobalThreadPools = useGlobalThreadPools
-    )
-
-    @JvmOverloads
-    constructor(
             haAddressPool: List<NetworkHostAndPort>,
             rpcOpsClass: Class<I>,
             username: String,
@@ -269,28 +191,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
             configuration = configuration,
             sslConfiguration = sslConfiguration,
             classLoader = classLoader
-    )
-
-    @JvmOverloads
-    constructor(
-            haAddressPool: List<NetworkHostAndPort>,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = null,
-            haAddressPool = haAddressPool,
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            configuration = configuration,
-            sslConfiguration = sslConfiguration,
-            classLoader = classLoader,
-            useGlobalThreadPools = useGlobalThreadPools
     )
 
     @JvmOverloads
