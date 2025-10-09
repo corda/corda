@@ -25,12 +25,8 @@ import java.lang.reflect.Method
 
 /**
  * A JUnit 5 extension that sets up a [SerializationEnvironment] for tests.
- *
- * @param inheritable whether new threads inherit the environment, use sparingly.
  */
-class SerializationEnvironmentExtension(
-        private val inheritable: Boolean = false
-) : BeforeEachCallback, InvocationInterceptor, ParameterResolver {
+class SerializationEnvironmentExtension : BeforeEachCallback, InvocationInterceptor, ParameterResolver {
 
     companion object {
         init {
