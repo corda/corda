@@ -28,6 +28,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observer
+import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadPoolExecutor
 import kotlin.test.assertEquals
@@ -154,6 +155,12 @@ class MultiRpcClientTest {
 
     @Test(timeout = 300_000)
     fun `client with useGlobalThreadPools set to false should not start global thread pools`() {
+        // Reset global thread pools before the test
+        val emptyThreadPool = Executors.newCachedThreadPool()
+        val emptyScheduledPool = Executors.newScheduledThreadPool(0)
+        val emptyFlowControlPool = Executors.newCachedThreadPool()
+        ActiveMQClient.injectPools(emptyThreadPool, emptyScheduledPool, emptyFlowControlPool)
+
         // Allocate named port to be used for RPC interaction
         val rpcAddress = incrementalPortAllocation().nextHostAndPort()
         val rpcUser = User("MultiRpcClient1", "MultiRpcClient1Pwd", setOf(all()))
