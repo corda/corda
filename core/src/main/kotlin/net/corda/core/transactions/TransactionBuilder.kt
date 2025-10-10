@@ -284,7 +284,7 @@ open class TransactionBuilder(
         }
     }
 
-    fun extractMissingClass(throwable: Throwable): String? {
+    private fun extractMissingClass(throwable: Throwable): String? {
         var current = throwable
         while (true) {
             if (current is ClassNotFoundException) {
