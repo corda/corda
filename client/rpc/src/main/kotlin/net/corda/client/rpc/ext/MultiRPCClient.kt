@@ -119,24 +119,6 @@ class MultiRPCClient<I : RPCOps> private constructor(
             configuration = configuration
     )
 
-    @JvmOverloads
-    constructor(
-            hostAndPort: NetworkHostAndPort,
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            useGlobalThreadPools: Boolean
-    ) : this(
-            hostAndPort = hostAndPort,
-            haAddressPool = emptyList(),
-            rpcOpsClass = rpcOpsClass,
-            username = username,
-            password = password,
-            configuration = configuration,
-            useGlobalThreadPools = useGlobalThreadPools
-    )
-
     constructor(
             hostAndPort: NetworkHostAndPort,
             rpcOpsClass: Class<I>,

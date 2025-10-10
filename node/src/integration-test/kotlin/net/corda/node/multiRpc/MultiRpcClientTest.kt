@@ -5,6 +5,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import net.corda.client.rpc.ConnectionFailureException
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.ext.MultiRPCClient
 import net.corda.client.rpc.ext.RPCConnectionListener
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
@@ -108,8 +109,21 @@ class MultiRpcClientTest {
         val rpcAddress = incrementalPortAllocation().nextHostAndPort()
         val rpcUser = User("MultiRpcClient1", "MultiRpcClient1Pwd", setOf(all()))
 
-        // Create two clients using global pools
-        val globalClient = MultiRPCClient(rpcAddress, AttachmentTrustInfoRPCOps::class.java, rpcUser.username, rpcUser.password, useGlobalThreadPools = true)
+        val globalClient = MultiRPCClient(
+                rpcAddress,
+                AttachmentTrustInfoRPCOps::class.java,
+                rpcUser.username,
+                rpcUser.password,
+                customSerializers = null,
+                configuration = CordaRPCClientConfiguration.DEFAULT,
+                sslConfiguration = null,
+                classLoader = null,
+                externalTrace = null,
+                impersonatedActor = null,
+                targetLegalIdentity = null,
+                useGlobalThreadPools = true
+        )
+
         // Right from the start attach a listener such that it will be informed of all the activity happening for this RPC client
         val globalListener = mock<RPCConnectionListener<AttachmentTrustInfoRPCOps>>()
         globalClient.addConnectionListener(globalListener)
@@ -144,8 +158,21 @@ class MultiRpcClientTest {
         val rpcAddress = incrementalPortAllocation().nextHostAndPort()
         val rpcUser = User("MultiRpcClient1", "MultiRpcClient1Pwd", setOf(all()))
 
-        // Create two clients using global pools
-        val localClient = MultiRPCClient(rpcAddress, AttachmentTrustInfoRPCOps::class.java, rpcUser.username, rpcUser.password, useGlobalThreadPools = false)
+        val localClient = MultiRPCClient(
+                rpcAddress,
+                AttachmentTrustInfoRPCOps::class.java,
+                rpcUser.username,
+                rpcUser.password,
+                customSerializers = null,
+                configuration = CordaRPCClientConfiguration.DEFAULT,
+                sslConfiguration = null,
+                classLoader = null,
+                externalTrace = null,
+                impersonatedActor = null,
+                targetLegalIdentity = null,
+                useGlobalThreadPools = false
+        )
+
         // Right from the start attach a listener such that it will be informed of all the activity happening for this RPC client
         val localListener = mock<RPCConnectionListener<AttachmentTrustInfoRPCOps>>()
         localClient.addConnectionListener(localListener)
@@ -168,10 +195,10 @@ class MultiRpcClientTest {
         val schedPool = ActiveMQClient.getGlobalScheduledThreadPool() as? ScheduledThreadPoolExecutor
                 ?: error("Expected global scheduled pool to be a ScheduledThreadPoolExecutor")
 
-        assertEquals(0,globalPool.poolSize, "Global thread pool should not be initialised and should have zero pool size")
-        assertEquals(0,globalPool.completedTaskCount, "Global thread pool should not be initialised and should have zero completed tasks")
-        assertEquals(0,schedPool.poolSize, "Scheduled thread pool should not be initialised and should have zero pool size")
-        assertEquals(0,schedPool.completedTaskCount, "Scheduled thread pool should not be initialised and should have zero completed tasks")
+        assertEquals(0, globalPool.poolSize, "Global thread pool should not be initialised and should have zero pool size")
+        assertEquals(0, globalPool.completedTaskCount, "Global thread pool should not be initialised and should have zero completed tasks")
+        assertEquals(0, schedPool.poolSize, "Scheduled thread pool should not be initialised and should have zero pool size")
+        assertEquals(0, schedPool.completedTaskCount, "Scheduled thread pool should not be initialised and should have zero completed tasks")
     }
 
     @Test(timeout = 300_000)
