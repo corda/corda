@@ -35,6 +35,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import kotlin.io.path.inputStream
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionBuilderTest {
@@ -285,5 +286,23 @@ class TransactionBuilderTest {
         assertThatIllegalArgumentException()
                 .isThrownBy { builder.toWireTransaction(services) }
                 .withMessageContaining("Multiple attachments specified for the same contract net.corda.testing.contracts.DummyContract")
+    }
+
+    @Test(timeout=300_000)
+    fun `extract missing class from ClassNotFoundException`() {
+        val ex = ClassNotFoundException("net.corda.coretests.doesnotexist")
+        val missingClass = TransactionBuilder().run {
+            extractMissingClass(ex)
+        }
+        assertEquals("net/corda/coretests/doesnotexist", missingClass)
+    }
+
+    @Test(timeout=300_000)
+    fun `extract missing class from NoClassDefFoundError`() {
+        val ex = NoClassDefFoundError("net.corda.coretests.doesnotexist")
+        val missingClass = TransactionBuilder().run {
+            extractMissingClass(ex)
+        }
+        assertEquals("net/corda/coretests/doesnotexist", missingClass)
     }
 }
