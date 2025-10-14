@@ -166,6 +166,57 @@ class TransactionBuilderDriverTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `prevents addition of a dependency from outside of the CorDapps`() {
+        internalDriver(cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP), startNodesInProcess = false) {
+            val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
+
+            cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node without the missing dependency CorDapp
+            val node = startNode(NodeParameters(ALICE_NAME, additionalCordapps = listOf(cordapp))).getOrThrow()
+
+            // Upload the missing dependency but don't include it in the CorDapps of the node
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Ensure the missing dependency causes an issue
+            assertThatThrownBy {
+                createTransaction(node)
+            }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `prevents addition of a legacy dependency from outside of the legacy CorDapps`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false))
+        ) {
+            val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
+            val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
+
+            currentContracts.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node without the missing legacy dependency CorDapp
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts)
+            )).getOrThrow()
+
+            // Upload the missing legacy dependency but don't include it in the legacy CorDapps of the node
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Ensure the missing dependency causes an issue
+            assertThatThrownBy {
+                createTransaction(node)
+            }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
+        }
+    }
+
     /**
      * Split the given finance contracts jar into two such that the second jar becomes a dependency to the first.
      */

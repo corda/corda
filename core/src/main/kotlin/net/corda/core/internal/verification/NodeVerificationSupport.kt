@@ -128,9 +128,11 @@ interface NodeVerificationSupport : VerificationSupport {
 
     /**
      * Scans trusted (installed locally) attachments to find all that contain the [className].
+     * The resulting list is sorted deterministically to ensure consistent ordering across nodes and runs:
+     *  * Primary sort: by **version** in descending order (newest first). This means any legacy attachments will occur after the current version one
+     *  * Secondary sort: by **attachment ID** in ascending alphabetical order.
      *
-     * @return attachments containing the given class in descending version order. This means any legacy attachments will occur after the
-     * current version one.
+     * @return a list of trusted attachments containing the given class, sorted by version (descending) and ID (ascending).
      */
     override fun getTrustedClassAttachments(className: String): List<Attachment> {
         val allTrusted = attachments.queryAttachments(
