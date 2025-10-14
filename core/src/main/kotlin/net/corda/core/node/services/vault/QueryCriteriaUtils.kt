@@ -214,7 +214,8 @@ data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseS
         INSERTION_DATE("insertionDate"),
         UPLOADER("uploader"),
         FILENAME("filename"),
-        VERSION ("version")
+        VERSION ("version"),
+        ATTACHMENT_ID("attId")
     }
 
     @CordaSerializable
