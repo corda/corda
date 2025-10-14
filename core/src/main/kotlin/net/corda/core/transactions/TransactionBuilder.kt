@@ -348,14 +348,16 @@ open class TransactionBuilder(
         }
 
         val attachments = serviceHub.getTrustedClassAttachments(missingClass)
-        val attachment = if (isLegacy) {
+        val attachmentCandidates = if (isLegacy) {
             // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
             val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-            attachments.firstOrNull { it.id in legacyContractCordapps } 
+            attachments.filter { it.id in legacyContractCordapps }
         } else {
-            attachments.firstOrNull()
+            // Any (non-legacy) missing attachments must also be present in the cordapps folder to be attached to a transaction
+            val nonLegacyCordapps = serviceHub.cordappProvider.cordapps.mapToSet { it.jarHash }
+            attachments.filter { it.id in nonLegacyCordapps }
         }
-
+        val attachment = attachmentCandidates.firstOrNull()
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
                     "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
@@ -363,7 +365,7 @@ open class TransactionBuilder(
         }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
-                        Automatically attaching contract dependency $attachment.
+                        Automatically attaching cordapp dependency $attachment.
                         Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
                     """.trimIndent())
 
