@@ -355,7 +355,7 @@ open class TransactionBuilder(
         }
 
         val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
-        val matchingAttachments = installedAttachments.filter { it.hasFile(missingClass) }
+        val matchingAttachments = installedAttachments.filter { it.hasFile("$missingClass.class") }
         val sortedAttachments = matchingAttachments.sortedWith(
                 compareByDescending<Attachment> { (it.contractVersion) }
                         .thenBy { it.id.toString() }
