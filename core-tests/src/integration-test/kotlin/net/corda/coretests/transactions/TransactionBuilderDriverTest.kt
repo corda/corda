@@ -74,16 +74,10 @@ class TransactionBuilderDriverTest {
                 createTransaction(node)
             }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
 
-            node.stop()
-            FileUtils.deleteDirectory(node.baseDirectory.toFile())
+            // Upload the missing dependency
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
 
-            // Now restart the node with the missing dependency
-            val restartedNode = startNode(NodeParameters(ALICE_NAME, additionalCordapps = listOf(cordapp, dependency), )).getOrThrow()
-
-            // Attachment does not have a contract in it so needs to be manually installed into attachment db storage
-            dependency.jarFile.inputStream().use(restartedNode.rpc::uploadAttachment)
-
-            val stx = createTransaction(restartedNode)
+            val stx = createTransaction(node)
             assertThat(stx.tx.attachments).contains(cordapp.jarFile.hash, dependency.jarFile.hash)
         }
     }

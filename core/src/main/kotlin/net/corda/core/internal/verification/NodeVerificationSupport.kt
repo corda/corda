@@ -137,10 +137,7 @@ interface NodeVerificationSupport : VerificationSupport {
     override fun getTrustedClassAttachments(className: String): List<Attachment> {
         val allTrusted = attachments.queryAttachments(
                 AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                AttachmentSort(listOf(AttachmentSortColumn(
-                        AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
-                        AttachmentSortColumn(AttachmentSortAttribute.ATTACHMENT_ID, Sort.Direction.ASC))
-                )
+                AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         )
         val fileName = "$className.class"
         return allTrusted.mapNotNull { id -> attachments.openAttachment(id)!!.takeIf { it.hasFile(fileName) } }

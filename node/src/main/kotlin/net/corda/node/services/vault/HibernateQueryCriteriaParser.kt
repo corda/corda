@@ -219,9 +219,6 @@ class HibernateAttachmentQueryCriteriaParser<T,R>(override val criteriaBuilder: 
         criteria.uploadDateCondition?.let {
             predicateSet.add(columnPredicateToPredicate(root.get<Instant>("insertionDate"), it))
         }
-        criteria.attachmentId?.let {
-            predicateSet.add(columnPredicateToPredicate(root.get<String>("attId"), it))
-        }
 
         criteria.contractClassNamesCondition?.let {
             val contractClassNames =

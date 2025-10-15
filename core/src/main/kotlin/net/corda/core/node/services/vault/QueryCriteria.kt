@@ -639,8 +639,7 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
                                         val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
                                         val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
                                         val isSignedCondition: ColumnPredicate<Boolean>? = null,
-                                        val versionCondition: ColumnPredicate<Int>? = null,
-                                        val attachmentId: ColumnPredicate<String>? = null) : AttachmentQueryCriteria() {
+                                        val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
         // V3 c'tors
         @DeprecatedConstructorForDeserialization(version = 3)
         constructor(uploaderCondition: ColumnPredicate<String>? = null,
