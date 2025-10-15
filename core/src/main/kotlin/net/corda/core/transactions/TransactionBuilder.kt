@@ -347,17 +347,21 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachments = serviceHub.getTrustedClassAttachments(missingClass)
-        val attachmentCandidates = if (isLegacy) {
-            // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
-            val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-            attachments.filter { it.id in legacyContractCordapps }
+        // Use the installed cordapps directly (not the attachment storage)
+        val installedCordapps = if (isLegacy) {
+            serviceHub.cordappProvider.legacyContractCordapps
         } else {
-            // Any (non-legacy) missing attachments must also be present in the cordapps folder to be attached to a transaction
-            val nonLegacyCordapps = serviceHub.cordappProvider.cordapps.mapToSet { it.jarHash }
-            attachments.filter { it.id in nonLegacyCordapps }
+            serviceHub.cordappProvider.cordapps
         }
-        val attachment = attachmentCandidates.firstOrNull()
+
+        val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
+        val matchingAttachments = installedAttachments.filter { it.hasFile(missingClass) }
+        val sortedAttachments = matchingAttachments.sortedWith(
+                compareByDescending<Attachment> { (it.contractVersion) }
+                        .thenBy { it.id.toString() }
+        )
+
+        val attachment = sortedAttachments.firstOrNull()
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
                     "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
@@ -377,6 +381,8 @@ open class TransactionBuilder(
 
         return true
     }
+
+    private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
 
     /**
      * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state
