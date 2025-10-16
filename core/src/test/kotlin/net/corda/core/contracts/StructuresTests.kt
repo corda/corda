@@ -70,21 +70,19 @@ class AttachmentTest {
         val hash4 = SecureHash.sha256("hash4") // 1C27099B3B84B13D0E3FBD299BA93AE7853EC1D0D3A4E5DAA89E68B7AD59D7CB
         val hash5 = SecureHash.sha256("hash5") // 7DA450AB64A26820E56DD73CD346950D656E60A20DBA00BD4BE9CED75BA7CDEF
 
-        val attachments: List<Attachment> = listOf(
-                FakeAttachment(hash1, 1),
-                FakeAttachment(hash2, 2),
-                FakeAttachment(hash3),
-                FakeAttachment(hash4),
-                FakeAttachment(hash5, 1)
-        )
+        val attachment1 = FakeAttachment(hash1, 1)
+        val attachment2 = FakeAttachment(hash2, 2)
+        val attachment3 = FakeAttachment(hash3)
+        val attachment4 = FakeAttachment(hash4)
+        val attachment5 = FakeAttachment(hash5, 1)
 
-        val sorted = attachments.sort()
+        val sorted = listOf(attachment1, attachment2, attachment3, attachment4, attachment5).sort()
         val expectedOrder = listOf(
-                FakeAttachment(hash2, 2), // highest version
-                FakeAttachment(hash5, 1), // version 1, alphabetically
-                FakeAttachment(hash1, 1), // version 1, alphabetically
-                FakeAttachment(hash4),    // no version, alphabetically
-                FakeAttachment(hash3)     // no version, alphabetically
+                attachment2, // highest version
+                attachment5, // version 1, alphabetically
+                attachment1, // version 1, alphabetically
+                attachment4, // no version, alphabetically
+                attachment3  // no version, alphabetically
         )
 
         assertThat(sorted).containsExactlyElementsOf(expectedOrder)
