@@ -63,7 +63,7 @@ class AttachmentTest {
     }
 
     @Test(timeout=300_000)
-    fun `sortAttachments sorts by version descending then id alphabetically`() {
+    fun `sort attachments by version descending then id alphabetically`() {
         val hash1 = SecureHash.sha256("hash1") // AF316ECB91A8EE7AE99210702B2D4758F30CDDE3BF61E3D8E787D74681F90A6E
         val hash2 = SecureHash.sha256("hash2") // E7BF382F6E5915B3F88619B866223EBF1D51C4C5321CCCDE2E9FF700A3259086
         val hash3 = SecureHash.sha256("hash3") // 42CAA4ABB7B60F8F914E5BFB8E6511D7D9BD9817DE719B74251755D97FE97BF1

@@ -217,6 +217,38 @@ class TransactionBuilderDriverTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `allows addition of a legacy dependency when multiple legacy CorDapps contain it`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false))
+        ) {
+            val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
+            val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
+            val duplicateLegacyDependency = TestCordapp.of(legacyDependency.jarFile.toUri()).asSigned() as UriTestCordapp
+
+            currentContracts.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node with the 2 legacy CorDapps which contain the same missing legacy dependency
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts, legacyDependency, duplicateLegacyDependency)
+            )).getOrThrow()
+
+            // Upload the missing legacy dependencies manually as they do not contain a contract so they won't be automatically uploaded
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+            duplicateLegacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            val stx = createTransaction(node)
+            assertThat(stx.tx.legacyAttachments).contains(legacyContracts.jarFile.hash)
+            assertThat(stx.tx.legacyAttachments).size().isEqualTo(2)
+            assertThat(stx.tx.legacyAttachments).containsAnyOf(legacyDependency.jarFile.hash, duplicateLegacyDependency.jarFile.hash)
+        }
+    }
+
     /**
      * Split the given finance contracts jar into two such that the second jar becomes a dependency to the first.
      */
