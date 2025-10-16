@@ -47,6 +47,7 @@ import kotlin.reflect.KClass
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
  */
+@Suppress("LargeClass")
 open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = defaultLockId(),
@@ -347,18 +348,30 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        // Use the installed cordapps directly (not the attachment storage)
-        val installedCordapps = if (isLegacy) {
-            serviceHub.cordappProvider.legacyContractCordapps
+        val onlyInstalledCordapps = System.getProperty("net.corda.node.attachments.onlyInstalledCordapps")?.toBoolean() == true
+
+        val attachment = if (onlyInstalledCordapps) {
+            // Only consider installed cordapps (not the attachment storage)
+            val installedCordapps = if (isLegacy) {
+                serviceHub.cordappProvider.legacyContractCordapps
+            } else {
+                serviceHub.cordappProvider.cordapps
+            }
+            val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
+            val matchingAttachments = installedAttachments.filter { it.hasFile("$missingClass.class") }
+            matchingAttachments.sort().firstOrNull()
         } else {
-            serviceHub.cordappProvider.cordapps
+            // Consider attachments in the storage too
+            val dbAttachments = serviceHub.getTrustedClassAttachments(missingClass)
+            if (isLegacy) {
+                val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
+                dbAttachments.firstOrNull { it.id in legacyContractCordapps }
+            } else {
+                // Only consider non-legacy (JDK 17) attachments in the storage
+                dbAttachments.firstOrNull { it.isJdk17Jar() }
+            }
         }
 
-        val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
-        val matchingAttachments = installedAttachments.filter { it.hasFile("$missingClass.class") }
-        val sortedAttachments = matchingAttachments.sort()
-
-        val attachment = sortedAttachments.firstOrNull()
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
                     "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
@@ -380,6 +393,22 @@ open class TransactionBuilder(
     }
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
+
+    /**
+     * @return `true` if the attachment is a JDK 17 compiled jar (class file major version 61), `false` otherwise.
+     */
+    @Suppress("MagicNumber")
+    fun Attachment.isJdk17Jar(): Boolean = openAsJAR().use { jar ->
+        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
+        if (firstClass != null) {
+            val header = ByteArray(8)
+            jar.read(header)
+            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
+            major == 61
+        } else {
+            false
+        }
+    }
 
     /**
      * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state

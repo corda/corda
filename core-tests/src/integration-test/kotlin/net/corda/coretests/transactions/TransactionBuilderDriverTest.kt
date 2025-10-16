@@ -167,8 +167,12 @@ class TransactionBuilderDriverTest {
     }
 
     @Test(timeout = 300_000)
-    fun `prevents addition of a dependency from outside of the CorDapps`() {
-        internalDriver(cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP), startNodesInProcess = false) {
+    fun `onlyInstalledCordapps property set to true prevents addition of a dependency from outside of the CorDapps`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false,
+                systemProperties = mapOf("net.corda.node.attachments.onlyInstalledCordapps" to true.toString())
+        ) {
             val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
 
             cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
@@ -184,6 +188,28 @@ class TransactionBuilderDriverTest {
             assertThatThrownBy {
                 createTransaction(node)
             }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `addition of a dependency from outside of the CorDapps should be possible without onlyInstalledCordapps system property`() {
+        internalDriver(
+                cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
+                startNodesInProcess = false
+        ) {
+            val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
+
+            cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+
+            // Start the node without the missing dependency CorDapp
+            val node = startNode(NodeParameters(ALICE_NAME, additionalCordapps = listOf(cordapp))).getOrThrow()
+
+            // Upload the missing dependency but don't include it in the CorDapps of the node
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
+
+            // Transaction with an attachment from outside of the CorDapps directory should succeed
+            createTransaction(node)
         }
     }
 
