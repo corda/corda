@@ -56,6 +56,8 @@ class AttachmentTest {
             val version: Int? = null
     ) : Attachment, HasContractVersion {
         override val signerKeys: List<PublicKey> = emptyList()
+        @Suppress("OverridingDeprecatedMember")
+        @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
         override val signers: List<Party> = emptyList()
         override val size: Int = 0
         override val contractVersion: Int get() = version ?: 0
