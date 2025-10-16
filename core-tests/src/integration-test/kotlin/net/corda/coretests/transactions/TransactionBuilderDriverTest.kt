@@ -167,11 +167,11 @@ class TransactionBuilderDriverTest {
     }
 
     @Test(timeout = 300_000)
-    fun `onlyInstalledCordapps property set to true prevents addition of a dependency from outside of the CorDapps`() {
+    fun `missingAttachmentDbSearch property set to false prevents addition of a dependency from outside of the CorDapps`() {
         internalDriver(
                 cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
                 startNodesInProcess = false,
-                systemProperties = mapOf("net.corda.node.attachments.onlyInstalledCordapps" to true.toString())
+                systemProperties = mapOf("net.corda.node.attachments.missingAttachmentDbSearch" to false.toString())
         ) {
             val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
 
@@ -192,7 +192,7 @@ class TransactionBuilderDriverTest {
     }
 
     @Test(timeout = 300_000)
-    fun `addition of a dependency from outside of the CorDapps should be possible without onlyInstalledCordapps system property`() {
+    fun `addition of a dependency from outside of the CorDapps should be possible without missingAttachmentDbSearch system property`() {
         internalDriver(
                 cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP),
                 startNodesInProcess = false

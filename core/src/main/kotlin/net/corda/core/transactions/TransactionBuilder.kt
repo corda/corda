@@ -348,28 +348,24 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val onlyInstalledCordapps = System.getProperty("net.corda.node.attachments.onlyInstalledCordapps")?.toBoolean() == true
+        // Controls whether DB search is allowed when installed CorDapps don't contain the class.
+        // Default: true (for backward compatibility)
+        val enableDbSearch = System.getProperty("net.corda.node.attachments.missingAttachmentDbSearch")?.toBoolean() != false
 
-        val attachment = if (onlyInstalledCordapps) {
-            // Only consider installed cordapps (not the attachment storage)
-            val installedCordapps = if (isLegacy) {
-                serviceHub.cordappProvider.legacyContractCordapps
-            } else {
-                serviceHub.cordappProvider.cordapps
-            }
-            val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
-            val matchingAttachments = installedAttachments.filter { it.hasFile("$missingClass.class") }
-            matchingAttachments.sort().firstOrNull()
+        val installedCordapps = if (isLegacy) {
+            serviceHub.cordappProvider.legacyContractCordapps
         } else {
-            // Consider attachments in the storage too
+            serviceHub.cordappProvider.cordapps
+        }
+
+        val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
+        val attachmentsWithMissingClass = installedAttachments.filter { it.hasFile("$missingClass.class") }.sort()
+        var attachment = attachmentsWithMissingClass.firstOrNull()
+
+        // Optionally fall back to DB search (only for non-legacy)
+        if (attachment == null && !isLegacy && enableDbSearch) {
             val dbAttachments = serviceHub.getTrustedClassAttachments(missingClass)
-            if (isLegacy) {
-                val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-                dbAttachments.firstOrNull { it.id in legacyContractCordapps }
-            } else {
-                // Only consider non-legacy (JDK 17) attachments in the storage
-                dbAttachments.firstOrNull { it.isJdk17Jar() }
-            }
+            attachment = dbAttachments.firstOrNull { it.isJdk17Jar() }
         }
 
         if (attachment == null) {
