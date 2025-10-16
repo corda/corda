@@ -1,12 +1,16 @@
 package net.corda.core.contracts
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.InputStream
+import java.security.PublicKey
 import java.util.UUID
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.zip.ZipEntry
@@ -45,6 +49,45 @@ class AttachmentTest {
             assertTrue { e.message!!.contains("line too long") }
         }
         assertEquals(1, closeCalls)
+    }
+
+    data class FakeAttachment(
+            override val id: SecureHash,
+            val version: Int? = null
+    ) : Attachment, HasContractVersion {
+        override val signerKeys: List<PublicKey> = emptyList()
+        override val signers: List<Party> = emptyList()
+        override val size: Int = 0
+        override val contractVersion: Int get() = version ?: 0
+        override fun open(): InputStream = throw NotImplementedError()
+    }
+
+    @Test(timeout=300_000)
+    fun `sortAttachments sorts by version descending then id alphabetically`() {
+        val hash1 = SecureHash.sha256("hash1") // AF316ECB91A8EE7AE99210702B2D4758F30CDDE3BF61E3D8E787D74681F90A6E
+        val hash2 = SecureHash.sha256("hash2") // E7BF382F6E5915B3F88619B866223EBF1D51C4C5321CCCDE2E9FF700A3259086
+        val hash3 = SecureHash.sha256("hash3") // 42CAA4ABB7B60F8F914E5BFB8E6511D7D9BD9817DE719B74251755D97FE97BF1
+        val hash4 = SecureHash.sha256("hash4") // 1C27099B3B84B13D0E3FBD299BA93AE7853EC1D0D3A4E5DAA89E68B7AD59D7CB
+        val hash5 = SecureHash.sha256("hash5") // 7DA450AB64A26820E56DD73CD346950D656E60A20DBA00BD4BE9CED75BA7CDEF
+
+        val attachments: List<Attachment> = listOf(
+                FakeAttachment(hash1, 1),
+                FakeAttachment(hash2, 2),
+                FakeAttachment(hash3),
+                FakeAttachment(hash4),
+                FakeAttachment(hash5, 1)
+        )
+
+        val sorted = attachments.sort()
+        val expectedOrder = listOf(
+                FakeAttachment(hash2, 2), // highest version
+                FakeAttachment(hash5, 1), // version 1, alphabetically
+                FakeAttachment(hash1, 1), // version 1, alphabetically
+                FakeAttachment(hash4),    // no version, alphabetically
+                FakeAttachment(hash3)     // no version, alphabetically
+        )
+
+        assertThat(sorted).containsExactlyElementsOf(expectedOrder)
     }
 }
 

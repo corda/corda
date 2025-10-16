@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.DoNotImplement
 import net.corda.core.identity.Party
+import net.corda.core.internal.contractVersion
 import net.corda.core.internal.extractFile
 import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
@@ -69,4 +70,23 @@ interface Attachment : NamedByHash {
      * Attachment size in bytes.
      */
     val size: Int
+}
+
+/**
+ * Sorts a list of [Attachment]s deterministically.
+ * The sorting logic is as follows:
+ * - Primary sort: by [Attachment.contractVersion] in **descending** order (higher versions come first).
+ * - Secondary sort: by [Attachment.id] in **ascending** (alphabetical) order to ensure deterministic ordering
+ *   when versions are equal or missing.
+ * @return a new list of attachments sorted first by version (descending) and then by ID (ascending).
+ */
+fun List<Attachment>.sort(): List<Attachment> {
+    return this.sortedWith(
+            compareByDescending<Attachment> { (it as? HasContractVersion)?.contractVersion }
+                    .thenBy { it.id.toString() }
+    )
+}
+// for testing only
+interface HasContractVersion {
+    val contractVersion: Int
 }
