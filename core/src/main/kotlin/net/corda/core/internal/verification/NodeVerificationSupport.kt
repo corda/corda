@@ -13,6 +13,8 @@ import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.entries
 import net.corda.core.internal.getRequiredGroup
 import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
+import net.corda.core.internal.sortAttachments
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
@@ -39,6 +41,12 @@ import java.security.PublicKey
  * Implements [VerificationSupport] in terms of node-based services.
  */
 interface NodeVerificationSupport : VerificationSupport {
+
+    private companion object {
+        val DB_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.missingClassDbSearchDisabled")
+        val INSTALLED_FIRST_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.installedFirstSearchDisabled")
+    }
+
     val networkParameters: NetworkParameters
 
     val validatedTransactions: TransactionStorage
@@ -127,18 +135,76 @@ interface NodeVerificationSupport : VerificationSupport {
     }
 
     /**
-     * Scans trusted (installed locally) attachments to find all that contain the [className].
-     *
-     * @return attachments containing the given class in descending version order. This means any legacy attachments will occur after the
-     * current version one.
+     * Returns a list of `Attachment`s containing [className], prioritising installed CorDapps first.
+     * Legacy contracts are only searched in legacy CorDapps. Non-legacy may optionally fall back to searching the attachment
+     * store (database) if no matching installed CorDapp is found and fallback is enabled.
+     * ### System properties:
+     * - `net.corda.node.transactionbuilder.missingClassDbSearchDisabled`:
+     *   If `true`, disables database fallback. Only installed CorDapps will be searched.
+     * - `net.corda.node.transactionbuilder.installedFirstSearchDisabled`:
+     *   If `true`, disables the new “installed-first” lookup logic and reverts to the old database-only behaviour.
+     * @param className Fully qualified class name to search for
+     * @param isLegacy Whether to search for legacy contract attachments
+     * @return list of matching attachments in deterministic order (version descending, then ID ascending)
      */
-    override fun getTrustedClassAttachments(className: String): List<Attachment> {
-        val allTrusted = attachments.queryAttachments(
-                AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-        )
+    override fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment> {
         val fileName = "$className.class"
-        return allTrusted.mapNotNull { id -> attachments.openAttachment(id)!!.takeIf { it.hasFile(fileName) } }
+
+        // 1. Old logic only
+        if (INSTALLED_FIRST_SEARCH_DISABLED) {
+            val dbAttachmentIds = attachments.queryAttachments(
+                    AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                    AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+            )
+            val dbAttachments = dbAttachmentIds.mapNotNull { id -> attachments.openAttachment(id)?.takeIf { it.hasFile(fileName) } }
+            return if (isLegacy) {
+                val legacyContractCordapps = cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
+                dbAttachments.filter { it.id in legacyContractCordapps }.sortAttachments()
+            } else {
+                dbAttachments.sortAttachments()
+            }
+        }
+
+        // 2. Get installed CorDapps first
+        val installedCordapps = if (isLegacy) {
+            cordappProvider.legacyContractCordapps
+        } else {
+            cordappProvider.cordapps
+        }
+
+        val installedAttachments = installedCordapps
+                .mapNotNull { attachments.openAttachment(it.jarHash) }
+                .filter { it.hasFile(fileName) }
+
+        if (installedAttachments.isNotEmpty()) {
+            return installedAttachments.sortAttachments()
+        }
+
+        // 3. Optional fall back to DB attachments (non-legacy only)
+        if (!isLegacy && !DB_SEARCH_DISABLED) {
+            val dbAttachments = attachments.queryAttachments(
+                    AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                    AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+            )
+            val matchingDbAttachments = dbAttachments.mapNotNull { id -> attachments.openAttachment(id)?.takeIf { it.hasFile(fileName) && it.isJdk17Jar() } }
+            if (matchingDbAttachments.isNotEmpty()) {
+                return matchingDbAttachments.sortAttachments()
+            }
+        }
+        return emptyList()
+    }
+
+    @Suppress("MagicNumber")
+    private fun Attachment.isJdk17Jar(): Boolean = openAsJAR().use { jar ->
+        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
+        if (firstClass != null) {
+            val header = ByteArray(8)
+            jar.read(header)
+            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
+            major == 61
+        } else {
+            false
+        }
     }
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }

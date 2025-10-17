@@ -2,7 +2,6 @@ package net.corda.core.contracts
 
 import net.corda.core.DoNotImplement
 import net.corda.core.identity.Party
-import net.corda.core.internal.entries
 import net.corda.core.internal.extractFile
 import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
@@ -52,31 +51,6 @@ interface Attachment : NamedByHash {
     fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 
     /**
-     * Checks whether the Attachment JAR contains a specific file entry.
-     * @param className The exact file name (including path, e.g. `"com/example/MyClass.class"`)
-     *                  to look for inside the JAR.
-     * @return `true` if an entry with the given name exists in the JAR, `false` otherwise.
-     * It is typically used to determine whether an attachment provides a given class or resource.
-     */
-    fun hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
-
-    /**
-     * @return `true` if the attachment is a JDK 17 compiled jar (class file major version 61), `false` otherwise.
-     */
-    @Suppress("MagicNumber")
-    fun isJdk17Jar(): Boolean = openAsJAR().use { jar ->
-        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
-        if (firstClass != null) {
-            val header = ByteArray(8)
-            jar.read(header)
-            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
-            major == 61
-        } else {
-            false
-        }
-    }
-
-    /**
      * The parties that have correctly signed the whole attachment.
      * Even though this returns a list of party objects, it is not required that these parties exist on the network, but rather they are a mapping from the signing key to the X.500 name.
      *
@@ -95,23 +69,4 @@ interface Attachment : NamedByHash {
      * Attachment size in bytes.
      */
     val size: Int
-}
-
-/**
- * Sorts a list of [Attachment]s deterministically.
- * The sorting logic is as follows:
- * - Primary sort: by [Attachment.contractVersion] in **descending** order (higher versions come first).
- * - Secondary sort: by [Attachment.id] in **ascending** (alphabetical) order to ensure deterministic ordering
- *   when versions are equal or missing.
- * @return a new list of attachments sorted first by version (descending) and then by ID (ascending).
- */
-fun List<Attachment>.sort(): List<Attachment> {
-    return this.sortedWith(
-            compareByDescending<Attachment> { (it as? HasContractVersion)?.contractVersion }
-                    .thenBy { it.id.toString() }
-    )
-}
-// for testing only
-internal interface HasContractVersion {
-    val contractVersion: Int
 }

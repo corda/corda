@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.internal.sortAttachments
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.mockito.kotlin.doAnswer
@@ -51,20 +52,7 @@ class AttachmentTest {
         assertEquals(1, closeCalls)
     }
 
-    data class FakeAttachment(
-            override val id: SecureHash,
-            val version: Int? = null
-    ) : Attachment, HasContractVersion {
-        override val signerKeys: List<PublicKey> = emptyList()
-        @Suppress("OverridingDeprecatedMember")
-        @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
-        override val signers: List<Party> = emptyList()
-        override val size: Int = 0
-        override val contractVersion: Int get() = version ?: 0
-        override fun open(): InputStream = throw NotImplementedError()
-    }
-
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `sort attachments by version descending then id alphabetically`() {
         val hash1 = SecureHash.sha256("hash1") // AF316ECB91A8EE7AE99210702B2D4758F30CDDE3BF61E3D8E787D74681F90A6E
         val hash2 = SecureHash.sha256("hash2") // E7BF382F6E5915B3F88619B866223EBF1D51C4C5321CCCDE2E9FF700A3259086
@@ -72,22 +60,32 @@ class AttachmentTest {
         val hash4 = SecureHash.sha256("hash4") // 1C27099B3B84B13D0E3FBD299BA93AE7853EC1D0D3A4E5DAA89E68B7AD59D7CB
         val hash5 = SecureHash.sha256("hash5") // 7DA450AB64A26820E56DD73CD346950D656E60A20DBA00BD4BE9CED75BA7CDEF
 
-        val attachment1 = FakeAttachment(hash1, 1)
-        val attachment2 = FakeAttachment(hash2, 2)
-        val attachment3 = FakeAttachment(hash3)
-        val attachment4 = FakeAttachment(hash4)
-        val attachment5 = FakeAttachment(hash5, 1)
+        val attachment1 = ContractAttachment.create(createDummyAttachment(hash1), "TestContract", version = 1)
+        val attachment2 = ContractAttachment.create(createDummyAttachment(hash2), "TestContract", version = 2)
+        val attachment3 = ContractAttachment.create(createDummyAttachment(hash3), "TestContract", version = 0)
+        val attachment4 = ContractAttachment.create(createDummyAttachment(hash4), "TestContract", version = 0)
+        val attachment5 = ContractAttachment.create(createDummyAttachment(hash5), "TestContract", version = 1)
 
-        val sorted = listOf(attachment1, attachment2, attachment3, attachment4, attachment5).sort()
+        val sorted = listOf(attachment1, attachment2, attachment3, attachment4, attachment5).sortAttachments()
         val expectedOrder = listOf(
                 attachment2, // highest version
                 attachment5, // version 1, alphabetically
                 attachment1, // version 1, alphabetically
-                attachment4, // no version, alphabetically
-                attachment3  // no version, alphabetically
+                attachment4, // version 0, alphabetically
+                attachment3  // version 0, alphabetically
         )
 
         assertThat(sorted).containsExactlyElementsOf(expectedOrder)
+    }
+
+    private fun createDummyAttachment(id: SecureHash): Attachment = object : Attachment {
+        override val id: SecureHash = id
+        override val size: Int = 0
+        override val signerKeys: List<PublicKey> = emptyList()
+        @Suppress("OverridingDeprecatedMember")
+        @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
+        override val signers: List<Party> = emptyList()
+        override fun open(): InputStream = throw NotImplementedError()
     }
 }
 

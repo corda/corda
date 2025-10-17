@@ -31,7 +31,7 @@ class ExternalVerificationContext(
 
     override fun isAttachmentTrusted(attachment: Attachment): Boolean = externalVerifier.getAttachment(attachment.id)!!.isTrusted
 
-    override fun getTrustedClassAttachments(className: String): List<Attachment> {
+    override fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment> {
         return externalVerifier.getTrustedClassAttachments(className)
     }
 

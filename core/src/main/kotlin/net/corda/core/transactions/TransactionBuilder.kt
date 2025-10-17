@@ -348,25 +348,7 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        // Controls whether DB search is allowed when installed CorDapps don't contain the class.
-        // Default: true (for backward compatibility)
-        val enableDbSearch = System.getProperty("net.corda.node.attachments.missingAttachmentDbSearch")?.toBoolean() != false
-
-        val installedCordapps = if (isLegacy) {
-            serviceHub.cordappProvider.legacyContractCordapps
-        } else {
-            serviceHub.cordappProvider.cordapps
-        }
-
-        val installedAttachments = installedCordapps.mapNotNull { serviceHub.attachments.openAttachment(it.jarHash) }
-        val attachmentsWithMissingClass = installedAttachments.filter { it.hasFile("$missingClass.class") }.sort()
-        var attachment = attachmentsWithMissingClass.firstOrNull()
-
-        // Optionally fall back to DB search (only for non-legacy)
-        if (attachment == null && !isLegacy && enableDbSearch) {
-            val dbAttachments = serviceHub.getTrustedClassAttachments(missingClass)
-            attachment = dbAttachments.firstOrNull { it.isJdk17Jar() }
-        }
+        val attachment = serviceHub.getTrustedClassAttachments(missingClass, isLegacy).firstOrNull()
 
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
