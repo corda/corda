@@ -87,6 +87,6 @@ fun List<Attachment>.sort(): List<Attachment> {
     )
 }
 // for testing only
-interface HasContractVersion {
+internal interface HasContractVersion {
     val contractVersion: Int
 }
