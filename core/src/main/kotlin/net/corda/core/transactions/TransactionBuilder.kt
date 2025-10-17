@@ -388,24 +388,6 @@ open class TransactionBuilder(
         return true
     }
 
-    private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
-
-    /**
-     * @return `true` if the attachment is a JDK 17 compiled jar (class file major version 61), `false` otherwise.
-     */
-    @Suppress("MagicNumber")
-    fun Attachment.isJdk17Jar(): Boolean = openAsJAR().use { jar ->
-        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
-        if (firstClass != null) {
-            val header = ByteArray(8)
-            jar.read(header)
-            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
-            major == 61
-        } else {
-            false
-        }
-    }
-
     /**
      * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state
      * [AutomaticPlaceholderConstraint]s. The contract attachments are used to create a deterministic Classloader to deserialise the
