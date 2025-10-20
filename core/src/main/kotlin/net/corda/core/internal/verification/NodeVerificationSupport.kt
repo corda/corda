@@ -186,7 +186,7 @@ interface NodeVerificationSupport : VerificationSupport {
                     AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
                     AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
             )
-            val matchingDbAttachments = dbAttachments.mapNotNull { id -> attachments.openAttachment(id)?.takeIf { it.hasFile(fileName) && it.isJdk17Jar() } }
+            val matchingDbAttachments = dbAttachments.mapNotNull { id -> attachments.openAttachment(id)?.takeIf { it.hasFile(fileName) && !it.isLegacyJar() } }
             if (matchingDbAttachments.isNotEmpty()) {
                 return matchingDbAttachments.sortAttachments()
             }
@@ -195,13 +195,13 @@ interface NodeVerificationSupport : VerificationSupport {
     }
 
     @Suppress("MagicNumber")
-    private fun Attachment.isJdk17Jar(): Boolean = openAsJAR().use { jar ->
+    private fun Attachment.isLegacyJar(): Boolean = openAsJAR().use { jar ->
         val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
         if (firstClass != null) {
             val header = ByteArray(8)
             jar.read(header)
             val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
-            major == 61
+            major <= 52
         } else {
             false
         }
