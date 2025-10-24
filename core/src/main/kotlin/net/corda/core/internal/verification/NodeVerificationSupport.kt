@@ -140,7 +140,9 @@ interface NodeVerificationSupport : VerificationSupport {
      * store (database) if no matching installed CorDapp is found and fallback is enabled.
      *
      * The function returns either:
-     * - A single-element list containing the first matching attachment (after deterministic sorting of attachments by version descending, then ID ascending), or
+     * - A single-element list containing the first matching attachment (after deterministic sorting:
+     *   installed attachments are sorted by version descending, then ID ascending; database attachments
+     *   are sorted by version descending, then insertion date descending), or
      * - An empty list if no suitable attachment is found.
      *
      * ### System properties:
@@ -161,11 +163,11 @@ interface NodeVerificationSupport : VerificationSupport {
             val dbAttachmentIds = attachments.queryAttachments(
                     AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
                     AttachmentSort(listOf(
-                            AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC))
+                            AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                            AttachmentSortColumn(AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC))
                     )
             )
-            val dbAttachments = dbAttachmentIds.mapNotNull { id -> attachments.openAttachment(id) }.sortAttachments()
-                    .filter { it.hasFile(fileName) }
+            val dbAttachments = dbAttachmentIds.mapNotNull { id -> attachments.openAttachment(id) }.filter { it.hasFile(fileName) }
             val attachment = if (isLegacy) {
                 val legacyContractCordapps = cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
                 dbAttachments.firstOrNull { it.id in legacyContractCordapps }
@@ -194,10 +196,13 @@ interface NodeVerificationSupport : VerificationSupport {
         if (!isLegacy && !DB_SEARCH_DISABLED) {
             val dbAttachments = attachments.queryAttachments(
                     AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                    AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+                    AttachmentSort(listOf(
+                            AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                            AttachmentSortColumn(AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC))
+                    )
             )
             val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
-                    .sortAttachments().firstOrNull { it.hasFile(fileName) && !it.isLegacyJar() }?.let { listOf(it) } ?: emptyList()
+                    .firstOrNull { it.hasFile(fileName) && !it.isLegacyJar() }?.let { listOf(it) } ?: emptyList()
             if (matchingDbAttachment.isNotEmpty()) {
                 return matchingDbAttachment.sortAttachments()
             }
