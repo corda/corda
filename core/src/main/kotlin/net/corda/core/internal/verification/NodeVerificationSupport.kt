@@ -204,7 +204,7 @@ interface NodeVerificationSupport : VerificationSupport {
             val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
                     .firstOrNull { it.hasFile(fileName) && !it.isLegacyJar() }?.let { listOf(it) } ?: emptyList()
             if (matchingDbAttachment.isNotEmpty()) {
-                return matchingDbAttachment.sortAttachments()
+                return matchingDbAttachment
             }
         }
         return emptyList()
