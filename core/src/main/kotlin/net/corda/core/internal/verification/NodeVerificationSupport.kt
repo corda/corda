@@ -221,19 +221,6 @@ interface NodeVerificationSupport : VerificationSupport {
         return emptyList()
     }
 
-//    @Suppress("MagicNumber")
-//    private fun Attachment.isLegacyJar(): Boolean = openAsJAR().use { jar ->
-//        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
-//        if (firstClass != null) {
-//            val header = ByteArray(8)
-//            jar.read(header)
-//            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
-//            major <= 52
-//        } else {
-//            false
-//        }
-//    }
-
     private fun Attachment.kotlinMetadataVersion(classBytes: ByteArray): KotlinMetadataVersion? {
         val mvList = mutableListOf<Int>()
         val classReader = ClassReader(classBytes)
