@@ -1,7 +1,5 @@
 package net.corda.core.internal.verification
 
-import io.github.classgraph.ClassInfo
-import io.github.classgraph.ScanResult
 import net.bytebuddy.jar.asm.AnnotationVisitor
 import net.bytebuddy.jar.asm.ClassReader
 import net.bytebuddy.jar.asm.ClassVisitor
@@ -13,7 +11,6 @@ import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentTrustCalculator
-import net.corda.core.internal.JAVA_8_CLASS_FILE_MAJOR_VERSION
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.cordapp.CordappProviderInternal
@@ -45,16 +42,14 @@ import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
-import java.nio.file.Path
 import java.security.PublicKey
-import java.util.TreeSet
 import java.util.jar.JarInputStream
 import kotlin.math.max
 
 /**
  * Implements [VerificationSupport] in terms of node-based services.
  */
+@Suppress("TooManyFunctions")
 interface NodeVerificationSupport : VerificationSupport {
 
     private companion object {
@@ -264,6 +259,7 @@ interface NodeVerificationSupport : VerificationSupport {
         return KotlinMetadataVersion.from(mvList.toIntArray())
     }
 
+    @Suppress("MagicNumber", "NestedBlockDepth")
     private fun Attachment.determineLanguageVersion(): LanguageVersion? {
         var maxClassFileMajorVersion = 0
         val kotlinMetadataVersions = sortedSetOf<KotlinMetadataVersion>()
