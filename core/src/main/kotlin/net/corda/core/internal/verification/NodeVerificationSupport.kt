@@ -1,5 +1,11 @@
 package net.corda.core.internal.verification
 
+import io.github.classgraph.ClassInfo
+import io.github.classgraph.ScanResult
+import net.bytebuddy.jar.asm.AnnotationVisitor
+import net.bytebuddy.jar.asm.ClassReader
+import net.bytebuddy.jar.asm.ClassVisitor
+import net.bytebuddy.jar.asm.Opcodes
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.StateRef
@@ -7,9 +13,12 @@ import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.JAVA_8_CLASS_FILE_MAJOR_VERSION
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.cordapp.CordappProviderInternal
+import net.corda.core.internal.cordapp.KotlinMetadataVersion
+import net.corda.core.internal.cordapp.LanguageVersion
 import net.corda.core.internal.entries
 import net.corda.core.internal.getRequiredGroup
 import net.corda.core.internal.getRequiredTransaction
@@ -35,7 +44,13 @@ import net.corda.core.transactions.MissingContractAttachments
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
+import java.nio.file.Path
 import java.security.PublicKey
+import java.util.TreeSet
+import java.util.jar.JarInputStream
+import kotlin.math.max
 
 /**
  * Implements [VerificationSupport] in terms of node-based services.
@@ -43,6 +58,7 @@ import java.security.PublicKey
 interface NodeVerificationSupport : VerificationSupport {
 
     private companion object {
+        private val logger = contextLogger()
         val DB_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.missingClassDbSearchDisabled")
         val INSTALLED_FIRST_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.installedFirstSearchDisabled")
     }
@@ -202,7 +218,7 @@ interface NodeVerificationSupport : VerificationSupport {
                     )
             )
             val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
-                    .firstOrNull { it.hasFile(fileName) && !it.isLegacyJar() }?.let { listOf(it) } ?: emptyList()
+                    .firstOrNull { it.hasFile(fileName) && it.isNonLegacyCompatible() }?.let { listOf(it) } ?: emptyList()
             if (matchingDbAttachment.isNotEmpty()) {
                 return matchingDbAttachment
             }
@@ -210,18 +226,71 @@ interface NodeVerificationSupport : VerificationSupport {
         return emptyList()
     }
 
-    @Suppress("MagicNumber")
-    private fun Attachment.isLegacyJar(): Boolean = openAsJAR().use { jar ->
-        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
-        if (firstClass != null) {
-            val header = ByteArray(8)
-            jar.read(header)
-            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
-            major <= 52
-        } else {
-            false
+//    @Suppress("MagicNumber")
+//    private fun Attachment.isLegacyJar(): Boolean = openAsJAR().use { jar ->
+//        val firstClass = jar.entries().firstOrNull { it.name.endsWith(".class") }
+//        if (firstClass != null) {
+//            val header = ByteArray(8)
+//            jar.read(header)
+//            val major = ((header[6].toInt() and 0xFF) shl 8) or (header[7].toInt() and 0xFF)
+//            major <= 52
+//        } else {
+//            false
+//        }
+//    }
+
+    private fun Attachment.kotlinMetadataVersion(classBytes: ByteArray): KotlinMetadataVersion? {
+        val mvList = mutableListOf<Int>()
+        val classReader = ClassReader(classBytes)
+        classReader.accept(object : ClassVisitor(Opcodes.ASM9) {
+            override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
+                if (descriptor == "Lkotlin/Metadata;") {
+                    return object : AnnotationVisitor(Opcodes.ASM9) {
+                        override fun visitArray(name: String?): AnnotationVisitor? {
+                            return if (name == "mv") {
+                                object : AnnotationVisitor(Opcodes.ASM9) {
+                                    override fun visit(name: String?, value: Any?) {
+                                        if (value is Int) mvList.add(value)
+                                    }
+                                }
+                            }
+                            else  null
+                        }
+                    }
+                }
+                return null
+            }
+        }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+        return KotlinMetadataVersion.from(mvList.toIntArray())
+    }
+
+    private fun Attachment.determineLanguageVersion(): LanguageVersion? {
+        var maxClassFileMajorVersion = 0
+        val kotlinMetadataVersions = sortedSetOf<KotlinMetadataVersion>()
+        open().use { input ->
+            JarInputStream(input).use { jar ->
+                var entry = jar.nextEntry
+                while (entry != null) {
+                    if (entry.name.endsWith(".class")) {
+                        val classBytes = jar.readBytes()
+                        maxClassFileMajorVersion = max( maxClassFileMajorVersion, ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF))
+                        kotlinMetadataVersion(classBytes)?.let { kotlinMetadataVersions.add(it) }
+                    }
+            } }
+        }
+        if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
+            logger.warn("Attachment $id comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
+                    "This may cause compatibility issues.")
+        }
+        try {
+            return LanguageVersion.Bytecode(maxClassFileMajorVersion, kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last())
+        } catch (e: IllegalArgumentException) {
+            logger.error("Unable to load Attachment Attachment Id: $id ${e.message}")
+            return null;
         }
     }
+    private fun Attachment.isLegacyCompatible() = determineLanguageVersion()?.let { it.isLegacyCompatible } ?: false
+    private fun Attachment.isNonLegacyCompatible() = determineLanguageVersion()?.let { it.isNonLegacyCompatible } ?: false
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
 
