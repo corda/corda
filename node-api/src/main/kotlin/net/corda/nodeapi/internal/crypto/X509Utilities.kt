@@ -450,6 +450,7 @@ fun X509Certificate.toSimpleString(): String {
     } catch (e: Exception) {
         "null"
     }
+    @Suppress("DEPRECATION")
     val authorityKeyIdentifier = try {
         AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
     } catch (e: Exception) {

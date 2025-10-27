@@ -215,6 +215,7 @@ class X509UtilitiesTest {
                 X500Principal("CN=Server Cert,O=R3 Ltd,L=London,C=GB"),
                 keyPair.public,
                 crlDistPoint = crlDistPoint)
+        @Suppress("DEPRECATION")
         serverCert.toBc().run {
             val certCrlDistPoint = CRLDistPoint.getInstance(getExtension(Extension.cRLDistributionPoints).parsedValue)
             assertTrue(certCrlDistPoint.distributionPoints.first().distributionPoint.toString().contains(crlDistPoint))
