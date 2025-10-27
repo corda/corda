@@ -243,7 +243,7 @@ interface NodeVerificationSupport : VerificationSupport {
                 return null
             }
         }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
-        return KotlinMetadataVersion.from(mvList.toIntArray())
+        return if (mvList.isNotEmpty()) KotlinMetadataVersion.from(mvList.toIntArray()) else null
     }
 
     @Suppress("MagicNumber", "NestedBlockDepth")
@@ -259,7 +259,9 @@ interface NodeVerificationSupport : VerificationSupport {
                         maxClassFileMajorVersion = max( maxClassFileMajorVersion, ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF))
                         kotlinMetadataVersion(classBytes)?.let { kotlinMetadataVersions.add(it) }
                     }
-            } }
+                    entry = jar.nextEntry
+               }
+            }
         }
         if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
             logger.warn("Attachment $id comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
