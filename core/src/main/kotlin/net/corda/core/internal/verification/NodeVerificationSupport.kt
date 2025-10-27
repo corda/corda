@@ -21,6 +21,7 @@ import net.corda.core.internal.getRequiredGroup
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.sortAttachments
+import net.corda.core.internal.warnOnce
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
@@ -215,6 +216,9 @@ interface NodeVerificationSupport : VerificationSupport {
             val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
                     .firstOrNull { it.hasFile(fileName) && it.isNonLegacyCompatible() }?.let { listOf(it) } ?: emptyList()
             if (matchingDbAttachment.isNotEmpty()) {
+                logger.warnOnce("Falling back to database-stored attachments because no installed matching non-legacy attachments " +
+                        "were found. This fallback may be disabled in a future version of Corda. If you see this message, " +
+                        "please raise a support ticket with R3 to discuss your deployment configuration.")
                 return matchingDbAttachment
             }
         }
@@ -235,8 +239,7 @@ interface NodeVerificationSupport : VerificationSupport {
                                         if (value is Int) mvList.add(value)
                                     }
                                 }
-                            }
-                            else  null
+                            } else null
                         }
                     }
                 }
@@ -256,11 +259,11 @@ interface NodeVerificationSupport : VerificationSupport {
                 while (entry != null) {
                     if (entry.name.endsWith(".class")) {
                         val classBytes = jar.readBytes()
-                        maxClassFileMajorVersion = max( maxClassFileMajorVersion, ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF))
+                        maxClassFileMajorVersion = max(maxClassFileMajorVersion, ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF))
                         kotlinMetadataVersion(classBytes)?.let { kotlinMetadataVersions.add(it) }
                     }
                     entry = jar.nextEntry
-               }
+                }
             }
         }
         if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
@@ -274,6 +277,7 @@ interface NodeVerificationSupport : VerificationSupport {
             return null;
         }
     }
+
     private fun Attachment.isLegacyCompatible() = determineLanguageVersion()?.let { it.isLegacyCompatible } ?: false
     private fun Attachment.isNonLegacyCompatible() = determineLanguageVersion()?.let { it.isNonLegacyCompatible } ?: false
 
