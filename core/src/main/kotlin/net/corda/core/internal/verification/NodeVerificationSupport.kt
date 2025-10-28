@@ -226,27 +226,23 @@ interface NodeVerificationSupport : VerificationSupport {
     }
 
     private fun Attachment.kotlinMetadataVersion(classBytes: ByteArray): KotlinMetadataVersion? {
-        val mvList = mutableListOf<Int>()
+        var mvArray: IntArray? = null
         val classReader = ClassReader(classBytes)
         classReader.accept(object : ClassVisitor(Opcodes.ASM9) {
             override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
                 if (descriptor == "Lkotlin/Metadata;") {
                     return object : AnnotationVisitor(Opcodes.ASM9) {
-                        override fun visitArray(name: String?): AnnotationVisitor? {
-                            return if (name == "mv") {
-                                object : AnnotationVisitor(Opcodes.ASM9) {
-                                    override fun visit(name: String?, value: Any?) {
-                                        if (value is Int) mvList.add(value)
-                                    }
-                                }
-                            } else null
+                        override fun visit(name: String?, value: Any?) {
+                            if (name == "mv") {
+                                if (value is IntArray) mvArray = value
+                            }
                         }
                     }
                 }
                 return null
             }
         }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
-        return if (mvList.isNotEmpty()) KotlinMetadataVersion.from(mvList.toIntArray()) else null
+        return mvArray?.let { KotlinMetadataVersion.from(it) }
     }
 
     @Suppress("MagicNumber", "NestedBlockDepth")
