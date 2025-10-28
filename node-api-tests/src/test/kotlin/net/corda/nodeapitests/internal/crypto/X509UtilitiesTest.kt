@@ -219,7 +219,7 @@ class X509UtilitiesTest {
             val certCrlDistPoint = CRLDistPoint.getInstance(getExtension(Extension.cRLDistributionPoints).parsedValue)
             assertTrue(certCrlDistPoint.distributionPoints.first().distributionPoint.toString().contains(crlDistPoint))
             val certCaAuthorityKeyIdentifier = AuthorityKeyIdentifier.getInstance(getExtension(Extension.authorityKeyIdentifier).parsedValue)
-            assertThat(caSubjectKeyIdentifier.keyIdentifier).isEqualTo(certCaAuthorityKeyIdentifier.keyIdentifier)
+            assertThat(caSubjectKeyIdentifier.keyIdentifier).isEqualTo(certCaAuthorityKeyIdentifier.getKeyIdentifierOctets())
         }
     }
 
