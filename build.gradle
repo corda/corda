@@ -497,6 +497,15 @@ allprojects {
                     if (details.requested.group == 'org.apache.commons') {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-lang3") {
+                            // SNYK-JAVA-ORGAPACHECOMMONS-10734078 / CVE-2025-48924
+                            // vulnerability in org.apache.commons:commons-lang3, fixed in commons-lang3@3.18.0
+                            // org.apache.commons:commons-lang3 is a transitive dependency of several Corda dependencies:
+                            // - liquibase-core@4.20.0
+                            // - artemis-server@2.19.1
+                            // - docker-java@3.5.1
+                            // force-upgrade to latest commons-lang3@3.19.0
+                            details.useVersion commons_lang_version
                         }
                     }
 
