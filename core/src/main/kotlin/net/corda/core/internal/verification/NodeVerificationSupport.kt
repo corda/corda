@@ -1,5 +1,9 @@
 package net.corda.core.internal.verification
 
+import net.bytebuddy.jar.asm.AnnotationVisitor
+import net.bytebuddy.jar.asm.ClassReader
+import net.bytebuddy.jar.asm.ClassVisitor
+import net.bytebuddy.jar.asm.Opcodes
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.StateRef
@@ -10,9 +14,14 @@ import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.cordapp.CordappProviderInternal
+import net.corda.core.internal.cordapp.KotlinMetadataVersion
+import net.corda.core.internal.cordapp.LanguageVersion
 import net.corda.core.internal.entries
 import net.corda.core.internal.getRequiredGroup
 import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
+import net.corda.core.internal.sortAttachments
+import net.corda.core.internal.warnOnce
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
@@ -33,12 +42,23 @@ import net.corda.core.transactions.MissingContractAttachments
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
+import java.util.jar.JarInputStream
+import kotlin.math.max
 
 /**
  * Implements [VerificationSupport] in terms of node-based services.
  */
+@Suppress("TooManyFunctions")
 interface NodeVerificationSupport : VerificationSupport {
+
+    private companion object {
+        private val logger = contextLogger()
+        val DB_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.missingClassDbSearchDisabled")
+        val INSTALLED_FIRST_SEARCH_DISABLED = java.lang.Boolean.getBoolean("net.corda.node.transactionbuilder.installedFirstSearchDisabled")
+    }
+
     val networkParameters: NetworkParameters
 
     val validatedTransactions: TransactionStorage
@@ -127,19 +147,135 @@ interface NodeVerificationSupport : VerificationSupport {
     }
 
     /**
-     * Scans trusted (installed locally) attachments to find all that contain the [className].
+     * Returns at most one `Attachment` containing [className], prioritising installed CorDapps first.
+     * Legacy contracts are only searched in legacy CorDapps. Non-legacy may optionally fall back to searching the attachment
+     * store (database) if no matching installed CorDapp is found and fallback is enabled.
      *
-     * @return attachments containing the given class in descending version order. This means any legacy attachments will occur after the
-     * current version one.
+     * The function returns either:
+     * - A single-element list containing the first matching attachment (after deterministic sorting:
+     *   installed attachments are sorted by version descending, then ID ascending; database attachments
+     *   are sorted by version descending, then insertion date descending), or
+     * - An empty list if no suitable attachment is found.
+     *
+     * ### System properties:
+     * - `net.corda.node.transactionbuilder.missingClassDbSearchDisabled`:
+     *   If `true`, disables database fallback. Only installed CorDapps will be searched.
+     * - `net.corda.node.transactionbuilder.installedFirstSearchDisabled`:
+     *   If `true`, disables the new “installed-first” lookup logic and reverts to the old database-only behaviour.
+     * @param className Fully qualified class name to search for
+     * @param isLegacy Whether to search for legacy contract attachments
+     * @return A list containing a single matching attachment, or an empty list if none are found.
      */
-    override fun getTrustedClassAttachments(className: String): List<Attachment> {
-        val allTrusted = attachments.queryAttachments(
-                AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-        )
+    @Suppress("ComplexMethod")
+    override fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment> {
         val fileName = "$className.class"
-        return allTrusted.mapNotNull { id -> attachments.openAttachment(id)!!.takeIf { it.hasFile(fileName) } }
+
+        // 1. Old logic only
+        if (INSTALLED_FIRST_SEARCH_DISABLED) {
+            val dbAttachmentIds = attachments.queryAttachments(
+                    AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                    AttachmentSort(listOf(
+                            AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                            AttachmentSortColumn(AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC))
+                    )
+            )
+            val dbAttachments = dbAttachmentIds.mapNotNull { id -> attachments.openAttachment(id) }.filter { it.hasFile(fileName) }
+            val attachment = if (isLegacy) {
+                val legacyContractCordapps = cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
+                dbAttachments.firstOrNull { it.id in legacyContractCordapps }
+            } else {
+                dbAttachments.firstOrNull()
+            }
+            return attachment?.let { listOf(it) } ?: emptyList()
+        }
+
+        // 2. Get installed CorDapps first
+        val installedCordapps = if (isLegacy) {
+            cordappProvider.legacyContractCordapps
+        } else {
+            cordappProvider.cordapps
+        }
+
+        val installedAttachments = installedCordapps
+                .mapNotNull { attachments.openAttachment(it.jarHash) }
+                .sortAttachments().firstOrNull { it.hasFile(fileName) }?.let { listOf(it) } ?: emptyList()
+
+        if (installedAttachments.isNotEmpty()) {
+            return installedAttachments
+        }
+
+        // 3. Optional fall back to DB attachments (non-legacy only)
+        if (!isLegacy && !DB_SEARCH_DISABLED) {
+            val dbAttachments = attachments.queryAttachments(
+                    AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                    AttachmentSort(listOf(
+                            AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                            AttachmentSortColumn(AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC))
+                    )
+            )
+            val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
+                    .firstOrNull { it.hasFile(fileName) && it.isNonLegacyCompatible() }?.let { listOf(it) } ?: emptyList()
+            if (matchingDbAttachment.isNotEmpty()) {
+                logger.warnOnce("Falling back to database-stored attachments because no installed matching non-legacy attachments " +
+                        "were found. This fallback may be disabled in a future version of Corda. If you see this message, " +
+                        "please raise a support ticket with R3 to discuss your deployment configuration.")
+                return matchingDbAttachment
+            }
+        }
+        return emptyList()
     }
+
+    private fun Attachment.kotlinMetadataVersion(classBytes: ByteArray): KotlinMetadataVersion? {
+        var mvArray: IntArray? = null
+        val classReader = ClassReader(classBytes)
+        classReader.accept(object : ClassVisitor(Opcodes.ASM9) {
+            override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
+                if (descriptor == "Lkotlin/Metadata;") {
+                    return object : AnnotationVisitor(Opcodes.ASM9) {
+                        override fun visit(name: String?, value: Any?) {
+                            if (name == "mv") {
+                                if (value is IntArray) mvArray = value
+                            }
+                        }
+                    }
+                }
+                return null
+            }
+        }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+        return mvArray?.let { KotlinMetadataVersion.from(it) }
+    }
+
+    @Suppress("MagicNumber", "NestedBlockDepth")
+    private fun Attachment.determineLanguageVersion(): LanguageVersion? {
+        var maxClassFileMajorVersion = 0
+        val kotlinMetadataVersions = sortedSetOf<KotlinMetadataVersion>()
+        open().use { input ->
+            JarInputStream(input).use { jar ->
+                var entry = jar.nextEntry
+                while (entry != null) {
+                    if (entry.name.endsWith(".class")) {
+                        val classBytes = jar.readBytes()
+                        maxClassFileMajorVersion = max(maxClassFileMajorVersion, ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF))
+                        kotlinMetadataVersion(classBytes)?.let { kotlinMetadataVersions.add(it) }
+                    }
+                    entry = jar.nextEntry
+                }
+            }
+        }
+        if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
+            logger.warn("Attachment $id comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
+                    "This may cause compatibility issues.")
+        }
+        try {
+            return LanguageVersion.Bytecode(maxClassFileMajorVersion, kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last())
+        } catch (e: IllegalArgumentException) {
+            logger.error("Unable to load Attachment Attachment Id: $id ${e.message}")
+            return null;
+        }
+    }
+
+    private fun Attachment.isLegacyCompatible() = determineLanguageVersion()?.let { it.isLegacyCompatible } ?: false
+    private fun Attachment.isNonLegacyCompatible() = determineLanguageVersion()?.let { it.isNonLegacyCompatible } ?: false
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
 
