@@ -74,6 +74,15 @@ processIntegrationTestResources {
 
 processTestResources {
     from(configurations.corda4_11)
+    from(tasks.getByPath(":finance:contracts:jar")) {
+        rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
+    }
+    from(tasks.getByPath(":finance:workflows:jar")) {
+        rename 'corda-finance-workflows-.*.jar', 'corda-finance-workflows.jar'
+    }
+    from(tasks.getByPath(":legacy411:jar")) {
+        rename 'legacy411-.*.jar', 'pure-java-legacy411.jar'
+    }
 }
 
 dependencies {

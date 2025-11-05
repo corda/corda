@@ -35,6 +35,21 @@ fun Attachment.isUploaderTrusted(): Boolean = when (this) {
     else -> false
 }
 
+/**
+ * Sorts a list of [Attachment]s deterministically.
+ * The sorting logic is as follows:
+ * - Primary sort: by [Attachment.contractVersion] in **descending** order (higher versions come first).
+ * - Secondary sort: by [Attachment.id] in **ascending** (alphabetical) order to ensure deterministic ordering
+ *   when versions are equal or missing.
+ * @return a new list of attachments sorted first by version (descending) and then by ID (ascending).
+ */
+fun List<Attachment>.sortAttachments(): List<Attachment> {
+    return this.sortedWith(
+            compareByDescending<Attachment> { (it.contractVersion) }
+                    .thenBy { it.id.toString() }
+    )
+}
+
 abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: String?) : Attachment {
     companion object {
         /**

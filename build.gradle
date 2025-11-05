@@ -125,6 +125,7 @@ buildscript {
     ext.commons_lang3_version= constants.getProperty("commonsLang3Version")
     ext.nimbus_oauth2_version= constants.getProperty("nimbusOauth2Version")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
+    ext.nimbus_jose_jwt_version= constants.getProperty("nimbusJoseJwtVersion")
 
     ext.corda_revision = {
         try {
@@ -484,6 +485,17 @@ allprojects {
                         if (!projectsToExcludeFromCaffeineForcing.contains(project.name)) {
                             details.useVersion caffeine_version
                         }
+                    }
+
+                    // SNYK-JAVA-COMNIMBUSDS-10691768 / CVE-2025-53864
+                    // vulnerability in com.nimbusds:nimbus-jose-jwt@8.20.1, fixed in nimbus-jose-jwt@10.0.2
+                    // nimbus-jose-jwt@8.20.1 is a transitive dependency via com.azure:azure-identity@1.17.0
+                    // com.azure:azure-identity@1.18.1 is the latest version, but only depends on nimbus-jose-jwt@9.37.3
+                    // Corda Enterprise already forces nimbus-jose-jwt to 10.0.2
+                    // force-upgrade to nimbus-jose-jwt@10.0.2 to fix the issue, and sync with Enterprise
+                    // Review this when com.azure:azure-identity is upgraded
+                    if (details.requested.group == 'com.nimbusds' && details.requested.name == 'nimbus-jose-jwt') {
+                        details.useVersion nimbus_jose_jwt_version
                     }
                 }
 

@@ -171,7 +171,7 @@ class ExternalVerifierHandleImpl(
             is GetAttachment -> AttachmentResult(verificationSupport.getAttachment(request.id)?.withTrust())
             is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map { it?.withTrust() })
             is GetNetworkParameters -> NetworkParametersResult(verificationSupport.getNetworkParameters(request.id))
-            is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(verificationSupport.getTrustedClassAttachments(request.className).map { it.id })
+            is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(verificationSupport.getTrustedClassAttachments(request.className, true).map { it.id })
         }
         log.debug { "Sending response to external verifier: $result" }
         connection.channel.writeCordaSerializable(result)

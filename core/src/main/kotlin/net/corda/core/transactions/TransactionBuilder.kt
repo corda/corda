@@ -47,6 +47,7 @@ import kotlin.reflect.KClass
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
  */
+@Suppress("LargeClass")
 open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = defaultLockId(),
@@ -347,14 +348,7 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachments = serviceHub.getTrustedClassAttachments(missingClass)
-        val attachment = if (isLegacy) {
-            // Any (legacy) missing attachments must also be present in the legacy-contracts folder to be attached to a transaction
-            val legacyContractCordapps = serviceHub.cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
-            attachments.firstOrNull { it.id in legacyContractCordapps } 
-        } else {
-            attachments.firstOrNull()
-        }
+        val attachment = serviceHub.getTrustedClassAttachments(missingClass, isLegacy).firstOrNull()
 
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
@@ -363,7 +357,7 @@ open class TransactionBuilder(
         }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
-                        Automatically attaching contract dependency $attachment.
+                        Automatically attaching cordapp dependency $attachment.
                         Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
                     """.trimIndent())
 

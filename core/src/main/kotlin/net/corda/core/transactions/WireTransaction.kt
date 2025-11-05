@@ -180,7 +180,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             }
             // These are not used
             override val appClassLoader: ClassLoader get() = throw AbstractMethodError()
-            override fun getTrustedClassAttachments(className: String) = throw AbstractMethodError()
+            override fun getTrustedClassAttachments(className: String, isLegacy: Boolean) = throw AbstractMethodError()
             override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>) = throw AbstractMethodError()
             override val rotatedKeys: RotatedKeys get() = throw AbstractMethodError()
         })
@@ -493,7 +493,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * so resort to the original mechanism of trying to find an attachment that contains
          * the missing class.
          */
-        val extraAttachment = requireNotNull(verificationSupport.getTrustedClassAttachments(missingClass).firstOrNull()) {
+        val extraAttachment = requireNotNull(verificationSupport.getTrustedClassAttachments(missingClass, false).firstOrNull()) {
             """Transaction $ltx is incorrectly formed. Most likely it was created during version 3 of Corda
                 |when the verification logic was more lenient. Attempted to find local dependency for class: $missingClass,
                 |but could not find one.
