@@ -291,11 +291,11 @@ open class TransactionBuilder(
                 return current.message?.replace('.', '/')
             }
             if (current is NoClassDefFoundError) {
-                return current.message
+                return current.message?.replace('.', '/')
             }
             val message = current.message
             if (message != null) {
-                message.extractClassAfter(NoClassDefFoundError::class)?.let { return it }
+                message.extractClassAfter(NoClassDefFoundError::class)?.let { return it.replace('.', '/') }
                 message.extractClassAfter(ClassNotFoundException::class)?.let { return it.replace('.', '/') }
             }
             current = current.cause ?: return null
