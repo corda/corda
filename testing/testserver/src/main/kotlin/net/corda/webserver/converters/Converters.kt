@@ -1,11 +1,10 @@
 package net.corda.webserver.converters
 
+import jakarta.ws.rs.ext.ParamConverter
+import jakarta.ws.rs.ext.ParamConverterProvider
+import jakarta.ws.rs.ext.Provider
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.uncheckedCast
 import java.lang.reflect.Type
-import javax.ws.rs.ext.ParamConverter
-import javax.ws.rs.ext.ParamConverterProvider
-import javax.ws.rs.ext.Provider
 
 object CordaX500NameConverter : ParamConverter<CordaX500Name> {
     override fun toString(value: CordaX500Name) = value.toString()
@@ -14,9 +13,10 @@ object CordaX500NameConverter : ParamConverter<CordaX500Name> {
 
 @Provider
 object CordaConverterProvider : ParamConverterProvider {
+    @Suppress("UNCHECKED_CAST")
     override fun <T : Any> getConverter(rawType: Class<T>, genericType: Type?, annotations: Array<out Annotation>?): ParamConverter<T>? {
         if (rawType == CordaX500Name::class.java) {
-            return uncheckedCast(CordaX500NameConverter)
+            return CordaX500NameConverter as ParamConverter<T>?
         }
         return null
     }

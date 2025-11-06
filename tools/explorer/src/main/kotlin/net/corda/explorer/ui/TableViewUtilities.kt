@@ -14,13 +14,14 @@ import org.fxmisc.easybind.EasyBind
 fun <S> TableView<S>.setColumnPrefWidthPolicy(
         getColumnWidth: (tableWidthWithoutPaddingAndBorder: Number, column: TableColumn<S, *>) -> Number
 ) {
+    @Suppress("SpreadOperator")
     val tableWidthWithoutPaddingAndBorder = Bindings.createDoubleBinding({
         val padding = padding
         val borderInsets = border?.insets
         width -
                 (if (padding != null) padding.left + padding.right else 0.0) -
                 (if (borderInsets != null) borderInsets.left + borderInsets.right else 0.0)
-    }, arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
+    }, *arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
 
     columns.forEach {
         it.setPrefWidthPolicy(tableWidthWithoutPaddingAndBorder, getColumnWidth)
@@ -49,13 +50,14 @@ fun <S, T> Formatter<T>.toTableCellFactory() = Callback<TableColumn<S, T?>, Tabl
     }
 }
 
+@Suppress("SpreadOperator")
 fun <S> TableView<S>.singleRowSelection(): ObjectBinding<SingleRowSelection<S>> = Bindings.createObjectBinding({
     if (selectionModel.selectedItems.size == 0) {
         SingleRowSelection.None<S>()
     } else {
         SingleRowSelection.Selected(selectionModel.selectedItems[0])
     }
-}, arrayOf(selectionModel.selectedItems))
+}, *arrayOf(selectionModel.selectedItems))
 
 fun <S, T> TableColumn<S, T>.setCustomCellFactory(toNode: (T) -> Node) {
     setCellFactory {

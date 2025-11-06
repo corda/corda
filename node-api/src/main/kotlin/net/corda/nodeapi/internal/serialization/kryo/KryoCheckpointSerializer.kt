@@ -7,7 +7,6 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -38,17 +37,16 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
         throw UnsupportedOperationException(message)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
+    override fun read(kryo: Kryo, input: Input, type: Class<out AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
 object KryoCheckpointSerializer : CheckpointSerializer {
     private val kryoPoolsForContexts = ConcurrentHashMap<Triple<ClassWhitelist, ClassLoader, Iterable<CheckpointCustomSerializer<*,*>>>, KryoPool>()
-
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, context.checkpointCustomSerializers)) {
-            KryoPool.Builder {
-                val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
+            KryoPool {
+                val classResolver = CordaClassResolver(context)
+                val serializer = Fiber.getFiberSerializer(classResolver,false) as KryoSerializer
                 // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                 val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                 serializer.kryo.apply {
@@ -64,9 +62,9 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                     warnAboutDuplicateSerializers(customSerializers)
                     val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
                     addDefaultCustomSerializers(this, classToSerializer)
+                    referenceResolver
                 }
-            }.build()
-
+            }
         }
     }
 
@@ -113,13 +111,13 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                     .forEach { (clazz, customSerializer) -> kryo.addDefaultSerializer(clazz, customSerializer) }
 
     private fun <T : Any> CheckpointSerializationContext.kryo(task: Kryo.() -> T): T {
-        return getPool(this).run { kryo ->
-            kryo.context.ensureCapacity(properties.size)
-            properties.forEach { kryo.context.put(it.key, it.value) }
+        return getPool(this).run {
+            this.context.ensureCapacity(properties.size)
+            properties.forEach { this.context.put(it.key, it.value) }
             try {
-                kryo.task()
+                this.task()
             } finally {
-                kryo.context.clear()
+                this.context.clear()
             }
         }
     }
