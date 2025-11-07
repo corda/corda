@@ -396,6 +396,7 @@ class AttachmentsClassLoaderTests {
                     privacySalt,
                     testNetworkParameters(),
                     emptyList(),
+                    emptyList(),
                     isAttachmentTrusted = { true },
                     attachmentsClassLoaderCache = attachmentsClassLoaderCache
             )
@@ -432,6 +433,7 @@ class AttachmentsClassLoaderTests {
                         timeWindow,
                         privacySalt,
                         testNetworkParameters(),
+                        emptyList(),
                         emptyList(),
                         isAttachmentTrusted = { true },
                         attachmentsClassLoaderCache = attachmentsClassLoaderCache

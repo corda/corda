@@ -5,6 +5,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
@@ -44,6 +45,7 @@ fun createLedgerTransaction(
         privacySalt: PrivacySalt,
         networkParameters: NetworkParameters,
         references: List<StateAndRef<ContractState>>,
+        notaryInstructions: List<NotaryInstruction>,
         componentGroups: List<ComponentGroup>? = null,
         serializedInputs: List<SerializedStateAndRef>? = null,
         serializedReferences: List<SerializedStateAndRef>? = null,
@@ -62,6 +64,7 @@ fun createLedgerTransaction(
             privacySalt,
             networkParameters,
             references,
+            notaryInstructions,
             componentGroups,
             serializedInputs,
             serializedReferences,

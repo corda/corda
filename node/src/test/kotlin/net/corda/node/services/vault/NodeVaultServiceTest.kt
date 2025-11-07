@@ -711,7 +711,12 @@ class NodeVaultServiceTest {
         // Change notary
         services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
-        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary, services.networkParametersService.currentHash).build()
+        val changeNotaryTx = NotaryChangeTransactionBuilder(
+                listOf(initialCashState.ref),
+                issueStx.notary!!,
+                newNotary,
+                services.networkParametersService.currentHash,
+                initialCashState.state.data.participants.map { it.owningKey }.toSet()).build()
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {

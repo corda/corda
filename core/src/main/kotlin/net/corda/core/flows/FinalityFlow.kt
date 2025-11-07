@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.PlatformVersionSwitches
@@ -16,7 +17,8 @@ import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.FullTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -172,7 +174,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
-        require(transaction.coreTransaction is WireTransaction)  // Sanity check
+        require(transaction.coreTransaction is WireTransaction || transaction.coreTransaction is NotaryChangeWireTransaction)  // Sanity check
         if (!newApi) {
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "FinalityFlow with FlowSessions. (${serviceHub.getAppContext().cordapp.info})")
@@ -192,8 +194,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         transaction.pushToLoggingContext()
         logCommandData()
-        val ledgerTransaction = verifyTx()
-        externalTxParticipants = extractExternalParticipants(ledgerTransaction)
+        externalTxParticipants = verifyTx()
 
         if (newApi) {
             val sessionParties = sessions.map { it.counterparty }.toSet()
@@ -428,46 +429,43 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
     }
 
-    private fun needsNotarySignature(stx: SignedTransaction): Boolean {
-        val wtx = stx.tx
-        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
-        return needsNotarisation && hasNoNotarySignature(stx)
-    }
-
-    private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
-        val notaryKey = stx.tx.notary?.owningKey
-        val signers = stx.sigs.asSequence().map { it.by }.toSet()
-        return notaryKey?.isFulfilledBy(signers) != true
-    }
-
-    private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {
-        val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
+    private fun extractExternalParticipants(ftx: FullTransaction): Set<Party> {
+        val participants = ftx.outputStates.flatMap { it.participants } + ftx.inputs.map { it.state.data }.flatMap { it.participants }
         return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities.toSet()
     }
 
-    private fun verifyTx(): LedgerTransaction {
-        val notary = transaction.tx.notary
+    private fun verifyTx(): Set<Party> {
+        val notary = transaction.notary
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
-        val ltx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false)
         // verifyInternal returns null if the transaction was verified externally, which *could* happen on a very odd scenerio of a 4.11
         // node creating the transaction but a 4.12 kicking off finality. In that case, we still want a LedgerTransaction object for
         // recording to the vault, etc. Note that calling verify() on this will fail as it doesn't have the necessary non-legacy attachments
         // for verification by the node.
-        return ltx ?: transaction.toLedgerTransaction(serviceHub, checkSufficientSignatures = false)
+        val ftx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false) ?:
+            transaction.toLedgerTransaction(serviceHub, checkSufficientSignatures = false)
+        return extractExternalParticipants(ftx)
     }
 }
 
 object NotarySigCheck {
     fun needsNotarySignature(stx: SignedTransaction): Boolean {
-        val wtx = stx.tx
-        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
-        return needsNotarisation && hasNoNotarySignature(stx)
+        val coreTx = stx.coreTransaction
+        return when (coreTx) {
+            is WireTransaction -> {
+                val needsNotarisation = coreTx.inputs.isNotEmpty() || coreTx.references.isNotEmpty() || coreTx.timeWindow != null
+                        || coreTx.notaryInstructions.isNotEmpty()
+                needsNotarisation && hasNoNotarySignature(stx)
+            }
+
+            is NotaryChangeWireTransaction -> hasNoNotarySignature(stx)
+            else -> throw IllegalArgumentException("Wrong input to NotarySigCheck - was expecting WireTransaction or NotaryChangeWireTransaction, got ${coreTx::class}")
+        }
     }
 
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
-        val notaryKey = stx.tx.notary?.owningKey
+        val notaryKey = stx.notary?.owningKey
         val signers = stx.sigs.asSequence().map { it.by }.toSet()
         return notaryKey?.isFulfilledBy(signers) != true
     }
