@@ -283,7 +283,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             // Seller Alice already sent a message to Buyer Bob. Pump once:
             bobNode.pumpReceive()
 
-            // Bob sends a couple of queries for the dependencies back to Alice. Alice reponds.
+            // Bob sends a couple of queries for the dependencies back to Alice. Alice responds.
             aliceNode.pumpReceive()
             bobNode.pumpReceive()
             aliceNode.pumpReceive()

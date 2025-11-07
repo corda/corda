@@ -686,7 +686,7 @@ class CordaRPCClient private constructor(
      * @param targetLegalIdentity in case of multi-identity RPC endpoint specific legal identity to which the calls must be addressed.
      * @param gracefulReconnect a [GracefulReconnect] class containing callback logic when the RPC is dis/reconnected unexpectedly.
      *  Note that when using graceful reconnect the values for [CordaRPCClientConfiguration.connectionMaxRetryInterval] and
-     * [CordaRPCClientConfiguration.maxReconnectAttempts] will be overridden in order to mangage the reconnects.
+     * [CordaRPCClientConfiguration.maxReconnectAttempts] will be overridden in order to manage the reconnects.
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     @JvmOverloads

@@ -39,7 +39,7 @@ class Kotlin12Plugin implements Plugin<Project> {
             def taskSourceSetName = isMain(sourceSet) ? "" : sourceSet.name.capitalize()
 
             def compileKotlin = project.tasks.register("compile${taskSourceSetName}Kotlin", KotlinCompile.class) { task ->
-                // The 1.2 compiler needs to be laoded in a separate class loader, as the build classpath already contains its own version
+                // The 1.2 compiler needs to be loaded in a separate class loader, as the build classpath already contains its own version
                 // of Kotlin.
                 task.compilerClasspath.from(kotlinCompilerConfiguration)
                 task.source(allKotlin)

@@ -118,7 +118,7 @@ class BFTSmartNotaryService(
             val response = service.commitTransaction(payload, otherSideSession.counterparty)
             when (response) {
                 is BFTSmart.ClusterResponse.Error -> {
-                    // TODO: here we assume that all error will be the same, but there might be invalid onces from mailicious nodes
+                    // TODO: here we assume that all error will be the same, but there might be invalid onces from malicious nodes
                     val responseError = response.errors.first().verified()
                     throw NotaryException(responseError, payload.coreTransaction.id)
                 }
