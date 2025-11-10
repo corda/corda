@@ -123,6 +123,9 @@ buildscript {
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
     ext.commons_lang3_version= constants.getProperty("commonsLang3Version")
+    ext.nimbus_oauth2_version= constants.getProperty("nimbusOauth2Version")
+    ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
+    ext.nimbus_jose_jwt_version= constants.getProperty("nimbusJoseJwtVersion")
 
     ext.corda_revision = {
         try {
@@ -442,6 +445,11 @@ allprojects {
                         }
                     }
 
+                    // Keep SnakeYaml in sync with Corda Ent
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
+                    }
+
                     // SNYK-JAVA-ORGAPACHECOMMONS-10363251 / CVE-2025-48976
                     // Vulnerability in commons-fileupload2-core@2.0.0-M1
                     // Is a transitive dependency of commons-fileupload2-jakarta@2.0.0-M1
@@ -459,6 +467,15 @@ allprojects {
                         details.useVersion json_smart_version
                     }
 
+                    // SNYK-JAVA-COMNIMBUSDS-1243767 / CWE-611
+                    // vulnerability in oauth2-oidc-sdk@7.4, fixed in oauth2-oidc-sdk@8.36.2
+                    // oauth2-oidc-sdk@7.4 is a transitive dependency via azure-identity@1.2.0
+                    // azure-identity has been upgraded to 1.2.5 (depends on oauth2-oidc-sdk@8.36)
+                    // force-upgrade to fixed auth2-oidc-sdk@8.36.2.
+                    if (details.requested.group == 'com.nimbusds' && details.requested.name == 'oauth2-oidc-sdk') {
+                        details.useVersion nimbus_oauth2_version
+                    }
+
                     // Artemis was upgraded to 2.42.0 to address numerous security issues. However, this pulls in an upgrade
                     // to Caffeine 3.1.8 to 3.2.1, which causes a plethora of compiler warnings.
                     // For simplicity, force the caffeine version back to 3.1.8, but exclude the legacy projects that
@@ -468,6 +485,17 @@ allprojects {
                         if (!projectsToExcludeFromCaffeineForcing.contains(project.name)) {
                             details.useVersion caffeine_version
                         }
+                    }
+
+                    // SNYK-JAVA-COMNIMBUSDS-10691768 / CVE-2025-53864
+                    // vulnerability in com.nimbusds:nimbus-jose-jwt@8.20.1, fixed in nimbus-jose-jwt@10.0.2
+                    // nimbus-jose-jwt@8.20.1 is a transitive dependency via com.azure:azure-identity@1.17.0
+                    // com.azure:azure-identity@1.18.1 is the latest version, but only depends on nimbus-jose-jwt@9.37.3
+                    // Corda Enterprise already forces nimbus-jose-jwt to 10.0.2
+                    // force-upgrade to nimbus-jose-jwt@10.0.2 to fix the issue, and sync with Enterprise
+                    // Review this when com.azure:azure-identity is upgraded
+                    if (details.requested.group == 'com.nimbusds' && details.requested.name == 'nimbus-jose-jwt') {
+                        details.useVersion nimbus_jose_jwt_version
                     }
                 }
 
