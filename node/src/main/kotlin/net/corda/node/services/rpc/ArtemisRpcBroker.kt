@@ -52,7 +52,6 @@ class ArtemisRpcBroker internal constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun start() {
         logger.debug { "Artemis RPC broker is starting for: $addresses" }
         try {
@@ -90,7 +89,7 @@ class ArtemisRpcBroker internal constructor(
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
-            registerPostQueueDeletionCallback { address, qName -> logger.debug("Queue deleted: $qName for $address") }
+            registerPostQueueDeletionCallback { address, qName -> logger.debug { "Queue deleted: $qName for $address" } }
         }
     }
 

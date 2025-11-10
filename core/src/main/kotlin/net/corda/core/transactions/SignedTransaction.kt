@@ -1,31 +1,41 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaException
+import net.corda.core.CordaInternal
 import net.corda.core.CordaThrowable
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.TransactionNetworkParameterOrderingException
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sign
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
-import net.corda.core.internal.TransactionDeserialisationException
-import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.getRequiredSigningKeysInternal
+import net.corda.core.internal.toSimpleString
+import net.corda.core.internal.verification.NodeVerificationSupport
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
-import java.io.NotSerializableException
+import net.corda.core.utilities.toBase58String
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
-import java.util.*
 import java.util.function.Predicate
 
 /**
- * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
+ * SignedTransaction wraps a serialized [CoreTransaction], though it will almost exclusively be a [WireTransaction].
+ * It contains one or more signatures, each one for
  * a public key (including composite keys) that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
  * and the type most frequently passed around the network and stored. The identity of a transaction is the hash of Merkle root
  * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
@@ -142,6 +152,9 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
+        val verifyingServiceHub = services.toVerifyingServiceHub()
+        // We need parameters check here, because finality flow calls stx.toLedgerTransaction() and then verify.
+        resolveAndCheckNetworkParameters(verifyingServiceHub)
         // TODO: We could probably optimise the below by
         // a) not throwing if threshold is eventually satisfied, but some of the rest of the signatures are failing.
         // b) omit verifying signatures when threshold requirement is met.
@@ -149,14 +162,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         // For the above to work, [checkSignaturesAreValid] should take the [requiredSigningKeys] as input
         // and probably combine logic from signature validation and key-fulfilment
         // in [TransactionWithSignatures.verifySignaturesExcept].
-        if (checkSufficientSignatures) {
-            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
-        } else {
-            checkSignaturesAreValid()
-        }
-        // We need parameters check here, because finality flow calls stx.toLedgerTransaction() and then verify.
-        resolveAndCheckNetworkParameters(services)
-        return tx.toLedgerTransaction(services)
+        verifySignatures(verifyingServiceHub, checkSufficientSignatures)
+        return tx.toLedgerTransactionInternal(verifyingServiceHub)
     }
 
     /**
@@ -172,109 +179,61 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
-        resolveAndCheckNetworkParameters(services)
-        when (coreTransaction) {
-            is NotaryChangeWireTransaction -> verifyNotaryChangeTransaction(services, checkSufficientSignatures)
-            is ContractUpgradeWireTransaction -> verifyContractUpgradeTransaction(services, checkSufficientSignatures)
-            else -> verifyRegularTransaction(services, checkSufficientSignatures)
+        verifyInternal(services.toVerifyingServiceHub(), checkSufficientSignatures)
+    }
+
+    /**
+     * Internal version of the public [verify] which takes in a [NodeVerificationSupport] instead of the heavier [ServiceHub].
+     *
+     * Depending on the contract attachments, this method will either verify this transaction in-process or send it to the external verifier
+     * for out-of-process verification.
+     *
+     * @return The [FullTransaction] that was successfully verified in-process. Returns null if the verification was successfully done externally.
+     */
+    @CordaInternal
+    @JvmSynthetic
+    internal fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true): LedgerTransaction? {
+        resolveAndCheckNetworkParameters(verificationSupport)
+        verifySignatures(verificationSupport, checkSufficientSignatures)
+        val ctx = coreTransaction
+        val verificationResult = when (ctx) {
+            // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
+            // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
+            // objects from the TransactionState.
+            is WireTransaction -> ctx.tryVerify(verificationSupport)
+            is ContractUpgradeWireTransaction -> ctx.tryVerify(verificationSupport)
+            is NotaryChangeWireTransaction -> ctx.tryVerify(verificationSupport)
+            else -> throw IllegalStateException("${ctx.toSimpleString()} cannot be verified")
         }
+        return verificationResult.enforceSuccess()
     }
 
     @Suppress("ThrowsCount")
-    private fun resolveAndCheckNetworkParameters(services: ServiceHub) {
+    private fun resolveAndCheckNetworkParameters(services: NodeVerificationSupport) {
         val hashOrDefault = networkParametersHash ?: services.networkParametersService.defaultHash
-        val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault)
-                ?: throw TransactionResolutionException(id)
+        val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault) ?: throw TransactionResolutionException(id)
         val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
-        groupedInputsAndRefs.map { entry ->
-            val tx = services.validatedTransactions.getTransaction(entry.key)?.coreTransaction
-                    ?: throw TransactionResolutionException(id)
+        for ((txId, stateRefs) in groupedInputsAndRefs) {
+            val tx = services.validatedTransactions.getTransaction(txId)?.coreTransaction ?: throw TransactionResolutionException(id)
             val paramHash = tx.networkParametersHash ?: services.networkParametersService.defaultHash
             val params = services.networkParametersService.lookup(paramHash) ?: throw TransactionResolutionException(id)
-            if (txNetworkParameters.epoch < params.epoch)
-                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, entry.value.first(), txNetworkParameters, params)
-        }
-    }
-
-    /** No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation. */
-    private fun verifyNotaryChangeTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
-        val ntx = resolveNotaryChangeTransaction(services)
-        if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
-        else checkSignaturesAreValid()
-    }
-
-    /** No contract code is run when verifying contract upgrade transactions, it is sufficient to check invariants during initialisation. */
-    private fun verifyContractUpgradeTransaction(services: ServicesForResolution, checkSufficientSignatures: Boolean) {
-        val ctx = resolveContractUpgradeTransaction(services)
-        if (checkSufficientSignatures) ctx.verifyRequiredSignatures()
-        else checkSignaturesAreValid()
-    }
-
-    // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
-    // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
-    // objects from the TransactionState.
-    private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
-        val ltx = toLedgerTransaction(services, checkSufficientSignatures)
-        try {
-            // TODO: allow non-blocking verification.
-            services.transactionVerifierService.verify(ltx).getOrThrow()
-        } catch (e: NoClassDefFoundError) {
-            checkReverifyAllowed(e)
-            val missingClass = e.message ?: throw e
-            log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
-            reverifyWithFixups(ltx, services, missingClass)
-        } catch (e: NotSerializableException) {
-            checkReverifyAllowed(e)
-            retryVerification(e, e, ltx, services)
-        } catch (e: TransactionDeserialisationException) {
-            checkReverifyAllowed(e)
-            retryVerification(e.cause, e, ltx, services)
-        }
-    }
-
-    private fun checkReverifyAllowed(ex: Throwable) {
-        // If that transaction was created with and after Corda 4 then just fail.
-        // The lenient dependency verification is only supported for Corda 3 transactions.
-        // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
-        if (networkParametersHash != null) {
-            log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
-            throw ex
-        }
-    }
-
-    @Suppress("ThrowsCount")
-    private fun retryVerification(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction, services: ServiceHub) {
-        when (cause) {
-            is MissingSerializerException -> {
-                log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
-                reverifyWithFixups(ltx, services, null)
+            if (txNetworkParameters.epoch < params.epoch) {
+                throw TransactionNetworkParameterOrderingException(id, stateRefs.first(), txNetworkParameters, params)
             }
-            is NotSerializableException -> {
-                val underlying = cause.cause
-                if (underlying is ClassNotFoundException) {
-                    val missingClass = underlying.message?.replace('.', '/') ?: throw ex
-                    log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
-                    reverifyWithFixups(ltx, services, missingClass)
-                } else {
-                    throw ex
-                }
-            }
-            else -> throw ex
         }
     }
 
-    // Transactions created before Corda 4 can be missing dependencies on other CorDapps.
-    // This code has detected a missing custom serializer - probably located inside a workflow CorDapp.
-    // We need to extract this CorDapp from AttachmentStorage and try verifying this transaction again.
-    private fun reverifyWithFixups(ltx: LedgerTransaction, services: ServiceHub, missingClass: String?) {
-        log.warn("""Detected that transaction $id does not contain all cordapp dependencies.
-                    |This may be the result of a bug in a previous version of Corda.
-                    |Attempting to re-verify having applied this node's fix-up rules.
-                    |Please check with the originator that this is a valid transaction.""".trimMargin())
-
-        (services.transactionVerifierService as TransactionVerifierServiceInternal)
-            .reverifyWithFixups(ltx, missingClass)
-            .getOrThrow()
+    private fun verifySignatures(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean) {
+        if (checkSufficientSignatures) {
+            val ctx = coreTransaction
+            val tws: TransactionWithSignatures = when (ctx) {
+                is WireTransaction -> this  // SignedTransaction implements TransactionWithSignatures in terms of WireTransaction
+                else -> CoreTransactionWithSignatures(ctx, sigs, verificationSupport)
+            }
+            tws.verifyRequiredSignatures()  // Internally checkSignaturesAreValid is invoked
+        } else {
+            checkSignaturesAreValid()
+        }
     }
 
     /**
@@ -306,7 +265,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /**
-     * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
+     * If [coreTransaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
     fun resolveNotaryChangeTransaction(services: ServicesForResolution): NotaryChangeLedgerTransaction {
@@ -316,10 +275,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /**
-     * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
+     * If [coreTransaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
-    fun resolveNotaryChangeTransaction(services: ServiceHub) = resolveNotaryChangeTransaction(services as ServicesForResolution)
+    fun resolveNotaryChangeTransaction(services: ServiceHub): NotaryChangeLedgerTransaction {
+        return resolveNotaryChangeTransaction(services as ServicesForResolution)
+    }
 
     /**
      * If [coreTransaction] is a [ContractUpgradeWireTransaction], loads the input states and resolves it to a
@@ -331,7 +292,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         return ctx.resolve(services, sigs)
     }
 
-    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
+    override fun toString(): String = toSimpleString()
 
     private companion object {
         private fun missingSignatureMsg(missing: Set<PublicKey>, descriptions: List<String>, id: SecureHash): String {
@@ -339,12 +300,27 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                     "keys: ${missing.joinToString { it.toStringShort() }}, " +
                     "by signers: ${descriptions.joinToString()} "
         }
-
-        private val log = contextLogger()
     }
 
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
         : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))
+
+    /**
+     * A [TransactionWithSignatures] wrapper for [CoreTransaction]s which need to resolve their input states in order to get at the signers
+     * list.
+     */
+    private data class CoreTransactionWithSignatures(
+            private val ctx: CoreTransaction,
+            override val sigs: List<TransactionSignature>,
+            private val verificationSupport: NodeVerificationSupport
+    ) : TransactionWithSignatures, NamedByHash by ctx {
+        override val requiredSigningKeys: Set<PublicKey>
+            get() = getRequiredSigningKeysInternal(ctx.inputs.asSequence().map(verificationSupport::getStateAndRef), ctx.notary)
+
+        override fun getKeyDescriptions(keys: Set<PublicKey>): List<String> = keys.map { it.toBase58String() }
+
+        override fun toString(): String = toSimpleString()
+    }
 
     //region Deprecated
     /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction. */

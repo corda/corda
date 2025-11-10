@@ -35,7 +35,7 @@ class SSLHelperTest {
                 trustManagerFactory,
                 ImmediateExecutor.INSTANCE
         )
-        val legalNameHash = SecureHash.sha256(legalName.toString()).toString().take(32).toLowerCase()
+        val legalNameHash = SecureHash.sha256(legalName.toString()).toString().take(32).lowercase()
 
         // These hardcoded values must not be changed, something is broken if you have to change these hardcoded values.
         assertEquals("O=Test, L=London, C=GB", legalName.toString())
