@@ -9,6 +9,8 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.config.AuthDataSourceType
+import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -141,10 +143,22 @@ class RPCSecurityManagerTest {
 
     @Test(timeout = 300_000)
     fun `Exponential backoff triggers after consecutive failed logins`() {
-        val userRealm = RPCSecurityManagerImpl.fromUserList(
-                users = listOf(User("user", "password", emptySet())),
-                id = AuthServiceId("TEST")
+        val users = listOf(User("user", "password", emptySet()))
+        val userRealm = RPCSecurityManagerImpl(
+                config = SecurityConfiguration.AuthService(
+                        options = SecurityConfiguration.AuthService.Options(
+                                cache = null,
+                                rateLimit = SecurityConfiguration.AuthService.Options.RateLimit(2L, 60L, 15)
+                        ),
+                        dataSource = SecurityConfiguration.AuthService.DataSource(
+                                type = AuthDataSourceType.INMEMORY,
+                                users = users,
+                                passwordEncryption = PasswordEncryption.NONE),
+                        id = AuthServiceId("NODE_CONFIG")
+                ),
+                cacheFactory = TestingNamedCacheFactory()
         )
+
         // 1st failure — should fail immediately
         val login1 = assertFailsWith(FailedLoginException::class) {
             userRealm.authenticate("user", Password("wrong"))
@@ -200,9 +214,20 @@ class RPCSecurityManagerTest {
 
     @Test(timeout = 300_000)
     fun `Backoff window expires after delay allowing login again`() {
-        val userRealm = RPCSecurityManagerImpl.fromUserList(
-                users = listOf(User("user", "password", emptySet())),
-                id = AuthServiceId("TEST")
+        val users = listOf(User("user", "password", emptySet()))
+        val userRealm = RPCSecurityManagerImpl(
+                config = SecurityConfiguration.AuthService(
+                        options = SecurityConfiguration.AuthService.Options(
+                                cache = null,
+                                rateLimit = SecurityConfiguration.AuthService.Options.RateLimit(2L, 60L, 15)
+                        ),
+                        dataSource = SecurityConfiguration.AuthService.DataSource(
+                                type = AuthDataSourceType.INMEMORY,
+                                users = users,
+                                passwordEncryption = PasswordEncryption.NONE),
+                        id = AuthServiceId("NODE_CONFIG")
+                ),
+                cacheFactory = TestingNamedCacheFactory()
         )
 
         // Fail once to trigger 2s delay

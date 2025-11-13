@@ -39,6 +39,10 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
 
     override val id = config.id
     private val manager: DefaultSecurityManager
+    private val rateLimitConfig = config.options?.rateLimit
+    private val baseDelaySeconds = rateLimitConfig?.backoffBaseSeconds ?: 0L
+    private val maxDelaySeconds = rateLimitConfig?.backoffMaxSeconds ?: 0L
+    private val attemptExpireMinutes = rateLimitConfig?.attemptExpireMinutes ?: 0L
 
     init {
         manager = buildImpl(config, cacheFactory)
@@ -46,31 +50,35 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
 
     private data class LoginAttempt(val count: Int, val nextAllowed: Instant)
 
-    // Cache of failed attempts, evicts entries automatically after TTL
-    private val failedLoginCache = Caffeine.newBuilder()
-            .expireAfterWrite(15, TimeUnit.MINUTES)   // forget users after 15 min of inactivity
-            .maximumSize(10_000)
-            .build<String, LoginAttempt>()
+    @Suppress("MagicNumber")
+    private val failedLoginCache =
+            if (rateLimitConfig != null) {
+                Caffeine.newBuilder()
+                        .expireAfterWrite(attemptExpireMinutes, TimeUnit.MINUTES)
+                        .maximumSize(10_000)
+                        .build<String, LoginAttempt>()
+            } else {
+                null
+            }
 
     @Throws(FailedLoginException::class)
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
-        // add limiting here
         val now = Instant.now()
-        val attempt = failedLoginCache.getIfPresent(principal)
-        val baseDelay = 2L // seconds
+        val attempt = failedLoginCache?.getIfPresent(principal)
 
         fun recordFailedAttemptAndThrow(attempt: LoginAttempt?, cause: AuthenticationException? = null) {
+            if (rateLimitConfig == null) throw FailedLoginException("Authentication failed for user '$principal'\n${cause.toString()}")
             val newCount = (attempt?.count ?: 0) + 1
-            val delaySeconds = (baseDelay * 2.0.pow(newCount - 1)).toLong().coerceAtMost(60L)
+            val delaySeconds = (baseDelaySeconds * 2.0.pow(newCount - 1)).toLong().coerceAtMost(maxDelaySeconds)
             val nextAllowed = now.plusSeconds(delaySeconds)
-            failedLoginCache.put(principal, LoginAttempt(newCount, nextAllowed))
+            failedLoginCache!!.put(principal, LoginAttempt(newCount, nextAllowed))
             val messagePrefix = cause?.toString()?.plus("\n") ?: ""
             val message = messagePrefix + "Failed login for user '$principal'. Try again in $delaySeconds seconds."
             throw FailedLoginException(message)
         }
 
         // Block immediately if inside backoff window
-        if (attempt != null && now.isBefore(attempt.nextAllowed)) {
+        if (rateLimitConfig != null && attempt != null && now.isBefore(attempt.nextAllowed)) {
             recordFailedAttemptAndThrow(attempt)
         }
 
@@ -78,7 +86,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
             val authToken = UsernamePasswordToken(principal, it.value)
             try {
                 manager.authenticate(authToken)
-                failedLoginCache.invalidate(principal)
+                failedLoginCache?.invalidate(principal)
             } catch (authcException: AuthenticationException) {
                 recordFailedAttemptAndThrow(attempt, authcException)
             }
