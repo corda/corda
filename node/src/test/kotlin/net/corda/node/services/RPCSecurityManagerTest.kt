@@ -139,6 +139,89 @@ class RPCSecurityManagerTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `Exponential backoff triggers after consecutive failed logins`() {
+        val userRealm = RPCSecurityManagerImpl.fromUserList(
+                users = listOf(User("user", "password", emptySet())),
+                id = AuthServiceId("TEST")
+        )
+        // 1st failure — should fail immediately
+        val login1 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("wrong"))
+        }
+        require(login1.message!!.contains("Failed login for user 'user'. Try again in 2 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login1.message}"
+        }
+
+        // 2nd failure — should increase delay
+        val login2 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("wrong"))
+        }
+        require(login2.message!!.contains("Failed login for user 'user'. Try again in 4 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login2.message}"
+        }
+
+        val login3 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+        require(login3.message!!.contains("Failed login for user 'user'. Try again in 8 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login3.message}"
+        }
+
+        val login4 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+        require(login4.message!!.contains("Failed login for user 'user'. Try again in 16 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login4.message}"
+        }
+
+        val login5 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+        require(login5.message!!.contains("Failed login for user 'user'. Try again in 32 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login5.message}"
+        }
+
+        val login6 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+        require(login6.message!!.contains("Failed login for user 'user'. Try again in 60 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login6.message}"
+        }
+
+        // Another login - backoff should still be at 60 seconds
+        val login7 = assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+        require(login7.message!!.contains("Failed login for user 'user'. Try again in 60 seconds.")) {
+            "Expected exponential backoff lockout message, got: ${login7.message}"
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Backoff window expires after delay allowing login again`() {
+        val userRealm = RPCSecurityManagerImpl.fromUserList(
+                users = listOf(User("user", "password", emptySet())),
+                id = AuthServiceId("TEST")
+        )
+
+        // Fail once to trigger 2s delay
+        assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("wrong"))
+        }
+
+        // Immediately retry — should still be locked and increase delay to 4s
+        assertFailsWith(FailedLoginException::class) {
+            userRealm.authenticate("user", Password("password"))
+        }
+
+        // Wait for the backoff period (~4s)
+        Thread.sleep(4100)
+
+        // Now should succeed
+        userRealm.authenticate("user", Password("password"))
+    }
+
     private fun configWithRPCUsername(username: String) {
         RPCSecurityManagerImpl.fromUserList(
                 users = listOf(User(username, "password", setOf())), id = AuthServiceId("TEST"))
