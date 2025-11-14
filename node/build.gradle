@@ -214,13 +214,13 @@ dependencies {
     runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-x86_64"
     runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-aarch_64"
 
-    runtimeOnly "io.netty:netty-transport-native-epoll:$tcnative_version:linux-x86_64"
-    runtimeOnly "io.netty:netty-transport-native-epoll:$tcnative_version:linux-aarch_64"
-    runtimeOnly "io.netty:netty-transport-native-kqueue:$tcnative_version:osx-x86_64"
-    runtimeOnly "io.netty:netty-transport-native-kqueue:$tcnative_version:osx-aarch_64"
-    runtimeOnly "io.netty:netty-transport-native-unix-common:$tcnative_version"
-    runtimeOnly "io.netty:netty-transport-classes-epoll:$tcnative_version"
-    runtimeOnly "io.netty:netty-transport-classes-kqueue:$tcnative_version"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-unix-common:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-epoll:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-kqueue:$netty_version"
 
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
