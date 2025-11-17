@@ -230,10 +230,18 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-x86_64"
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-aarch_64"
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-x86_64"
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-aarch_64"
+
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-unix-common:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-epoll:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-kqueue:$netty_version"
 
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
