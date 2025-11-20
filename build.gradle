@@ -76,8 +76,6 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
-    ext.djvm_version = constants.getProperty("djvmVersion")
-    ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = constants.getProperty("okhttpVersion")
     ext.netty_version = constants.getProperty("nettyVersion")
     ext.tcnative_version = constants.getProperty("tcnativeVersion")
@@ -126,11 +124,12 @@ buildscript {
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
-    ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     ext.json_smart_version = constants.getProperty("jsonSmartVersion")
     ext.azure_version = constants.getProperty("azureVersion")
     ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
     ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
+    ext.javaassist_version = constants.getProperty("javaassistVersion")
+
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
@@ -138,9 +137,6 @@ buildscript {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     }
-
-    // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
-    // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
 
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
@@ -501,17 +497,16 @@ allprojects {
                     if (details.requested.group == 'org.apache.commons') {
                         if (details.requested.name == "commons-configuration2") {
                             details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-lang3") {
+                            // SNYK-JAVA-ORGAPACHECOMMONS-10734078 / CVE-2025-48924
+                            // vulnerability in org.apache.commons:commons-lang3, fixed in commons-lang3@3.18.0
+                            // org.apache.commons:commons-lang3 is a transitive dependency of several Corda dependencies:
+                            // - liquibase-core@4.20.0
+                            // - artemis-server@2.19.1
+                            // - docker-java@3.5.1
+                            // force-upgrade to latest commons-lang3@3.19.0
+                            details.useVersion commons_lang_version
                         }
-                    }
-
-                    // SNYK-JAVA-ORGYAML-6056527 / CVE-2022-38749
-                    // SNYK-JAVA-ORGYAML-2806360 / CVE-2022-25857
-                    // vulnerability in snakeyaml@1.18, fixed in snakeyaml@1.31
-                    // snakeyaml@1.18 is a transitive dependency via liquibase@3.6.3
-                    // current latest liquibase@3.9.0 only uses snakeyaml@1.24
-                    // force-upgrade to latest snakeyaml@1.33
-                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
-                        details.useVersion snake_yaml_version
                     }
 
                     // SNYK-JAVA-NETMINIDEV-3369748 / CVE-2023-1370
@@ -634,28 +629,6 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             it.exists()
         })
     }
-    afterEvaluate {
-        classDirectories = files(classDirectories.files.collect {
-            fileTree(dir: it,
-                    // these exclusions are necessary because jacoco gets confused by same class names
-                    // which occur due to deterministic versions of non deterministic classes
-                    exclude: ['**/net/corda/core/crypto/DigestSupplier**',
-                    '**/net/corda/core/crypto/DelegatingSecureRandomService',
-                    '**/net/corda/core/internal/ThreadLocalToggleField**',
-                    '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
-                    '**/net/corda/core/internal/ToggleField**',
-                    'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
-                    'net/corda/core/internal/SimpleToggleField**',
-                    'net/corda/core/serialization/SerializationFactory**',
-                    'net/corda/serialization/internal/amqp/AMQPStreams**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
-                    'net/corda/serialization/internal/ByteBufferStreams**',
-                    'net/corda/serialization/internal/model/DefaultCacheProvider**',
-                    'net/corda/serialization/internal/DefaultWhitelist**'
-                    ])
-        })
-    }
 }
 
 tasks.register('detekt', JavaExec) {
@@ -708,15 +681,11 @@ bintrayConfig {
             'corda-mock',
             'corda-rpc',
             'corda-core',
-            'corda-core-deterministic',
-            'corda-deterministic-verifier',
-            'corda-deserializers-djvm',
             'corda',
             'corda-finance-workflows',
             'corda-finance-contracts',
             'corda-node',
             'corda-node-api',
-            'corda-node-djvm',
             'corda-test-common',
             'corda-core-test-utils',
             'corda-test-utils',
@@ -729,8 +698,6 @@ bintrayConfig {
             'corda-shell',
             'corda-tools-shell-cli',
             'corda-serialization',
-            'corda-serialization-deterministic',
-            'corda-serialization-djvm',
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',
@@ -969,8 +936,4 @@ distributedTesting {
             distribution DistributeTestsBy.METHOD
         }
     }
-
-    ignoredTests = [
-        ':core-deterministic:testing:data:test'
-    ]
 }

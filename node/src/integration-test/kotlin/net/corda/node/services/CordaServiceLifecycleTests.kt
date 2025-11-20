@@ -156,6 +156,6 @@ class CordaServiceLifecycleTests {
         /**
          * Given an event, was the SMM started when the event was received?
          */
-        fun getSmmStartedForEvent(event: ServiceLifecycleEvent) : Int = smmStateAtEvent.getOrDefault(event, STATE_MACHINE_MANAGER_UNKNOWN_STATUS)
+        fun getSmmStartedForEvent(event: ServiceLifecycleEvent) : Int  = smmStateAtEvent[event] ?: checkSmmStarted()
     }
 }

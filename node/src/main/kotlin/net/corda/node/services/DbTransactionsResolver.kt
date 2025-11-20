@@ -8,10 +8,12 @@ import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.trace
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
 
@@ -20,7 +22,8 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     private val logger = flow.logger
 
     @Suspendable
-    override fun downloadDependencies(batchMode: Boolean) {
+    override fun downloadDependencies(batchMode: Boolean, recoveryMode: Boolean) {
+        if (recoveryMode) throw NotImplementedError("Enterprise only Ledger Recovery feature")
         logger.debug { "Downloading dependencies for transactions ${flow.txHashes}" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
 
@@ -98,15 +101,14 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     override fun recordDependencies(usedStatesToRecord: StatesToRecord) {
         val sortedDependencies = checkNotNull(this.sortedDependencies)
         logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
-        val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.
-            val (tx, isVerified) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
+            val (tx, txStatus) = checkNotNull(flow.serviceHub.validatedTransactions.getTransactionWithStatus(txId)) {
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
-            if (!isVerified) {
+            if (txStatus == TransactionStatus.UNVERIFIED) {
                 tx.verify(flow.serviceHub)
-                flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
+                (flow.serviceHub as ServiceHubInternal).recordTransactions(usedStatesToRecord, listOf(tx), false, disableSoftLocking = true)
             } else {
                 logger.debug { "No need to record $txId as it's already been verified" }
             }

@@ -30,6 +30,8 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
@@ -91,6 +93,32 @@ class NetworkParametersTest {
         assertEquals(nm1.epoch, nm2.epoch)
         assertEquals(nm1.whitelistedContractImplementations, nm2.whitelistedContractImplementations)
         assertEquals(twoDays, nm2.eventHorizon)
+    }
+
+    @Test(timeout=300_000)
+    fun `that transactionRecoveryPeriod and confidentialIdentityPreGenerationPeriod aren't required`() {
+        // this is defensive tests in response to CORDA-2769
+        val aliceNotaryParty = TestIdentity(ALICE_NAME).party
+        val aliceNotaryInfo = NotaryInfo(aliceNotaryParty, false)
+        val nm1 = NetworkParameters(
+                minimumPlatformVersion = 1,
+                notaries = listOf(aliceNotaryInfo),
+                maxMessageSize = Int.MAX_VALUE,
+                maxTransactionSize = Int.MAX_VALUE,
+                modifiedTime = Instant.now(),
+                epoch = 1,
+                whitelistedContractImplementations = mapOf("MyClass" to listOf(AttachmentId.allOnesHash)),
+                eventHorizon = Duration.ofDays(1)
+        )
+
+        assertNull(nm1.recoveryMaximumBackupInterval)
+        assertNull(nm1.confidentialIdentityMinimumBackupInterval)
+
+        val nm2 = nm1.copy(recoveryMaximumBackupInterval = 10.days, confidentialIdentityMinimumBackupInterval = 10.days)
+
+        assertNotEquals(nm1.recoveryMaximumBackupInterval, nm2.recoveryMaximumBackupInterval)
+        assertNotEquals(nm1.confidentialIdentityMinimumBackupInterval, nm2.confidentialIdentityMinimumBackupInterval)
+
     }
 
     // Notaries tests

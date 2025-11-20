@@ -141,19 +141,13 @@ data class DevModeOptions(
                 "Use [NodeConfiguration.disableReloadCheckpointAfterSuspend] instead."
     )
     val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
-    val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
-    val djvm: DJVMOptions? = null
+    val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone
 ) {
     internal object Defaults {
         val disableCheckpointChecker = false
         val allowCompatibilityZone = false
     }
 }
-
-data class DJVMOptions(
-   val bootstrapSource: String?,
-   val cordaSource: List<String>
-)
 
 fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
 fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode

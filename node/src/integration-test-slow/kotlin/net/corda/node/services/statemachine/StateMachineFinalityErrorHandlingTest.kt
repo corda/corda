@@ -57,7 +57,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception when recording transaction
                 INTERFACE ${ServiceHubInternal::class.java.name}
-                METHOD recordTransactions
+                METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")
                 DO traceln("Throwing exception"); 
@@ -118,7 +118,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception when recording transaction
                 INTERFACE ${ServiceHubInternal::class.java.name}
-                METHOD recordTransactions
+                METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")
                 DO traceln("Throwing exception"); 

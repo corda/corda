@@ -1,10 +1,6 @@
 @file:JvmName("AMQPSerializationScheme")
 
 package net.corda.serialization.internal.amqp
-
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.toSynchronised
@@ -16,6 +12,7 @@ import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.SerializationScheme
 import java.util.*
+import java.util.concurrent.ConcurrentMap
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
 
@@ -40,14 +37,12 @@ interface SerializerFactoryFactory {
     fun make(context: SerializationContext): SerializerFactory
 }
 
-@KeepForDJVM
 abstract class AbstractAMQPSerializationScheme(
         private val cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
         private val cordappSerializationWhitelists: Set<SerializationWhitelist>,
         maybeNotConcurrentSerializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>,
         val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
-    @DeleteForDJVM
     constructor(cordapps: List<Cordapp>) : this(
             cordapps.customSerializers,
             cordapps.serializationWhitelists,
@@ -57,23 +52,19 @@ abstract class AbstractAMQPSerializationScheme(
     @VisibleForTesting
     fun getRegisteredCustomSerializers() = cordappCustomSerializers
 
-    // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
     private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> =
-            if (maybeNotConcurrentSerializerFactoriesForContexts is
-                            AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>) {
-                Collections.synchronizedMap(maybeNotConcurrentSerializerFactoriesForContexts)
-            } else {
+            if (maybeNotConcurrentSerializerFactoriesForContexts is ConcurrentMap<*, *>) {
                 maybeNotConcurrentSerializerFactoriesForContexts
+            } else {
+                Collections.synchronizedMap(maybeNotConcurrentSerializerFactoriesForContexts)
             }
 
     companion object {
         private val serializationWhitelists: List<SerializationWhitelist> by lazy { listOf(DefaultWhitelist) }
 
-        @DeleteForDJVM
         val List<Cordapp>.customSerializers
             get() = flatMapTo(LinkedHashSet(), Cordapp::serializationCustomSerializers)
 
-        @DeleteForDJVM
         val List<Cordapp>.serializationWhitelists
             get() = flatMapTo(LinkedHashSet(), Cordapp::serializationWhitelists)
     }
@@ -125,6 +116,7 @@ abstract class AbstractAMQPSerializationScheme(
     fun getSerializerFactory(context: SerializationContext): SerializerFactory {
         val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss, context.customSerializers)
         // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
+        // This was fixed in Java 9, so remove the extra get() when we upgrade (https://bugs.openjdk.org/browse/JDK-8161372).
         return serializerFactoriesForContexts[key] ?: serializerFactoriesForContexts.computeIfAbsent(key) {
             when (context.useCase) {
                 SerializationContext.UseCase.RPCClient ->
@@ -194,18 +186,7 @@ fun registerCustomSerializers(factory: SerializerFactory) {
         register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(this))
         register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(this))
         register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
-    }
-    registerNonDeterministicSerializers(factory)
-}
-
-/*
- * Register the serializers which will be excluded from the DJVM.
- */
-@StubOutForDJVM
-private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
-    with(factory) {
         register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
         register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
     }
 }
-

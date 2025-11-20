@@ -1,8 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
@@ -12,11 +10,9 @@ import java.util.Collections.unmodifiableMap
 import java.util.function.Function
 import java.util.function.Predicate
 
-@KeepForDJVM
 object SerializerFactoryBuilder {
     /**
      * The standard mapping of Java object types to Java primitive types.
-     * The DJVM will need to override these, but probably not anyone else.
      */
     @Suppress("unchecked_cast")
     private val javaPrimitiveTypes: Map<Class<*>, Class<*>> = unmodifiableMap(listOf(
@@ -46,7 +42,6 @@ object SerializerFactoryBuilder {
     }
 
     @JvmStatic
-    @DeleteForDJVM
     fun build(
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
@@ -67,7 +62,6 @@ object SerializerFactoryBuilder {
     }
 
     @JvmStatic
-    @DeleteForDJVM
     fun build(
             whitelist: ClassWhitelist,
             carpenterClassLoader: ClassLoader,

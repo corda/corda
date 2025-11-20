@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -142,18 +143,22 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Associates the specified value with the specified key in this map and persists it.
      * If the map previously contained a committed mapping for the key, the old value is not replaced.  It may throw an error from the
      * underlying storage if this races with another database transaction to store a value for the same key.
+     * An optional [forceUpdate] function allows performing additional checks/updates on an existingEntry to determine whether the map
+     * should be updated.
      * @return true if added key was unique, otherwise false
      */
-    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean {
+    fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true,
+                                 forceUpdate: (K, V, E) -> Boolean = { _, _, _ -> false }): Boolean {
         return set(key, value, logWarning) { k, v ->
             val session = currentDBSession()
             val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
             if (existingEntry == null) {
                 session.save(toPersistentEntity(k, v))
                 null
-            } else {
-                fromPersistentEntity(existingEntry).second
             }
+            else if (!forceUpdate(key, value, existingEntry)) {
+                fromPersistentEntity(existingEntry).second
+            } else null
         }
     }
 
@@ -243,6 +248,8 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         session.createQuery(deleteQuery).executeUpdate()
         cache.invalidateAll()
     }
+
+    fun clear(id: SecureHash) = cache.invalidate(id)
 
     // Helpers to know if transaction(s) are currently writing the given key.
     private fun weAreWriting(key: K): Boolean = pendingKeys[key]?.transactions?.contains(contextTransaction) ?: false

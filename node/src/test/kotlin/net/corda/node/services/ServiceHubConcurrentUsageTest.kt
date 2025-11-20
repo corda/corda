@@ -13,6 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
+import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
@@ -23,7 +24,8 @@ import rx.schedulers.Schedulers
 import java.util.concurrent.CountDownLatch
 
 class ServiceHubConcurrentUsageTest {
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP))
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP,
+            CustomCordapp(classes = setOf(TestFlow::class.java))))
 
     @After
     fun stopNodes() {

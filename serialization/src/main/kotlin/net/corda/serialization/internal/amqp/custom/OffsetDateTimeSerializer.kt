@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.LocalDateTime
@@ -26,6 +25,5 @@ class OffsetDateTimeSerializer(
 
     override fun fromProxy(proxy: OffsetDateTimeProxy): OffsetDateTime = OffsetDateTime.of(proxy.dateTime, proxy.offset)
 
-    @KeepForDJVM
     data class OffsetDateTimeProxy(val dateTime: LocalDateTime, val offset: ZoneOffset)
 }

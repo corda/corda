@@ -1,13 +1,11 @@
 package net.corda.core.serialization.internal
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationMagic
 import net.corda.core.utilities.ByteSequence
 import java.nio.ByteBuffer
 
 class CustomSerializationSchemeUtils {
 
-    @KeepForDJVM
     companion object {
 
         private const val SERIALIZATION_SCHEME_ID_SIZE = 4

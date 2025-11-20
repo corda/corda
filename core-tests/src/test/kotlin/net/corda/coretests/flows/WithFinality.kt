@@ -4,7 +4,13 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.CordaRPCOps
@@ -56,6 +62,15 @@ interface WithFinality : WithMockNet {
         @Suspendable
         override fun call() {
             subFlow(ReceiveFinalityFlow(otherSide))
+        }
+    }
+
+    @StartableByRPC
+    class OldFinalityInvoker(private val transaction: SignedTransaction) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            @Suppress("DEPRECATION")
+            return subFlow(FinalityFlow(transaction))
         }
     }
 }

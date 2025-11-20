@@ -75,7 +75,9 @@ class TimedFlowTests {
         @JvmStatic
         fun setup() {
             mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
+                    cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP,
+                            CustomCordapp(classes = setOf(FinalityFlow::class.java)),
+                            enclosedCordapp()),
                     defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
                     threadPerNode = true
             )

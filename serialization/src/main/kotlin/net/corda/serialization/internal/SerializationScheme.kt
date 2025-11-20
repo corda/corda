@@ -1,7 +1,5 @@
 package net.corda.serialization.internal
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyBytes
@@ -24,7 +22,6 @@ internal object SnappyEncodingWhitelist: EncodingWhitelist {
     }
 }
 
-@KeepForDJVM
 data class SerializationContextImpl @JvmOverloads constructor(override val preferredSerializationVersion: SerializationMagic,
                                                               override val deserializationClassLoader: ClassLoader,
                                                               override val whitelist: ClassWhitelist,
@@ -82,12 +79,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
 }
 
-@KeepForDJVM
 open class SerializationFactoryImpl(
         // TODO: This is read-mostly. Probably a faster implementation to be found.
         private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
 ) : SerializationFactory() {
-    @DeleteForDJVM
     constructor() : this(ConcurrentHashMap())
 
     companion object {
@@ -155,7 +150,6 @@ open class SerializationFactoryImpl(
     override fun hashCode(): Int = registeredSchemes.hashCode()
 }
 
-@KeepForDJVM
 interface SerializationScheme {
     fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean
     @Throws(NotSerializableException::class)

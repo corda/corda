@@ -1,6 +1,14 @@
 package net.corda.node.services.keys
 
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.keys
+import net.corda.core.crypto.sign
+import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -16,9 +24,12 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
-import javax.persistence.*
-import kotlin.collections.LinkedHashSet
+import java.util.UUID
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.Table
 
 /**
  * A persistent implementation of [KeyManagementServiceInternal] to support CryptoService for initial keys and
@@ -52,7 +63,7 @@ class BasicHSMKeyManagementService(
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
-            : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
+            : this(publicKey.toStringShort(), Crypto.encodePublicKey(publicKey), privateKey.encoded)
     }
 
     private companion object {

@@ -21,6 +21,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.KeyManagementService
@@ -68,7 +69,8 @@ import java.security.PublicKey
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
-import java.util.*
+import java.util.Arrays
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.stream.Stream
@@ -79,8 +81,6 @@ import javax.persistence.criteria.CriteriaQuery
 import javax.persistence.criteria.CriteriaUpdate
 import javax.persistence.criteria.Predicate
 import javax.persistence.criteria.Root
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashSet
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -93,6 +93,7 @@ import kotlin.collections.component2
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
+@Suppress("LargeClass")
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
@@ -105,6 +106,8 @@ class NodeVaultService(
         private val log = contextLogger()
 
         const val DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE = 16
+
+        private val IGNORE_TRANSACTION_DESERIALIZATION_ERRORS = java.lang.Boolean.getBoolean("net.corda.vaultupdate.ignore.transaction.deserialization.errors")
 
         /**
          * Establish whether a given state is relevant to a node, given the node's public keys.
@@ -234,6 +237,7 @@ class NodeVaultService(
                     if (stateStatus != Vault.StateStatus.CONSUMED) {
                         stateStatus = Vault.StateStatus.CONSUMED
                         consumedTime = clock.instant()
+                        consumingTxId = update.consumingTxIds[stateRef]?.toString()
                         // remove lock (if held)
                         if (lockId != null) {
                             lockId = null
@@ -279,12 +283,13 @@ class NodeVaultService(
     internal val publishUpdates get() = mutex.locked { updatesPublisher }
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>,
+                           disableSoftLocking: Boolean) {
         if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any())) return
         val batch = mutableListOf<CoreTransaction>()
 
         fun flushBatch(previouslySeen: Boolean) {
-            val updates = makeUpdates(batch, statesToRecord, previouslySeen)
+            val updates = makeUpdates(batch, statesToRecord, previouslySeen, disableSoftLocking)
             processAndNotify(updates)
             batch.clear()
         }
@@ -303,20 +308,34 @@ class NodeVaultService(
         processTransactions(txns, false)
     }
 
-    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
+    @Suppress("ComplexMethod", "ThrowsCount")
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean, disableSoftLocking: Boolean): List<Vault.Update<ContractState>> {
 
-        fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->
-            try {
-                idx to list[idx]
-            } catch (e: TransactionDeserialisationException) {
-                // When resolving transaction dependencies we might encounter contracts we haven't installed locally.
-                // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
-                // For now we ignore these states.
-                // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
-                log.warn("Could not deserialize state $idx from transaction $txId. Cause: $e")
-                null
-            }
-        }.toMap()
+        fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> {
+            var error: TransactionDeserialisationException? = null
+            val map = (0 until list.size).mapNotNull { idx ->
+                try {
+                    idx to list[idx]
+                } catch (e: TransactionDeserialisationException) {
+                    // When resolving transaction dependencies we might encounter contracts we haven't installed locally.
+                    // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
+                    // For now we ignore these states.
+                    // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
+                    // Disabled if soft locking disabled, as assumes you are in the back chain and that maybe it is less important than top
+                    // level transaction.
+                    if (IGNORE_TRANSACTION_DESERIALIZATION_ERRORS || disableSoftLocking) {
+                        log.warnOnce("The current usage of transaction deserialization for the vault is unsafe." +
+                                "Ignoring vault updates due to failed deserialized states may lead to severe problems with ledger consistency. ")
+                        log.warn("Could not deserialize state $idx from transaction $txId. Cause: $e")
+                    } else {
+                        log.error("Could not deserialize state $idx from transaction $txId. Cause: $e")
+                        if (error == null) error = e
+                    }
+                    null
+                }
+            }.toMap()
+            return error?.let { throw it } ?: map
+        }
 
         // Returns only output states that can be deserialised successfully.
         fun WireTransaction.deserializableOutputStates(): Map<Int, TransactionState<ContractState>> = withValidDeserialization(this.outputs, this.id)
@@ -373,8 +392,8 @@ class NodeVaultService(
                     }
                 }
             }
-
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
+            val consumedTxIds = consumedStates.associate { Pair(it.ref, tx.id) }
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet(), consumingTxIds = consumedTxIds)
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
@@ -408,7 +427,8 @@ class NodeVaultService(
             } else {
                 Vault.UpdateType.NOTARY_CHANGE
             }
-            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet())
+            val consumedTxIds = consumedStateAndRefs.associate { Pair(it.ref, tx.id) }
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet(), consumingTxIds = consumedTxIds)
         }
 
 
@@ -713,11 +733,20 @@ class NodeVaultService(
         val query = getSession().createQuery(criteriaQuery)
         query.setResultWindow(paging)
 
+        var previousPageAnchor: StateRef? = null
         val statesMetadata: MutableList<Vault.StateMetadata> = mutableListOf()
         val otherResults: MutableList<Any> = mutableListOf()
 
         query.resultStream(paging).use { results ->
-            results.forEach { result ->
+            val resultsIterator = results.iterator()
+
+            // From page 2 and onwards, the first result is the previous page anchor
+            if (paging.pageNumber > DEFAULT_PAGE_NUM && resultsIterator.hasNext()) {
+                val previousVaultState = resultsIterator.next()[0] as VaultSchemaV1.VaultStates
+                previousPageAnchor = previousVaultState.stateRef!!.toStateRef()
+            }
+
+            for (result in resultsIterator) {
                 val result0 = result[0]
                 if (result0 is VaultSchemaV1.VaultStates) {
                     statesMetadata.add(result0.toStateMetadata())
@@ -740,7 +769,7 @@ class NodeVaultService(
             else -> queryTotalStateCount(criteria, contractStateType)
         }
 
-        return Vault.Page(states, statesMetadata, totalStatesAvailable, criteriaParser.stateTypes, otherResults)
+        return Vault.Page(states, statesMetadata, totalStatesAvailable, criteriaParser.stateTypes, otherResults, previousPageAnchor)
     }
 
     private fun <R> Query<R>.resultStream(paging: PageSpecification): Stream<R> {
@@ -758,14 +787,18 @@ class NodeVaultService(
     }
 
     private fun Query<*>.setResultWindow(paging: PageSpecification) {
+        // For both SQLServer and PostgresSQL, firstResult must be >= 0.
+        firstResult = 0
         if (paging.isDefault) {
-            // For both SQLServer and PostgresSQL, firstResult must be >= 0.
-            firstResult = 0
             // Peek ahead and see if there are more results in case pagination should be done
             maxResults = paging.pageSize + 1
-        } else {
-            firstResult = (paging.pageNumber - 1) * paging.pageSize
+        } else if (paging.pageNumber == DEFAULT_PAGE_NUM) {
             maxResults = paging.pageSize
+        } else {
+            // In addition to aligning the query to the correct result window for the page, also include the previous page's last
+            // result for the previousPageAnchor value.
+            firstResult = ((paging.pageNumber - 1) * paging.pageSize) - 1
+            maxResults = paging.pageSize + 1
         }
     }
 
