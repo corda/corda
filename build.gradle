@@ -522,6 +522,15 @@ allprojects {
                     if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
                         details.useVersion json_smart_version
                     }
+
+                    // SNYK-JAVA-ORGGLASSFISHJERSEYCORE-14049172 / CVE-2025-12383
+                    // vulnerability in org.glassfish.jersey.core:jersey-client@2.30.1, fixed in org.glassfish.jersey.core:jersey-client@2.46
+                    // jersey-client@2.46 is a transitive dependency via com.github.docker-java:docker-java@3.5.1
+                    // current latest docker-java@1.5.3 only uses jersey-client@2.30.1
+                    // force-upgrade all jersey dependencies to same version used by Corda version 2.47
+                    if (details.requested.group.startsWith('org.glassfish.jersey')) {
+                        details.useVersion jersey_version
+                    }
                 }
 
                 dependencySubstitution {
