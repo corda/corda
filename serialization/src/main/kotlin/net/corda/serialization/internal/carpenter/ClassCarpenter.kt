@@ -2,6 +2,8 @@
 package net.corda.serialization.internal.carpenter
 
 import com.google.common.base.MoreObjects
+import net.corda.core.internal.capitalize
+import net.corda.core.internal.decapitalize
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
@@ -12,7 +14,6 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
-import java.lang.reflect.Method
 
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
@@ -29,10 +30,6 @@ class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.c
     @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
         return synchronized(getClassLoadingLock(name)) {
-            /**
-             * Search parent classloaders using lock-less [Class.forName],
-             * bypassing [parent] to avoid its [SecurityManager] overhead.
-             */
             (findLoadedClass(name) ?: Class.forName(name, false, parentClassLoader)).also { clazz ->
                 if (resolve) {
                     resolveClass(clazz)
@@ -46,8 +43,8 @@ class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.c
     }
 }
 
-class InterfaceMismatchNonGetterException(val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
-        "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
+class InterfaceMismatchNonGetterException(val clazz: Class<*>, val methodName: String) : InterfaceMismatchException(
+        "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${methodName}")
 
 class InterfaceMismatchMissingAMQPFieldException(val clazz: Class<*>, val field: String) : InterfaceMismatchException(
         "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
@@ -292,7 +289,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                    java.lang.Character.TYPE -> visitInsn(IRETURN)
+                    Character.TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
@@ -421,7 +418,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-            java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
+            Character.TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
@@ -461,7 +458,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
                     logger.debug { "Ignoring interface $method which is not a getter" }
                     continue@methodLoop
                 } else {
-                    throw InterfaceMismatchNonGetterException(itf, method)
+                    throw InterfaceMismatchNonGetterException(itf, method.name)
                 }
 
                 // If we're trying to carpent a class that prior to serialisation / deserialization

@@ -15,8 +15,9 @@ import javafx.scene.control.TextField
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import net.corda.client.jfx.utils.ChosenList
-import net.corda.client.jfx.utils.map
 import tornadofx.*
+import net.corda.client.jfx.utils.map
+import java.util.Locale
 
 /**
  * Generic search bar filters [ObservableList] with provided filterCriteria.
@@ -30,6 +31,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
     private val searchCategory by fxid<ComboBox<String>>()
     private val ALL = "All"
 
+    @Suppress("SpreadOperator")
     val filteredData = ChosenList(Bindings.createObjectBinding({
         val text = textField.text
         val category = searchCategory.value
@@ -40,7 +42,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
                 filterCriteria.toMap()[category]?.invoke(data, text) == true
             }
         }
-    }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty())), "filteredData")
+    }, *arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty())), "filteredData")
 
     init {
         clearButton.setOnMouseClicked { event: MouseEvent ->
@@ -67,9 +69,9 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
         })
         textField.promptTextProperty().bind(searchCategory.valueProperty().map {
             val category = if (it == ALL) {
-                filterCriteria.joinToString(", ") { it.first.toLowerCase() }
+                filterCriteria.joinToString(", ") { it.first.lowercase(Locale.getDefault()) }
             } else {
-                it.toLowerCase()
+                it.lowercase(Locale.getDefault())
             }
             "Filter by $category."
         })

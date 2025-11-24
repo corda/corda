@@ -168,7 +168,8 @@ class NewTransaction : Fragment() {
 
     init {
         // Disable everything when not connected to node.
-        val notariesNotNullBinding = Bindings.createBooleanBinding({ notaries.isNotEmpty() }, arrayOf(notaries))
+        @Suppress("SpreadOperator")
+        val notariesNotNullBinding = Bindings.createBooleanBinding({ notaries.isNotEmpty() }, *arrayOf(notaries))
         val enableProperty = myIdentity.isNotNull().and(rpcProxy.isNotNull()).and(notariesNotNullBinding)
         root.disableProperty().bind(enableProperty.not())
 
@@ -213,16 +214,18 @@ class NewTransaction : Fragment() {
         // TODO : Create a currency model to store these values
         currencyChoiceBox.items = currencyItems
         currencyChoiceBox.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
-        val issuer = Bindings.createObjectBinding({ if (issuerChoiceBox.isVisible) issuerChoiceBox.value else myIdentity.value }, arrayOf(myIdentity, issuerChoiceBox.visibleProperty(), issuerChoiceBox.valueProperty()))
+        @Suppress("SpreadOperator")
+        val issuer = Bindings.createObjectBinding({ if (issuerChoiceBox.isVisible) issuerChoiceBox.value else myIdentity.value }, *arrayOf(myIdentity, issuerChoiceBox.visibleProperty(), issuerChoiceBox.valueProperty()))
         availableAmount.visibleProperty().bind(
                 issuer.isNotNull.and(currencyChoiceBox.valueProperty().isNotNull).and(transactionTypeCB.valueProperty().booleanBinding(transactionTypeCB.valueProperty()) { it != CashTransaction.Issue })
         )
+        @Suppress("SpreadOperator")
         availableAmount.textProperty()
                 .bind(Bindings.createStringBinding({
                     val filteredCash = cash.filtered { it.token.issuer.party == issuer.value && it.token.product == currencyChoiceBox.value }
                             .map { it.withoutIssuer() }.sumOrNull()
                     "${filteredCash ?: "None"} Available"
-                }, arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))
+                }, *arrayOf(currencyChoiceBox.valueProperty(), issuerChoiceBox.valueProperty())))
         // Amount
         amountLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         amountTextField.textFormatter = bigDecimalFormatter().apply { amount.bind(this.valueProperty()) }
