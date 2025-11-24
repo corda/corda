@@ -215,7 +215,18 @@ dependencies {
     // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
     compileOnly "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
-    implementation "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-aarch_64"
+
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-unix-common:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-epoll:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-kqueue:$netty_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.8.0'
 
     testImplementation(project(':test-cli'))
