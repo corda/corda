@@ -65,7 +65,6 @@ publishing {
             artifactId 'corda-finance-contracts'
             from components.cordapp
             artifact javadocJar
-            artifact sourcesJar
         }
     }
 }

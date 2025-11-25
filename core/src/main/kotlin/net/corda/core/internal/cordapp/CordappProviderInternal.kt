@@ -11,7 +11,6 @@ interface CordappProviderInternal : CordappProvider {
     val appClassLoader: ClassLoader
     val attachmentFixups: AttachmentFixups
     val cordapps: List<CordappImpl>
-    val legacyContractCordapps: List<CordappImpl>
     fun getCordappForFlow(flowLogic: FlowLogic<*>): Cordapp?
 
     /**

@@ -38,8 +38,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      */
     override val cordapps: List<CordappImpl> get() = cordappLoader.cordapps
 
-    override val legacyContractCordapps: List<CordappImpl> get() = cordappLoader.legacyContractCordapps
-
     fun start() {
         loadContractsIntoAttachmentStore(cordappLoader.cordapps)
         loadContractsIntoAttachmentStore(cordappLoader.legacyContractCordapps)

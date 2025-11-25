@@ -17,10 +17,7 @@ dependencies {
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
-jar {
-    enabled = true
-    classifier 'ignore'
-}
+jar.enabled = false
 
 capsule {
     version capsule_version

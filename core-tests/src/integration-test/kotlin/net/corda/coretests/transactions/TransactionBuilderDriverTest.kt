@@ -37,7 +37,6 @@ import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.UriTestCordapp
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.internalDriver
-import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy
 import org.junit.Test
@@ -115,20 +114,10 @@ class TransactionBuilderDriverTest {
                 createTransaction(node, bobParty)
             }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
 
-            node.stop()
-            FileUtils.deleteDirectory(node.baseDirectory.toFile());
+            // Upload the missing dependency
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
 
-            // Now restart the node with the missing dependency
-            val restartedNode = startNode(NodeParameters(
-                    ALICE_NAME,
-                    additionalCordapps = listOf(currentContracts),
-                    legacyContracts = listOf(legacyContracts, legacyDependency)
-            )).getOrThrow()
-
-            // Attachment does not have a contract in it so needs to be manually installed into attachment db storage
-            legacyDependency.jarFile.inputStream().use(restartedNode.rpc::uploadAttachment)
-
-            val stx = createTransaction(restartedNode, bobParty)
+            val stx = createTransaction(node, bobParty)
             assertThat(stx.tx.legacyAttachments).contains(legacyContracts.jarFile.hash, legacyDependency.jarFile.hash)
         }
     }

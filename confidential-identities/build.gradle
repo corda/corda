@@ -48,7 +48,6 @@ publishing {
             artifactId 'corda-confidential-identities'
             from components.cordapp
             artifact javadocJar
-            artifact sourcesJar
         }
     }
 }

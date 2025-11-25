@@ -4,6 +4,8 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.jmx.JmxReporter
 import com.github.benmanes.caffeine.cache.Caffeine
+import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
+import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
 import net.corda.cliutils.ShellConstants
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
@@ -535,24 +537,16 @@ open class Node(configuration: NodeConfiguration,
 
     private fun registerNewRelicReporter(registry: MetricRegistry) {
         log.info("Registering New Relic JMX Reporter:")
-        try {
-            val reporterClass = Class.forName("com.palominolabs.metrics.newrelic.NewRelicReporter")
-            val forRegistryMethod = reporterClass.getMethod("forRegistry", MetricRegistry::class.java)
-            val reporterBuilder = forRegistryMethod.invoke(null, registry) as com.palominolabs.metrics.newrelic.NewRelicReporter.Builder
-            val reporter = reporterBuilder
-                    .name("New Relic Reporter")
-                    .filter(MetricFilter.ALL)
-                    .attributeFilter(com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter())
-                    .rateUnit(TimeUnit.SECONDS)
-                    .durationUnit(TimeUnit.MILLISECONDS)
-                    .metricNamePrefix("corda/")
-                    .build()
-            reporter.start(1, TimeUnit.MINUTES)
-        }
-        catch (e: ClassNotFoundException) {
-            // This is expected if the New Relic agent is not on the classpath.
-            log.warn("New Relic JMX Reporter not registered, as the New Relic API is not on the classpath.", e)
-        }
+        val reporter = NewRelicReporter.forRegistry(registry)
+                .name("New Relic Reporter")
+                .filter(MetricFilter.ALL)
+                .attributeFilter(AllEnabledMetricAttributeFilter())
+                .rateUnit(TimeUnit.SECONDS)
+                .durationUnit(TimeUnit.MILLISECONDS)
+                .metricNamePrefix("corda/")
+                .build()
+
+        reporter.start(1, TimeUnit.MINUTES)
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()
