@@ -2,10 +2,13 @@ package net.corda.core.transactions
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.NamedByHash
+import net.corda.core.crypto.Crypto.doVerify
+import net.corda.core.crypto.Crypto.findSignatureScheme
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.mapToSet
 import net.corda.core.transactions.SignedTransaction.SignaturesMissingException
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toNonEmptySet
 import java.security.InvalidKeyException
 import java.security.PublicKey
@@ -103,6 +106,48 @@ interface TransactionWithSignatures : NamedByHash {
         val sigKeys = sigs.mapToSet { it.by }
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
         //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
-        return requiredSigningKeys.asSequence().filter { !it.isFulfilledBy(sigKeys) }.toSet()
+        return requiredSigningKeys.asSequence().filter { requiredSigningKey -> !isKeyInSignature(requiredSigningKey, sigKeys) }.toSet()
+    }
+
+    private fun isKeyInSignature(requiredSigningKey: PublicKey, signingKeys: Set<PublicKey>): Boolean {
+        // This bit should be after requiredSigningKey.isFulfilledBy(signingKey) check
+        // The flag validatedByKeyRotationCheck is not required. this is only for testing purposes
+        ///
+        val oldPublicKeyToCrossProviderKeyRotationProofMap =
+                sigs.map { signature ->
+                    signature.signatureMetadata.crossProviderKeyRotationProof.map { keyRotationProof ->
+                        keyRotationProof.publicKeyOld to keyRotationProof
+                    }
+                }.flatten().toMap()
+
+        var validatedByKeyRotationCheck = false
+        var oldPublicKeyToKeyRotationState = oldPublicKeyToCrossProviderKeyRotationProofMap[requiredSigningKey]
+        while(oldPublicKeyToKeyRotationState != null)  {
+            validatedByKeyRotationCheck = true
+            loggerFor<TransactionSignature>().info("Filipe: Validating old key. Old key: $requiredSigningKey")
+            val isKeyRotationProofValid = doVerify(
+                    findSignatureScheme(requiredSigningKey),
+                    requiredSigningKey,
+                    oldPublicKeyToKeyRotationState.signature,
+                    oldPublicKeyToKeyRotationState.publicKeyNew.encoded
+            )
+            if(!isKeyRotationProofValid) {
+                loggerFor<TransactionSignature>().info("Filipe: Old key is invalid")
+                return false
+            }
+
+            oldPublicKeyToKeyRotationState = oldPublicKeyToCrossProviderKeyRotationProofMap[oldPublicKeyToKeyRotationState.publicKeyNew]
+        }
+
+        if(validatedByKeyRotationCheck) {
+            return true
+        }
+        ////
+
+
+        if(requiredSigningKey.isFulfilledBy(signingKeys)) {
+            return true
+        }
+        return false
     }
 }
