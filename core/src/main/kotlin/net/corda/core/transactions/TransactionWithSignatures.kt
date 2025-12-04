@@ -127,7 +127,7 @@ interface TransactionWithSignatures : NamedByHash {
             loggerFor<TransactionSignature>().info("Filipe: Validating old key. Old key: $requiredSigningKey")
             val isKeyRotationProofValid = doVerify(
                     findSignatureScheme(requiredSigningKey),
-                    requiredSigningKey,
+                    oldPublicKeyToKeyRotationState.publicKeyOld,
                     oldPublicKeyToKeyRotationState.signature,
                     oldPublicKeyToKeyRotationState.publicKeyNew.encoded
             )
