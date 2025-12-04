@@ -11,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
  *
  * @param platformVersion current DLT version.
  * @param schemeNumberID number id of the signature scheme used based on signer's key-pair, see [SignatureScheme.schemeNumberID].
+ * @param crossProviderKeyRotationProof a list of signatures proving that the newest key is authorised to sign transactions on behalf of the previous keys.
  */
 @CordaSerializable
 data class SignatureMetadata(val platformVersion: Int, val schemeNumberID: Int, val crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof> = emptyList())
