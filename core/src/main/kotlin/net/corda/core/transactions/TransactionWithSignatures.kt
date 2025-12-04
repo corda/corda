@@ -124,7 +124,7 @@ interface TransactionWithSignatures : NamedByHash {
         var oldPublicKeyToKeyRotationState = oldPublicKeyToCrossProviderKeyRotationProofMap[requiredSigningKey]
         while(oldPublicKeyToKeyRotationState != null)  {
             validatedByKeyRotationCheck = true
-            loggerFor<TransactionSignature>().info("Filipe: Validating old key. Old key: $requiredSigningKey")
+            loggerFor<TransactionSignature>().info("Filipe: Validating old key. Old key: ${oldPublicKeyToKeyRotationState.publicKeyOld}")
             val isKeyRotationProofValid = doVerify(
                     findSignatureScheme(requiredSigningKey),
                     oldPublicKeyToKeyRotationState.publicKeyOld,
