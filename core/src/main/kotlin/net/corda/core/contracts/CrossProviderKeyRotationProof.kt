@@ -9,6 +9,4 @@ data class CrossProviderKeyRotationProof(
         val publicKeyOld: PublicKey,
         val publicKeyNew: PublicKey,
         val signature: ByteArray,
-        val timestamp: Instant,
-        val issuer: String // Change this name to signerName
 )
