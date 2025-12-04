@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.contracts.CrossProviderKeyRotationProof
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -12,4 +13,4 @@ import net.corda.core.serialization.CordaSerializable
  * @param schemeNumberID number id of the signature scheme used based on signer's key-pair, see [SignatureScheme.schemeNumberID].
  */
 @CordaSerializable
-data class SignatureMetadata(val platformVersion: Int, val schemeNumberID: Int)
+data class SignatureMetadata(val platformVersion: Int, val schemeNumberID: Int, val crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof> = emptyList())
