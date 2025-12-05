@@ -47,7 +47,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 scheduledThreadPool: ScheduledExecutorService,
                                 protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?,
                                 threadFactoryGroupName: String,
-                                metricsManager: MetricsManager): Acceptor {
+                                metricsManager: MetricsManager?): Acceptor {
         val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "Acceptor", configuration)
         threadPool.setThreadPoolName("$threadPoolName-artemis")
         scheduledThreadPool.setThreadPoolName("$threadPoolName-artemis-scheduler")
@@ -77,7 +77,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     failureExecutor: Executor,
                                     protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?,
                                     threadFactoryGroupName: String,
-                                    metricsManager: MetricsManager,
+                                    metricsManager: MetricsManager?,
                                     private val threadPoolName: String
                                     ) :
             NettyAcceptor(name,
