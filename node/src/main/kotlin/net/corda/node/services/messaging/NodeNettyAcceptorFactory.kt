@@ -63,7 +63,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                 protocolMap,
                 threadFactoryGroupName,
                 metricsManager,
-                "$threadPoolName-netty",
+                "$threadPoolName-netty"
         )
     }
 
