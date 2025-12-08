@@ -237,8 +237,20 @@ class ArtemisTcpTransport {
                 options[TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME] = CIPHER_SUITES.joinToString(",")
                 options[TransportConstants.ENABLED_PROTOCOLS_PROP_NAME] = TLS_VERSIONS.joinToString(",")
             }
-            // By default, use only one remoting thread in tests (https://github.com/corda/corda/pull/2357)
-            options[TransportConstants.REMOTING_THREADS_PROPNAME] = remotingThreads ?: if (nodeSerializationEnv == null) 1 else -1
+            /**
+             * ENT-14714
+             * As of Artemis 2.44.0 - Artemis no longer interprets REMOTING_THREADS_PROPNAME=-1 as 'not set' and doesn't default it to
+             * whatever value Artemis deems fit. To express 'not set' just don't add it to the options at all and then Artemis WILL default
+             * it. Here, REMOTING_THREADS_PROPNAME is only set if there's a value to give to it.
+             */
+            remotingThreads?.let {
+                options[TransportConstants.REMOTING_THREADS_PROPNAME] = it
+            } ?: run {
+                // Only execute this block if remotingThreads was null
+                if (nodeSerializationEnv == null) {
+                    options[TransportConstants.REMOTING_THREADS_PROPNAME] = 1
+                }
+            }
             options[THREAD_POOL_NAME_NAME] = threadPoolName
             options[TRACE_NAME] = trace
             return TransportConfiguration(className, options)
