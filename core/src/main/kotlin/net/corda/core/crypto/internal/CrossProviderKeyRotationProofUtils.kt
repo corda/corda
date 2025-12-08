@@ -26,11 +26,11 @@ object CrossProviderKeyRotationProofUtils {
         return proofChain
     }
 
-    private fun validateProofChainContinuity(currentKey: PublicKey, proofChain: Map<PublicKey, CrossProviderKeyRotationProof>) {
+    private fun validateProofChainContinuity(signingKey: PublicKey, proofChain: Map<PublicKey, CrossProviderKeyRotationProof>) {
         var validProofCount = 0
 
         // Iterate backwards through the proof chain, verifying each proof
-        var activeKey = currentKey
+        var activeKey = signingKey
         var currentProof = proofChain[activeKey]
         while(currentProof != null) {
             validateIndividualProof(currentProof)
