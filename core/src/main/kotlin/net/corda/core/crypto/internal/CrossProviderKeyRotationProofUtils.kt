@@ -39,7 +39,7 @@ object CrossProviderKeyRotationProofUtils {
             validProofCount++
         }
 
-        // Ensure that all proofs in the map are reachable from the current key.
+        // Ensure that all proofs in the map are reachable from the signing key.
         // This prevents an attacker from injecting unrelated proofs into a valid chain.
         // Example attack scenario:
         //   - Attacker has a valid proof chain A -> B -> C
@@ -47,7 +47,7 @@ object CrossProviderKeyRotationProofUtils {
         //   - If the system blindly accepted all proofs, the attacker could create a combined chain:
         //       A -> B -> C, D -> E -> F
         //     and potentially impersonate the victim's keys D, E, F.
-        // By verifying that every proof is connected starting from the current key, we guarantee
+        // By verifying that every proof is connected starting from the signing key, we guarantee
         // that only the intended, continuous proof chain is accepted.
         check(validProofCount == proofChain.size) {
             "Invalid cross-provider key rotation proof chain: contains unreachable proofs."
