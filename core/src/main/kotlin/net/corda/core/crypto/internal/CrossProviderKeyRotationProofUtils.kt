@@ -19,24 +19,30 @@ object CrossProviderKeyRotationProofUtils {
 
     private fun extractProof(signature: TransactionSignature): List<CrossProviderKeyRotationProof> {
         val proofChain = signature.signatureMetadata.crossProviderKeyRotationProof
-        val proofChainMap = proofChain.associateBy { proof -> proof.publicKeyNew }
+        val newPublicKeyToProofMap = proofChain.associateBy { proof -> proof.publicKeyNew }
 
-        validateProofChainContinuity(signature.by, proofChainMap)
+        validateProofChainContinuity(signature.by, newPublicKeyToProofMap)
 
         return proofChain
     }
 
-    private fun validateProofChainContinuity(signingKey: PublicKey, proofChain: Map<PublicKey, CrossProviderKeyRotationProof>) {
-        var validProofCount = 0
+    private fun validateProofChainContinuity(signingKey: PublicKey, newPublicKeyToProofMap: Map<PublicKey, CrossProviderKeyRotationProof>) {
 
         // Iterate backwards through the proof chain, verifying each proof
         var activeKey = signingKey
-        var currentProof = proofChain[activeKey]
+        val keysSeenSoFar = mutableSetOf(activeKey)
+        var currentProof = newPublicKeyToProofMap[activeKey]
         while(currentProof != null) {
             validateIndividualProof(currentProof)
+
             activeKey = currentProof.publicKeyOld
-            currentProof = proofChain[activeKey]
-            validProofCount++
+            if(keysSeenSoFar.contains(activeKey)) {
+                // Detected a cycle in the proof chain
+                throw IllegalArgumentException("Invalid cross-provider key rotation proof chain: Contains a cycle.")
+            }
+            keysSeenSoFar.add(activeKey)
+
+            currentProof = newPublicKeyToProofMap[activeKey]
         }
 
         // Ensure that all proofs in the map are reachable from the signing key.
@@ -49,7 +55,7 @@ object CrossProviderKeyRotationProofUtils {
         //     and potentially impersonate the victim's keys D, E, F.
         // By verifying that every proof is connected starting from the signing key, we guarantee
         // that only the intended, continuous proof chain is accepted.
-        check(validProofCount == proofChain.size) {
+        check(keysSeenSoFar.size == newPublicKeyToProofMap.size) {
             "Invalid cross-provider key rotation proof chain: contains unreachable proofs."
         }
     }
