@@ -5,7 +5,7 @@ import java.security.PublicKey
 import java.time.Instant
 
 /**
- * A proof that a key rotation has taken place across different cryptographic providers.
+ * A proof that a key rotation has taken place across different key providers.
  *
  * @param publicKeyOld The old public key before rotation.
  * @param publicKeyNew The new public key after rotation.
