@@ -395,7 +395,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun logCommandData() {
-        if (logger.isDebugEnabled) {
+        if (logger.isDebugEnabled && transaction.coreTransaction is WireTransaction) {
             val commandDataTypes = transaction.tx.commands.asSequence().mapNotNull { it.value::class.qualifiedName }.distinct()
             logger.debug("Started finalization, commands are ${commandDataTypes.joinToString(", ", "[", "]")}.")
         }
