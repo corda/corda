@@ -8,5 +8,5 @@ import java.time.Instant
 data class CrossProviderKeyRotationProof(
         val publicKeyOld: PublicKey,
         val publicKeyNew: PublicKey,
-        val signature: ByteArray,
+        val signature: ByteArray
 )
