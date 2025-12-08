@@ -30,18 +30,16 @@ object CrossProviderKeyRotationProofUtils {
 
         // Iterate backwards through the proof chain, verifying each proof
         var activeKey = signingKey
-        val keysSeenSoFar = mutableSetOf(activeKey)
+        val keysSeenSoFar = mutableSetOf<PublicKey>()
         var currentProof = newPublicKeyToProofMap[activeKey]
         while(currentProof != null) {
-            validateIndividualProof(currentProof)
-
-            activeKey = currentProof.publicKeyOld
-            if(keysSeenSoFar.contains(activeKey)) {
+            if(!keysSeenSoFar.add(activeKey)) {
                 // Detected a cycle in the proof chain
                 throw IllegalArgumentException("Invalid cross-provider key rotation proof chain: Contains a cycle.")
             }
-            keysSeenSoFar.add(activeKey)
 
+            validateIndividualProof(currentProof)
+            activeKey = currentProof.publicKeyOld
             currentProof = newPublicKeyToProofMap[activeKey]
         }
 
