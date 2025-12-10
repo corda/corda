@@ -243,13 +243,9 @@ class ArtemisTcpTransport {
              * whatever value Artemis deems fit. To express 'not set' just don't add it to the options at all and then Artemis WILL default
              * it. Here, REMOTING_THREADS_PROPNAME is only set if there's a value to give to it.
              */
-            remotingThreads?.let {
-                options[TransportConstants.REMOTING_THREADS_PROPNAME] = it
-            } ?: run {
-                // Only execute this block if remotingThreads was null
-                if (nodeSerializationEnv == null) {
-                    options[TransportConstants.REMOTING_THREADS_PROPNAME] = 1
-                }
+            when {
+                remotingThreads != null -> options[TransportConstants.REMOTING_THREADS_PROPNAME] = remotingThreads
+                nodeSerializationEnv == null -> options[TransportConstants.REMOTING_THREADS_PROPNAME] = 1
             }
             options[THREAD_POOL_NAME_NAME] = threadPoolName
             options[TRACE_NAME] = trace
