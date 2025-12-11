@@ -44,7 +44,9 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
     private val manager: DefaultSecurityManager
     private val rateLimitConfig = config.options?.rateLimit
     private val baseDelaySeconds = rateLimitConfig?.backoffBaseSeconds ?: 2L
+    @Suppress("MagicNumber")
     private val maxDelaySeconds = rateLimitConfig?.backoffMaxSeconds ?: 60L
+    @Suppress("MagicNumber")
     private val attemptExpireMinutes = rateLimitConfig?.attemptExpireMinutes ?: 15L
 
     init {
@@ -64,12 +66,14 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
                 null
             }
 
+    @Suppress("ComplexMethod")
     @Throws(FailedLoginException::class)
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
         val now = Instant.now()
         val key = hashUsername(principal)
         val attempt = failedLoginCache?.getIfPresent(key)
 
+        @Suppress("MagicNumber")
         fun recordFailedAttemptAndThrow(attempt: LoginAttempt?, cause: AuthenticationException? = null) {
             if (rateLimitConfig == null) throw FailedLoginException("Authentication failed for user '$principal'\n${cause.toString()}")
             val newCount = (attempt?.count ?: 0) + 1
