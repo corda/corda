@@ -41,7 +41,6 @@ import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
-import org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM
 import org.hamcrest.text.MatchesPattern
 import org.junit.After
 import org.junit.Before
