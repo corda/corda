@@ -526,6 +526,15 @@ allprojects {
                     if (details.requested.group == 'org.glassfish.jersey.core' && details.requested.name == 'jersey-client') {
                         details.useVersion jersey_version
                     }
+
+                    // SNYK-JAVA-COMMONSIO-8161190 / CVE-2024-47554
+                    // vulnerability in commons-io:commons-io@2.10.0 fixed in commons-io@2.14.0
+                    // commons-io@2.10.0 is a transitive dependency via artemis-server@2.19.1
+                    // can't upgrade artemis any further due to compatibility issues, so
+                    // force-upgrade to latest commons-io:commons-io@2.21.0
+                    if (details.requested.group == 'commons-io' && details.requested.name == 'commons-io') {
+                        details.useVersion commons_io_version
+                    }
                 }
 
                 dependencySubstitution {
