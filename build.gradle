@@ -129,6 +129,7 @@ buildscript {
     ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
     ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
+    ext.http_client_version = constants.getProperty("httpClientVersion")
 
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
@@ -534,6 +535,14 @@ allprojects {
                     // force-upgrade to latest commons-io:commons-io@2.21.0
                     if (details.requested.group == 'commons-io' && details.requested.name == 'commons-io') {
                         details.useVersion commons_io_version
+                    }
+
+                    // SNYK-JAVA-ORGAPACHEHTTPCOMPONENTS-1048058 / CVE-2020-13956
+                    // vulnerability in org.apache.httpcomponents:httpclient@4.5.12 fixed in httpclient@4.5.13
+                    // httpclient@4.5.14 is a transitive dependency via docker-java@3.5.1, which is the latest version available,
+                    // force-upgrade to latest httpclient@4.5.14
+                    if (details.requested.group == 'org.apache.httpcomponents' && details.requested.name == 'httpclient') {
+                        details.useVersion http_client_version
                     }
                 }
 
