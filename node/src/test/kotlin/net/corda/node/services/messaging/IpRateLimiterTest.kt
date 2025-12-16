@@ -7,7 +7,7 @@ import kotlin.test.assertFailsWith
 
 class IpRateLimiterTest {
 
-    @Test
+    @Test(timeout=300_000)
     fun `IP is suspended after too many failures`() {
         val limiter = IpRateLimiter(maxFailuresBeforeBackoff = 3)
         val ip = "127.0.0.1"
@@ -24,7 +24,7 @@ class IpRateLimiterTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `IP suspension expires`() {
         val limiter = IpRateLimiter(maxFailuresBeforeBackoff = 1, baseDelaySeconds = 2)
         val ip = "127.0.0.1"

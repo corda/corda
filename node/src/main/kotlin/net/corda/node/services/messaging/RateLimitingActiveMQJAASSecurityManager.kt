@@ -51,6 +51,7 @@ internal class IpRateLimiter(
 
     private data class Attempt(val count: Int, val nextAllowed: Instant)
 
+    @Suppress("MagicNumber")
     private val attempts =
             Caffeine.newBuilder()
                     .expireAfterWrite(15, TimeUnit.MINUTES)
