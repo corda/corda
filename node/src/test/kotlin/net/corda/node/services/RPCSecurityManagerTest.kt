@@ -1,6 +1,5 @@
 package net.corda.node.services
 
-import junit.framework.TestCase.assertTrue
 import net.corda.core.context.AuthServiceId
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
@@ -10,8 +9,6 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.tryAuthenticate
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.config.AuthDataSourceType
-import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -140,99 +137,6 @@ class RPCSecurityManagerTest {
                 "Invalid subject should not be allowed to call $action"
             }
         }
-    }
-
-    @Test(timeout = 300_000)
-    fun `Login attempts during backoff do not extend delay`() {
-        val users = listOf(User("user", "password", emptySet()))
-        val userRealm = RPCSecurityManagerImpl(
-                config = SecurityConfiguration.AuthService(
-                        options = SecurityConfiguration.AuthService.Options(
-                                cache = null,
-                                rateLimit = SecurityConfiguration.AuthService.Options.RateLimit(2L, 60L, 15)
-                        ),
-                        dataSource = SecurityConfiguration.AuthService.DataSource(
-                                type = AuthDataSourceType.INMEMORY,
-                                users = users,
-                                passwordEncryption = PasswordEncryption.NONE),
-                        id = AuthServiceId("NODE_CONFIG")
-                ),
-                cacheFactory = TestingNamedCacheFactory()
-        )
-
-        // first 3 failures - no delay
-        repeat(3) {
-            val ex = assertFailsWith(FailedLoginException::class) {
-                userRealm.authenticate("user", Password("wrong"))
-            }
-            assertTrue(ex.message!!.contains("Failed login for user 'user'."))
-        }
-
-        // 4th failure — should start delay
-        val login1 = assertFailsWith(FailedLoginException::class) {
-            userRealm.authenticate("user", Password("wrong"))
-        }
-        require(login1.message!!.contains("Failed login for user 'user'. Try again in 2 seconds.")) {
-            "Expected exponential backoff lockout message, got: ${login1.message}"
-        }
-
-        // retry immediately - suspended, delay not increased
-        val login2 = assertFailsWith(FailedLoginException::class) {
-            userRealm.authenticate("user", Password("password"))
-        }
-        require(login2.message!!.contains(Regex("Login temporarily suspended for user 'user'. Try again in [1-2] seconds."))) {
-            "Expected exponential backoff lockout message, got: ${login2.message}"
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `Exponential backoff expires and login eventually succeeds`() {
-        val users = listOf(User("user", "password", emptySet()))
-        val userRealm = RPCSecurityManagerImpl(
-                config = SecurityConfiguration.AuthService(
-                        options = SecurityConfiguration.AuthService.Options(
-                                cache = null,
-                                rateLimit = SecurityConfiguration.AuthService.Options.RateLimit(2L, 60L, 15)
-                        ),
-                        dataSource = SecurityConfiguration.AuthService.DataSource(
-                                type = AuthDataSourceType.INMEMORY,
-                                users = users,
-                                passwordEncryption = PasswordEncryption.NONE),
-                        id = AuthServiceId("NODE_CONFIG")
-                ),
-                cacheFactory = TestingNamedCacheFactory()
-        )
-
-        // first 3 failures - no delay
-        repeat(3) {
-            val ex = assertFailsWith(FailedLoginException::class) {
-                userRealm.authenticate("user", Password("wrong"))
-            }
-            assertTrue(ex.message!!.contains("Failed login for user 'user'."))
-        }
-
-        // 4th failure — should start delay
-        val login1 = assertFailsWith(FailedLoginException::class) {
-            userRealm.authenticate("user", Password("wrong"))
-        }
-        require(login1.message!!.contains("Failed login for user 'user'. Try again in 2 seconds.")) {
-            "Expected exponential backoff lockout message, got: ${login1.message}"
-        }
-
-        Thread.sleep(2100)
-
-        // should increase delay to 4s
-        val login2 = assertFailsWith(FailedLoginException::class) {
-            userRealm.authenticate("user", Password("wrong"))
-        }
-        require(login2.message!!.contains("Failed login for user 'user'. Try again in 4 seconds.")) {
-            "Expected exponential backoff lockout message, got: ${login2.message}"
-        }
-
-        Thread.sleep(4100) // wait 4s for the delay window to expire
-
-        // now login should succeed
-        userRealm.authenticate("user", Password("password"))
     }
 
     private fun configWithRPCUsername(username: String) {

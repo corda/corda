@@ -23,14 +23,8 @@ import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
-import java.security.MessageDigest
-import java.time.Duration
-import java.time.Instant
-import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 import javax.security.auth.login.FailedLoginException
-import kotlin.math.pow
 
 private typealias AuthServiceConfig = SecurityConfiguration.AuthService
 
@@ -42,78 +36,25 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
 
     override val id = config.id
     private val manager: DefaultSecurityManager
-    private val rateLimitConfig = config.options?.rateLimit
-    private val baseDelaySeconds = rateLimitConfig?.backoffBaseSeconds ?: 2L
-    @Suppress("MagicNumber")
-    private val maxDelaySeconds = rateLimitConfig?.backoffMaxSeconds ?: 60L
-    @Suppress("MagicNumber")
-    private val attemptExpireMinutes = rateLimitConfig?.attemptExpireMinutes ?: 15L
 
     init {
         manager = buildImpl(config, cacheFactory)
     }
 
-    private data class LoginAttempt(val count: Int, val nextAllowed: Instant)
-
-    @Suppress("MagicNumber")
-    private val failedLoginCache =
-            if (rateLimitConfig != null) {
-                Caffeine.newBuilder()
-                        .expireAfterWrite(attemptExpireMinutes, TimeUnit.MINUTES)
-                        .maximumSize(10_000)
-                        .build<String, LoginAttempt>()
-            } else {
-                null
-            }
-
-    @Suppress("ComplexMethod")
     @Throws(FailedLoginException::class)
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
-        val now = Instant.now()
-        val key = hashUsername(principal)
-        val attempt = failedLoginCache?.getIfPresent(key)
-
-        @Suppress("MagicNumber")
-        fun recordFailedAttemptAndThrow(attempt: LoginAttempt?, cause: AuthenticationException? = null) {
-            if (rateLimitConfig == null) throw FailedLoginException("Authentication failed for user '$principal'\n${cause.toString()}")
-            val newCount = (attempt?.count ?: 0) + 1
-            val failuresBeforeBackoff = 3
-            val effectiveFailures = maxOf(0, newCount - failuresBeforeBackoff)
-            val delaySeconds =
-                    if (effectiveFailures == 0) 0
-                    else (baseDelaySeconds * 2.0.pow(effectiveFailures - 1)).toLong().coerceAtMost(maxDelaySeconds)
-            val nextAllowed = now.plusSeconds(delaySeconds)
-            failedLoginCache!!.put(key, LoginAttempt(newCount, nextAllowed))
-            val messagePrefix = cause?.toString()?.plus("\n") ?: ""
-            val tryAgainMessage = if (delaySeconds != 0L) " Try again in $delaySeconds seconds." else ""
-            val message = messagePrefix + "Failed login for user '$principal'.$tryAgainMessage"
-            throw FailedLoginException(message)
-        }
-
-        // Block immediately if inside backoff window
-        if (rateLimitConfig != null && attempt != null && now.isBefore(attempt.nextAllowed)) {
-            val remaining = Duration.between(now, attempt.nextAllowed).seconds
-            throw FailedLoginException("Login temporarily suspended for user '$principal'. Try again in $remaining seconds.")
-        }
-
         password.use {
             val authToken = UsernamePasswordToken(principal, it.value)
             try {
                 manager.authenticate(authToken)
-                failedLoginCache?.invalidate(key)
             } catch (authcException: AuthenticationException) {
-                recordFailedAttemptAndThrow(attempt, authcException)
+                throw FailedLoginException(authcException.toString())
             }
             return ShiroAuthorizingSubject(
                     subjectId = SimplePrincipalCollection(principal, id.value),
                     manager = manager)
         }
     }
-
-    private fun hashUsername(user: String): String =
-            Base64.getEncoder().encodeToString(
-                    MessageDigest.getInstance("SHA-256").digest(user.toByteArray())
-            )
 
     override fun buildSubject(principal: String): AuthorizingSubject =
             ShiroAuthorizingSubject(
@@ -136,7 +77,6 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
                     logger.info("Constructing DB-backed security data source: ${config.dataSource.connection}")
                     NodeJdbcRealm(config.dataSource)
                 }
-
                 AuthDataSourceType.INMEMORY -> {
                     logger.info("Constructing realm from list of users in config ${config.dataSource.users!!}")
                     InMemoryRealm(config.dataSource.users, config.id.value, config.dataSource.passwordEncryption)
@@ -172,6 +112,7 @@ internal class RPCPermission : DomainPermission {
      * @param target  An optional "target" type on which methods act
      */
     constructor(methods: Set<String>, target: String? = null) : super(methods, target?.let { setOf(it.replace(".", ":")) })
+
 
     /**
      * Default constructor instantiate an "ALL" permission
