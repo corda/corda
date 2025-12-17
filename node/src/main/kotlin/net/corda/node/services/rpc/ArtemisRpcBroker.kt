@@ -8,6 +8,7 @@ import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
 import net.corda.node.services.messaging.RateLimitingActiveMQJAASSecurityManager
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
@@ -34,20 +35,20 @@ class ArtemisRpcBroker internal constructor(
         private val baseDirectory: Path,
         private val nodeConfiguration: MutualSslConfiguration,
         private val shouldStartLocalShell: Boolean,
-        private val rateLimitConfig: net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit?) : ArtemisBroker {
+        private val rateLimitConfig: RateLimit?) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
         fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                     sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int,
-                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit?): ArtemisBroker {
+                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, journalBufferTimeout,
                     jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
         }
 
         fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                        securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
-                       baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit?): ArtemisBroker {
+                       baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, journalBufferTimeout,
                     jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
         }

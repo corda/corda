@@ -13,11 +13,12 @@ import java.util.concurrent.TimeUnit
 import javax.security.auth.Subject
 import javax.security.auth.login.FailedLoginException
 import kotlin.math.pow
+import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
 
 class RateLimitingActiveMQJAASSecurityManager(
         configurationName: String,
         configuration: SecurityConfiguration,
-        rateLimitConfig: net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit?
+        rateLimitConfig: RateLimit?
 ) : ActiveMQJAASSecurityManager(configurationName, configuration) {
 
     private data class Attempt(val count: Int, val nextAllowed: Instant)
