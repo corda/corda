@@ -87,7 +87,7 @@ class RateLimitingActiveMQJAASSecurityManager(
                 recordFailure(userAttempts, userKey, userFreeAttempts, now)
             }
 
-            // 6. If user+IP suspected -> reject
+            // 6. Re-check if user+IP is suspended after recording failure in case this attempt triggered suspension
             if (userKey != null) {
                 userAttempts.getIfPresent(userKey)?.let { userAttempt ->
                     if (now.isBefore(userAttempt.nextAllowed)) {
