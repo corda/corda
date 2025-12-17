@@ -23,9 +23,7 @@ class RateLimitingActiveMQJAASSecurityManager(
     private data class Attempt(val count: Int, val nextAllowed: Instant)
 
     private val baseDelaySeconds = rateLimitConfig?.backoffBaseSeconds ?: 2L
-    @Suppress("MagicNumber")
     private val maxDelaySeconds = rateLimitConfig?.backoffMaxSeconds ?: 60L
-    @Suppress("MagicNumber")
     private val attemptExpireMinutes = rateLimitConfig?.attemptExpireMinutes ?: 15L
 
     private val userFreeAttempts = 3
@@ -43,6 +41,7 @@ class RateLimitingActiveMQJAASSecurityManager(
                     .maximumSize(10_000)
                     .build<String, Attempt>()
 
+    @Suppress("ComplexMethod")
     override fun authenticate(user: String?, password: String?, remotingConnection: RemotingConnection?, securityDomain: String?): Subject? {
 
         val now = Instant.now()
