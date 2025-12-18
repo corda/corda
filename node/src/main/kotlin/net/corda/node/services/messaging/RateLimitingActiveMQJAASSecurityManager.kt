@@ -21,7 +21,10 @@ class RateLimitingActiveMQJAASSecurityManager(
         rateLimitConfig: RateLimit?
 ) : ActiveMQJAASSecurityManager(configurationName, configuration) {
 
-    private data class Attempt(val count: Int, val nextAllowed: Instant)
+    private data class Attempt(val count: Int, val nextAllowed: Instant) {
+        fun suspended(now: Instant): Boolean = now.isBefore(nextAllowed)
+        fun remainingSeconds(now: Instant): Long = Duration.between(now, nextAllowed).seconds
+    }
 
     private val baseDelaySeconds = rateLimitConfig?.backoffBaseSeconds ?: 2L
     private val maxDelaySeconds = rateLimitConfig?.backoffMaxSeconds ?: 60L
@@ -38,7 +41,7 @@ class RateLimitingActiveMQJAASSecurityManager(
 
     private val ipAttempts =
             Caffeine.newBuilder()
-                    .expireAfterWrite(15, TimeUnit.MINUTES)
+                    .expireAfterWrite(attemptExpireMinutes, TimeUnit.MINUTES)
                     .maximumSize(10_000)
                     .build<String, Attempt>()
 
@@ -53,8 +56,8 @@ class RateLimitingActiveMQJAASSecurityManager(
         // 1. If user+IP suspended -> immediately reject
         if (userKey != null) {
             userAttempts.getIfPresent(userKey)?.let { userAttempt ->
-                if (now.isBefore(userAttempt.nextAllowed)) {
-                    val remaining = Duration.between(now, userAttempt.nextAllowed).seconds
+                if (userAttempt.suspended(now)) {
+                    val remaining = userAttempt.remainingSeconds(now)
                     throw FailedLoginException("Login temporarily suspended for user '$user'. Try again in $remaining seconds.")
                 }
             }
@@ -76,8 +79,8 @@ class RateLimitingActiveMQJAASSecurityManager(
 
             // 4, If IP suspended -> reject
             ipAttempts.getIfPresent(ipKey)?.let { ipAttempt ->
-                if (now.isBefore(ipAttempt.nextAllowed)) {
-                    val remaining = Duration.between(now, ipAttempt.nextAllowed).seconds
+                if (ipAttempt.suspended(now)) {
+                    val remaining = ipAttempt.remainingSeconds(now)
                     throw FailedLoginException("Login temporarily suspended from IP $ip. Try again in $remaining seconds.")
                 }
             }
@@ -90,8 +93,8 @@ class RateLimitingActiveMQJAASSecurityManager(
             // 6. Re-check if user+IP is suspended after recording failure in case this attempt triggered suspension
             if (userKey != null) {
                 userAttempts.getIfPresent(userKey)?.let { userAttempt ->
-                    if (now.isBefore(userAttempt.nextAllowed)) {
-                        val remaining = Duration.between(now, userAttempt.nextAllowed).seconds
+                    if (userAttempt.suspended(now)) {
+                        val remaining = userAttempt.remainingSeconds(now)
                         throw FailedLoginException("Login temporarily suspended for user '$user'. Try again in $remaining seconds.")
                     }
                 }
@@ -107,16 +110,12 @@ class RateLimitingActiveMQJAASSecurityManager(
             freeAttempts: Int,
             now: Instant
     ) {
-        val prev = cache.getIfPresent(key)
-        val newCount = (prev?.count ?: 0) + 1
-
-        val delay =
-                if (newCount <= freeAttempts) 0
-                else {
-                    val exp = newCount - freeAttempts - 1
-                    (baseDelaySeconds * 2.0.pow(exp)).toLong().coerceAtMost(maxDelaySeconds)
-                }
-        cache.put(key, Attempt(newCount, now.plusSeconds(delay)))
+        cache.asMap().compute(key) { _, prev ->
+            val newCount = (prev?.count ?: 0) + 1
+            val delay = if (newCount <= freeAttempts) -60L // negative to indicate no suspension
+            else (baseDelaySeconds * 2.0.pow(newCount - freeAttempts - 1)).toLong().coerceAtMost(maxDelaySeconds)
+            Attempt(newCount, now.plusSeconds(delay))
+        }
     }
 
     private fun extractIp(remotingConnection: RemotingConnection?): String {
