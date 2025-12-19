@@ -129,6 +129,7 @@ buildscript {
     ext.azure_resource_manager_version = constants.getProperty("azureResourceManagerVersion")
     ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
+    ext.http_client_version = constants.getProperty("httpClientVersion")
 
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
@@ -516,6 +517,32 @@ allprojects {
                     // force-upgrade to latest json-smart@2.5.2
                     if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
                         details.useVersion json_smart_version
+                    }
+
+                    // SNYK-JAVA-ORGGLASSFISHJERSEYCORE-14049172 / CVE-2025-12383
+                    // vulnerability in jersey-client@2.30.1 fixed in jersey-client@2.46
+                    // jersey-client@2.30.1 is a transitive dependency via docker-java@3.5.1
+                    // current latest docker-java@3.5.x is 3.5.3, still uses jersey-client@2.30.1
+                    // force-upgrade to latest 2.x version of docker-client@2.47
+                    if (details.requested.group == 'org.glassfish.jersey.core' && details.requested.name == 'jersey-client') {
+                        details.useVersion jersey_version
+                    }
+
+                    // SNYK-JAVA-COMMONSIO-8161190 / CVE-2024-47554
+                    // vulnerability in commons-io:commons-io@2.10.0 fixed in commons-io@2.14.0
+                    // commons-io@2.10.0 is a transitive dependency via artemis-server@2.19.1
+                    // can't upgrade artemis any further due to compatibility issues, so
+                    // force-upgrade to latest commons-io:commons-io@2.21.0
+                    if (details.requested.group == 'commons-io' && details.requested.name == 'commons-io') {
+                        details.useVersion commons_io_version
+                    }
+
+                    // SNYK-JAVA-ORGAPACHEHTTPCOMPONENTS-1048058 / CVE-2020-13956
+                    // vulnerability in org.apache.httpcomponents:httpclient@4.5.12 fixed in httpclient@4.5.13
+                    // httpclient@4.5.14 is a transitive dependency via docker-java@3.5.1, which is the latest version available,
+                    // force-upgrade to latest httpclient@4.5.14
+                    if (details.requested.group == 'org.apache.httpcomponents' && details.requested.name == 'httpclient') {
+                        details.useVersion http_client_version
                     }
                 }
 

@@ -35,6 +35,7 @@ dependencies {
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.inject:jersey-hk2:${jersey_version}"
 
     // Test dependencies
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
