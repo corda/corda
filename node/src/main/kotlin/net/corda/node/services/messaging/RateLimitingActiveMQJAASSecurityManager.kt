@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.utilities.loggerFor
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
@@ -20,6 +21,10 @@ class RateLimitingActiveMQJAASSecurityManager(
         configuration: SecurityConfiguration,
         rateLimitConfig: RateLimit?
 ) : ActiveMQJAASSecurityManager(configurationName, configuration) {
+
+    companion object {
+        private val log = loggerFor<RateLimitingActiveMQJAASSecurityManager>()
+    }
 
     private data class Attempt(val count: Int, val nextAllowed: Instant) {
         fun suspended(now: Instant): Boolean = now.isBefore(nextAllowed)
@@ -58,50 +63,54 @@ class RateLimitingActiveMQJAASSecurityManager(
             userAttempts.getIfPresent(userKey)?.let { userAttempt ->
                 if (userAttempt.suspended(now)) {
                     val remaining = userAttempt.remainingSeconds(now)
-                    throw FailedLoginException("Login temporarily suspended for user '$user'. Try again in $remaining seconds.")
+                    // additional logging because Artemis will swallow the FailedLoginExceptions thrown in this method
+                    // and wrap them into ActiveMQInternalErrorException without the cause
+                    log.warn(printWarnMessage(user, remaining))
+                    throw FailedLoginException(printWarnMessage(user, remaining))
                 }
             }
         }
 
         // 2. Attempt authentication
-        return try {
-            val subject = super.authenticate(user, password, remotingConnection, securityDomain)
-
+        val subject = super.authenticate(user, password, remotingConnection, securityDomain)
+        if (subject != null) {
             // success - clear user cache only
             if (userKey != null) {
                 userAttempts.invalidate(userKey)
             }
-            subject
-        } catch (fle: FailedLoginException) {
-
-            // 3. Record IP failure
-            recordFailure(ipAttempts, ipKey, ipFreeAttempts, now)
-
-            // 4, If IP suspended -> reject
-            ipAttempts.getIfPresent(ipKey)?.let { ipAttempt ->
-                if (ipAttempt.suspended(now)) {
-                    val remaining = ipAttempt.remainingSeconds(now)
-                    throw FailedLoginException("Login temporarily suspended from IP $ip. Try again in $remaining seconds.")
-                }
-            }
-
-            // 5. Record user+IP failure
-            if (userKey != null) {
-                recordFailure(userAttempts, userKey, userFreeAttempts, now)
-            }
-
-            // 6. Re-check if user+IP is suspended after recording failure in case this attempt triggered suspension
-            if (userKey != null) {
-                userAttempts.getIfPresent(userKey)?.let { userAttempt ->
-                    if (userAttempt.suspended(now)) {
-                        val remaining = userAttempt.remainingSeconds(now)
-                        throw FailedLoginException("Login temporarily suspended for user '$user'. Try again in $remaining seconds.")
-                    }
-                }
-            }
-            // 7. Plain authentication failure
-            throw fle
+            return subject
         }
+
+        // 3. Record IP failure
+        recordFailure(ipAttempts, ipKey, ipFreeAttempts, now)
+
+        // 4, If IP suspended -> reject
+        ipAttempts.getIfPresent(ipKey)?.let { ipAttempt ->
+            if (ipAttempt.suspended(now)) {
+                val remaining = ipAttempt.remainingSeconds(now)
+                log.warn(printWarnMessage(ip, remaining, true))
+                throw FailedLoginException(printWarnMessage(ip, remaining, true))
+            }
+        }
+
+        // 5. Record user+IP failure
+        if (userKey != null) {
+            recordFailure(userAttempts, userKey, userFreeAttempts, now)
+        }
+
+        // 6. Re-check if user+IP is suspended after recording failure in case this attempt triggered suspension
+        if (userKey != null) {
+            userAttempts.getIfPresent(userKey)?.let { userAttempt ->
+                if (userAttempt.suspended(now)) {
+                    val remaining = userAttempt.remainingSeconds(now)
+                    log.warn(printWarnMessage(user, remaining))
+                    throw FailedLoginException(printWarnMessage(user, remaining))
+                }
+            }
+        }
+
+        // 7. Plain authentication failure
+        return null
     }
 
     private fun recordFailure(
@@ -127,5 +136,10 @@ class RateLimitingActiveMQJAASSecurityManager(
         return Base64.getEncoder().encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(value.toByteArray())
         )
+    }
+
+    private fun printWarnMessage(userOrIp: String, remaining: Long, isIp: Boolean = false): String {
+        return if (isIp) "Login temporarily suspended for IP '$userOrIp' due to too many failed attempts. Try again in $remaining seconds."
+        else "Login temporarily suspended for user '$userOrIp' due to too many failed attempts. Try again in $remaining seconds."
     }
 }
