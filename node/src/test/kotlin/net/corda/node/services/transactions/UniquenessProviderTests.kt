@@ -20,6 +20,7 @@ import net.corda.core.flows.StateConsumptionDetails.ConsumedStateType.INPUT_STAT
 import net.corda.core.flows.StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.HashAgility
+import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.utilities.NetworkHostAndPort
@@ -51,9 +52,11 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.fail
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.security.KeyPair
+import java.text.NumberFormat
 import java.time.Clock
 
 @RunWith(Parameterized::class)
@@ -173,8 +176,8 @@ class UniquenessProviderTests(
         val invalidFuture2 = commit(emptyList(), secondTxId, invalidTimeWindow)
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
-        assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture2.get()).isInstanceOf(Result.Success::class.java)
+        validFuture1.get().assertIsSuccess()
+        validFuture2.get().assertIsSuccess()
         assertThat(invalidFuture1.get()).isInstanceOf(Result.Failure::class.java)
         assertThat(invalidFuture2.get()).isInstanceOf(Result.Failure::class.java)
     }
@@ -235,10 +238,10 @@ class UniquenessProviderTests(
         val validFuture2 = commit(emptyList(), secondTxId, references = listOf(referenceState))
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
-        assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture2.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture3.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture4.get()).isInstanceOf(Result.Success::class.java)
+        validFuture1.get().assertIsSuccess()
+        validFuture2.get().assertIsSuccess()
+        validFuture3.get().assertIsSuccess()
+        validFuture4.get().assertIsSuccess()
     }
 
     /* Group C: reference states & time window */
@@ -374,16 +377,21 @@ class UniquenessProviderTests(
         val secondTxId = digestService.randomHash()
         val inputState = generateStateRef()
 
-        val validFuture1 = commit(listOf(inputState), firstTxId)
-        val validFuture2 = commit(listOf(inputState), firstTxId)
-        val invalidFuture1 = commit(listOf(inputState), secondTxId)
-        val invalidFuture2 = commit(listOf(inputState), secondTxId)
+        val tx1Future1 = commit(listOf(inputState), firstTxId)
+        val tx1Future2 = commit(listOf(inputState), firstTxId)
+        val tx2Future1 = commit(listOf(inputState), secondTxId)
+        val tx2Future2 = commit(listOf(inputState), secondTxId)
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
-        assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture2.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(invalidFuture1.get()).isInstanceOf(Result.Failure::class.java)
-        assertThat(invalidFuture2.get()).isInstanceOf(Result.Failure::class.java)
+        if (tx1Future1.get() is Result.Success) {
+            tx1Future2.get().assertIsSuccess()
+            assertThat(tx2Future1.get()).isInstanceOf(Result.Failure::class.java)
+            assertThat(tx2Future2.get()).isInstanceOf(Result.Failure::class.java)
+        } else {
+            assertThat(tx1Future2.get()).isInstanceOf(Result.Failure::class.java)
+            tx2Future1.get().assertIsSuccess()
+            tx2Future2.get().assertIsSuccess()
+        }
     }
 
     /* Group E: input states & time window */
@@ -523,21 +531,33 @@ class UniquenessProviderTests(
         val referenceState = generateStateRef()
 
         // Ensure batch contains duplicates
-        val validFuture1 = commit(emptyList(), secondTxId, references = listOf(referenceState))
-        val validFuture2 = commit(emptyList(), secondTxId, references = listOf(referenceState))
-        val validFuture3 = commit(listOf(referenceState), firstTxId)
-
-        // Attempt to use the reference state after it has been consumed
-        val validFuture4 = commit(emptyList(), digestService.randomHash(), references = listOf(referenceState))
+        val useRefFuture1 = commit(emptyList(), secondTxId, references = listOf(referenceState))
+        val useRefFuture2 = commit(emptyList(), secondTxId, references = listOf(referenceState))
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
-        assertThat(validFuture1.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture2.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture3.get()).isInstanceOf(Result.Success::class.java)
-        assertThat(validFuture4.get()).isInstanceOf(Result.Failure::class.java)
+        useRefFuture1.get().assertIsSuccess()
+        useRefFuture2.get().assertIsSuccess()
+
+        val consumeRefFuture = commit(listOf(referenceState), firstTxId)
+        consumeRefFuture.get().assertIsSuccess()
+
+        // Attempt to use the reference state after it has been consumed
+        val useRefFuture3 = commit(emptyList(), digestService.randomHash(), references = listOf(referenceState))
+        assertThat(useRefFuture3.get()).isInstanceOf(Result.Failure::class.java)
     }
 
     /* Group G: input, reference states and time window – covered by previous tests. */
+
+    @Test(timeout = 300_000)
+    fun `many concurrent requests`() {
+        val duration = elapsedTime {
+            val futures = (1..100).map { commit(listOf(generateStateRef()), digestService.randomHash()) }
+            for (future in futures) {
+                future.get().assertIsSuccess()
+            }
+        }
+        println("Took $duration ${NumberFormat.getInstance().format(100/(duration.toMillis()/1000.0))}tps")
+    }
 
     private fun commit(
             states: List<StateRef>,
@@ -555,9 +575,7 @@ class UniquenessProviderTests(
             references: List<StateRef> = emptyList()
     ) {
         val result = commit(states, txId, timeWindow, references).get()
-        assertThat(result).isInstanceOf(Result.Success::class.java)
-        result as Result.Success
-        result.signature.verify(txId)
+        result.assertIsSuccess().signature.verify(txId)
     }
 
     private fun expectCommitFailure(
@@ -593,6 +611,21 @@ class UniquenessProviderTests(
         val conflict = notaryError as NotaryError.Conflict
         assertThat(conflict.txId).isEqualTo(txId)
         return conflict.consumedStates
+    }
+
+    private fun Result.assertIsSuccess(): Result.Success {
+        when (this) {
+            is Result.Success -> return this
+            is Result.Failure -> {
+                val cause = when (val error = this.error) {
+                    is NotaryError.General -> error.cause
+                    is NotaryError.RequestSignatureInvalid -> error.cause
+                    is NotaryError.TransactionInvalid -> error.cause
+                    else -> null
+                }
+                fail("Expected success but got ${error.javaClass.name}: $error", cause)
+            }
+        }
     }
 }
 
