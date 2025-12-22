@@ -135,6 +135,14 @@ scanApi {
         // Kotlin should probably have declared this class as "synthetic".
         "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
     ]
+
+    excludeMethods = [
+            "net.corda.core.transactions.LedgerTransaction": [
+                    // This is a private c'tor but is exposed as public by the Kotlin compiler. Further, it's got the DefaultConstructorMarker
+                    // parameter even though there are no default values.
+                    "<init>(Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lnet/corda/core/crypto/SecureHash;Lnet/corda/core/identity/Party;Lnet/corda/core/contracts/TimeWindow;Lnet/corda/core/contracts/PrivacySalt;Lnet/corda/core/node/NetworkParameters;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lnet/corda/core/serialization/internal/AttachmentsClassLoaderCache;Lnet/corda/core/crypto/DigestService;Lkotlin/jvm/internal/DefaultConstructorMarker;)V"
+            ]
+    ]
 }
 
 tasks.register("writeTestResources", JavaExec) {
