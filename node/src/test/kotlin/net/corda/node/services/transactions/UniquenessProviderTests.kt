@@ -558,15 +558,6 @@ class UniquenessProviderTests(
     /* Group G: input, reference states and time window – covered by previous tests. */
 
     @Test(timeout = 300_000)
-    fun `unknown notary instructions are not supported`() {
-        class FakeNotaryInstruction : NotaryInstruction
-
-        assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf())).isTrue
-        assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf(FakeNotaryInstruction()))).isFalse
-    }
-
-    @Suppress("LongParameterList")
-    @Test(timeout = 300_000)
     fun `many concurrent requests`() {
         val duration = elapsedTime {
             val futures = (1..100).map { commit(listOf(generateStateRef()), digestService.randomHash()) }
@@ -577,6 +568,15 @@ class UniquenessProviderTests(
         println("Took $duration ${NumberFormat.getInstance().format(100/(duration.toMillis()/1000.0))}tps")
     }
 
+    @Test(timeout = 300_000)
+    fun `unknown notary instructions are not supported`() {
+        class FakeNotaryInstruction : NotaryInstruction
+
+        assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf())).isTrue
+        assertThat(uniquenessProvider.isNotaryInstructionsValid(listOf(FakeNotaryInstruction()))).isFalse
+    }
+
+    @Suppress("LongParameterList")
     private fun commit(
             states: List<StateRef>,
             txId: SecureHash,
