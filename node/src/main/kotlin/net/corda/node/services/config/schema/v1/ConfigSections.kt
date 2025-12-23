@@ -122,12 +122,23 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
                     return valid(SecurityConfiguration.AuthService.Options.Cache(config[expireAfterSecs], config[maxEntries]))
                 }
             }
+            private object RateLimitSpec : Configuration.Specification<SecurityConfiguration.AuthService.Options.RateLimit>("RateLimit") {
+                private val backoffBaseSeconds by long().mapValid { value -> if (value >= 0) validValue(value) else badValue("cannot be less than 0'") }
+                private val backoffMaxSeconds by long().mapValid { value -> if (value >= 0) validValue(value) else badValue("cannot be less than 0'") }
+                private val attemptExpireMinutes by long().mapValid { value -> if (value >= 0) validValue(value) else badValue("cannot be less than 0'") }
+
+                override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.Options.RateLimit> {
+                    val config = configuration.withOptions(options)
+                    return valid(SecurityConfiguration.AuthService.Options.RateLimit(config[backoffBaseSeconds], config[backoffMaxSeconds], config[attemptExpireMinutes]))
+                }
+            }
 
             private val cache by nested(CacheSpec).optional()
+            private val rateLimit by nested(RateLimitSpec).optional()
 
             override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.Options> {
                 val config = configuration.withOptions(options)
-                return valid(SecurityConfiguration.AuthService.Options(config[cache]))
+                return valid(SecurityConfiguration.AuthService.Options(config[cache], config[rateLimit]))
             }
         }
 

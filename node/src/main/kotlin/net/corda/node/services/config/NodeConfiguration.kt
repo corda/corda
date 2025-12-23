@@ -294,8 +294,8 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             }
         }
 
-        // Optional components: cache
-        data class Options(val cache: Options.Cache?) {
+        // Optional components: cache and rateLimit
+        data class Options(val cache: Options.Cache?, val rateLimit: Options.RateLimit?) {
 
             // Cache parameters
             data class Cache(val expireAfterSecs: Long, val maxEntries: Long) {
@@ -305,6 +305,30 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     }
                     require(maxEntries > 0) {
                         "Expected positive value for 'cache.maxEntries'"
+                    }
+                }
+            }
+
+            /**
+             * Parameters controlling login rate limiting for failed RPC authentication attempts.
+             *
+             * @property backoffBaseSeconds Base delay in seconds for exponential backoff between failed login attempts.
+             * Each subsequent failure doubles the delay until [backoffMaxSeconds] is reached.
+             * @property backoffMaxSeconds Maximum delay in seconds for the backoff window.
+             * @property attemptExpireMinutes Time-to-live in minutes for tracking failed login attempts; after this period the counter resets.
+             *
+             * @throws IllegalArgumentException if any parameter is non-positive.
+             */
+            data class RateLimit(val backoffBaseSeconds: Long, val backoffMaxSeconds: Long, val attemptExpireMinutes: Long) {
+                init {
+                    require(backoffBaseSeconds >= 0) {
+                        "Expected positive value for 'rateLimit.backoffBaseSeconds'"
+                    }
+                    require(backoffMaxSeconds > 0) {
+                        "Expected positive value for 'rateLimit.backoffMaxSeconds'"
+                    }
+                    require(attemptExpireMinutes > 0) {
+                        "Expected positive value for 'rateLimit.attemptExpireMinutes'"
                     }
                 }
             }
