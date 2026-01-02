@@ -34,7 +34,7 @@ internal object LinkedHashMapIteratorSerializer : Serializer<Iterator<*>>() {
         kryo.writeClassAndObject(output, current)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Iterator<*>>): Iterator<*> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Iterator<*>>): Iterator<*> {
         val outerMap = kryo.readClassAndObject(input) as Map<*, *>
         return when (type) {
             KEY_ITERATOR_CLASS -> {
@@ -103,7 +103,7 @@ object LinkedHashMapEntrySerializer : Serializer<Map.Entry<*, *>>() {
         kryo.writeClassAndObject(output, e.value)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Map.Entry<*, *>>): Map.Entry<*, *> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Map.Entry<*, *>>): Map.Entry<*, *> {
         val key = kryo.readClassAndObject(input)
         val value = kryo.readClassAndObject(input)
         return constr.newInstance(0, key, value, null) as Map.Entry<*, *>
@@ -126,7 +126,7 @@ object LinkedListItrSerializer : Serializer<ListIterator<Any>>() {
         output.writeInt(obj.nextIndex())
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<ListIterator<Any>>): ListIterator<Any> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out ListIterator<Any>>): ListIterator<Any> {
         val list = kryo.readClassAndObject(input) as LinkedList<*>
         val index = input.readInt()
         return list.listIterator(index)
