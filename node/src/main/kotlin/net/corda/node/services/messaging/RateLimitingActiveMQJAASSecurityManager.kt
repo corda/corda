@@ -12,9 +12,9 @@ import java.time.Instant
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import javax.security.auth.Subject
-import javax.security.auth.login.FailedLoginException
 import kotlin.math.pow
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
+import org.apache.activemq.artemis.spi.core.security.jaas.NoCacheLoginException
 
 class RateLimitingActiveMQJAASSecurityManager(
         configurationName: String,
@@ -66,7 +66,7 @@ class RateLimitingActiveMQJAASSecurityManager(
                     // additional logging because Artemis will swallow the FailedLoginExceptions thrown in this method
                     // and wrap them into ActiveMQInternalErrorException without the cause
                     log.warn(printWarnMessage(user, remaining))
-                    throw FailedLoginException(printWarnMessage(user, remaining))
+                    throw NoCacheLoginException(printWarnMessage(user, remaining))
                 }
             }
         }
@@ -89,7 +89,7 @@ class RateLimitingActiveMQJAASSecurityManager(
             if (ipAttempt.suspended(now)) {
                 val remaining = ipAttempt.remainingSeconds(now)
                 log.warn(printWarnMessage(ip, remaining, true))
-                throw FailedLoginException(printWarnMessage(ip, remaining, true))
+                throw NoCacheLoginException(printWarnMessage(ip, remaining, true))
             }
         }
 
@@ -104,7 +104,7 @@ class RateLimitingActiveMQJAASSecurityManager(
                 if (userAttempt.suspended(now)) {
                     val remaining = userAttempt.remainingSeconds(now)
                     log.warn(printWarnMessage(user, remaining))
-                    throw FailedLoginException(printWarnMessage(user, remaining))
+                    throw NoCacheLoginException(printWarnMessage(user, remaining))
                 }
             }
         }

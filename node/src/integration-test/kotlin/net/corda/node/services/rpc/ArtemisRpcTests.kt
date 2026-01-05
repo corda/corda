@@ -26,7 +26,6 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.internal.p2pSslOptions
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
-import org.apache.activemq.artemis.api.core.ActiveMQInternalErrorException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
@@ -119,12 +118,12 @@ class ArtemisRpcTests {
         // 4th failure – backoff starts
         assertThatThrownBy {
             client.start(TestRpcOps::class.java, user.username,"wrong")
-        }.isInstanceOf(ActiveMQInternalErrorException::class.java)
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
 
         // retry immediately with correct password - should fail as the user is blocked
         assertThatThrownBy {
             client.start(TestRpcOps::class.java, user.username, user.password)
-        }.isInstanceOf(ActiveMQInternalErrorException::class.java)
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
 
         Thread.sleep(2100) // wait 2s for the backoff to expire
         client.start(TestRpcOps::class.java, user.username, user.password)
@@ -150,14 +149,14 @@ class ArtemisRpcTests {
         // 11th failure from the same IP - backoff starts - failure due to suspension
         assertThatThrownBy {
             client.start(TestRpcOps::class.java, "username11", "wrong")
-        }.isInstanceOf(ActiveMQInternalErrorException::class.java)
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
 
         // Wait for IP backoff to expire
         Thread.sleep(2100)
         // 12th failure from the same IP - backoff expired - so the failure is due to login not suspension
         assertThatThrownBy {
             client.start(TestRpcOps::class.java, "username12", "wrong")
-        }.isInstanceOf(ActiveMQInternalErrorException::class.java)
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
 
         client.start(TestRpcOps::class.java, user.username, user.password)
     }
