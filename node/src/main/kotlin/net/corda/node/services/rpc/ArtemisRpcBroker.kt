@@ -14,6 +14,7 @@ import net.corda.node.internal.artemis.RPCJaasConfig
 import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.messaging.InterceptingActiveMQJAASSecurityManager
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -39,23 +40,23 @@ class ArtemisRpcBroker internal constructor(
         private val baseDirectory: Path,
         private val nodeConfiguration: MutualSslConfiguration,
         private val shouldStartLocalShell: Boolean,
+        private val rateLimitConfig: RateLimit?
 ) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
-
         fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                     sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int,
-                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, journalBufferTimeout,
-                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
         }
 
         fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                        securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
-                       baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+                       baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, journalBufferTimeout,
-                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
         }
     }
 
@@ -115,7 +116,7 @@ class ArtemisRpcBroker internal constructor(
             }
         }
         return InterceptingActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig, -1, address.port, adminAddressOptional?.port
-                ?: -1)
+                ?: -1, rateLimitConfig)
     }
 }
 
