@@ -339,14 +339,15 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses {
+        val rateLimitConfig = configuration.security?.authService?.options?.rateLimit
         val rpcBrokerDirectory = configuration.baseDirectory / "brokers" / "rpc"
         with(configuration.rpcOptions) {
             rpcBroker = if (useSsl) {
                 ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
-                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell())
+                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell(), rateLimitConfig)
             } else {
                 ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
-                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell())
+                        journalBufferTimeout, configuration.jmxMonitoringHttpPort != null, rpcBrokerDirectory, configuration.shouldStartLocalShell(), rateLimitConfig)
             }
         }
         return rpcBroker!!.addresses
