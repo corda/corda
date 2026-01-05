@@ -12,7 +12,7 @@ import net.corda.networkbuilder.docker.DockerUtils
 import net.corda.networkbuilder.gui.Gui
 import net.corda.networkbuilder.serialization.SerializationEngine
 import picocli.CommandLine
-import javax.ws.rs.ProcessingException
+import jakarta.ws.rs.ProcessingException
 import kotlin.system.exitProcess
 
 val baseArgs = CliParser()

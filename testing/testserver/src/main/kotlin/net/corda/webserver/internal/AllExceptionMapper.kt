@@ -1,9 +1,9 @@
 package net.corda.webserver.internal
 
+import jakarta.ws.rs.core.Response
+import jakarta.ws.rs.ext.ExceptionMapper
+import jakarta.ws.rs.ext.Provider
 import net.corda.core.utilities.loggerFor
-import javax.ws.rs.core.Response
-import javax.ws.rs.ext.ExceptionMapper
-import javax.ws.rs.ext.Provider
 
 // Provides basic exception logging to all APIs
 @Provider

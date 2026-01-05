@@ -2,6 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.internal.uncheckedCast
 import kotlin.reflect.KCallable
+import kotlin.reflect.jvm.ExperimentalReflectionOnLambdas
 import kotlin.reflect.jvm.reflect
 
 /**
@@ -10,15 +11,19 @@ import kotlin.reflect.jvm.reflect
  * different combinations of parameters.
  */
 
+@OptIn(ExperimentalReflectionOnLambdas::class)
 fun <A : Any, R> measure(a: Iterable<A>, f: (A) -> R) =
         measure(listOf(a), f.reflect()!!) { f(uncheckedCast(it[0])) }
 
+@OptIn(ExperimentalReflectionOnLambdas::class)
 fun <A : Any, B : Any, R> measure(a: Iterable<A>, b: Iterable<B>, f: (A, B) -> R) =
         measure(listOf(a, b), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1])) }
 
+@OptIn(ExperimentalReflectionOnLambdas::class)
 fun <A : Any, B : Any, C : Any, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, f: (A, B, C) -> R) =
         measure(listOf(a, b, c), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1]), uncheckedCast(it[2])) }
 
+@OptIn(ExperimentalReflectionOnLambdas::class)
 fun <A : Any, B : Any, C : Any, D : Any, R> measure(a: Iterable<A>, b: Iterable<B>, c: Iterable<C>, d: Iterable<D>, f: (A, B, C, D) -> R) =
         measure(listOf(a, b, c, d), f.reflect()!!) { f(uncheckedCast(it[0]), uncheckedCast(it[1]), uncheckedCast(it[2]), uncheckedCast(it[3])) }
 
