@@ -22,6 +22,7 @@ import net.corda.node.internal.artemis.UserValidationPlugin
 import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.hasSecurityRateLimitConfigured
 import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.rpc.RolesAdderOnLogin
@@ -264,6 +265,10 @@ class ArtemisMessagingServer(
     }
 
     private fun createArtemisSecurityManager(loginListener: (String) -> Unit): ActiveMQJAASSecurityManager {
+        val rateLimitConfig = if (rpcAddresses != null && config.hasSecurityRateLimitConfigured()) {
+            config.security?.authService?.options?.rateLimit
+        } else null
+
         val keyStore = config.p2pSslOptions.keyStore.get().value.internal
         val trustStore = config.p2pSslOptions.trustStore.get().value.internal
         val revocationMode = when {
@@ -286,6 +291,6 @@ class ArtemisMessagingServer(
             }
         }
         return InterceptingActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig, messagingServerAddress.port, rpcAddresses?.primary?.port
-                ?: -1, rpcAddresses?.admin?.port ?: -1)
+                ?: -1, rpcAddresses?.admin?.port ?: -1, rateLimitConfig)
     }
 }

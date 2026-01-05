@@ -778,6 +778,11 @@
     <ID>MagicNumber:IdenticonRenderer.kt$IdenticonRenderer$8</ID>
     <ID>MagicNumber:IdenticonRenderer.kt$IdenticonRenderer$90</ID>
     <ID>MagicNumber:InputStreamSerializer.kt$InputStreamSerializer$4096</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$10</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$10_000</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$15L</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$3</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$60L</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$3</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$5</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$InternalMockNetwork$30000</ID>
@@ -959,12 +964,6 @@
     <ID>MagicNumber:RPCDriver.kt$RandomRpcUser.Companion$4</ID>
     <ID>MagicNumber:RPCPermissionResolver.kt$RPCPermissionResolver$20</ID>
     <ID>MagicNumber:RPCServer.kt$RPCServer$5</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$10</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$10_000</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$15</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$15L</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$3</ID>
-    <ID>MagicNumber:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$60L</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$4</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$1000</ID>
     <ID>MagicNumber:RpcBrokerConfiguration.kt$RpcBrokerConfiguration$2000</ID>
@@ -1229,6 +1228,7 @@
     <ID>ThrowsCount:DeserializationInput.kt$DeserializationInput$@Throws( AMQPNotSerializableException::class, AMQPNoTypeNotSerializableException::class) private fun &lt;R&gt; des(generator: () -&gt; R): R</ID>
     <ID>ThrowsCount:DeserializationInput.kt$DeserializationInput$fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any</ID>
     <ID>ThrowsCount:EnumTransforms.kt$EnumTransforms$ private fun validateNoCycles(constants: Map&lt;String, Int&gt;)</ID>
+    <ID>ThrowsCount:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$@Suppress("ComplexMethod") private fun authenticateWithRateLimit( user: String?, password: String?, remotingConnection: RemotingConnection?, securityDomain: String? ): Subject?</ID>
     <ID>ThrowsCount:JacksonSupport.kt$JacksonSupport.PartyDeserializer$private fun lookupByNameSegment(mapper: PartyObjectMapper, parser: JsonParser): Party</ID>
     <ID>ThrowsCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseVersion(versionStr: String?, attributeName: String): Int</ID>
     <ID>ThrowsCount:KeyStoreHandler.kt$KeyStoreHandler$private fun getCertificateStores(): AllCertificateStores</ID>

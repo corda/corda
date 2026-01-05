@@ -15,7 +15,6 @@ import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.messaging.InterceptingActiveMQJAASSecurityManager
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
-import net.corda.node.services.messaging.RateLimitingActiveMQJAASSecurityManager
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
