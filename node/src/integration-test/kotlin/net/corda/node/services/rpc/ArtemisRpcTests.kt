@@ -11,6 +11,7 @@ import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
@@ -25,6 +26,7 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.internal.p2pSslOptions
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -96,6 +98,88 @@ class ArtemisRpcTests {
         }.isInstanceOf(RPCException::class.java)
     }
 
+    @Test(timeout = 300_000)
+    fun `user+ip is suspended after repeated failures`() {
+        val rateLimitConfig = RateLimit(
+                backoffBaseSeconds = 2L,
+                backoffMaxSeconds = 60L,
+                attemptExpireMinutes = 15
+        )
+
+        val client = startRpcClient(rateLimitConfig)
+
+        // first 3 failures – free attempts, no backoff
+        repeat(3) {
+            assertThatThrownBy {
+                client.start(TestRpcOps::class.java, user.username, "wrong")
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 4th failure – backoff starts
+        assertThatThrownBy {
+            client.start(TestRpcOps::class.java, user.username,"wrong")
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // retry immediately with correct password - should fail as the user is blocked
+        assertThatThrownBy {
+            client.start(TestRpcOps::class.java, user.username, user.password)
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        Thread.sleep(2100) // wait 2s for the backoff to expire
+        client.start(TestRpcOps::class.java, user.username, user.password)
+    }
+
+    @Test(timeout = 300_000)
+    fun `ip is suspended after repeated failures`() {
+        val rateLimitConfig = RateLimit(
+                backoffBaseSeconds = 2L,
+                backoffMaxSeconds = 60L,
+                attemptExpireMinutes = 15
+        )
+
+        val client = startRpcClient(rateLimitConfig)
+        val userName = "user"
+        // first 10 failures – free attempts, no backoff
+        repeat(10) { attempt ->
+            assertThatThrownBy {
+                client.start(TestRpcOps::class.java, "$userName$attempt", "wrong")
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 11th failure from the same IP - backoff starts - failure due to suspension
+        assertThatThrownBy {
+            client.start(TestRpcOps::class.java, "username11", "wrong")
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // Wait for IP backoff to expire
+        Thread.sleep(2100)
+        // 12th failure from the same IP - backoff expired - so the failure is due to login not suspension
+        assertThatThrownBy {
+            client.start(TestRpcOps::class.java, "username12", "wrong")
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        client.start(TestRpcOps::class.java, user.username, user.password)
+    }
+
+    private fun startRpcClient(rateLimitConfig: RateLimit): RPCClient<TestRpcOps> {
+        val maxMessageSize = 10000
+        val jmxEnabled = false
+        val nodeSSlconfig = p2pSslOptions(tempFolder.root.toPath())
+        val address = ports.nextHostAndPort()
+        val adminAddress = ports.nextHostAndPort()
+        val baseDirectory = tempFolder.root.toPath()
+
+        val artemisBroker = ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false, rateLimitConfig)
+        artemisBroker.start()
+
+        InternalRPCMessagingClient(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT
+        ).apply {
+            init(listOf(TestRpcOpsImpl()), securityManager, TestingNamedCacheFactory())
+            start(artemisBroker.serverControl)
+        }
+        return RPCClient(rpcConnectorTcpTransport(artemisBroker.addresses.primary, null))
+    }
+
     private fun testSslCommunication(nodeSSlconfig: MutualSslConfiguration,
                                      brokerSslOptions: BrokerRpcSslOptions?,
                                      useSslForBroker: Boolean,
@@ -108,9 +192,9 @@ class ArtemisRpcTests {
         val jmxEnabled = false
 
         val artemisBroker: ArtemisBroker = if (useSslForBroker) {
-            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false, null)
         } else {
-            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false, null)
         }
         artemisBroker.use { broker ->
             broker.start()
@@ -145,5 +229,4 @@ class ArtemisRpcTests {
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
-
 }
