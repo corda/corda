@@ -546,8 +546,8 @@
     <ID>LongParameterList:AbstractCashSelection.kt$AbstractCashSelection$(services: ServiceHub, amount: Amount&lt;Currency&gt;, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set&lt;AbstractParty&gt;, withIssuerRefs: Set&lt;OpaqueBytes&gt;, stateAndRefs: MutableList&lt;StateAndRef&lt;Cash.State&gt;&gt;)</ID>
     <ID>LongParameterList:AbstractCashSelection.kt$AbstractCashSelection$(services: ServiceHub, amount: Amount&lt;Currency&gt;, onlyFromIssuerParties: Set&lt;AbstractParty&gt; = emptySet(), notary: Party? = null, lockId: UUID, withIssuerRefs: Set&lt;OpaqueBytes&gt; = emptySet())</ID>
     <ID>LongParameterList:ArtemisMessagingServer.kt$ArtemisMessagingServer$(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false, deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false, deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?)</ID>
     <ID>LongParameterList:ArtemisRpcTests.kt$ArtemisRpcTests$(nodeSSlconfig: MutualSslConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(), adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = tempFolder.root.toPath() )</ID>
     <ID>LongParameterList:BFTSmart.kt$BFTSmart.Replica$( states: List&lt;StateRef&gt;, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; = emptyList() )</ID>
     <ID>LongParameterList:BusinessCalendar.kt$BusinessCalendar.Companion$(startDate: LocalDate, period: Frequency, calendar: BusinessCalendar = EMPTY, dateRollConvention: DateRollConvention = DateRollConvention.Following, noOfAdditionalPeriods: Int = Integer.MAX_VALUE, endDate: LocalDate? = null, periodOffset: Int? = null)</ID>
@@ -778,6 +778,11 @@
     <ID>MagicNumber:IdenticonRenderer.kt$IdenticonRenderer$8</ID>
     <ID>MagicNumber:IdenticonRenderer.kt$IdenticonRenderer$90</ID>
     <ID>MagicNumber:InputStreamSerializer.kt$InputStreamSerializer$4096</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$10</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$10_000</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$15L</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$3</ID>
+    <ID>MagicNumber:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$60L</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$3</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$5</ID>
     <ID>MagicNumber:InternalMockNetwork.kt$InternalMockNetwork$30000</ID>
@@ -1094,6 +1099,7 @@
     <ID>NestedBlockDepth:ProfileController.kt$ProfileController$ @Throws(IOException::class) fun openProfile(): List&lt;InstallConfig&gt;?</ID>
     <ID>NestedBlockDepth:ProfileController.kt$ProfileController$ @Throws(IOException::class) fun saveProfile(): Boolean</ID>
     <ID>NestedBlockDepth:QuasarInstrumentationHook.kt$PackageTree$ fun toGlobs(excludeTree: PackageTree): List&lt;Glob&gt;</ID>
+    <ID>NestedBlockDepth:RateLimitingActiveMQJAASSecurityManager.kt$RateLimitingActiveMQJAASSecurityManager$@Suppress("ComplexMethod") override fun authenticate(user: String?, password: String?, remotingConnection: RemotingConnection?, securityDomain: String?): Subject?</ID>
     <ID>NestedBlockDepth:RPCClientProxyHandler.kt$RPCClientProxyHandler$// The handler for Artemis messages. private fun artemisMessageHandler(message: ClientMessage)</ID>
     <ID>NestedBlockDepth:ShutdownManager.kt$ShutdownManager$fun shutdown()</ID>
     <ID>NestedBlockDepth:SpringDriver.kt$SpringBootDriverDSL$private fun queryWebserver(handle: NodeHandle, process: Process, checkUrl: String): WebserverHandle</ID>
@@ -1222,6 +1228,7 @@
     <ID>ThrowsCount:DeserializationInput.kt$DeserializationInput$@Throws( AMQPNotSerializableException::class, AMQPNoTypeNotSerializableException::class) private fun &lt;R&gt; des(generator: () -&gt; R): R</ID>
     <ID>ThrowsCount:DeserializationInput.kt$DeserializationInput$fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any</ID>
     <ID>ThrowsCount:EnumTransforms.kt$EnumTransforms$ private fun validateNoCycles(constants: Map&lt;String, Int&gt;)</ID>
+    <ID>ThrowsCount:InterceptingActiveMQJAASSecurityManager.kt$InterceptingActiveMQJAASSecurityManager$@Suppress("ComplexMethod") private fun authenticateWithRateLimit( user: String?, password: String?, remotingConnection: RemotingConnection?, securityDomain: String? ): Subject?</ID>
     <ID>ThrowsCount:JacksonSupport.kt$JacksonSupport.PartyDeserializer$private fun lookupByNameSegment(mapper: PartyObjectMapper, parser: JsonParser): Party</ID>
     <ID>ThrowsCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseVersion(versionStr: String?, attributeName: String): Int</ID>
     <ID>ThrowsCount:KeyStoreHandler.kt$KeyStoreHandler$private fun getCertificateStores(): AllCertificateStores</ID>
