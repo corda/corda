@@ -21,7 +21,7 @@ gradlew docker:buildDockerImage --image NON_EXISTENT_IMAGE_VARIANT
 ```
 results in
 ```
-> Cannot convert string value 'NON_EXISTENT_IMAGE_VARIANT' to an enum value of type 'ImageVariant' (valid case insensitive values: UBUNTU_ZULU, UBUNTU_ZULU_11, AL_CORRETTO, OFFICIAL)
+> Cannot convert string value 'NON_EXISTENT_IMAGE_VARIANT' to an enum value of type 'ImageVariant' (valid case insensitive values: UBUNTU_ZULU, UBUNTU_ZULU_11, AL_CORRETTO, ARM, OFFICIAL)
 ```
 If no image variant is specified, all available image variants will be built.
 
