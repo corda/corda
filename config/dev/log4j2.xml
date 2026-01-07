@@ -1,226 +1,132 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="info" shutdownHook="disable">
+<Configuration status="warn" shutdownHook="disable">
 
     <Properties>
         <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
         <Property name="diagnostic-log-name">diagnostic-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
-        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
-        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="defaultRootLevel">${sys:defaultLogLevel:-info}</Property>
+        <Property name="defaultConsoleLevel">${sys:consoleLogLevel:-error}</Property>
     </Properties>
 
     <Appenders>
-        <ScriptAppenderSelector name="Console-Selector">
-            <Script language="nashorn"><![CDATA[
-                var System = Java.type('java.lang.System');
-                var level = System.getProperty("consoleLogLevel");
-                var enabled = System.getProperty("consoleLoggingEnabled");
-                enabled == "true" && (level == "debug" || level == "trace") ? "Console-Debug-Appender" : "Console-Appender";
-            ]]></Script>
-            <AppenderSet>
+        <Console name="Console-Standard" target="SYSTEM_OUT">
+            <PatternLayout>
+                <Pattern>%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%notEmpty{ %X}%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}</Pattern>
+            </PatternLayout>
+        </Console>
 
-                <!-- The default console appender - prints no exception information -->
-                <Console name="Console-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector
-                                defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
-                </Console>
+        <Console name="Console-Debug" target="SYSTEM_OUT">
+            <PatternLayout>
+                <Pattern>%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%notEmpty{ %X}%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}</Pattern>
+            </PatternLayout>
+        </Console>
 
-                <!-- The console appender when debug or trace level logging is specified. Prints full stack trace -->
-                <Console name="Console-Debug-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
-                </Console>
-            </AppenderSet>
-        </ScriptAppenderSelector>
+        <Routing name="Console-Routing-Appender">
+            <Routes pattern="${sys:consoleLogLevel}">
+                <Route key="debug" ref="Console-Debug" />
+                <Route key="trace" ref="Console-Debug" />
+                <Route ref="Console-Standard" />
+            </Routes>
+        </Routing>
 
-        <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
             <PatternLayout pattern="%msg%n%throwable{0}" />
         </Console>
 
-        <!-- Will generate up to 500 log files for a given day. Adjust this number according to the available storage.
-             During every rollover it will delete those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="RollingFile-Appender"
-                     fileName="${log-path}/${log-name}.log"
-                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
-
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
-
+                                 fileName="${log-path}/${log-name}.log"
+                                 filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%notEmpty{ %X}%n"/>
             <Policies>
                 <TimeBasedTriggeringPolicy/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
             </Policies>
-
             <DefaultRolloverStrategy min="1" max="500">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="${log-name}*.log.gz"/>
-                    <IfLastModified age="60d">
-                        <IfAny>
-                            <IfAccumulatedFileSize exceeds="10 GB"/>
-                        </IfAny>
-                    </IfLastModified>
+                    <IfLastModified age="60d" />
                 </Delete>
             </DefaultRolloverStrategy>
-
         </RollingRandomAccessFile>
 
-        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
-             those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="Diagnostic-RollingFile-Appender"
-                     fileName="${log-path}/${diagnostic-log-name}.log"
-                     filePattern="${archive}/${diagnostic-log-name}.%date{yyyy-MM-dd}-%i.log.gz">
-
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
-
+                                 fileName="${log-path}/${diagnostic-log-name}.log"
+                                 filePattern="${archive}/${diagnostic-log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%notEmpty{ %X}%n"/>
             <Policies>
                 <TimeBasedTriggeringPolicy/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
             </Policies>
-
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="${diagnostic-log-name}*.log.gz"/>
-                    <IfLastModified age="60d">
-                        <IfAny>
-                            <IfAccumulatedFileSize exceeds="10 GB"/>
-                        </IfAny>
-                    </IfLastModified>
+                    <IfLastModified age="60d" />
                 </Delete>
             </DefaultRolloverStrategy>
-
         </RollingRandomAccessFile>
 
         <RollingFile name="Checkpoint-Agent-RollingFile-Appender"
                      fileName="${log-path}/checkpoints_agent-${date:yyyyMMdd-HHmmss}.log"
                      filePattern="${archive}/checkpoints_agent.%date{yyyy-MM-dd}-%i.log.gz">
-
             <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
-
             <Policies>
                 <TimeBasedTriggeringPolicy/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
             </Policies>
-
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="checkpoints_agent*.log.gz"/>
-                    <IfLastModified age="60d">
-                        <IfAny>
-                            <IfAccumulatedFileSize exceeds="10 GB"/>
-                        </IfAny>
-                    </IfLastModified>
+                    <IfLastModified age="60d" />
                 </Delete>
             </DefaultRolloverStrategy>
-
         </RollingFile>
-
-        <Rewrite name="Console-ErrorCode-Selector">
-            <AppenderRef ref="Console-Selector"/>
-        </Rewrite>
-
-        <Rewrite name="Console-ErrorCode-Appender-Println">
-            <AppenderRef ref="Console-Appender-Println"/>
-        </Rewrite>
-
-        <Rewrite name="RollingFile-ErrorCode-Appender">
-            <AppenderRef ref="RollingFile-Appender"/>
-        </Rewrite>
-        <Rewrite name="Diagnostic-RollingFile-ErrorCode-Appender">
-            <AppenderRef ref="Diagnostic-RollingFile-Appender"/>
-        </Rewrite>
     </Appenders>
 
     <Loggers>
-        <Root level="${defaultLogLevel}">
-            <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        <Root level="${defaultRootLevel}">
+            <SystemPropertyArbiter propertyName="consoleLoggingEnabled" propertyValue="true">
+                <AppenderRef ref="Console-Routing-Appender" level="${defaultConsoleLevel}"/>
+            </SystemPropertyArbiter>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Root>
-        <Logger name="BasicInfo" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+
+        <Logger name="BasicInfo" additivity="false" level="info">
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
+
         <Logger name="org.hibernate" level="warn" additivity="false">
-            <AppenderRef ref="Diagnostic-RollingFile-ErrorCode-Appender"/>
+            <AppenderRef ref="Diagnostic-RollingFile-Appender"/>
         </Logger>
+
         <Logger name="org.hibernate.SQL" level="info" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Selector"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+            <SystemPropertyArbiter propertyName="consoleLoggingEnabled" propertyValue="true">
+                <AppenderRef ref="Console-Routing-Appender"/>
+            </SystemPropertyArbiter>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
+
         <Logger name="org.apache.activemq.artemis.core.server" level="warn" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Selector">
-                <Filters>
-                    <RegexFilter regex=".*AMQ222061.*" onMatch="DENY" onMismatch="NEUTRAL"/>
-                    <RegexFilter regex=".*AMQ222107.*" onMatch="DENY" onMismatch="NEUTRAL"/>
-                    <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
-                    <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
-                </Filters>
-            </AppenderRef>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+            <SystemPropertyArbiter propertyName="consoleLoggingEnabled" propertyValue="true">
+                <AppenderRef ref="Console-Routing-Appender">
+                    <Filters>
+                        <RegexFilter regex=".*AMQ222061.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                        <RegexFilter regex=".*AMQ222107.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                        <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                        <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                    </Filters>
+                </AppenderRef>
+            </SystemPropertyArbiter>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
-        <Logger name="org.apache.activemq.audit" level="error" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Selector"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
-        </Logger>
+
         <Logger name="org.jolokia" additivity="true" level="warn">
-            <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
-            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
+
         <Logger name="CheckpointAgent" level="debug" additivity="false">
             <AppenderRef ref="Checkpoint-Agent-RollingFile-Appender"/>
         </Logger>
