@@ -32,15 +32,14 @@ apply plugin: 'com.jfrog.artifactory'
 configurations {
     compile {
         exclude group: "log4j", module: "log4j"
-        exclude group: "org.apache.logging.log4j"
-
         // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
     }
 }
 
 dependencies {
-    compile "com.microsoft.azure:azure:1.22.0"
+    compile "com.azure.resourcemanager:azure-resourcemanager:$azure_resource_manager_version"
+    compile "com.azure:azure-identity:$azure_identity_version"
     compile "com.github.docker-java:docker-java:$docker_java_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test"
@@ -72,10 +71,11 @@ processResources {
 }
 
 shadowJar {
-    baseName = 'network-builder'
+    archiveBaseName = 'network-builder'
     archiveClassifier = jdkClassifier
-    version = null
+    archiveVersion = null
     zip64 true
+    exclude '**/Log4j2Plugins.dat'
 }
 
 tasks.register('buildNetworkBuilder') {
@@ -88,7 +88,7 @@ artifacts {
 }
 
 jar {
-    enabled = false
+    enabled = true
 }
 
 publish {

@@ -6,6 +6,7 @@ import net.corda.core.cordapp.Cordapp.Info.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -49,6 +50,7 @@ interface Cordapp {
     val serviceFlows: List<Class<out FlowLogic<*>>>
     val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
+    val telemetryComponents: List<Class<out TelemetryComponent>>
     val serializationWhitelists: List<SerializationWhitelist>
     val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>
     val checkpointCustomSerializers: List<CheckpointCustomSerializer<*, *>>

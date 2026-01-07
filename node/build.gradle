@@ -100,6 +100,7 @@ dependencies {
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
 
+    implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
@@ -229,7 +230,18 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-tcnative-boringssl-static:$tcnative_version:osx-aarch_64"
+
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-unix-common:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-epoll:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-kqueue:$netty_version"
 
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
@@ -309,7 +321,8 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**")
+            "rx**",
+            "io.opentelemetry.**")
 }
 
 jar {

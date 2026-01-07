@@ -27,7 +27,8 @@ configurations {
 dependencies {
 
     obfuscatorImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
+    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    compileOnly project(':opentelemetry')
     testImplementation sourceSets.obfuscator.output
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -58,7 +59,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    testCompile "com.google.guava:guava:$guava_version"
+    compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
@@ -161,7 +162,8 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**")
+            "rx**",
+            "io.opentelemetry.**")
 }
 
 artifacts {

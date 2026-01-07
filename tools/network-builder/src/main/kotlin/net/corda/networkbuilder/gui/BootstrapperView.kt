@@ -1,6 +1,7 @@
 package net.corda.networkbuilder.gui
 
-import com.microsoft.azure.management.resources.fluentcore.arm.Region
+import com.azure.core.management.Region
+import java.util.Random
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
@@ -22,7 +23,6 @@ import net.corda.networkbuilder.backends.Backend
 import net.corda.networkbuilder.baseArgs
 import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
-import org.apache.commons.lang3.RandomStringUtils
 import org.controlsfx.control.SegmentedButton
 import tornadofx.*
 import java.io.File
@@ -188,7 +188,11 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     private fun setupAzureRegionOptions(): Pair<Map<String, String>, String> {
-        var networkName1 = RandomStringUtils.randomAlphabetic(4) + "-network"
+        var networkName1 = run {
+            val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+            val random = Random()
+            (1..4).map { charPool[random.nextInt(charPool.length)] }.joinToString("")
+        } + "-network"
         val textInputDialog = TextInputDialog(networkName1)
         textInputDialog.title = "Azure Resource Group"
         networkName1 = textInputDialog.showAndWait().orElseGet { networkName1 }

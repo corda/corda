@@ -18,7 +18,7 @@ dependencies {
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
-jar.enabled = false
+jar.enabled = true
 
 capsule {
     version capsule_version

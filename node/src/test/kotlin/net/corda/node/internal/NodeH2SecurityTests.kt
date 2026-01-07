@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.atLeast
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
@@ -134,6 +135,8 @@ class NodeH2SecurityTests {
         whenever(config.dataSourceProperties).thenReturn(hikaryProperties)
         whenever(config.baseDirectory).thenReturn(mock())
         whenever(config.effectiveH2Settings).thenAnswer { NodeH2Settings(address) }
+        whenever(config.telemetry).thenReturn(mock())
+        whenever(config.myLegalName).thenReturn(CordaX500Name(null, "client-${address.toString()}", "Corda", "London", null, "GB"))
     }
 
     private inner class MockNode: Node(config, VersionInfo.UNKNOWN, false) {

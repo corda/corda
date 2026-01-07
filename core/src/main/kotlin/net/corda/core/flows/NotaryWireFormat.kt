@@ -34,7 +34,9 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
         private val stateRefComparator = compareBy<StateRef>({ it.txhash }, { it.index })
     }
 
+    // For compatibility reasons, each SecureHash has to be distinct, even if for same value.
     private val _statesToConsumeSorted = statesToConsume.sortedWith(stateRefComparator)
+            .map { StateRef(SecureHash.deintern(it.txhash), it.index) }
 
     /** States this request specifies to be consumed. Sorted to ensure the serialized form does not get affected by the state order. */
     val statesToConsume: List<StateRef> get() = _statesToConsumeSorted // Getter required for AMQP serialization

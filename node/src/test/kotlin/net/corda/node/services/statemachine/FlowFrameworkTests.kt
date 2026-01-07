@@ -571,7 +571,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null, null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
         val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
@@ -587,7 +587,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `non-flow class in session init`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, String::class.java.name, 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, String::class.java.name, 1, "", null, null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
         val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
@@ -1103,7 +1103,7 @@ internal data class SessionTransfer(val from: Int, val message: SessionMessage, 
 }
 
 internal fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
-    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
+    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize(), serializedTelemetry = null)
 }
 
 internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))
