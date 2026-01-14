@@ -154,7 +154,7 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     }
 
     val specifiedLogLevel: String by lazy {
-        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
+        System.getProperty("log4j2.level")?.lowercase(Locale.ENGLISH) ?: loggingLevel.name.lowercase(Locale.ENGLISH)
     }
 }
 
@@ -219,7 +219,7 @@ object CommonCliConstants {
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.valueOf(it.toUpperCase()) }
+        return value?.let { Level.valueOf(it.uppercase(Locale.getDefault())) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 
