@@ -433,7 +433,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         // The lenient dependency verification is only supported for Corda 3 transactions.
         // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
         if (networkParametersHash != null) {
-            if (!disableWarnings) log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
+            if (!disableWarnings) log.info("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
             throw ex
         }
     }
