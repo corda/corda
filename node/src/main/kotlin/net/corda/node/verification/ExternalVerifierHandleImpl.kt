@@ -134,7 +134,7 @@ class ExternalVerifierHandleImpl(
     private fun processError(attempt: Int, e: Exception) {
         try {
             if (attempt == MAX_ATTEMPTS) {
-                log.error("External verifier failed after $attempt attempts, giving up", e)
+                log.error("External verifier failed after $attempt attempts, exiting.", e)
             } else {
                 log.warn("Unable to verify with external verifier, trying again...", e)
             }
