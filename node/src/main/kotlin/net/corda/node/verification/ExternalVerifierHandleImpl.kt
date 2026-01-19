@@ -132,17 +132,23 @@ class ExternalVerifierHandleImpl(
     }
 
     private fun processError(attempt: Int, e: Exception) {
+        try {
+            if (attempt == MAX_ATTEMPTS) {
+                log.error("External verifier failed after $attempt attempts, giving up", e)
+            } else {
+                log.warn("Unable to verify with external verifier, trying again...", e)
+            }
+        } finally {
+            try {
+                connection?.close() // always kill verifier process
+            } catch (e: Exception) {
+                log.debug("Problem closing external verifier connection", e)
+            }
+            connection = null
+        }
         if (attempt == MAX_ATTEMPTS) {
             throw IOException("Unable to verify with external verifier", e)
-        } else {
-            log.warn("Unable to verify with external verifier, trying again...", e)
         }
-        try {
-            connection?.close()
-        } catch (e: Exception) {
-            log.debug("Problem closing external verifier connection", e)
-        }
-        connection = null
     }
 
     private fun tryVerification(request: VerificationRequest): Try<Unit> {
