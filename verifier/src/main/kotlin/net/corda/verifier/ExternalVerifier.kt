@@ -115,8 +115,7 @@ class ExternalVerifier(private val channel: SocketChannel) {
             log.info("${ctx.toSimpleString()} verified")
             Try.Success(Unit)
         } catch (t: Throwable) {
-            log.info("${request.ctx.toSimpleString()} failed to verify: ${t.message}")
-            if (log.isDebugEnabled) log.debug("Verification failure stacktrace:", t)
+            log.info("${request.ctx.toSimpleString()} failed to verify", t)
             Try.Failure(t)
         }
         channel.writeCordaSerializable(VerificationResult(result))
