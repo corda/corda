@@ -414,47 +414,64 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         try {
             ltx.verify()
         } catch (e: NoClassDefFoundError) {
-            checkReverifyAllowed(e, disableWarnings)
+            checkReverifyAllowed(e, ltx, disableWarnings)
             val missingClass = e.message ?: throw e
             log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
             reverifyWithFixups(ltx, verificationSupport, missingClass)
         } catch (e: NotSerializableException) {
-            checkReverifyAllowed(e, disableWarnings)
+            checkReverifyAllowed(e, ltx, disableWarnings)
             retryVerification(e, e, ltx, verificationSupport)
         } catch (e: TransactionDeserialisationException) {
-            checkReverifyAllowed(e, disableWarnings)
+            checkReverifyAllowed(e, ltx, disableWarnings)
             retryVerification(e.cause, e, ltx, verificationSupport)
         }
         return ltx
     }
 
-    private fun checkReverifyAllowed(ex: Throwable, disableWarnings: Boolean) {
+    private fun checkReverifyAllowed(ex: Throwable, ltx: LedgerTransaction, disableWarnings: Boolean) {
         // If that transaction was created with and after Corda 4 then just fail.
         // The lenient dependency verification is only supported for Corda 3 transactions.
         // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
         if (networkParametersHash != null) {
-            if (!disableWarnings) log.info("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
+            if (!disableWarnings) {
+                log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
+                logRetryVerificationCause(ex.cause, ex, ltx)
+            }
             throw ex
         }
     }
 
     private fun retryVerification(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction, verificationSupport: VerificationSupport) {
+        logRetryVerificationCause(cause, ex, ltx)
         when (cause) {
             is MissingSerializerException -> {
-                log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
                 reverifyWithFixups(ltx, verificationSupport, null)
             }
             is NotSerializableException -> {
                 val underlying = cause.cause
                 if (underlying is ClassNotFoundException) {
                     val missingClass = underlying.message?.replace('.', '/') ?: throw ex
-                    log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
                     reverifyWithFixups(ltx, verificationSupport, missingClass)
                 } else {
                     throw ex
                 }
             }
             else -> throw ex
+        }
+    }
+
+    private fun logRetryVerificationCause(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction) {
+        when (cause) {
+            is MissingSerializerException -> {
+                log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
+            }
+            is NotSerializableException -> {
+                val underlying = cause.cause
+                if (underlying is ClassNotFoundException) {
+                    val missingClass = underlying.message?.replace('.', '/') ?: throw ex
+                    log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
+                }
+            }
         }
     }
 
