@@ -72,7 +72,7 @@ data class LedgerRecoveryParameters(
     val useTimeWindowNarrowing: Boolean = true,
     val verboseLogging: Boolean = false,
     val recoveryBatchSize: Int = 1000,
-    val alsoFinalize: Boolean = false
+    val alsoFinalize: Boolean = true
 )
 
 @CordaSerializable
