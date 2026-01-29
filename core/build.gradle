@@ -67,10 +67,6 @@ dependencies {
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
     testImplementation 'org.hamcrest:hamcrest-library:2.1'
-
-    // Required for SolanaInstructionTest
-    testImplementation project(':core-test-utils')
-    testImplementation project(":node-driver")
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

@@ -1,4 +1,4 @@
-package net.corda.core.solana
+package net.corda.coretests.solana
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
@@ -10,6 +10,9 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.solana.AccountMeta
+import net.corda.core.solana.Pubkey
+import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.common.internal.testNetworkParameters
@@ -52,7 +55,7 @@ class SolanaInstructionTest {
 
     @Test(timeout=300_000)
     fun `build transaction with solana instruction`() {
-        val instruction =  SolanaInstruction(
+        val instruction = SolanaInstruction(
                 randomPubkey(),
                 listOf(
                         AccountMeta(randomPubkey(), isSigner = false, isWritable = true),
