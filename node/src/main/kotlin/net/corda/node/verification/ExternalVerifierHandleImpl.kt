@@ -7,6 +7,7 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.level
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.NodeVerificationSupport
@@ -131,38 +132,18 @@ class ExternalVerifierHandleImpl(
         Runtime.getRuntime().addShutdownHook(Thread(::close))
     }
 
-//    private fun processError(attempt: Int, e: Exception) {
-//        if (attempt == MAX_ATTEMPTS) {
-//            throw IOException("Unable to verify with external verifier", e)
-//        } else {
-//            log.warn("Unable to verify with external verifier, trying again...", e)
-//        }
-//        try {
-//            connection?.close()
-//        } catch (e: Exception) {
-//            log.debug("Problem closing external verifier connection", e)
-//        }
-//        connection = null
-//    }
-
     private fun processError(attempt: Int, e: Exception) {
-        try {
-            if (attempt == MAX_ATTEMPTS) {
-                log.error("External verifier failed after $attempt attempts, exiting.", e)
-            } else {
-                log.warn("Unable to verify with external verifier, trying again...", e)
-            }
-        } finally {
-            try {
-                connection?.close() // always kill verifier process
-            } catch (e: Exception) {
-                log.debug("Problem closing external verifier connection", e)
-            }
-            connection = null
-        }
         if (attempt == MAX_ATTEMPTS) {
             throw IOException("Unable to verify with external verifier", e)
+        } else {
+            log.warn("Unable to verify with external verifier, trying again...", e)
         }
+        try {
+            connection?.close()
+        } catch (e: Exception) {
+            log.debug("Problem closing external verifier connection", e)
+        }
+        connection = null
     }
 
     private fun tryVerification(request: VerificationRequest): Try<Unit> {
@@ -245,7 +226,7 @@ class ExternalVerifierHandleImpl(
                     log.level.name.lowercase()
             )
             log.debug { "External verifier command: $command" }
-            val logsDirectory = (baseDirectory / "logs").createDirectories()
+            val logsDirectory = (baseDirectory / "logs").safeSymbolicRead().createDirectories()
             verifierProcess = ProcessBuilder(command)
                     .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))
                     .redirectError(Redirect.appendTo((logsDirectory / "verifier-stderr.log").toFile()))
