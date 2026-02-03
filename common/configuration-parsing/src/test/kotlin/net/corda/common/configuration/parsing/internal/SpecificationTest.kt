@@ -5,6 +5,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Consumer
 
 class SpecificationTest {
 
@@ -41,15 +42,15 @@ class SpecificationTest {
         val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.isValid).isTrue()
-        assertThat(rpcSettings.value()).satisfies { value ->
+        assertThat(rpcSettings.value()).satisfies (Consumer{ value ->
 
             assertThat(value.useSsl).isEqualTo(useSslValue)
-            assertThat(value.addresses).satisfies { addresses ->
+            assertThat(value.addresses).satisfies (Consumer{ addresses ->
 
                 assertThat(addresses.principal).isEqualTo(principalAddressValue)
                 assertThat(addresses.admin).isEqualTo(adminAddressValue)
-            }
-        }
+            })
+        })
     }
 
     @Test(timeout=300_000)

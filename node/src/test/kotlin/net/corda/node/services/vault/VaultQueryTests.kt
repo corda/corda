@@ -55,6 +55,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.function.Consumer
 
 interface VaultQueryParties {
     val alice: TestIdentity
@@ -628,31 +629,35 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `unconsumed cash states sorted by state ref txnId and index`() {
-        val consumed = mutableSetOf<SecureHash>()
-        database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
-            this.session.flush()
+	@Test(timeout=300_000)
+        fun `unconsumed cash states sorted by state ref txnId and index`() {
+            val consumed = mutableSetOf<SecureHash>()
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
+                this.session.flush()
 
-            consumeCash(10.DOLLARS).consumed.forEach { consumed += it.ref.txhash }
-            consumeCash(10.DOLLARS).consumed.forEach { consumed += it.ref.txhash }
-            val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
-            val sortAttributeIndex = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_INDEX)
-            val sortBy = Sort(setOf(Sort.SortColumn(sortAttributeTxnId, Sort.Direction.ASC),
-                    Sort.SortColumn(sortAttributeIndex, Sort.Direction.ASC)))
-            val criteria = VaultQueryCriteria()
-            val results = vaultService.queryBy<Cash.State>(criteria, sortBy)
+                consumeCash(10.DOLLARS).consumed.forEach { consumed += it.ref.txhash }
+                consumeCash(10.DOLLARS).consumed.forEach { consumed += it.ref.txhash }
+                val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
+                val sortAttributeIndex = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_INDEX)
+                val sortBy = Sort(setOf(Sort.SortColumn(sortAttributeTxnId, Sort.Direction.ASC),
+                        Sort.SortColumn(sortAttributeIndex, Sort.Direction.ASC)))
+                val criteria = VaultQueryCriteria()
+                val results = vaultService.queryBy<Cash.State>(criteria, sortBy)
 
-            results.statesMetadata.forEach {
-                println(" ${it.ref}")
-                assertThat(it.status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+                results.statesMetadata.forEach {
+                    println(" ${it.ref}")
+                    assertThat(it.status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+                }
+                val sorted = results.states.sortedBy { it.ref.toString() }
+                assertThat(results.states).isEqualTo(sorted)
+
+                // Fixed line below:
+                assertThat(results.states).allSatisfy(Consumer { state ->
+                    assertThat(consumed).doesNotContain(state.ref.txhash)
+                })
             }
-            val sorted = results.states.sortedBy { it.ref.toString() }
-            assertThat(results.states).isEqualTo(sorted)
-            assertThat(results.states).allSatisfy { assertThat(consumed).doesNotContain(it.ref.txhash) }
         }
-    }
 
     @Test(timeout=300_000)
 	fun `unconsumed states for state refs`() {

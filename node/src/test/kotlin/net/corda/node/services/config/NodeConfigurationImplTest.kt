@@ -28,6 +28,7 @@ import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import java.util.function.Consumer
 
 class NodeConfigurationImplTest {
 
@@ -132,7 +133,9 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+        assertThat(errors).satisfiesExactly(Consumer { error ->
+            assertThat(error).contains("compatibilityZoneURL").contains("devMode")
+        })
     }
 
     @Test(timeout=6_000)
@@ -165,7 +168,9 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
+        assertThat(errors).satisfiesExactly(Consumer { error ->
+            assertThat(error).contains("networkServices").contains("devMode")
+        })
     }
 
     @Test(timeout=6_000)
@@ -179,9 +184,9 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error ->
-            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
-        }
+        assertThat(errors).satisfiesExactly(Consumer { error ->
+            assertThat(error).contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        })
     }
 
     @Test(timeout=6_000)

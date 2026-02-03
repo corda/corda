@@ -4,18 +4,19 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.function.Consumer
 
 class PropertyValidationTest {
 
     @Test(timeout=300_000)
-	fun absent_value() {
+    fun absent_value() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
         val property = Configuration.Property.Definition.long(key)
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -23,18 +24,18 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun missing_value() {
+    fun missing_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
         val property = Configuration.Property.Definition.long(key)
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -42,18 +43,18 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun absent_list_value() {
+    fun absent_list_value() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
         val property = Configuration.Property.Definition.long(key).list()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -61,18 +62,18 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun missing_list_value() {
+    fun missing_list_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
         val property = Configuration.Property.Definition.long(key).list()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -80,11 +81,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun whole_list_validation_valid_value() {
+    fun whole_list_validation_valid_value() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -98,7 +99,7 @@ class PropertyValidationTest {
     }
 
     @Test(timeout=300_000)
-	fun whole_list_validation_invalid_value() {
+    fun whole_list_validation_invalid_value() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -114,7 +115,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
@@ -122,11 +123,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun wrong_type() {
+    fun wrong_type() {
 
         val key = "a.b.c"
 
@@ -134,7 +135,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to false).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -142,11 +143,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun wrong_floating_numeric_type_when_integer_expected() {
+    fun wrong_floating_numeric_type_when_integer_expected() {
 
         val key = "a.b.c"
 
@@ -154,7 +155,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to 1.2).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -162,11 +163,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun integer_numeric_type_when_floating_expected_works() {
+    fun integer_numeric_type_when_floating_expected_works() {
 
         val key = "a.b.c"
 
@@ -178,7 +179,7 @@ class PropertyValidationTest {
     }
 
     @Test(timeout=300_000)
-	fun wrong_element_type_for_list() {
+    fun wrong_element_type_for_list() {
 
         val key = "a.b.c"
 
@@ -186,7 +187,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -194,11 +195,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun list_type_when_declared_single() {
+    fun list_type_when_declared_single() {
 
         val key = "a.b.c"
 
@@ -206,7 +207,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -214,11 +215,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun single_type_when_declared_list() {
+    fun single_type_when_declared_list() {
 
         val key = "a.b.c"
 
@@ -226,7 +227,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to 1).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -234,11 +235,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun wrong_type_in_nested_property() {
+    fun wrong_type_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -249,7 +250,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -257,11 +258,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun absent_value_in_nested_property() {
+    fun absent_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -272,7 +273,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject()).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -280,11 +281,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun missing_value_in_nested_property() {
+    fun missing_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -295,7 +296,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
-        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -303,11 +304,11 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
-        }
+        })
     }
 
     @Test(timeout=300_000)
-	fun nested_property_without_schema_does_not_validate() {
+    fun nested_property_without_schema_does_not_validate() {
 
         val key = "a.b.c"
 
@@ -321,7 +322,7 @@ class PropertyValidationTest {
     }
 
     @Test(timeout=300_000)
-	fun valid_mapped_property() {
+    fun valid_mapped_property() {
 
         val key = "a"
 
@@ -337,7 +338,7 @@ class PropertyValidationTest {
     }
 
     @Test(timeout=300_000)
-	fun invalid_mapped_property() {
+    fun invalid_mapped_property() {
 
         val key = "a.b.c"
 
@@ -352,7 +353,7 @@ class PropertyValidationTest {
 
         val result = property.validate(configuration, Configuration.Options.defaults)
 
-        assertThat(result.errors).satisfies { errors ->
+        assertThat(result.errors).satisfies(Consumer { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
@@ -360,7 +361,7 @@ class PropertyValidationTest {
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
-        }
+        })
     }
 
     private fun parseAddress(value: String): Valid<Address> {

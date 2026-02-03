@@ -66,7 +66,7 @@ class P2PMessagingTest {
                 break
             }
         }
-        assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
+        assertThat(participatingNodes).hasSameElementsAs(participatingServiceNodes.map { it.services.myInfo })
     }
 
     private fun InProcess.respondWith(message: Any) {

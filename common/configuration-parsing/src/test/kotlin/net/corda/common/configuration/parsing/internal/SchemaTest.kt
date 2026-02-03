@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValueFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.function.Consumer
 
 class SchemaTest {
 
@@ -191,13 +192,13 @@ class SchemaTest {
 
         val descriptionObj = (printedConfiguration as ConfigObject).toConfig()
 
-        assertThat(descriptionObj.getObjectList("prop3")).satisfies { objects ->
+        assertThat(descriptionObj.getObjectList("prop3")).satisfies (Consumer { objects ->
 
             objects.forEach { obj ->
 
                 assertThat(obj.toConfig().getString("prop5")).isEqualTo(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
             }
-        }
+        })
         assertThat(description).doesNotContain(prop5Value)
     }
 }

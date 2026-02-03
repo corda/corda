@@ -76,7 +76,7 @@ class PathUtilsTest {
             assertThat(result)
                 .isRegularFile()
                 .hasParent(dir)
-                .hasSameContentAs(source)
+                .hasSameTextualContentAs(source)
         }
     }
 }
