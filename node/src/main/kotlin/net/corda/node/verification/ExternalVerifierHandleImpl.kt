@@ -7,6 +7,7 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.level
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.NodeVerificationSupport
@@ -225,7 +226,7 @@ class ExternalVerifierHandleImpl(
                     log.level.name.lowercase()
             )
             log.debug { "External verifier command: $command" }
-            val logsDirectory = (baseDirectory / "logs").createDirectories()
+            val logsDirectory = (baseDirectory / "logs").safeSymbolicRead().createDirectories()
             verifierProcess = ProcessBuilder(command)
                     .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))
                     .redirectError(Redirect.appendTo((logsDirectory / "verifier-stderr.log").toFile()))
