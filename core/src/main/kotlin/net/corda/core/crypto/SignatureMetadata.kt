@@ -14,4 +14,10 @@ import net.corda.core.serialization.CordaSerializable
  * @param crossProviderKeyRotationProof a list of signatures proving that the newest key is authorised to sign transactions on behalf of the previous keys.
  */
 @CordaSerializable
-data class SignatureMetadata(val platformVersion: Int, val schemeNumberID: Int, val crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof> = emptyList())
+data class SignatureMetadata(
+        val platformVersion: Int,
+        val schemeNumberID: Int,
+        private val _crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof>? = emptyList() // nullable for AMQP
+) {
+    val crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof> = _crossProviderKeyRotationProof ?: emptyList()
+}
