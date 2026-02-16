@@ -41,7 +41,13 @@ class ThrowableSerializer(
             try {
                 val typeInformation = factory.getTypeInformation(obj.javaClass)
                 extraProperties.putAll(typeInformation.propertiesOrEmptyMap.mapValues { (_, property) ->
-                    PropertyReader.make(property).read(obj)
+                    try {
+                        PropertyReader.make(property).read(obj)
+                    }
+                    catch (e: Exception) {
+                        logger.warn("Unable to read property ${property} of ${obj.javaClass}. ", e)
+                        throw e
+                    }
                 })
             } catch (e: NotSerializableException) {
                 logger.warn("Unexpected exception", e)
