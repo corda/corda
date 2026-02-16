@@ -19,7 +19,7 @@ class ExceptionWithStaticGetter : FlowException() {
 }
 
 public class ThrowableSerializerTest {
-    @Test(expected=NotSerializableException::class)
+    @Test(timeout=300_000, expected=NotSerializableException::class)
     fun `See if ErrorStateTransitionException serializes`() {
         val e = ErrorStateTransitionException(ExceptionWithStaticGetter())
         val sf = testDefaultFactory()
