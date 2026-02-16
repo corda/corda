@@ -24,6 +24,6 @@ public class ThrowableSerializerTest {
         val e = ErrorStateTransitionException(ExceptionWithStaticGetter())
         val sf = testDefaultFactory()
         sf.register(ThrowableSerializer(sf))
-        val serializedBytes = SerializationOutput(sf).serialize(e, testSerializationContext)
+        SerializationOutput(sf).serialize(e, testSerializationContext)
     }
 }
