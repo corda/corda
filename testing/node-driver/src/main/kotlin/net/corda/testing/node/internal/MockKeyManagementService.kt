@@ -1,9 +1,13 @@
 package net.corda.testing.node.internal
 
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
 import net.corda.core.crypto.*
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import org.bouncycastle.operator.ContentSigner
@@ -59,5 +63,21 @@ class MockKeyManagementService(
     override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
+    }
+
+    override fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
+        return KeyRotationProofChain(emptyList())
+    }
+
+    override fun persistProofChain(proofChain: KeyRotationProofChain) {
+        // No-op
+    }
+
+    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
+        // No-op
+    }
+
+    override fun containsProofChain(publicKey: PublicKey): Boolean {
+        return false
     }
 }
