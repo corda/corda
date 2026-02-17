@@ -14,6 +14,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import java.io.NotSerializableException
 import java.lang.reflect.InvocationTargetException
 
 class ExceptionWithStaticGetter : FlowException() {
@@ -25,7 +26,7 @@ class ExceptionWithStaticGetter : FlowException() {
 }
 
 public class ThrowableSerializerTest {
-    @Test(timeout=300_000, expected=InvocationTargetException::class)
+    @Test(timeout=300_000, expected=NotSerializableException::class)
     fun `See if ErrorStateTransitionException serializes`() {
         val e = ErrorStateTransitionException(ExceptionWithStaticGetter())
         val sf = testDefaultFactory()
