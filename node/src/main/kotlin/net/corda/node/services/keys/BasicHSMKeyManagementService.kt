@@ -6,6 +6,7 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
 import net.corda.core.crypto.toStringShort
@@ -13,6 +14,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -174,5 +176,19 @@ class BasicHSMKeyManagementService(
             val keyPair = getSigningKeyPair(signingPublicKey)
             keyPair.sign(signableData)
         }
+    }
+
+    override fun getProofChain(publicKey: PublicKey) = KeyRotationProofChain(emptyList())
+
+    override fun persistProofChain(proofs:KeyRotationProofChain) {
+        // No-op
+    }
+
+    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
+        // No-op
+    }
+
+    override fun containsProofChain(publicKey: PublicKey): Boolean {
+        return false
     }
 }

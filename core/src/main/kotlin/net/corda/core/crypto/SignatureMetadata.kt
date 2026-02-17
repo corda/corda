@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.contracts.CrossProviderKeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -17,7 +17,15 @@ import net.corda.core.serialization.CordaSerializable
 data class SignatureMetadata(
         val platformVersion: Int,
         val schemeNumberID: Int,
-        private val _crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof>? = emptyList() // nullable for AMQP
+        val crossProviderKeyRotationProof: List<KeyRotationProof> // This should probably be a proofChain: net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 ) {
-    val crossProviderKeyRotationProof: List<CrossProviderKeyRotationProof> = _crossProviderKeyRotationProof ?: emptyList()
+
+    constructor(
+            platformVersion: Int,
+            schemeNumberID: Int
+    ) : this(
+            platformVersion,
+            schemeNumberID,
+            emptyList()
+    )
 }

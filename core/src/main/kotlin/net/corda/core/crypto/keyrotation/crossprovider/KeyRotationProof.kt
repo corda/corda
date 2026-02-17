@@ -1,8 +1,7 @@
-package net.corda.core.contracts
+package net.corda.core.crypto.keyrotation.crossprovider
 
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
-import java.time.Instant
 
 /**
  * A proof that a key rotation has taken place across different key providers.
@@ -12,7 +11,7 @@ import java.time.Instant
  * @param signature A signature created by the old private key over the new public key, proving the rotation.
  */
 @CordaSerializable
-data class CrossProviderKeyRotationProof(
+data class KeyRotationProof(
         val publicKeyOld: PublicKey,
         val publicKeyNew: PublicKey,
         val signature: ByteArray
