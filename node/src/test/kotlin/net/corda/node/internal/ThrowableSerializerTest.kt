@@ -8,7 +8,6 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.DefaultDescriptorBasedSerializerRegistry
 import net.corda.serialization.internal.amqp.DescriptorBasedSerializerRegistry
-import java.io.NotSerializableException
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.amqpMagic
