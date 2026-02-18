@@ -59,6 +59,7 @@ import java.util.regex.Pattern
 import kotlin.io.path.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -108,9 +109,6 @@ class StandaloneCordaRPClientTest {
     private lateinit var connection: CordaRPCConnection
     private lateinit var rpcProxy: CordaRPCOps
     private lateinit var notaryNodeIdentity: Party
-
-    @get:Rule
-    val exception: ExpectedException = ExpectedException.none()
 
     @Before
     fun setUp() {
@@ -269,15 +267,19 @@ class StandaloneCordaRPClientTest {
     }
 
     @Test(timeout=300_000)
-	fun `test kill flow without killFlow permission`() {
-        exception.expect(PermissionException::class.java)
-        exception.expectMessage(MatchesPattern(Pattern.compile("User not authorized to perform RPC call .*killFlow.*")))
-
+    fun `test kill flow without killFlow permission`() {
         val flowHandle = rpcProxy.startFlow(::SleepingFlow, 1.minutes)
-        notary.connect(nonUser).use { connection ->
-            val rpcProxy = connection.proxy
-            rpcProxy.killFlow(flowHandle.id)
+
+        val ex = assertFailsWith<PermissionException> {
+            notary.connect(nonUser).use { connection ->
+                val rpcProxy = connection.proxy
+                rpcProxy.killFlow(flowHandle.id)
+            }
         }
+
+        // Verify the message manually
+        val pattern = Pattern.compile("User not authorized to perform RPC call .*killFlow.*")
+        assertTrue(pattern.matcher(ex.message!!).matches(), "Exception message did not match expected pattern")
     }
 
     @Test(timeout=300_000)
