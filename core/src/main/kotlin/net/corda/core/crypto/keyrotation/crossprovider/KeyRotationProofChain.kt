@@ -20,6 +20,30 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
 
     fun size() = proofChain.size
 
+    fun getKeyLineage(): List<PublicKey> {
+        if (isEmpty()) {
+            return emptyList()
+        }
+
+        val keys = mutableListOf<PublicKey>()
+        keys.add(originalKey)
+
+        proofChain.forEach { proof ->
+            keys.add(proof.publicKeyNew) // Add the new key from each proof
+        }
+
+        return keys
+    }
+
+    // Validates the entire proof chain against the original and current keys.
+    fun isValid(): Boolean {
+        if(isEmpty()) {
+            return true
+        }
+
+        return isRotationValid(originalKey, currentKey)
+    }
+
     /**
      * Checks that a key rotation proof chain is valid.
      *
