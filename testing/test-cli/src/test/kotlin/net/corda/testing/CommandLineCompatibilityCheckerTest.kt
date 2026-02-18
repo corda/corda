@@ -2,7 +2,6 @@ package net.corda.testing
 
 import org.hamcrest.CoreMatchers.*
 import org.hamcrest.MatcherAssert
-import org.junit.Assert
 import org.junit.Test
 import picocli.CommandLine
 import java.util.regex.Pattern

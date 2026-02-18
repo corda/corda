@@ -40,15 +40,12 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
-import org.hamcrest.text.MatchesPattern
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.io.OutputStream.nullOutputStream
