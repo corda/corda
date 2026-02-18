@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -17,7 +17,7 @@ import net.corda.core.serialization.CordaSerializable
 data class SignatureMetadata(
         val platformVersion: Int,
         val schemeNumberID: Int,
-        val crossProviderKeyRotationProof: List<KeyRotationProof> // This should probably be a proofChain: net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
+        val proofChain: KeyRotationProofChain
 ) {
 
     constructor(
@@ -26,6 +26,6 @@ data class SignatureMetadata(
     ) : this(
             platformVersion,
             schemeNumberID,
-            emptyList()
+            KeyRotationProofChain(emptyList())
     )
 }

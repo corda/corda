@@ -26,7 +26,7 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
 
             for (resolved in resolvedParties) {
                 if (resolved.containsProof()) {
-                    keyRotationProofs.put(resolved.getOriginalKey(), resolved.proofChain!!)
+                    keyRotationProofs[resolved.getOriginalKey()] = resolved.proofChain!!
                 }
             }
             return Collections.unmodifiableMap(keyRotationProofs)
