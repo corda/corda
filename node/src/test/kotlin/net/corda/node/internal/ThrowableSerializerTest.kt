@@ -15,7 +15,6 @@ import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import java.io.NotSerializableException
-import java.lang.reflect.InvocationTargetException
 
 class ExceptionWithStaticGetter : FlowException() {
     var foo: String = "foobar"
