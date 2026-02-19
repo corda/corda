@@ -4,9 +4,9 @@ cordaSnykScanPipeline (
     snykTokenId: 'c4-os-snyk-api-token-secret',
     // specify the Gradle submodules to scan and monitor on snyk Server
     modulesToScan: ['node', 'capsule', 'common-configuration-parsing', 'common-logging', 'common-validation', 'confidential-identities',
-                    'core', 'core-test-utils', 'finance/contracts', 'finance/workflows', 'client/jackson', 'client/jfk', 'client/mock',
-                    'node', 'node-api', 'node/djvm', 'node-driver', 'opentelemetry', 'opentelemetry/opentelemetry-driver', 'client/rpc',
-                    'serialization', 'serialization-deterministic', 'serialization-djvm', 'test-common', 'test-db', 'test-utils',
+                    'core', 'core-test-utils', 'finance/contracts', 'finance/workflows', 'client/jackson', 'client/jfx', 'client/mock',
+                    'node', 'node-api', 'node-driver', 'opentelemetry', 'opentelemetry/opentelemetry-driver', 'client/rpc',
+                    'serialization', 'test-common', 'test-db', 'test-utils',
                     'testing/testserver', 'testing/testserver/testcapsule', 'tools/blobinspector', 'tools/checkpoint-agent',
                     'tools/cliutils', 'tools/explorer', 'tools/bootstrapper', 'tools/network-builder']
 )
