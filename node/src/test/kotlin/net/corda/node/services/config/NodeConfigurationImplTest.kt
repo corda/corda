@@ -180,7 +180,7 @@ class NodeConfigurationImplTest {
         val errors = configuration.validate()
 
         assertThat(errors).singleElement().matches { error ->
-            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+            error.contains("cannot specify both 'compatibilityZoneUrl' and 'networkServices'")
         }
     }
 
