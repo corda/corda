@@ -139,7 +139,9 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         if (verbose) {
             System.setProperty("consoleLogLevel", specifiedLogLevel)
         }
-        System.setProperty("log-path", Paths.get(".").toString())
+        if (System.getProperty("log-path") == null) {
+            System.setProperty("log-path", Paths.get(".").toString())
+        }
         return true
     }
 
