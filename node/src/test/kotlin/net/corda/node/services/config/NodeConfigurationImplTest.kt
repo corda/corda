@@ -132,7 +132,7 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+        assertThat(errors).singleElement().matches { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
     }
 
     @Test(timeout=6_000)
@@ -165,7 +165,7 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
+        assertThat(errors).singleElement().matches { error -> error.contains("networkServices") && error.contains("devMode") }
     }
 
     @Test(timeout=6_000)
@@ -179,8 +179,8 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying { error ->
-            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        assertThat(errors).singleElement().matches { error ->
+            error.contains("cannot specify both 'compatibilityZoneUrl' and 'networkServices'")
         }
     }
 
