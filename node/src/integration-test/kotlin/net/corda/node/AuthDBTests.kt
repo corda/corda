@@ -22,6 +22,7 @@ import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
@@ -96,6 +97,11 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
                                         "cache" to mapOf(
                                                 "expireAfterSecs" to cacheExpireAfterSecs,
                                                 "maxEntries" to 50
+                                        ),
+                                        "rateLimit" to mapOf(
+                                                "backoffBaseSeconds" to 2,
+                                                "backoffMaxSeconds" to 60,
+                                                "attemptExpireMinutes" to 15
                                         )
                                 )
                         )
@@ -280,6 +286,53 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
                 "Login with incorrect password should fail") {
             client.start("user7", "bar").close()
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `user+ip is suspended after repeated failures`() {
+        // first 3 failures – free attempts, no backoff
+        repeat(3) {
+            assertThatThrownBy {
+                client.start("user", "wrong").close()
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 4th failure – backoff starts
+        assertThatThrownBy {
+            client.start("user", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // retry immediately with correct password - should fail as the user is blocked
+        assertThatThrownBy {
+            client.start("user", "foo").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        Thread.sleep(2100) // wait 2s for the backoff to expire
+        client.start("user", "foo").close()
+    }
+
+    @Test(timeout = 300_000)
+    fun `ip is suspended after repeated failures`() {
+        // first 10 failures – free attempts, no backoff
+        repeat(10) { attempt ->
+            assertThatThrownBy {
+                client.start("user$attempt", "wrong").close()
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 11th failure from the same IP - backoff starts - failure due to suspension
+        assertThatThrownBy {
+            client.start("user11", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // Wait for IP backoff to expire
+        Thread.sleep(2100)
+        // 12th failure from the same IP - backoff expired - so the failure is due to login not suspension
+        assertThatThrownBy {
+            client.start("user12", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        client.start("user", "foo").close()
     }
 
     @StartableByRPC
