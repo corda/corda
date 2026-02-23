@@ -210,7 +210,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val authenticatedCommands = commandComponents.lazyMapped { _, index ->
             val cmd = lazyCommands[index]
             val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
-            CommandWithParties(cmd.signers, parties, cmd.value)
+            CommandWithParties(cmd.signers, parties, cmd.value, cmd.keyRotationProofs)
         }
 
         // Ensure that the lazy mappings will use the correct SerializationContext.
