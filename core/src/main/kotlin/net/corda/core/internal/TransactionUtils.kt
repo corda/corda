@@ -14,6 +14,7 @@ import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.NamedByHash
@@ -28,6 +29,7 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
@@ -170,7 +172,18 @@ fun deserialiseCommands(
     //      and it will throw if any of the signers objects is not List of public keys).
     val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP, forceDeserialize, factory, context))
     val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, COMMANDS_GROUP, forceDeserialize, factory, context)
-    val group = componentGroups.getGroup(COMMANDS_GROUP)
+    // The key rotation proofs group contains one Map<PublicKey, KeyRotationProofChain> element per Command.
+    // Deserialize it as a list of maps and provide a safe fallback (empty maps) if the group is missing
+    // to maintain compatibility with older transactions.
+    val keyRotationProofRaw: List<Map<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, Map::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
+    val keyRotationProofList: List<Map<PublicKey, KeyRotationProofChain>> =
+            if (keyRotationProofRaw.isEmpty()) {
+                // No group present (older wire transaction); default to empty map per signer entry to preserve indexing.
+                List(signersList.size) { emptyMap<PublicKey, KeyRotationProofChain>() }
+            } else {
+                keyRotationProofRaw
+            }
+     val group = componentGroups.getGroup(COMMANDS_GROUP)
     return if (group is FilteredComponentGroup) {
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
@@ -181,14 +194,14 @@ fun deserialiseCommands(
             @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")   // Because the external verifier uses Kotlin 1.2
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
+        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], keyRotationProofList[leafIndices[index]]) }
     } else {
         // It is a WireTransaction
         // or a FilteredTransaction with no Commands (in which case group is null).
         check(commandDataList.size == signersList.size) {
             "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
+        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], keyRotationProofList[index]) }
     }
 }
 
@@ -226,6 +239,9 @@ fun createComponentGroups(inputs: List<StateRef>,
         componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     }
     componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
+    // keyRotationProofs is nullable on Command. Map nulls to an empty map so the component group
+    // contains a serialisable element per command (preserves indices) and avoids nulls.
+    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofs ?: emptyMap() }, serialize)
     return componentGroupMap
 }
 
