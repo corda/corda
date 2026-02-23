@@ -239,9 +239,9 @@ fun createComponentGroups(inputs: List<StateRef>,
         componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     }
     componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
-    // keyRotationProofs is nullable on Command. Map nulls to an empty map so the component group
+    // keyRotationProofChainMap is nullable on Command. Map nulls to an empty map so the component group
     // contains a serialisable element per command (preserves indices) and avoids nulls.
-    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofs ?: emptyMap() }, serialize)
+    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap() }, serialize)
     return componentGroupMap
 }
 

@@ -195,7 +195,7 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
-data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofs: Map<PublicKey, KeyRotationProofChain>? = null) { //optional key rotation map, nullable. look  at the addCommand() method
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null) {
     // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
