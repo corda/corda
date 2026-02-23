@@ -72,7 +72,13 @@ class RateLimitingActiveMQJAASSecurityManager(
         }
 
         // 2. Attempt authentication
-        val subject = super.authenticate(user, password, remotingConnection, securityDomain)
+        var thrown: Exception? = null
+        val subject = try {
+            super.authenticate(user, password, remotingConnection, securityDomain)
+        } catch (e: Exception) {
+            thrown = e
+            null
+        }
         if (subject != null) {
             // success - clear user cache only
             if (userKey != null) {
@@ -110,6 +116,7 @@ class RateLimitingActiveMQJAASSecurityManager(
         }
 
         // 7. Plain authentication failure
+        if (thrown != null) throw thrown
         return null
     }
 
