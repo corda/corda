@@ -115,9 +115,11 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
         }
 
         // 2. Attempt authentication
+        var thrown: Exception? = null
         val subject = try {
             super.authenticate(user, password, remotingConnection, securityDomain)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            thrown = e
             null
         }
         if (subject != null) {
@@ -157,6 +159,7 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
         }
 
         // 7. Plain authentication failure
+        if (thrown != null) throw thrown
         return null
     }
 
