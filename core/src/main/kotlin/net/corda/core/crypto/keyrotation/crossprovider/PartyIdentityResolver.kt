@@ -4,7 +4,6 @@ import net.corda.core.crypto.internal.keyrotation.crossprovider.InMemoryProofPro
 import net.corda.core.crypto.internal.keyrotation.crossprovider.KmsProofProvider
 import net.corda.core.crypto.internal.keyrotation.crossprovider.ProofProvider
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import java.security.PublicKey
@@ -36,8 +35,7 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
         // This does not provide a proof chain, but is useful for cases where only the current Party instance is needed without the need
         // to access the original key or proof details.
         fun resolveToCurrentParty(original: Party, identityService: IdentityService): Party {
-            val partyAndCertificate: PartyAndCertificate? = identityService.certificateFromKey(original.owningKey)
-            return identityService.wellKnownPartyFromX500Name(partyAndCertificate!!.name)!!
+            return identityService.wellKnownPartyFromX500Name(original.name)!!
         }
     }
 
