@@ -35,7 +35,7 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
         // This does not provide a proof chain, but is useful for cases where only the current Party instance is needed without the need
         // to access the original key or proof details.
         fun resolveToCurrentParty(original: Party, identityService: IdentityService): Party {
-            return identityService.wellKnownPartyFromX500Name(original.name)!!
+            return identityService.wellKnownPartyFromAnonymous(original)!!
         }
     }
 
