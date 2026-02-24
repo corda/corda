@@ -95,7 +95,6 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
             securityDomain: String?
     ): Subject? {
 
-
         val now = Instant.now()
         val ip = extractIp(remotingConnection)
         val userKey = user?.let { hash("$it|$ip") }
@@ -160,9 +159,8 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
 
         // 7. Plain authentication failure
         if (thrown != null) throw thrown
-        return null
+        throw NoCacheLoginException("Uncached failure")
     }
-
 
     private fun recordFailure(
             cache: Cache<String, Attempt>,
