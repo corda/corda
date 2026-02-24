@@ -191,12 +191,10 @@ class SchemaTest {
 
         val descriptionObj = (printedConfiguration as ConfigObject).toConfig()
 
-        assertThat(descriptionObj.getObjectList("prop3")).satisfies { objects ->
+        val objects = descriptionObj.getObjectList("prop3")
+        objects.forEach { obj ->
 
-            objects.forEach { obj ->
-
-                assertThat(obj.toConfig().getString("prop5")).isEqualTo(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
-            }
+            assertThat(obj.toConfig().getString("prop5")).isEqualTo(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         }
         assertThat(description).doesNotContain(prop5Value)
     }
