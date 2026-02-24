@@ -87,7 +87,7 @@ class PersistentNetworkMapCacheTest {
             nodeInfo
         }
 
-        assertThat(charlieNetMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
+        assertThat(charlieNetMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsExactlyInAnyOrderElementsOf(distServiceNodeInfos)
         assertThatIllegalArgumentException()
                 .isThrownBy { charlieNetMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
                 .withMessageContaining(DUMMY_NOTARY_NAME.toString())
