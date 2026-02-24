@@ -117,7 +117,7 @@ class RateLimitingActiveMQJAASSecurityManager(
 
         // 7. Plain authentication failure
         if (thrown != null) throw thrown
-        return null
+        throw NoCacheLoginException("Uncached failure")
     }
 
     private fun recordFailure(
