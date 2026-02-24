@@ -187,7 +187,7 @@ class NodeConfigurationImplTest {
 
         assertThat(errors).hasSize(1)
         val error = errors.first()
-        assertThat(error).contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        assertThat(error).contains("cannot specify both 'compatibilityZoneUrl' and 'networkServices'")
     }
 
     @Test(timeout=6_000)
