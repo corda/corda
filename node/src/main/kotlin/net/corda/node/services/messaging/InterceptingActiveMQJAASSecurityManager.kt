@@ -95,7 +95,6 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
             securityDomain: String?
     ): Subject? {
 
-
         val now = Instant.now()
         val ip = extractIp(remotingConnection)
         val userKey = user?.let { hash("$it|$ip") }
@@ -115,9 +114,11 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
         }
 
         // 2. Attempt authentication
+        var thrown: Exception? = null
         val subject = try {
             super.authenticate(user, password, remotingConnection, securityDomain)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            thrown = e
             null
         }
         if (subject != null) {
@@ -157,9 +158,9 @@ class InterceptingActiveMQJAASSecurityManager(configurationName: String, configu
         }
 
         // 7. Plain authentication failure
-        return null
+        if (thrown != null) throw thrown
+        throw NoCacheLoginException("Uncached failure")
     }
-
 
     private fun recordFailure(
             cache: Cache<String, Attempt>,
