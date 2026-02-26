@@ -15,13 +15,13 @@ import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.SECURITY_INVALIDATION_INTERVAL
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
@@ -96,11 +96,6 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
                                         "cache" to mapOf(
                                                 "expireAfterSecs" to cacheExpireAfterSecs,
                                                 "maxEntries" to 50
-                                        ),
-                                        "rateLimit" to mapOf(
-                                                "backoffBaseSeconds" to 2,
-                                                "backoffMaxSeconds" to 60,
-                                                "attemptExpireMinutes" to 15
                                         )
                                 )
                         )
@@ -215,6 +210,26 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
             db.deleteUser("user4")
             Thread.sleep(1500)
             assertFailsWith(
+                    PermissionException::class,
+                    "This user should not be authorized to call 'stateMachinesFeed'") {
+                proxy.stateMachinesFeed()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Revoke user permissions during RPC session - cache expiry`() {
+        db.insert(UserAndRoles(
+                username = "user5",
+                password = encodePassword("test"),
+                roles = listOf("default")))
+
+        client.start("user5", "test").use {
+            val proxy = it.proxy
+            proxy.stateMachinesFeed()
+            db.deleteUser("user5")
+            Thread.sleep(SECURITY_INVALIDATION_INTERVAL)
+            assertFailsWith(
                     RPCException::class,
                     "This user should not be authorized to call 'stateMachinesFeed'") {
                 proxy.stateMachinesFeed()
@@ -222,51 +237,49 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
         }
     }
 
-    @Test(timeout=300_000)
-    fun `user+ip is suspended after repeated failures`() {
-        // first 3 failures – free attempts, no backoff
-        repeat(3) {
-            assertThatThrownBy {
-                client.start("user", "wrong").close()
-            }.isInstanceOf(ActiveMQSecurityException::class.java)
+    @Test(timeout = 300_000)
+    fun `login after password change`() {
+        db.insert(UserAndRoles(
+                username = "user6",
+                password = encodePassword("bar"),
+                roles = emptyList()))
+        client.start("user6", "bar").close()
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user6", "foo").close()
         }
-
-        // 4th failure – backoff starts
-        assertThatThrownBy {
-            client.start("user", "wrong").close()
-        }.isInstanceOf(ActiveMQSecurityException::class.java)
-
-        // retry immediately with correct password - should fail as the user is blocked
-        assertThatThrownBy {
-            client.start("user", "foo").close()
-        }.isInstanceOf(ActiveMQSecurityException::class.java)
-
-        Thread.sleep(2100) // wait 2s for the backoff to expire
-        client.start("user", "foo").close()
+        db.deleteUser("user6")
+        db.insert(UserAndRoles(
+                username = "user6",
+                password = encodePassword("foo"),
+                roles = emptyList()))
+        client.start("user6", "foo").close()
     }
 
-    @Test(timeout=300_000)
-    fun `ip is suspended after repeated failures`() {
-        // first 10 failures – free attempts, no backoff
-        repeat(10) { attempt ->
-            assertThatThrownBy {
-                client.start("user$attempt", "wrong").close()
-            }.isInstanceOf(ActiveMQSecurityException::class.java)
+    @Test(timeout = 300_000)
+    fun `login with old password after password change`() {
+        db.insert(UserAndRoles(
+                username = "user7",
+                password = encodePassword("bar"),
+                roles = emptyList()))
+        client.start("user7", "bar").close()
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user7", "foo").close()
         }
-
-        // 11th failure from the same IP - backoff starts - failure due to suspension
-        assertThatThrownBy {
-            client.start("user11", "wrong").close()
-        }.isInstanceOf(ActiveMQSecurityException::class.java)
-
-        // Wait for IP backoff to expire
-        Thread.sleep(2100)
-        // 12th failure from the same IP - backoff expired - so the failure is due to login not suspension
-        assertThatThrownBy {
-            client.start("user12", "wrong").close()
-        }.isInstanceOf(ActiveMQSecurityException::class.java)
-
-        client.start("user", "foo").close()
+        db.deleteUser("user7")
+        db.insert(UserAndRoles(
+                username = "user7",
+                password = encodePassword("foo"),
+                roles = emptyList()))
+        Thread.sleep(SECURITY_INVALIDATION_INTERVAL)
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user7", "bar").close()
+        }
     }
 
     @StartableByRPC

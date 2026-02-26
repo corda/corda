@@ -2,14 +2,18 @@ package net.corda.node.services.rpc
 
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.debug
-import net.corda.node.internal.artemis.*
+import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
+import net.corda.node.internal.artemis.NodeJaasConfig
+import net.corda.node.internal.artemis.RPCJaasConfig
+import net.corda.node.internal.artemis.isBindingError
+import net.corda.node.services.messaging.InterceptingActiveMQJAASSecurityManager
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
-import net.corda.node.services.messaging.RateLimitingActiveMQJAASSecurityManager
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -24,7 +28,7 @@ import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
 
 class ArtemisRpcBroker internal constructor(
-        address: NetworkHostAndPort,
+        private val address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,
         private val sslOptions: BrokerRpcSslOptions?,
         private val useSsl: Boolean,
@@ -35,22 +39,23 @@ class ArtemisRpcBroker internal constructor(
         private val baseDirectory: Path,
         private val nodeConfiguration: MutualSslConfiguration,
         private val shouldStartLocalShell: Boolean,
-        private val rateLimitConfig: RateLimit?) : ArtemisBroker {
+) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
+
         fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                     sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int,
-                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
+                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, journalBufferTimeout,
-                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
 
         fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                        securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
-                       baseDirectory: Path, shouldStartLocalShell: Boolean, rateLimitConfig: RateLimit?): ArtemisBroker {
+                       baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, journalBufferTimeout,
-                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, rateLimitConfig)
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
     }
 
@@ -109,7 +114,8 @@ class ArtemisRpcBroker internal constructor(
                 return arrayOf(AppConfigurationEntry(name, AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options))
             }
         }
-        return RateLimitingActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig, rateLimitConfig)
+        return InterceptingActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig, -1, address.port, adminAddressOptional?.port
+                ?: -1)
     }
 }
 

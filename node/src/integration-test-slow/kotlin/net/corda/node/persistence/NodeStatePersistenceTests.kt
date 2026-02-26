@@ -23,10 +23,10 @@ import net.corda.testMessage.MessageState
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.isQuasarAgentSpecified
 import net.corda.testing.node.User
 import org.junit.Assume
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -99,11 +99,6 @@ class NodeStatePersistenceTests {
         val retrievedMessage = stateAndRef.state.data.message
         assertEquals(message, retrievedMessage)
     }
-}
-
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
 }
 
 @StartableByRPC
