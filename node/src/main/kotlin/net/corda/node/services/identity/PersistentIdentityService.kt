@@ -59,6 +59,7 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
+import javax.transaction.NotSupportedException
 
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
@@ -515,15 +516,15 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        // Do nothing
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun getProofChain(publicKey: PublicKey): KeyRotationProofChain {
-        return KeyRotationProofChain(emptyList())
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun containsProofChain(publicKey: PublicKey): Boolean {
-        return false
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {

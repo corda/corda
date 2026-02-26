@@ -20,6 +20,7 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import javax.transaction.NotSupportedException
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashSet
 
@@ -158,14 +159,14 @@ class InMemoryIdentityService(
     }
 
     override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        TODO("Not yet implemented")
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun getProofChain(publicKey: PublicKey): KeyRotationProofChain {
-        TODO("Not yet implemented")
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun containsProofChain(publicKey: PublicKey): Boolean {
-        TODO("Not yet implemented")
+        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 }
