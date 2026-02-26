@@ -14,7 +14,6 @@ import net.corda.networkbuilder.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
-import java.util.function.Supplier
 
 class AzureInstantiator(private val azure: AzureResourceManager,
                         private val registry: Registry,
@@ -34,7 +33,7 @@ class AzureInstantiator(private val azure: AzureResourceManager,
         val registryAddress = registry.loginServerUrl()
         val (username, password) = registry.parseCredentials()
         val mountName = "node-setup"
-        return CompletableFuture.supplyAsync(Supplier {
+        return CompletableFuture.supplyAsync({
             val containerGroup = azure.containerGroups().define(buildIdent(instanceName))
                     .withRegion(resourceGroup.regionName())
                     .withExistingResourceGroup(resourceGroup)
@@ -56,7 +55,7 @@ class AzureInstantiator(private val azure: AzureResourceManager,
                     .create()
             val fqdn = containerGroup.fqdn()
             LOG.info("Completed instantiation: $instanceName is running at $fqdn with port(s) $portsToOpen exposed")
-            fqdn to portsToOpen.associate { it to it }
+            fqdn to portsToOpen.associateWith { it }
         }, executor)
     }
 
@@ -66,7 +65,6 @@ class AzureInstantiator(private val azure: AzureResourceManager,
         return "${buildIdent(instanceName)}.${resourceGroup.region().name()}.azurecontainer.io"
     }
 
-    @Suppress("MagicNumber")
     fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
         return try {
             val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)

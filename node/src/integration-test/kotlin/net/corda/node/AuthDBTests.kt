@@ -311,7 +311,7 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
         client.start("user", "foo").close()
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `ip is suspended after repeated failures`() {
         // first 10 failures – free attempts, no backoff
         repeat(10) { attempt ->
