@@ -2,6 +2,7 @@ package net.corda.node.services.identity
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -16,6 +17,7 @@ import net.corda.core.internal.toSet
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -510,6 +512,18 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         } else {
             keys
         }
+    }
+
+    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
+        // Do nothing
+    }
+
+    override fun getProofChain(publicKey: PublicKey): KeyRotationProofChain {
+        return KeyRotationProofChain(emptyList())
+    }
+
+    override fun containsProofChain(publicKey: PublicKey): Boolean {
+        return false
     }
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {

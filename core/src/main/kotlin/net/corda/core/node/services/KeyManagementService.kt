@@ -92,16 +92,4 @@ interface KeyManagementService {
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
-
-    @Suspendable
-    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain
-
-    @Suspendable
-    fun persistProofChain(proofChain: KeyRotationProofChain)
-
-    @Suspendable
-    fun updateProofCacheFromTransaction(stx: SignedTransaction)
-
-    @Suspendable
-    fun containsProofChain(publicKey: PublicKey): Boolean
 }

@@ -45,7 +45,7 @@ fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: 
                 }.
                 map {
                     @Suppress("DEPRECATION")
-                    CommandWithParties(it.signers, it.signingParties, it.value, it.keyRotationProofs)
+                    CommandWithParties(it.signers, it.signingParties, it.value, it.keyRotationProofChainMap)
                 }
 
 /** Filters the command list by type, parties and public keys all at once. */
@@ -65,7 +65,7 @@ fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: 
                 }.
                 map {
                     @Suppress("DEPRECATION")
-                    CommandWithParties(it.signers, it.signingParties, it.value, it.keyRotationProofs)
+                    CommandWithParties(it.signers, it.signingParties, it.value, it.keyRotationProofChainMap)
                 }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */

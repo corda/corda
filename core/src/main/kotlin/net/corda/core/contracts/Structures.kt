@@ -227,7 +227,7 @@ data class CommandWithParties<out T : CommandData>(
         @Deprecated("Should not be used in contract verification code as it is non-deterministic, will be disabled for some future target platform version onwards and will take effect only for CorDapps targeting those versions.")
         val signingParties: List<Party>,
         val value: T,
-        val keyRotationProofs: Map<PublicKey, KeyRotationProofChain>? = null
+        val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null
 ) {
     constructor(
             signers: List<PublicKey>,
