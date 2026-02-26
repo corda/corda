@@ -64,20 +64,4 @@ class MockKeyManagementService(
         val keyPair = getSigningKeyPair(publicKey)
         return keyPair.sign(signableData)
     }
-
-    override fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
-        return KeyRotationProofChain(emptyList())
-    }
-
-    override fun persistProofChain(proofChain: KeyRotationProofChain) {
-        // No-op
-    }
-
-    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        // No-op
-    }
-
-    override fun containsProofChain(publicKey: PublicKey): Boolean {
-        return false
-    }
 }

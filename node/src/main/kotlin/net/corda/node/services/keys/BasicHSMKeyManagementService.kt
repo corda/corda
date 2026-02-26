@@ -177,18 +177,4 @@ class BasicHSMKeyManagementService(
             keyPair.sign(signableData)
         }
     }
-
-    override fun getProofChain(publicKey: PublicKey) = KeyRotationProofChain(emptyList())
-
-    override fun persistProofChain(proofs:KeyRotationProofChain) {
-        // No-op
-    }
-
-    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        // No-op
-    }
-
-    override fun containsProofChain(publicKey: PublicKey): Boolean {
-        return false
-    }
 }

@@ -1,11 +1,11 @@
 package net.corda.core.crypto.keyrotation.crossprovider
 
+import net.corda.core.crypto.internal.keyrotation.crossprovider.IdentityServiceProofProvider
 import net.corda.core.crypto.internal.keyrotation.crossprovider.InMemoryProofProvider
-import net.corda.core.crypto.internal.keyrotation.crossprovider.KmsProofProvider
 import net.corda.core.crypto.internal.keyrotation.crossprovider.ProofProvider
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
 import java.security.PublicKey
 import java.util.Collections
 
@@ -16,7 +16,7 @@ import java.util.Collections
 class PartyIdentityResolver private constructor(private val proofProvider: ProofProvider) {
 
     constructor(proofsByOriginalKeyMap: Map<PublicKey, KeyRotationProofChain>?) : this(InMemoryProofProvider(proofsByOriginalKeyMap ?: emptyMap()))
-    constructor(kms: KeyManagementService) : this(KmsProofProvider(kms))
+    constructor(identityService: IdentityService) : this(IdentityServiceProofProvider(identityService))
 
     companion object {
 
@@ -36,6 +36,10 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
         // to access the original key or proof details.
         fun resolveToCurrentParty(original: Party, identityService: IdentityService): Party {
             return identityService.wellKnownPartyFromAnonymous(original)!!
+        }
+
+        fun resolveToCurrentParty(publicKey: PublicKey, identityService: IdentityService): Party {
+            return identityService.wellKnownPartyFromAnonymous(AnonymousParty(publicKey))!!
         }
     }
 
