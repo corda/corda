@@ -2,14 +2,11 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.transactions.SignedTransaction
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
