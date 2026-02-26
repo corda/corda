@@ -15,6 +15,7 @@ import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.SECURITY_INVALIDATION_INTERVAL
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.internal.NodeBasedTest
@@ -215,6 +216,26 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
             db.deleteUser("user4")
             Thread.sleep(1500)
             assertFailsWith(
+                    PermissionException::class,
+                    "This user should not be authorized to call 'stateMachinesFeed'") {
+                proxy.stateMachinesFeed()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Revoke user permissions during RPC session - cache expiry`() {
+        db.insert(UserAndRoles(
+                username = "user5",
+                password = encodePassword("test"),
+                roles = listOf("default")))
+
+        client.start("user5", "test").use {
+            val proxy = it.proxy
+            proxy.stateMachinesFeed()
+            db.deleteUser("user5")
+            Thread.sleep(SECURITY_INVALIDATION_INTERVAL)
+            assertFailsWith(
                     RPCException::class,
                     "This user should not be authorized to call 'stateMachinesFeed'") {
                 proxy.stateMachinesFeed()
@@ -222,7 +243,52 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
+    fun `login after password change`() {
+        db.insert(UserAndRoles(
+                username = "user6",
+                password = encodePassword("bar"),
+                roles = emptyList()))
+        client.start("user6", "bar").close()
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user6", "foo").close()
+        }
+        db.deleteUser("user6")
+        db.insert(UserAndRoles(
+                username = "user6",
+                password = encodePassword("foo"),
+                roles = emptyList()))
+        client.start("user6", "foo").close()
+    }
+
+    @Test(timeout = 300_000)
+    fun `login with old password after password change`() {
+        db.insert(UserAndRoles(
+                username = "user7",
+                password = encodePassword("bar"),
+                roles = emptyList()))
+        client.start("user7", "bar").close()
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user7", "foo").close()
+        }
+        db.deleteUser("user7")
+        db.insert(UserAndRoles(
+                username = "user7",
+                password = encodePassword("foo"),
+                roles = emptyList()))
+        Thread.sleep(SECURITY_INVALIDATION_INTERVAL)
+        assertFailsWith(
+                ActiveMQSecurityException::class,
+                "Login with incorrect password should fail") {
+            client.start("user7", "bar").close()
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `user+ip is suspended after repeated failures`() {
         // first 3 failures – free attempts, no backoff
         repeat(3) {
