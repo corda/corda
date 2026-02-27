@@ -464,7 +464,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
                 // If we're trying to carpent a class that prior to serialisation / deserialization
                 // was made by a carpenter then we can ignore this (it will implement a plain get
                 // method from SimpleFieldAccess).
-                if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) continue@methodLoop
+                if (fieldNameFromItf.isBlank() && SimpleFieldAccess::class.java in schema.interfaces) continue@methodLoop
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields)) {
                     if (lenient) {
