@@ -2,6 +2,7 @@ package net.corda.testing.internal
 
 import net.corda.core.context.AuthServiceId
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -164,9 +165,21 @@ fun createWireTransaction(inputs: List<StateRef>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
                           legacyAttachments: List<SecureHash> = emptyList(),
+                          notaryInstructions: List<NotaryInstruction> = emptyList(),
                           privacySalt: PrivacySalt = PrivacySalt(),
                           digestService: DigestService = DigestService.default): WireTransaction {
-    val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null, legacyAttachments)
+    val componentGroups = createComponentGroups(
+            inputs,
+            outputs,
+            commands,
+            attachments,
+            notary,
+            timeWindow,
+            emptyList(),
+            null,
+            legacyAttachments,
+            notaryInstructions
+    )
     return WireTransaction(componentGroups, privacySalt, digestService)
 }
 
