@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver.Companion.resolveToCurrentParty
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -332,7 +333,8 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 
     @Suspendable
     private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
-        require(signingKeys.all { it in stx.requiredSigningKeys }) {
+        val requiredKeysResolved =  stx.requiredSigningKeys.map { resolveToCurrentParty(it, serviceHub.identityService).owningKey }.toSet()
+        require(signingKeys.all { it in requiredKeysResolved }) {
             "A signature was requested for a key that isn't part of the required signing keys for transaction ${stx.id}"
         }
     }
