@@ -33,7 +33,6 @@ class CordaRevocationChecker(private val crlSource: CrlSource,
         checkApprovedCRLs(cert, getCRLs(cert))
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun getCRLs(cert: X509Certificate): Set<X509CRL> {
         val crls = try {
             crlSource.fetch(cert)

@@ -1,0 +1,184 @@
+import groovy.transform.CompileStatic
+
+// plugin to cater for R3 vs Non R3 users building code base. R3 employees will leverage internal plugins non
+// R3 users will use standard Maven publishing conventions as provided by the Maven-publish gradle plugin
+if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
+    logger.info("Internal R3 user - resolving publication build dependencies from internal plugins")
+    pluginManager.apply('com.r3.internal.gradle.plugins.r3Publish')
+    afterEvaluate {
+        // Define a common repository URL (assuming 'repo' is a variable or can be defined here)
+        // You might need to define 'repo' in your top-level build.gradle or elsewhere.
+        def repoUrl = "https://github.com/corda/corda" // Replace with your actual repo URL if 'repo' is not global
+        // Or access from project properties if 'repo' is defined there, e.g., project.ext.repoUrl or project.findProperty('repoUrl')
+
+        // --- Define a common POM configuration closure/action that applies to ALL publications ---
+        def configureCommonPom = { MavenPom pom ->
+            pom.description = project.description // Use project's description
+            pom.name = project.name // Use project's name
+            pom.url = repoUrl
+            pom.scm {
+                url = repoUrl
+            }
+            pom.licenses {
+                license {
+                    name = 'Apache-2.0'
+                    url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    distribution = 'repo'
+                }
+            }
+            pom.developers {
+                developer {
+                    id = 'R3'
+                    name = 'R3'
+                    email = 'dev@corda.net'
+                }
+            }
+        }
+
+        // Apply maven-publish plugin unconditionally to all projects in this block
+        project.pluginManager.apply('maven-publish')
+
+        // Set common project properties for publishing (group and version)
+        project.group 'net.corda'
+        project.version "$corda_release_version" // Assuming corda_release_version is defined
+
+        def projectDict = [
+                "testserver:testcapsule": [name: "corda-testserver", type: 'capsule'],
+                "explorer:capsule": [name: "corda-tools-explorer", type: 'capsule'],
+                "opentelemetry:opentelemetry-driver": [name: "corda-opentelemetry-driver", type: 'shadow'],
+                "tools:network-builder": [name: "corda-tools-network-builder", type: 'shadow'],
+                "node:capsule": [name: "corda", type: 'capsule'],
+                "corda-project:confidential-identities": [name: "corda-confidential-identities", type: 'corda'],
+                "finance:contracts": [name: "corda-finance-contracts", type: 'corda'],
+                "finance:workflows": [name: "corda-finance-workflows", type: 'corda']
+        ]
+        def lookupName = "${project.parent?.name ?: ''}:${project.name}".toString() // Handle root project gracefully
+
+        project.publishing {
+            publications {
+
+                withType(MavenPublication).all { publication ->
+                    // Only apply if the publication's POM hasn't been explicitly configured with these details yet,
+                    // or if we want to overwrite. Using 'pom(configureCommonPom)' is additive for elements
+                    // like developers/licenses but overwrites simple fields like name/description.
+                    // This applies to all publications, be they maven, shadow, corda, capsule, thin-for-deps.
+                    publication.pom(configureCommonPom)
+                }
+
+                if (projectDict.containsKey(lookupName)) {
+                    def jarName = projectDict[lookupName].name
+                    def projectType = projectDict[lookupName].type
+                    def publicationName = "${jarName}Publication" // Use a consistent name
+
+                    if (projectType == "corda" || projectType == "capsule") {
+                        def thinWithDepsJarTask = project.tasks.register("${jarName}ThinWithDepsJar", Jar) {
+                            archiveClassifier = 'R3-internal' // IMPORTANT: Give it a classifier
+                            from project.sourceSets.main.output // Include compiled classes and resources
+                        }
+
+                        create(publicationName, MavenPublication) {
+                            artifact(thinWithDepsJarTask.get())
+
+                            groupId = project.group
+                            artifactId = "${jarName}-thin-with-deps" // Distinct artifactId
+                            version = project.version
+
+                            // Manual dependency handling for 'corda' and 'capsule' types
+                            pom.withXml {
+                                def rootNode = asNode()
+                                // Ensure dependencies node exists
+                                def dependenciesNode = rootNode.children().find { it.name() == 'dependencies' }
+                                if (!dependenciesNode) {
+                                    dependenciesNode = rootNode.appendNode('dependencies')
+                                }
+
+                                def dependenciesProject = project
+                                if (projectType == "capsule") {
+                                    dependenciesProject = project.parent
+                                }
+
+                                if (dependenciesProject != null) {
+                                    dependenciesProject.configurations.runtimeClasspath.allDependencies.each { dep ->
+                                        if (dep instanceof ExternalModuleDependency) {
+                                            def dnode = dependenciesNode.appendNode('dependency')
+                                            dnode.appendNode('groupId', "${dep.group}")
+                                            dnode.appendNode('artifactId', "${dep.name}")
+                                            dnode.appendNode('version', "${dep.version}")
+                                            dnode.appendNode('scope', 'compile')
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {    // type = 'shadow' (handled by projectDict)
+                        create(publicationName, MavenPublication) {
+                            from project.components.java
+                            artifactId = "$jarName-thin-with-deps"
+
+                            // No manual dependency crafting needed here, `from components.java` handles it
+                        }
+
+                        // Apply classifier to the main jar for 'shadow' projects
+                        project.tasks.withType(Jar).configureEach { jarTask ->
+                            if (jarTask.name == 'jar') { // Ensure it's the main jar task
+                                jarTask.archiveClassifier = 'R3-internal'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+} else {
+    logger.info("External user - using standard maven publishing")
+    pluginManager.apply('maven-publish')
+    pluginManager.withPlugin('java') {
+        afterEvaluate {
+            publishing {
+                if (publications.isEmpty()) {
+                    // If we haven't already created a MavenPublication then create one now.
+                    publications {
+                        maven(MavenPublication) {
+                            artifactId = tasks.named('jar', Jar).flatMap { it.archiveBaseName }.get()
+                            groupId group.toString()
+                            from findSoftwareComponent(components).get()
+
+                            if (artifacts.matching { it.classifier == 'sources' }.isEmpty()) {
+                                try {
+                                    artifact tasks.named('sourcesJar', Jar)
+                                } catch (UnknownTaskException ignored) {
+                                }
+                            }
+
+                            try {
+                                artifact tasks.named('javadocJar', Jar)
+                            } catch (UnknownTaskException ignored) {
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        enabled = false
+    }
+
+    tasks.register('install') {
+        dependsOn 'publishToMavenLocal'
+    }
+}
+
+@CompileStatic
+private static Provider<SoftwareComponent> findSoftwareComponent(SoftwareComponentContainer components) {
+    try {
+        return components.named('cordapp')
+    } catch (UnknownDomainObjectException ignored) {
+        try {
+            return components.named('kotlin')
+        } catch (UnknownDomainObjectException ignored2) {
+            return components.named('java')
+        }
+    }
+}

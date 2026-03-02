@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
+import net.corda.core.internal.capitalize
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
