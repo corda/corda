@@ -25,9 +25,6 @@ class PartyIdentityResolved(
     private val originalKey: PublicKey = originalParty.owningKey
     val originalOrCurrentParty: Party = toOriginalOrCurrentParty(originalParty)
 
-    fun isSameParty(party: Party): Boolean =
-            originalOrCurrentParty == party
-
     fun containsProof(): Boolean = proofChain != null && !proofChain.isEmpty()
 
     fun getOriginalKey(): PublicKey = originalKey
