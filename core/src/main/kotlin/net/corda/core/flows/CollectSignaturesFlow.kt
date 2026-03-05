@@ -3,7 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver.Companion.resolveToCurrentParty
+import net.corda.core.crypto.keyrotation.crossprovider.getOriginalKey
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -98,6 +98,10 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // One of the signatures collected so far MUST be from the initiator of this flow.
         require(partiallySignedTx.sigs.any { it.by in myKeys }) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
+        }
+
+        require(partiallySignedTx.sigs.all { it.signatureMetadata.proofChain.isEmpty() }) {
+            "Cross-provider key rotation is not supported by Corda OS."
         }
 
         // The signatures must be valid and the transaction must be valid.
