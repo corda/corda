@@ -19,10 +19,10 @@ dependencies {
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     implementation "org.apache.commons:commons-collections4:${commons_collections_version}"
     implementation "commons-beanutils:commons-beanutils:${beanutils_version}"
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
-    implementation "org.apache.activemq:artemis-commons:${artemis_version}"
+    implementation "org.apache.artemis:artemis-commons:${artemis_version}"
     implementation "javax.json:javax.json-api:$json_api_version"
     implementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
@@ -84,7 +84,7 @@ dependencies {
     testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
 
-    implementation ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+    implementation ("org.apache.artemis:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
         exclude group: 'org.jgroups', module: 'jgroups'

@@ -29,7 +29,7 @@ dependencies {
     implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "junit:junit:$junit_version"
     implementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
-    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-server:${artemis_version}") {
         exclude group: 'org.apache.commons', module: 'commons-dbcp2'
         exclude group: 'org.jgroups', module: 'jgroups'
     }

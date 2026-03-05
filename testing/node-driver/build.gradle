@@ -73,7 +73,7 @@ dependencies {
     implementation "org.glassfish.jersey.inject:jersey-hk2:$jersey_version"
 
     implementation "io.reactivex:rxjava:$rxjava_version"
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
 
@@ -95,7 +95,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "junit:junit:$junit_version"
 
-    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-server:${artemis_version}") {
         exclude group: 'org.apache.commons', module: 'commons-dbcp2'
         exclude group: 'org.jgroups', module: 'jgroups'
     }
