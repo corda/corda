@@ -6,6 +6,14 @@ import net.corda.core.serialization.CordaSerializable
 import java.security.GeneralSecurityException
 import java.security.PublicKey
 
+/**
+ * Represents an ordered chain of cross-provider key-rotation proofs.
+ *
+ * Each element proves that `publicKeyOld` authorized a rotation to `publicKeyNew`
+ * by signing the new key bytes. As a chain, it provides a verifiable lineage from
+ * an original key to the current key, as long as every link is continuous and
+ * cryptographically valid.
+ */
 @CordaSerializable
 data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>) : Iterable<KeyRotationProof> {
     val originalKey: PublicKey
