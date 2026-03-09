@@ -35,13 +35,12 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         return keys
     }
 
-    // Validates the entire proof chain against the original and current keys.
-    fun isValid(): Boolean {
+    fun isValid(currentKey: PublicKey): Boolean {
         if(isEmpty()) {
             return true
         }
 
-        return isRotationValid(originalKey, currentKey)
+        return isValid(originalKey, currentKey)
     }
 
     /**
@@ -55,7 +54,11 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
      *
      * This ensures the history of key rotations is complete and trustworthy.
      */
-    fun isRotationValid(originalKey: PublicKey, currentKey: PublicKey): Boolean {
+    fun isValid(originalKey: PublicKey, currentKey: PublicKey): Boolean {
+        if(originalKey == currentKey) {
+            return true
+        }
+        
         if (isEmpty()) {
             return false
         }

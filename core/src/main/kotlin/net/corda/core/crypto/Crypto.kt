@@ -570,7 +570,17 @@ object Crypto {
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        return doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes) &&
+                doVerify(transactionSignature.by, transactionSignature.signatureMetadata)
+
+    }
+
+    private fun doVerify(publicKey: PublicKey, signatureMetadata: SignatureMetadata): Boolean {
+        val verificationResult = signatureMetadata.proofChain.isValid(publicKey)
+        if (!verificationResult) {
+            throw SignatureException("Signature Verification failed!")
+        }
+        return true
     }
 
     /**
@@ -593,7 +603,13 @@ object Crypto {
                 findSignatureScheme(transactionSignature.by),
                 transactionSignature.by,
                 transactionSignature.bytes,
-                signableData.serialize().bytes)
+                signableData.serialize().bytes) &&
+                isValid(transactionSignature.by, transactionSignature.signatureMetadata)
+    }
+
+    @JvmStatic
+    private fun isValid(publicKey: PublicKey, signatureMetadata: SignatureMetadata): Boolean {
+        return signatureMetadata.proofChain.isValid(publicKey)
     }
 
     /**
