@@ -93,6 +93,6 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
             return false
         }
 
-        return proofChain.isRotationValid(originalKey, candidateKey)
+        return proofChain.isValid(originalKey, candidateKey)
     }
 }
