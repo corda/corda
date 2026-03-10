@@ -55,7 +55,7 @@ dependencies {
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation "io.reactivex:rxjava:$rxjava_version"
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
     implementation "com.google.guava:guava-testlib:$guava_version"
