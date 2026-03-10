@@ -530,7 +530,7 @@ allprojects {
                     substitute module('com.google.guava:guava') with module("com.google.guava:guava:$guava_version")
 
                     // Effectively delete this unused and unwanted transitive dependency of Artemis.
-                    substitute module('org.jgroups:jgroups') with module("org.apache.activemq:artemis-commons:$artemis_version")
+                    substitute module('org.jgroups:jgroups') with module("org.apache.artemis:artemis-commons:$artemis_version")
 
                     // Force use of LTS version of BC everywhere
                     substitute module('org.bouncycastle:bcutil-jdk18on') with module("org.bouncycastle:bcutil-lts8on:$bouncycastle_version")

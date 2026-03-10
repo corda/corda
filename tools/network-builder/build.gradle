@@ -65,7 +65,7 @@ dependencies {
     // ControlsFX: Extra controls for JavaFX.
     implementation "org.controlsfx:controlsfx:$controlsfx_version"
 
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
 }
