@@ -429,7 +429,7 @@ internal class RPCClientProxyHandler(
                 log.info("Message duplication detected, discarding message")
                 return
             }
-            log.debug { "Got message from RPC server $serverToClient" }
+            log.debug { "Got message from RPC server: $serverToClient" }
             when (serverToClient) {
                 is RPCApi.ServerToClient.RpcReply -> {
                     val replyFuture = rpcReplyMap.remove(serverToClient.id)
@@ -440,6 +440,7 @@ internal class RPCClientProxyHandler(
                         when (result) {
                             is Try.Success -> replyFuture.set(result.value)
                             is Try.Failure -> {
+                                log.warn("Received error response from RPC server: $serverToClient")
                                 completeExceptionally(serverToClient.id, result.exception, replyFuture)
                             }
                         }
