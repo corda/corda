@@ -8,6 +8,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -48,6 +50,26 @@ class TransactionSignatureTest {
         assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
     }
 
+    /** Valid sign and verify with key rotation proof. */
+    @Test(timeout=300_000)
+    fun `Signature metadata full sign and verify with key rotation proof`() {
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val newKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val proof = createProof(keyPair, newKeyPair.public)
+
+        // Create a SignableData object.
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(newKeyPair.public).schemeNumberID, KeyRotationProofChain(listOf(proof))))
+
+        // Sign the meta object.
+        val transactionSignature: TransactionSignature = newKeyPair.sign(signableData)
+
+        // Check auto-verification.
+        assertTrue(transactionSignature.verify(testBytes.sha256()))
+
+        // Check manual verification.
+        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
+    }
+
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
     @Test(timeout=300_000)
     fun `Signature metadata full failure clearData has changed`() {
@@ -57,6 +79,28 @@ class TransactionSignatureTest {
         assertThatExceptionOfType(SignatureException::class.java).isThrownBy {
             Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
         }
+    }
+
+    /** Verification should fail if the proof contains an invalid signature. */
+    @Test(timeout=300_000)
+    fun `Signiture verification should fail if key rotation proof is tampered `() {
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val newKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val proof = createProof(keyPair, newKeyPair.public)
+        val tempProof = createProof(newKeyPair, newKeyPair.public)
+        val tamperedProof = proof.copy(signature = tempProof.signature)
+
+        // Create a SignableData object.
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(newKeyPair.public).schemeNumberID, KeyRotationProofChain(listOf(tamperedProof))))
+
+        // Sign the meta object.
+        val transactionSignature: TransactionSignature = newKeyPair.sign(signableData)
+
+        // Check auto-verification.
+        assertFailsWith<SignatureException> { transactionSignature.verify(testBytes.sha256()) }
+
+        // Check manual verification.
+        assertFailsWith<SignatureException> { Crypto.doVerify(testBytes.sha256(), transactionSignature) }
     }
 
     @Test(timeout=300_000)
@@ -137,5 +181,10 @@ class TransactionSignatureTest {
     private fun signOneTx(txId: SecureHash, keyPair: KeyPair): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(3, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return keyPair.sign(signableData)
+    }
+
+    private fun createProof(oldKeyPair: KeyPair, newPublicKey: java.security.PublicKey): KeyRotationProof {
+        val signature = Crypto.doSign(oldKeyPair.private, newPublicKey.encoded)
+        return KeyRotationProof(oldKeyPair.public, newPublicKey, signature)
     }
 }
