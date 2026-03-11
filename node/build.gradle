@@ -163,11 +163,11 @@ dependencies {
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     implementation "org.apache.commons:commons-collections4:${commons_collections_version}"
     implementation "commons-beanutils:commons-beanutils:${beanutils_version}"
-    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-server:${artemis_version}") {
         exclude group: 'org.apache.commons', module: 'commons-dbcp2'
         exclude group: 'org.jgroups', module: 'jgroups'
     }
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
     // Bouncy castle support needed for X509 certificate manipulation
@@ -186,7 +186,7 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     implementation "com.typesafe:config:$typesafe_config_version"
     implementation "io.reactivex:rxjava:$rxjava_version"
-    implementation("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
         exclude group: 'org.jgroups', module: 'jgroups'
