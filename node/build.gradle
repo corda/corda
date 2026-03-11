@@ -22,7 +22,13 @@ ext {
 configurations {
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-    
+
+    integrationTest1Implementation.extendsFrom testImplementation
+    integrationTest1RuntimeOnly.extendsFrom testRuntimeOnly
+
+    integrationTest2Implementation.extendsFrom testImplementation
+    integrationTest2RuntimeOnly.extendsFrom testRuntimeOnly
+
     slowIntegrationTestImplementation.extendsFrom testImplementation
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
@@ -43,6 +49,36 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+        }
+    }
+    integrationTest1 {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test1/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test1/java')
+        }
+        resources {
+            srcDir file('src/integration-test1/resources')
+        }
+    }
+    integrationTest2 {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test2/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test2/java')
+        }
+        resources {
+            srcDir file('src/integration-test2/resources')
         }
     }
     slowIntegrationTest {
@@ -235,7 +271,15 @@ dependencies {
     integrationTestImplementation "de.javakaffee:kryo-serializers:$kryo_serializer_version"
     integrationTestImplementation "junit:junit:$junit_version"
     integrationTestImplementation "org.assertj:assertj-core:${assertj_version}"
-    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${protonj_version}"
+    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${qpid_version}"
+    // Allow access to simple SOCKS Server for integration testing
+    integrationTestImplementation("io.netty:netty-example:$netty_version") {
+        exclude group: "io.netty", module: "netty-tcnative"
+        exclude group: "ch.qos.logback", module: "logback-classic"
+    }
+
+    integrationTest1Implementation project(":testing:cordapps:dbfailure:dbfcontracts")
+    integrationTest1Implementation project(":testing:cordapps:missingmigration")
 
     // used by FinalityFlowErrorHandlingTest
     slowIntegrationTestImplementation project(':testing:cordapps:cashobservers')
@@ -265,6 +309,26 @@ tasks.register('integrationTest', Test) {
     systemProperty 'net.corda.dpcrl.connect.timeout', '4000'
 }
 
+tasks.register('integrationTest1', Test) {
+    testClassesDirs = sourceSets.integrationTest1.output.classesDirs
+    classpath = sourceSets.integrationTest1.runtimeClasspath
+    forkEvery = 9
+    // CertificateRevocationListNodeTests
+    systemProperty 'net.corda.dpcrl.connect.timeout', '4000'
+}
+
+tasks.register('integrationTest2', Test) {
+    testClassesDirs = sourceSets.integrationTest2.output.classesDirs
+    classpath = sourceSets.integrationTest2.runtimeClasspath
+    forkEvery = 9
+    // CertificateRevocationListNodeTests
+    systemProperty 'net.corda.dpcrl.connect.timeout', '4000'
+}
+
+tasks.register('databaseIntegrationTest', Test) {
+    testClassesDirs = sourceSets.databaseIntegrationTest.output.classesDirs
+    classpath = sourceSets.databaseIntegrationTest.runtimeClasspath
+}
 tasks.register('slowIntegrationTest', Test) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath

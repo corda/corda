@@ -48,7 +48,7 @@ class NotaryInfoSerializationTests {
         val resource = "NotaryInfoTest.notaryInfoWithProtocol"
         val sf = testDefaultFactory()
 
-        val expectedNotaryInfo = NotaryInfo(notaryParty, false)
+        val expectedNotaryInfo = NotaryInfo(notaryParty, false, "TEST_PROTOCOL")
 
         // uncomment to recreate the data
         // This has to be run on a version of Corda that has the `protocol` field in NotaryInfo
