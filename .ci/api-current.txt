@@ -621,9 +621,13 @@ public final class net.corda.core.contracts.Command extends java.lang.Object
   public final T component1()
   @NotNull
   public final java.util.List component2()
+  @Nullable
+  public final java.util.Map component3()
   @NotNull
-  public final net.corda.core.contracts.Command copy(T, java.util.List)
+  public final net.corda.core.contracts.Command copy(T, java.util.List, java.util.Map)
   public boolean equals(Object)
+  @Nullable
+  public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
   @NotNull
@@ -655,15 +659,21 @@ public interface net.corda.core.contracts.CommandData
 @CordaSerializable
 public final class net.corda.core.contracts.CommandWithParties extends java.lang.Object
   public <init>(java.util.List, java.util.List, T)
+  public <init>(java.util.List, java.util.List, T, java.util.Map)
+  public <init>(java.util.List, java.util.List, net.corda.core.contracts.CommandData, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final java.util.List component1()
   @NotNull
   public final java.util.List component2()
   @NotNull
   public final T component3()
+  @Nullable
+  public final java.util.Map component4()
   @NotNull
-  public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T)
+  public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T, java.util.Map)
   public boolean equals(Object)
+  @Nullable
+  public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
   @NotNull
@@ -2380,12 +2390,16 @@ public final class net.corda.core.crypto.SignableData extends java.lang.Object
 @CordaSerializable
 public final class net.corda.core.crypto.SignatureMetadata extends java.lang.Object
   public <init>(int, int)
+  public <init>(int, int, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain)
+  public <init>(int, int, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public final int component1()
   public final int component2()
   @NotNull
-  public final net.corda.core.crypto.SignatureMetadata copy(int, int)
+  public final net.corda.core.crypto.SignatureMetadata copy(int, int, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain)
   public boolean equals(Object)
   public final int getPlatformVersion()
+  @NotNull
+  public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain()
   public final int getSchemeNumberID()
   public int hashCode()
   @NotNull
@@ -2463,6 +2477,93 @@ public final class net.corda.core.crypto.TransactionSignature extends net.corda.
   public int hashCode()
   public final boolean isValid(net.corda.core.crypto.SecureHash)
   public final boolean verify(net.corda.core.crypto.SecureHash)
+##
+@CordaSerializable
+public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof extends java.lang.Object
+  public <init>(java.security.PublicKey, java.security.PublicKey, byte[])
+  @NotNull
+  public final java.security.PublicKey component1()
+  @NotNull
+  public final java.security.PublicKey component2()
+  @NotNull
+  public final byte[] component3()
+  @NotNull
+  public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof copy(java.security.PublicKey, java.security.PublicKey, byte[])
+  public boolean equals(Object)
+  @NotNull
+  public final java.security.PublicKey getPublicKeyNew()
+  @NotNull
+  public final java.security.PublicKey getPublicKeyOld()
+  @NotNull
+  public final byte[] getSignature()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain extends java.lang.Object implements java.lang.Iterable, kotlin.jvm.internal.markers.KMappedMarker
+  public <init>(java.util.List)
+  @NotNull
+  public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain copy(java.util.List)
+  public boolean equals(Object)
+  @NotNull
+  public final java.security.PublicKey getCurrentKey()
+  @NotNull
+  public final java.util.List getKeyLineage()
+  @NotNull
+  public final java.security.PublicKey getOriginalKey()
+  public int hashCode()
+  public final boolean isEmpty()
+  public final boolean isNotEmpty()
+  public final boolean isValid(java.security.PublicKey)
+  public final boolean isValid(java.security.PublicKey, java.security.PublicKey)
+  @NotNull
+  public java.util.Iterator iterator()
+  public final int size()
+  @NotNull
+  public String toString()
+##
+public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationUtilsKt extends java.lang.Object
+  @NotNull
+  public static final java.util.Set getKeyLineage(java.util.List)
+  @NotNull
+  public static final java.security.PublicKey getOriginalKey(net.corda.core.crypto.TransactionSignature)
+##
+public final class net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolved extends java.lang.Object
+  public <init>(net.corda.core.identity.Party, java.util.List)
+  public <init>(net.corda.core.identity.Party, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain)
+  public final boolean containsProof()
+  @NotNull
+  public final String getLegalName()
+  @NotNull
+  public final java.security.PublicKey getOriginalKey()
+  @NotNull
+  public final net.corda.core.identity.Party getOriginalOrCurrentParty()
+  @NotNull
+  public final java.security.PublicKey getOwningKey()
+  @Nullable
+  public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain()
+  @NotNull
+  public String toString()
+##
+public final class net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver extends java.lang.Object
+  public <init>(java.util.Map)
+  public <init>(net.corda.core.node.services.IdentityService)
+  public final boolean isRequiredSigner(java.util.List, net.corda.core.identity.Party)
+  public final boolean isSameParty(net.corda.core.identity.Party, net.corda.core.identity.Party)
+  @NotNull
+  public final net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolved resolve(net.corda.core.identity.Party)
+  @NotNull
+  public static final net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver$Companion Companion
+##
+public static final class net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final java.util.Map generateProofChainMap(net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolved...)
+  @NotNull
+  public final net.corda.core.identity.Party resolveToCurrentParty(java.security.PublicKey, net.corda.core.node.services.IdentityService)
+  @NotNull
+  public final net.corda.core.identity.Party resolveToCurrentParty(net.corda.core.identity.Party, net.corda.core.node.services.IdentityService)
 ##
 public abstract class net.corda.core.flows.AbstractStateReplacementFlow extends java.lang.Object
   public <init>()
@@ -4957,12 +5058,17 @@ public interface net.corda.core.node.services.IdentityService
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate certificateFromKey(java.security.PublicKey)
   @Suspendable
+  public abstract boolean containsProofChain(java.security.PublicKey)
+  @Suspendable
   @Nullable
   public abstract java.util.UUID externalIdForPublicKey(java.security.PublicKey)
   @NotNull
   public abstract Iterable getAllIdentities()
   @NotNull
   public abstract java.security.cert.CertStore getCaCertStore()
+  @Suspendable
+  @NotNull
+  public abstract net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain(java.security.PublicKey)
   @NotNull
   public abstract java.security.cert.TrustAnchor getTrustAnchor()
   @NotNull
