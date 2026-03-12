@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION")
+@file:Suppress("DEPRECATION", "unused")
 
 package net.corda.client.jackson.internal
 
@@ -51,6 +51,7 @@ import net.corda.core.contracts.AttachmentConstraint
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -132,6 +133,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(TransactionState::class.java, TransactionStateMixin::class.java)
         context.setMixInAnnotations(Command::class.java, CommandMixin::class.java)
         context.setMixInAnnotations(TimeWindow::class.java, TimeWindowMixin::class.java)
+        context.setMixInAnnotations(NotaryInstruction::class.java, NotaryInstructionMixin::class.java)
         context.setMixInAnnotations(PrivacySalt::class.java, PrivacySaltMixin::class.java)
         context.setMixInAnnotations(SignatureScheme::class.java, SignatureSchemeMixin::class.java)
         context.setMixInAnnotations(SignatureMetadata::class.java, SignatureMetadataMixin::class.java)
@@ -256,7 +258,8 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.legacyAttachments.map { "$it-legacy" } + value.nonLegacyAttachments.map { it.toString() },
                 value.references,
                 value.privacySalt,
-                value.networkParametersHash
+                value.networkParametersHash,
+                value.notaryInstructions
         ))
     }
 }
@@ -275,24 +278,27 @@ private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() 
                 wrapper.timeWindow,
                 wrapper.references,
                 wrapper.networkParametersHash,
-                legacyAttachments.map { SecureHash.parse(it.removeSuffix("-legacy")) }
+                legacyAttachments.map { SecureHash.parse(it.removeSuffix("-legacy")) },
+                wrapper.notaryInstructions
         )
         return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }
 }
 
-private class WireTransactionJson(@get:JsonInclude(Include.NON_NULL) val digestService: DigestService?,
-                                  val id: SecureHash,
-                                  val notary: Party?,
-                                  val inputs: List<StateRef>,
-                                  val outputs: List<TransactionState<*>>,
-                                  val commands: List<Command<*>>,
-                                  val timeWindow: TimeWindow?,
-                                  val attachments: List<String>,
-                                  val references: List<StateRef>,
-                                  val privacySalt: PrivacySalt,
-                                  val networkParametersHash: SecureHash?
-)
+private class WireTransactionJson(
+        @get:JsonInclude(Include.NON_NULL) val digestService: DigestService?,
+        val id: SecureHash,
+        val notary: Party?,
+        val inputs: List<StateRef>,
+        val outputs: List<TransactionState<*>>,
+        val commands: List<Command<*>>,
+        val timeWindow: TimeWindow?,
+        val attachments: List<String>,
+        val references: List<StateRef>,
+        val privacySalt: PrivacySalt,
+        val networkParametersHash: SecureHash?,
+        val notaryInstructions: List<NotaryInstruction>
+ )
 
 private interface TransactionStateMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
@@ -323,6 +329,9 @@ private class TimeWindowDeserializer : JsonDeserializer<TimeWindow>() {
 }
 
 private data class TimeWindowJson(val fromTime: Instant?, val untilTime: Instant?)
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+private interface NotaryInstructionMixin
 
 @JsonSerialize(using = PrivacySaltSerializer::class)
 @JsonDeserialize(using = PrivacySaltDeserializer::class)
@@ -379,7 +388,6 @@ private class PartialTreeSerializer : JsonSerializer<PartialTree>() {
             is PartialTree.IncludedLeaf -> PartialTreeJson(includedLeaf = tree.hash)
             is PartialTree.Leaf -> PartialTreeJson(leaf = tree.hash)
             is PartialTree.Node -> PartialTreeJson(left = convert(tree.left), right = convert(tree.right), hashAlgorithm = tree.hashAlgorithm)
-            else -> throw IllegalArgumentException("Don't know how to serialize $tree")
         }
     }
 }

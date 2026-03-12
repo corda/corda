@@ -238,6 +238,7 @@ dependencies {
     testImplementation project(':client:jfx')
     testImplementation project(':finance:contracts')
     testImplementation project(':finance:workflows')
+    testImplementation project(':testing:cordapps:dummystateworkflows')
     // sample test schemas
     testImplementation project(path: ':finance:contracts', configuration: 'testArtifacts')
     testImplementation project(':testing:cordapps:dbfailure:dbfworkflows')

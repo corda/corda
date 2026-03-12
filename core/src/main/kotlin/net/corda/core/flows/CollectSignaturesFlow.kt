@@ -92,7 +92,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // Usually just the Initiator and possibly an oracle would have signed at this point.
         val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(ourIdentity.owningKey)
         val signed = partiallySignedTx.sigs.mapToSet { it.by }
-        val notSigned = partiallySignedTx.tx.requiredSigningKeys - signed
+        val notSigned = partiallySignedTx.requiredSigningKeys - signed
 
         // One of the signatures collected so far MUST be from the initiator of this flow.
         require(partiallySignedTx.sigs.any { it.by in myKeys }) {
@@ -104,7 +104,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
 
         // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
-        val notaryKey = partiallySignedTx.tx.notary?.owningKey
+        val notaryKey = partiallySignedTx.notary?.owningKey
         // If present, we need to exclude the notary's PublicKey as the notary signature is collected separately with
         // the FinalityFlow.
         val unsigned = if (notaryKey != null) notSigned - notaryKey else notSigned
@@ -332,7 +332,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 
     @Suspendable
     private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
-        require(signingKeys.all { it in stx.tx.requiredSigningKeys }) {
+        require(signingKeys.all { it in stx.requiredSigningKeys }) {
             "A signature was requested for a key that isn't part of the required signing keys for transaction ${stx.id}"
         }
     }
