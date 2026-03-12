@@ -29,6 +29,7 @@ import kotlin.collections.LinkedHashSet
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
+@Suppress("TooManyFunctions")
 @ThreadSafe
 class InMemoryIdentityService(
         identities: List<PartyAndCertificate> = emptyList(),

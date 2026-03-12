@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class KeyRotationProofTest {
 
-    @Test
+    @Test(timeout=300_000)
     fun `empty chain reports empty and validates only for inferred original equals current path`() {
         val key = generateKeyPair().public
         val chain = KeyRotationProofChain(emptyList())
@@ -22,7 +22,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(key, generateKeyPair().public), "Any empty chain should be invalid if original and current keys are different since they is no proof of rotation")
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `single proof chain exposes origin key, current key, and lineage`() {
         val old = generateKeyPair()
         val new = generateKeyPair()
@@ -36,7 +36,7 @@ class KeyRotationProofTest {
         assertEquals(listOf(old.public, new.public), chain.getKeyLineage(), "Expected key lineage to include both the old and new keys in order")
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `valid chain with multiple proofs validates against expected original, and current keys`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -59,7 +59,7 @@ class KeyRotationProofTest {
         assertTrue(chain.isValid(k3.public), "The chain is expected to be valid without specifying the original key, as the proofs in the chain should establish a link from the original key to the current key.")
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when expected old and new keys do not match`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -78,7 +78,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(other.public))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when continuity is broken`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -96,7 +96,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(k4.public))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when unrelated proof appears at beginning`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -117,7 +117,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(k4.public))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when unrelated proof appears in the middle`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -138,7 +138,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(k4.public))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when unrelated proof appears at the end`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()
@@ -159,7 +159,7 @@ class KeyRotationProofTest {
         assertFalse(chain.isValid(k4.public))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `chain fails validation when a proof signature is tampered`() {
         val k1 = generateKeyPair()
         val k2 = generateKeyPair()

@@ -1,7 +1,6 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
-import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 
 /**

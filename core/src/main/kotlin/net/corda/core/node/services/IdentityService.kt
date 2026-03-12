@@ -24,6 +24,7 @@ import java.util.*
  * whereas confidential identities are distributed only on a need to know basis (typically between parties in
  * a transaction being built). See [NetworkMapCache] for retrieving well known identities from the network map.
  */
+@Suppress("TooManyFunctions")
 @DoNotImplement
 interface IdentityService {
     val trustRoot: X509Certificate

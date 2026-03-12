@@ -12,7 +12,7 @@ import java.security.PublicKey
 
 class PartyIdentityResolverTest {
 
-    @Test
+    @Test(timeout=300_000)
     fun `the resolved party is the same as the original party if a proof does not exist`() {
 
         val originalPairKey = newKeyPair()
@@ -29,7 +29,7 @@ class PartyIdentityResolverTest {
         assertEquals(null, resolvedParty.proofChain)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `the resolved party contains the current party details and the original party if a proof exists`() {
 
         val originalPairKey = newKeyPair()
@@ -49,7 +49,7 @@ class PartyIdentityResolverTest {
         assertEquals(rotatedParty.owningKey, resolvedParty.originalOrCurrentParty.owningKey)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `isSameParty returns the right value`() {
 
         val originalPairKey = newKeyPair()
@@ -74,7 +74,7 @@ class PartyIdentityResolverTest {
         assertFalse(resolver.isSameParty(differentParty, originalParty))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `isSameParty returns false if proof is tampered with`() {
 
         val originalPairKey = newKeyPair()
@@ -106,7 +106,7 @@ class PartyIdentityResolverTest {
         assertFalse(resolver.isSameParty(tamperedProofParty, originalParty))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `isRequiredSigner returns the right value`() {
 
         val originalPairKey = newKeyPair()
@@ -127,7 +127,7 @@ class PartyIdentityResolverTest {
         assertFalse(resolver.isRequiredSigner(signers, differentParty))
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `isRequiredSigner returns false if proof is tampered with`() {
 
         val originalPairKey = newKeyPair()

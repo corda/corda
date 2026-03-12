@@ -11,7 +11,7 @@ import java.security.KeyPair
 
 class PartyIdentityResolvedTest {
 
-    @Test
+    @Test(timeout=300_000)
     fun `without proof chain returns original party identity and key`() {
         val original = newParty("Alice")
         val resolved = PartyIdentityResolved(original, proofChain = null as KeyRotationProofChain?)
@@ -24,7 +24,7 @@ class PartyIdentityResolvedTest {
         assertEquals(original.owningKey, resolved.originalOrCurrentParty.owningKey)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `empty proof chain is treated as no proof`() {
         val original = newParty("Bob")
         val resolved = PartyIdentityResolved(original, KeyRotationProofChain(emptyList()))
@@ -37,7 +37,7 @@ class PartyIdentityResolvedTest {
         assertEquals(original.owningKey, resolved.originalOrCurrentParty.owningKey)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `non-empty proof chain returns rotated owning key and projected party`() {
         val oldKey = newKeyPair()
         val newKey = newKeyPair()
@@ -54,7 +54,7 @@ class PartyIdentityResolvedTest {
         assertEquals(newKey.public, resolved.originalOrCurrentParty.owningKey)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `list constructor wraps proof list into chain`() {
         val oldKey = newKeyPair()
         val newKey = newKeyPair()
