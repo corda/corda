@@ -645,7 +645,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             }
             val sorted = results.states.sortedBy { it.ref.toString() }
             assertThat(results.states).isEqualTo(sorted)
-            assertThat(results.states).allSatisfy { assertThat(consumed).doesNotContain(it.ref.txhash) }
+            results.states.forEach { assertThat(consumed).doesNotContain(it.ref.txhash) }
         }
     }
 
