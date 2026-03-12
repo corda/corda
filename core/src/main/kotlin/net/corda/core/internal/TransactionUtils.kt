@@ -194,14 +194,16 @@ fun deserialiseCommands(
             @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")   // Because the external verifier uses Kotlin 1.2
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], keyRotationProofList[leafIndices[index]]) }
+        // the if else statement is required to keep the merkle tree the same when a command is created using the default value
+        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], if(keyRotationProofList[leafIndices[index]].isEmpty()) null else keyRotationProofList[leafIndices[index]]) }
     } else {
         // It is a WireTransaction
         // or a FilteredTransaction with no Commands (in which case group is null).
         check(commandDataList.size == signersList.size) {
             "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], keyRotationProofList[index]) }
+        // the if else statement is required to keep the merkle tree the same when a command is created using the default value
+        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], if(keyRotationProofList[index].isEmpty()) null else keyRotationProofList[index]) }
     }
 }
 
@@ -239,9 +241,7 @@ fun createComponentGroups(inputs: List<StateRef>,
         componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     }
     componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
-    // keyRotationProofChainMap is nullable on Command. Map nulls to an empty map so the component group
-    // contains a serialisable element per command (preserves indices) and avoids nulls.
-    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap() }, serialize)
+    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap }, serialize)
     return componentGroupMap
 }
 
