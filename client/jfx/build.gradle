@@ -57,7 +57,7 @@ dependencies {
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     implementation "org.apache.commons:commons-collections4:${commons_collections_version}"
     implementation "commons-beanutils:commons-beanutils:${beanutils_version}"
-    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation("org.apache.artemis:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
 
