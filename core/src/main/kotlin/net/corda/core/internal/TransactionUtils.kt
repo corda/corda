@@ -160,6 +160,7 @@ class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: 
  *
  *  This method used the [deserialiseComponentGroup] method.
  */
+@Suppress("ComplexMethod")
 fun deserialiseCommands(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
