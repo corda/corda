@@ -617,16 +617,16 @@ public final class net.corda.core.contracts.BrokenAttachmentException extends ne
 public final class net.corda.core.contracts.Command extends java.lang.Object
   public <init>(T, java.security.PublicKey)
   public <init>(T, java.util.List)
+  public <init>(T, java.util.List, java.util.Map)
+  public <init>(net.corda.core.contracts.CommandData, java.util.List, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final T component1()
   @NotNull
   public final java.util.List component2()
-  @Nullable
-  public final java.util.Map component3()
   @NotNull
   public final net.corda.core.contracts.Command copy(T, java.util.List, java.util.Map)
   public boolean equals(Object)
-  @Nullable
+  @NotNull
   public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
@@ -667,12 +667,10 @@ public final class net.corda.core.contracts.CommandWithParties extends java.lang
   public final java.util.List component2()
   @NotNull
   public final T component3()
-  @Nullable
-  public final java.util.Map component4()
   @NotNull
   public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T, java.util.Map)
   public boolean equals(Object)
-  @Nullable
+  @NotNull
   public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
@@ -5082,6 +5080,8 @@ public interface net.corda.core.node.services.IdentityService
   public abstract void registerKey(java.security.PublicKey, net.corda.core.identity.Party, java.util.UUID)
   @NotNull
   public net.corda.core.identity.Party requireWellKnownPartyFromAnonymous(net.corda.core.identity.AbstractParty)
+  @Suspendable
+  public abstract void updateProofCacheFromTransaction(net.corda.core.transactions.SignedTransaction)
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate verifyAndRegisterIdentity(net.corda.core.identity.PartyAndCertificate)
   @Nullable
