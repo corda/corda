@@ -2499,8 +2499,10 @@ public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationPr
   public String toString()
 ##
 @CordaSerializable
-public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain extends java.lang.Object implements java.lang.Iterable, kotlin.jvm.internal.markers.KMappedMarker
+public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain extends java.lang.Object
   public <init>(java.util.List)
+  @NotNull
+  public final java.util.List asList()
   @NotNull
   public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain copy(java.util.List)
   public boolean equals(Object)
@@ -2515,8 +2517,6 @@ public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationPr
   public final boolean isNotEmpty()
   public final boolean isValid(java.security.PublicKey)
   public final boolean isValid(java.security.PublicKey, java.security.PublicKey)
-  @NotNull
-  public java.util.Iterator iterator()
   public final int size()
   @NotNull
   public String toString()
