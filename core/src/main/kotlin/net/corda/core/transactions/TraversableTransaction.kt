@@ -9,6 +9,7 @@ import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
@@ -218,6 +219,10 @@ class FilteredTransaction internal constructor(
                     filteredSerialisedComponents[SIGNERS_GROUP.ordinal] = wtx.componentGroups.getRequiredGroup(SIGNERS_GROUP).components.toMutableList()
                     filteredComponentNonces[SIGNERS_GROUP.ordinal] = wtx.availableComponentNonces[SIGNERS_GROUP.ordinal]!!.toMutableList()
                     filteredComponentHashes[SIGNERS_GROUP.ordinal] = wtx.availableComponentHashes[SIGNERS_GROUP.ordinal]!!.toMutableList()
+
+                    filteredSerialisedComponents[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.componentGroups.getRequiredGroup(KEY_ROTATION_PROOF_GROUP).components.toMutableList()
+                    filteredComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
+                    filteredComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
                 }
             }
 
