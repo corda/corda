@@ -234,6 +234,9 @@ data class CommandWithParties<out T : CommandData>(
         val value: T,
         private val _keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null
 ) {
+    init {
+        require(_keyRotationProofChainMap == null || _keyRotationProofChainMap.isNotEmpty()) { "The key rotation proof chain map cannot be empty if provided" }
+    }
     val keyRotationProofChainMap = _keyRotationProofChainMap ?: emptyMap()
 
     constructor(

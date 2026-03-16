@@ -210,7 +210,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val authenticatedCommands = commandComponents.lazyMapped { _, index ->
             val cmd = lazyCommands[index]
             val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
-            CommandWithParties(cmd.signers, parties, cmd.value, cmd.keyRotationProofChainMap)
+            CommandWithParties(cmd.signers, parties, cmd.value, if(cmd.keyRotationProofChainMap.isEmpty()) null else cmd.keyRotationProofChainMap)
         }
 
         // Ensure that the lazy mappings will use the correct SerializationContext.
@@ -381,7 +381,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
+        componentGroups.associate {
+            it.groupIndex to
+                    it.components.mapIndexed {
+                        internalIndex,
+                        internalIt ->
+                        digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**

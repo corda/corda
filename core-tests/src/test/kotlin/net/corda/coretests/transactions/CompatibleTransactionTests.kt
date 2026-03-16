@@ -93,6 +93,7 @@ class CompatibleTransactionTests {
     private val signersGroup by lazy { ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }) }
     private val networkParamsGroup by lazy { ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(paramsHash.serialize())) }
     private val notaryInstructionsGroup by lazy { ComponentGroup(NOTARY_INSTRUCTIONS_GROUP.ordinal, notaryInstructions.map { it.serialize() }) }
+    private val keyRotationProofGroup by lazy { ComponentGroup(ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP.ordinal, commands.map { it.keyRotationProofChainMap.serialize() }) }
 
     private val newUnknownComponentGroup = ComponentGroup(100, listOf(OpaqueBytes(secureRandomBytes(4)), OpaqueBytes(secureRandomBytes(8))))
     private val newUnknownComponentEmptyGroup = ComponentGroup(101, emptyList())
@@ -105,7 +106,8 @@ class CompatibleTransactionTests {
                 commandGroup,
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
     }
     private val wireTransactionA by lazy { WireTransaction(componentGroups = componentGroupsA, privacySalt = privacySalt) }
