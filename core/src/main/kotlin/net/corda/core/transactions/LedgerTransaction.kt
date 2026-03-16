@@ -919,7 +919,7 @@ private class DefaultVerifier(
                     // Requires ltx.commands to have been deserialized already.
                     @Suppress("DEPRECATION")   // Deprecated feature.
                     val parties = ltx.commands[idx].signingParties
-                    CommandWithParties(cmd.signers, parties, cmd.value, cmd.keyRotationProofChainMap)
+                    CommandWithParties(cmd.signers, parties, cmd.value, if(cmd.keyRotationProofChainMap.isEmpty()) null else cmd.keyRotationProofChainMap)
                 }
 
                 LedgerTransaction.createForContractVerify(
