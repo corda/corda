@@ -15,7 +15,7 @@ import java.security.PublicKey
  * cryptographically valid.
  */
 @CordaSerializable
-data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>) : Iterable<KeyRotationProof> {
+data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>) {
     val originalKey: PublicKey
         get() = proofChain.first().publicKeyOld
 
@@ -50,6 +50,8 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
 
         return isValid(originalKey, currentKey)
     }
+
+    fun asList(): List<KeyRotationProof> = proofChain
 
     /**
      * Checks that a key rotation proof chain is valid.
@@ -89,9 +91,6 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         // so we only need to check the current key matches
         return endsWithKey(currentKey)
     }
-
-    // Allow for-each style iteration
-    override operator fun iterator(): Iterator<KeyRotationProof> = proofChain.iterator()
 
     private fun startsWithKey(expectedOriginalKey: PublicKey): Boolean {
         return originalKey == expectedOriginalKey
