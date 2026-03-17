@@ -4,11 +4,12 @@ import net.corda.core.crypto.TransactionSignature
 import java.security.PublicKey
 
 fun List<TransactionSignature>.getKeyLineage(): Set<PublicKey> {
-    return flatMap { signature -> signature.signatureMetadata.proofChain.getKeyLineage() }.toSet()
+    return filter { signature -> signature.signatureMetadata.proofChain != null }
+            .flatMap { signature -> signature.signatureMetadata.proofChain!!.getKeyLineage() }.toSet()
 }
 
 fun TransactionSignature.getOriginalKey(): PublicKey {
-    if (signatureMetadata.proofChain.isNotEmpty()) {
+    if (signatureMetadata.proofChain != null && signatureMetadata.proofChain.isNotEmpty()) {
         // If there is a proof chain, the original key is the first key in the chain.
         return signatureMetadata.proofChain.originalKey
     }

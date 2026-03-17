@@ -17,10 +17,8 @@ import net.corda.core.serialization.CordaSerializable
 data class SignatureMetadata(
         val platformVersion: Int,
         val schemeNumberID: Int,
-        private val _proofChain: KeyRotationProofChain? = null
+        val proofChain: KeyRotationProofChain? = null
 ) {
-
-    val proofChain: KeyRotationProofChain get() = _proofChain ?: KeyRotationProofChain(emptyList())
 
     constructor(
             platformVersion: Int,

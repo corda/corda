@@ -36,7 +36,7 @@ val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
 val DAVE_NAME = CordaX500Name("Dave Unlimited", "Warsaw", "PL")
 
 /** Generates a dummy command that doesn't do anything useful for use in tests **/
-fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
+fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList(), emptyMap())
 
 /** Trivial implementation of [TypeOnlyCommandData] for test purposes */
 object DummyCommandData : TypeOnlyCommandData()

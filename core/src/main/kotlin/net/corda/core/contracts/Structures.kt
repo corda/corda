@@ -197,14 +197,11 @@ abstract class TypeOnlyCommandData : CommandData {
  * Never pass an empty proof chain map to the construct as it will have impact on how the merkle tree is calculated after a deserialization. Use null instead, which will be converted to an empty map internally.
  * */
 @CordaSerializable
-data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, private val _keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null) {
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null) {
     // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
-        require(_keyRotationProofChainMap == null || _keyRotationProofChainMap.isNotEmpty()) { "The key rotation proof chain map cannot be empty if provided" }
     }
-
-    val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain> = _keyRotationProofChainMap ?: emptyMap()
 
     constructor(data: T, signers: List<PublicKey>) : this(data, signers, null)
     constructor(data: T, key: PublicKey) : this(data, listOf(key), null)
@@ -232,12 +229,8 @@ data class CommandWithParties<out T : CommandData>(
         @Deprecated("Should not be used in contract verification code as it is non-deterministic, will be disabled for some future target platform version onwards and will take effect only for CorDapps targeting those versions.")
         val signingParties: List<Party>,
         val value: T,
-        private val _keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null
+        val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null
 ) {
-    init {
-        require(_keyRotationProofChainMap == null || _keyRotationProofChainMap.isNotEmpty()) { "The key rotation proof chain map cannot be empty if provided" }
-    }
-    val keyRotationProofChainMap = _keyRotationProofChainMap ?: emptyMap()
 
     constructor(
             signers: List<PublicKey>,

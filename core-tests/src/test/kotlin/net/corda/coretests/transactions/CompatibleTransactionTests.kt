@@ -94,7 +94,7 @@ class CompatibleTransactionTests {
     private val signersGroup by lazy { ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }) }
     private val networkParamsGroup by lazy { ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(paramsHash.serialize())) }
     private val notaryInstructionsGroup by lazy { ComponentGroup(NOTARY_INSTRUCTIONS_GROUP.ordinal, notaryInstructions.map { it.serialize() }) }
-    private val keyRotationProofGroup by lazy { ComponentGroup(ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP.ordinal, commands.map { it.keyRotationProofChainMap.serialize() }) }
+    private val keyRotationProofGroup by lazy { ComponentGroup(ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP.ordinal, commands.map { it.keyRotationProofChainMap!!.serialize() }) }
 
     private val newUnknownComponentGroup = ComponentGroup(100, listOf(OpaqueBytes(secureRandomBytes(4)), OpaqueBytes(secureRandomBytes(8))))
     private val newUnknownComponentEmptyGroup = ComponentGroup(101, emptyList())
@@ -345,7 +345,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() }),
-                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap.serialize() }),
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap!!.serialize() }),
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
         val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt())
@@ -446,7 +446,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, commandsNoKey1.map { it.signers.serialize() }),
-                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, commandsNoKey1.map { it.keyRotationProofChainMap.serialize() }),
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, commandsNoKey1.map { it.keyRotationProofChainMap!!.serialize() }),
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
 
@@ -469,7 +469,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() }),
-                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap.serialize() })
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap!!.serialize() })
         )
         val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt(), digestService = DigestService.default)
 

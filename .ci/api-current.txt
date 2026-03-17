@@ -623,10 +623,12 @@ public final class net.corda.core.contracts.Command extends java.lang.Object
   public final T component1()
   @NotNull
   public final java.util.List component2()
+  @Nullable
+  public final java.util.Map component3()
   @NotNull
   public final net.corda.core.contracts.Command copy(T, java.util.List, java.util.Map)
   public boolean equals(Object)
-  @NotNull
+  @Nullable
   public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
@@ -667,10 +669,12 @@ public final class net.corda.core.contracts.CommandWithParties extends java.lang
   public final java.util.List component2()
   @NotNull
   public final T component3()
+  @Nullable
+  public final java.util.Map component4()
   @NotNull
   public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T, java.util.Map)
   public boolean equals(Object)
-  @NotNull
+  @Nullable
   public final java.util.Map getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
@@ -854,6 +858,10 @@ public interface net.corda.core.contracts.NamedByHash
   public abstract net.corda.core.crypto.SecureHash getId()
 ##
 public @interface net.corda.core.contracts.NoConstraintPropagation
+##
+@DoNotImplement
+@CordaSerializable
+public interface net.corda.core.contracts.NotaryInstruction
 ##
 @CordaSerializable
 public interface net.corda.core.contracts.OwnableState extends net.corda.core.contracts.ContractState
@@ -2392,11 +2400,13 @@ public final class net.corda.core.crypto.SignatureMetadata extends java.lang.Obj
   public <init>(int, int, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public final int component1()
   public final int component2()
+  @Nullable
+  public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain component3()
   @NotNull
   public final net.corda.core.crypto.SignatureMetadata copy(int, int, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain)
   public boolean equals(Object)
   public final int getPlatformVersion()
-  @NotNull
+  @Nullable
   public final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain()
   public final int getSchemeNumberID()
   public int hashCode()
@@ -3551,6 +3561,8 @@ public final class net.corda.core.flows.NotarisationPayload extends java.lang.Ob
   public final net.corda.core.transactions.SignedTransaction getSignedTransaction()
   @NotNull
   public final Object getTransaction()
+  @Nullable
+  public final java.util.List getTransactionSignatures()
   public int hashCode()
   @NotNull
   public String toString()

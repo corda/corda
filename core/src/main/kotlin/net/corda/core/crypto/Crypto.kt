@@ -576,6 +576,9 @@ object Crypto {
     }
 
     private fun doVerify(publicKey: PublicKey, signatureMetadata: SignatureMetadata): Boolean {
+        if(signatureMetadata.proofChain == null) {
+            return true
+        }
         val verificationResult = signatureMetadata.proofChain.isValid(publicKey)
         if (!verificationResult) {
             throw SignatureException("Signature Verification failed!")
@@ -609,6 +612,9 @@ object Crypto {
 
     @JvmStatic
     private fun isValid(publicKey: PublicKey, signatureMetadata: SignatureMetadata): Boolean {
+        if(signatureMetadata.proofChain == null) {
+            return true
+        }
         return signatureMetadata.proofChain.isValid(publicKey)
     }
 
