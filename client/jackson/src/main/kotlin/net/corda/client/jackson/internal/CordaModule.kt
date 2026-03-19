@@ -369,6 +369,11 @@ private class SignatureMetadataSerializer : JsonSerializer<SignatureMetadata>() 
         gen.jsonObject {
             writeNumberField("platformVersion", value.platformVersion)
             writeObjectField("scheme", value.schemeNumberID.let { signatureSchemesByNumberID[it] ?: it })
+
+            // Only write the proofChain field if it's not null, to maintain backwards compatibility with older payloads that don't have this field.
+            // This is important because the data in the signaure metadata is part of the bytes that are signed,
+            // so changing the serialized form would break signature verification for older nodes.
+            value.proofChain?.let { writeObjectField("proofChain", it) }
         }
     }
 }
@@ -382,7 +387,10 @@ private class SignatureMetadataDeserializer : JsonDeserializer<SignatureMetadata
         } else {
             Crypto.findSignatureScheme(scheme.textValue()).schemeNumberID
         }
-        return SignatureMetadata(json["platformVersion"].intValue(), schemeNumberID)
+        val proofChain = json.get("proofChain")?.takeUnless { it.isNull }?.let {
+            parser.codec.treeToValue(it, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain::class.java)
+        }
+        return SignatureMetadata(json["platformVersion"].intValue(), schemeNumberID, proofChain)
     }
 }
 
