@@ -188,5 +188,6 @@ fun registerCustomSerializers(factory: SerializerFactory) {
         register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
         register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
         register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
+        register(net.corda.serialization.internal.amqp.custom.SignatureMetadataSerializer)
     }
 }
