@@ -30,6 +30,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -342,6 +344,25 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test(timeout=300_000)
 	fun Command() {
         val command = Command(DummyCommandData, listOf(BOB_PUBKEY))
+        val json = mapper.valueToTree<ObjectNode>(command)
+        assertThat(mapper.convertValue<Command<*>>(json)).isEqualTo(command)
+    }
+
+    @Test(timeout=300_000)
+	fun CommandWithProofChain() {
+        val command = Command(
+                DummyCommandData,
+                listOf(BOB_PUBKEY),
+                keyRotationProofChainMap = mapOf(
+                        BOB_PUBKEY to KeyRotationProofChain(
+                                listOf(
+                                        KeyRotationProof(BOB_PUBKEY,
+                                                BOB_PUBKEY,
+                                                secureRandomBytes(128))
+                                )
+                        )
+                )
+        )
         val json = mapper.valueToTree<ObjectNode>(command)
         assertThat(mapper.convertValue<Command<*>>(json)).isEqualTo(command)
     }

@@ -515,7 +515,7 @@ private interface NodeInfoMixin
 private interface SecureHashMixin
 
 @JsonSerialize(using = JacksonSupport.PublicKeySerializer::class)
-@JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class)
+@JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class, keyUsing = JacksonSupport.PublicKeyKeyDeserializer::class)
 private interface PublicKeyMixin
 
 @JsonSerialize(using = StateMachineRunIdSerializer::class)

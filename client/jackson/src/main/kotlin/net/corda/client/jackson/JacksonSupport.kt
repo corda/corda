@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.KeyDeserializer
 import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -445,6 +446,18 @@ object JacksonSupport {
                 parsePublicKeyBase58(parser.text)
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+            }
+        }
+    }
+
+    @Deprecated("This is an internal class, do not use")
+    object PublicKeyKeyDeserializer : KeyDeserializer() {
+        override fun deserializeKey(key: String, context: DeserializationContext): PublicKey {
+            return try {
+                parsePublicKeyBase58(key)
+            } catch (e: Exception) {
+                // JsonParseException normally needs a parser, but KeyDeserializer doesn't provide one; wrap in IllegalArgumentException
+                throw IllegalArgumentException("Invalid public key $key: ${e.message}", e)
             }
         }
     }
