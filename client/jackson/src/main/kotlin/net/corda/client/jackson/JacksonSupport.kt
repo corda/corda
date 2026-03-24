@@ -440,15 +440,22 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use")
-    object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
-            return try {
-                parsePublicKeyBase58(parser.text)
-            } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
-            }
+    object PublicKeyKeySerializer : JsonSerializer<PublicKey>() {
+        override fun serialize(value: PublicKey, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeFieldName(value.toBase58String())
         }
     }
+
+     @Deprecated("This is an internal class, do not use")
+     object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
+         override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
+             return try {
+                 parsePublicKeyBase58(parser.text)
+             } catch (e: Exception) {
+                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+             }
+         }
+     }
 
     @Deprecated("This is an internal class, do not use")
     object PublicKeyKeyDeserializer : KeyDeserializer() {

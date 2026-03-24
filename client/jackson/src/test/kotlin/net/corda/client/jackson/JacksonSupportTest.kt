@@ -356,7 +356,20 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
                 keyRotationProofChainMap = mapOf(
                         BOB_PUBKEY to KeyRotationProofChain(
                                 listOf(
+                                        KeyRotationProof(ALICE_PUBKEY,
+                                                BOB_PUBKEY,
+                                                secureRandomBytes(128)),
                                         KeyRotationProof(BOB_PUBKEY,
+                                                ALICE_PUBKEY,
+                                                secureRandomBytes(128))
+                                )
+                        ),
+                        ALICE_PUBKEY to KeyRotationProofChain(
+                                listOf(
+                                        KeyRotationProof(BOB_PUBKEY,
+                                                ALICE_PUBKEY,
+                                                secureRandomBytes(128)),
+                                        KeyRotationProof(ALICE_PUBKEY,
                                                 BOB_PUBKEY,
                                                 secureRandomBytes(128))
                                 )
