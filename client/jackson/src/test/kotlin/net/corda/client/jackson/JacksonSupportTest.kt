@@ -349,7 +349,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test(timeout=300_000)
-	fun CommandWithProofChain() {
+	fun commandWithProofChain() {
         val command = Command(
                 DummyCommandData,
                 listOf(BOB_PUBKEY),
