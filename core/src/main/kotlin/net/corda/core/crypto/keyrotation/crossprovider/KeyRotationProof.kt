@@ -15,4 +15,20 @@ data class KeyRotationProof(
         val publicKeyOld: PublicKey,
         val publicKeyNew: PublicKey,
         val signature: ByteArray
-)
+) {
+       override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KeyRotationProof) return false
+        if (publicKeyOld != other.publicKeyOld) return false
+        if (publicKeyNew != other.publicKeyNew) return false
+        if (!signature.contentEquals(other.signature)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = publicKeyOld.hashCode()
+        result = 31 * result + publicKeyNew.hashCode()
+        result = 31 * result + signature.contentHashCode()
+        return result
+    }
+}
