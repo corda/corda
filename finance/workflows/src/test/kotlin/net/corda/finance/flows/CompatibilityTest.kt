@@ -69,7 +69,7 @@ class CompatibilityTest {
         val inByteArray: ByteArray = inputStream.readBytes()
         val input = DeserializationInput(serializerFactory)
 
-        val (transaction, envelope) = input.deserializeAndReturnEnvelope(
+        val (transaction, _) = input.deserializeAndReturnEnvelope(
                 SerializedBytes(inByteArray),
                 SignedTransaction::class.java,
                 SerializationDefaults.STORAGE_CONTEXT)
