@@ -65,6 +65,7 @@ import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -371,7 +372,7 @@ private class SignatureMetadataSerializer : JsonSerializer<SignatureMetadata>() 
             writeObjectField("scheme", value.schemeNumberID.let { signatureSchemesByNumberID[it] ?: it })
 
             // Only write the proofChain field if it's not null, to maintain backwards compatibility with older payloads that don't have this field.
-            // This is important because the data in the signaure metadata is part of the bytes that are signed,
+            // This is important because the data in the signature metadata is part of the bytes that are signed,
             // so changing the serialized form would break signature verification for older nodes.
             value.proofChain?.let { writeObjectField("proofChain", it) }
         }
@@ -388,7 +389,7 @@ private class SignatureMetadataDeserializer : JsonDeserializer<SignatureMetadata
             Crypto.findSignatureScheme(scheme.textValue()).schemeNumberID
         }
         val proofChain = json.get("proofChain")?.takeUnless { it.isNull }?.let {
-            parser.codec.treeToValue(it, net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain::class.java)
+            parser.codec.treeToValue(it, KeyRotationProofChain::class.java)
         }
         return SignatureMetadata(json["platformVersion"].intValue(), schemeNumberID, proofChain)
     }
