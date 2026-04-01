@@ -13,6 +13,7 @@ import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -80,7 +81,7 @@ class CompatibilityTest {
         assertTrue(commands.first().value is Cash.Commands.Issue)
 
         for (signature in transaction.sigs) {
-           signature.verify(transaction.coreTransaction.id)
+           assertDoesNotThrow {  signature.verify(transaction.coreTransaction.id) }
         }
     }
 
