@@ -242,7 +242,14 @@ fun createComponentGroups(inputs: List<StateRef>,
         componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     }
     componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
-    componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap() }, serialize)
+
+    if(commands.any { it.keyRotationProofChainMap != null }) {
+        // Adding key rotation proof map to its own group. If all the commands have null key rotation proof map,
+        // we skip adding the group to ensure compatibility with older versions of Corda which don't have this group.
+        // To keep the list of key rotation proof maps aligned with the list of commands, we add an empty map for commands which don't have a key rotation proof map.
+        componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap() }, serialize)
+    }
+
     return componentGroupMap
 }
 

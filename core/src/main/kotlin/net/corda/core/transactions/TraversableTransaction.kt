@@ -220,9 +220,12 @@ class FilteredTransaction internal constructor(
                     filteredComponentNonces[SIGNERS_GROUP.ordinal] = wtx.availableComponentNonces[SIGNERS_GROUP.ordinal]!!.toMutableList()
                     filteredComponentHashes[SIGNERS_GROUP.ordinal] = wtx.availableComponentHashes[SIGNERS_GROUP.ordinal]!!.toMutableList()
 
-                    filteredSerialisedComponents[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.componentGroups.getRequiredGroup(KEY_ROTATION_PROOF_GROUP).components.toMutableList()
-                    filteredComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
-                    filteredComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
+                    val keyRotationProofGroup = wtx.componentGroups.getGroup(KEY_ROTATION_PROOF_GROUP)?.components?.toMutableList()
+                    if(keyRotationProofGroup != null) {
+                        filteredSerialisedComponents[KEY_ROTATION_PROOF_GROUP.ordinal] = keyRotationProofGroup
+                        filteredComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentNonces[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
+                        filteredComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal] = wtx.availableComponentHashes[KEY_ROTATION_PROOF_GROUP.ordinal]!!.toMutableList()
+                    }
                 }
             }
 
