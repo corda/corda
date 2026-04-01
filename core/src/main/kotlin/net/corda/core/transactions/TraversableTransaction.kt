@@ -240,9 +240,9 @@ class FilteredTransaction internal constructor(
                 wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
                 wtx.networkParametersHash?.let { filter(NetworkParametersHash(it), PARAMETERS_GROUP.ordinal, 0) }
                 wtx.notaryInstructions.forEachIndexed { internalIndex, it -> filter(it, NOTARY_INSTRUCTIONS_GROUP.ordinal, internalIndex) }
-                // It is highlighted that because there is no a signers property in TraversableTransaction,
+                // It is highlighted that because there is no a signers nor key rotation properties in TraversableTransaction,
                 // one cannot specifically filter them in or out.
-                // The above is very important to ensure someone won't filter out the signers component group if at least one
+                // The above is very important to ensure someone won't filter out the signers or key rotation component groups if at least one
                 // command is included in a FilteredTransaction.
 
                 // It's sometimes possible that when we receive a WireTransaction for which there is a new or more unknown component groups,
