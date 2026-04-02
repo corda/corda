@@ -207,7 +207,12 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, 
     constructor(data: T, key: PublicKey) : this(data, listOf(key), null)
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
+    override fun toString(): String {
+        if(keyRotationProofChainMap == null || keyRotationProofChainMap.isEmpty()) {
+            return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
+        }
+        return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }} and proof chains ${keyRotationProofChainMap.entries.joinToString { "${it.key.toStringShort()} -> ${it.value}" }}"
+    }
 }
 
 /** A common move command for contract states which can change owner. */
