@@ -81,7 +81,7 @@ class CompatibilityTest {
         assertTrue(commands.first().value is Cash.Commands.Issue)
 
         for (signature in transaction.sigs) {
-           assertDoesNotThrow {  signature.verify(transaction.coreTransaction.id) }
+           assertDoesNotThrow { signature.verify(transaction.coreTransaction.id) }
         }
     }
 
