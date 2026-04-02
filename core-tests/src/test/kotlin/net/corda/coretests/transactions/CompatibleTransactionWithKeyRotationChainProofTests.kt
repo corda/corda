@@ -343,6 +343,7 @@ class CompatibleTransactionWithKeyRotationChainProofTests {
         assertThat(ftxCompatibleNotaryInstructions.notaryInstructions).isEqualTo(notaryInstructions)
     }
 
+    @Suppress("ComplexMethod")
     @Test(timeout=300_000)
     fun `Command visibility tests`() {
         // 1st and 3rd commands require a signature from KEY_1.
