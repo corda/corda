@@ -22,6 +22,8 @@ import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.internal.accessAvailableComponentHashes
 import net.corda.core.internal.accessGroupHashes
@@ -56,10 +58,12 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-class CompatibleTransactionTests {
+class CompatibleTransactionWithKeyRotationChainProofTests {
     private companion object {
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
+        val DUMMY_KEY_ROTATION_PROOF_CHAIN = KeyRotationProofChain(listOf(KeyRotationProof(DUMMY_KEY_1.public, DUMMY_KEY_2.public, secureRandomBytes(32))))
+        val DUMMY_KEY_ROTATION_PROOF_MAP = mapOf(DUMMY_KEY_1.public to DUMMY_KEY_ROTATION_PROOF_CHAIN)
         val BOB = TestIdentity(BOB_NAME, 80).party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
@@ -77,7 +81,7 @@ class CompatibleTransactionTests {
 
     private val inputs = listOf(stateRef1, stateRef2, stateRef3) // 3 elements.
     private val outputs = listOf(dummyOutState, dummyOutState.copy(notary = BOB)) // 2 elements.
-    private val commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)) // 1 element.
+    private val commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP)) // 1 element.
     private val attachments = emptyList<SecureHash>() // Empty list.
     private val notary = DUMMY_NOTARY
     private val timeWindow = TimeWindow.fromOnly(Instant.now())
@@ -94,6 +98,7 @@ class CompatibleTransactionTests {
     private val signersGroup by lazy { ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }) }
     private val networkParamsGroup by lazy { ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(paramsHash.serialize())) }
     private val notaryInstructionsGroup by lazy { ComponentGroup(NOTARY_INSTRUCTIONS_GROUP.ordinal, notaryInstructions.map { it.serialize() }) }
+    private val keyRotationProofGroup by lazy { ComponentGroup(ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP.ordinal, commands.map { it.keyRotationProofChainMap!!.serialize() }) }
 
     private val newUnknownComponentGroup = ComponentGroup(100, listOf(OpaqueBytes(secureRandomBytes(4)), OpaqueBytes(secureRandomBytes(8))))
     private val newUnknownComponentEmptyGroup = ComponentGroup(101, emptyList())
@@ -106,13 +111,14 @@ class CompatibleTransactionTests {
                 commandGroup,
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
     }
     private val wireTransactionA by lazy { WireTransaction(componentGroups = componentGroupsA, privacySalt = privacySalt) }
 
     @Test(timeout=300_000)
-	fun `Merkle root computations`() {
+    fun `Merkle root computations`() {
         // Merkle tree computation is deterministic if the same salt and ordering are used.
         val wireTransactionB = WireTransaction(componentGroups = componentGroupsA, privacySalt = privacySalt)
         assertEquals(wireTransactionA, wireTransactionB)
@@ -132,7 +138,8 @@ class CompatibleTransactionTests {
                 attachmentGroup,
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
         assertFails { WireTransaction(componentGroups = componentGroupsEmptyAttachment, privacySalt = privacySalt) }
 
@@ -145,7 +152,8 @@ class CompatibleTransactionTests {
                 commandGroup,
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
         val wireTransaction1ShuffledInputs = WireTransaction(componentGroups = componentGroupsB, privacySalt = privacySalt)
         // The ID has changed due to change of the internal ordering in inputs.
@@ -156,10 +164,10 @@ class CompatibleTransactionTests {
         // But outputs group Merkle leaf (and the rest) remained the same.
         assertEquals(wireTransactionA.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal])
         assertEquals(wireTransactionA.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal])
+        assertEquals(wireTransactionA.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
         assertNull(wireTransactionA.accessGroupMerkleRoots()[ATTACHMENTS_V2_GROUP.ordinal])
-        assertNull(wireTransactionA.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
         assertNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[ATTACHMENTS_V2_GROUP.ordinal])
-        assertNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
+        assertNotNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
 
         // Group leaves (components) ordering does not affect the id. In this case, we added outputs group before inputs.
         val shuffledComponentGroupsA = listOf(
@@ -167,6 +175,7 @@ class CompatibleTransactionTests {
                 inputGroup,
                 commandGroup,
                 notaryGroup,
+                keyRotationProofGroup,
                 timeWindowGroup,
                 signersGroup
         )
@@ -174,7 +183,7 @@ class CompatibleTransactionTests {
     }
 
     @Test(timeout=300_000)
-	fun `WireTransaction constructors and compatibility`() {
+    fun `WireTransaction constructors and compatibility`() {
         val groups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null, emptyList(), emptyList())
         val wireTransactionOldConstructor = WireTransaction(groups, privacySalt)
         assertEquals(wireTransactionA, wireTransactionOldConstructor)
@@ -187,7 +196,8 @@ class CompatibleTransactionTests {
                 ComponentGroup(ATTACHMENTS_V2_GROUP.ordinal, inputGroup.components),
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
         assertFails { WireTransaction(componentGroupsB, privacySalt).attachments.toList() }
 
@@ -199,7 +209,8 @@ class CompatibleTransactionTests {
                 commandGroup, // Second commandsGroup.
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
         assertFails { WireTransaction(componentGroupsDuplicatedCommands, privacySalt) }
 
@@ -210,7 +221,8 @@ class CompatibleTransactionTests {
                 commandGroup,
                 notaryGroup,
                 timeWindowGroup,
-                signersGroup
+                signersGroup,
+                keyRotationProofGroup
         )
         assertFails { WireTransaction(componentGroupsC, privacySalt) }
 
@@ -221,6 +233,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 signersGroup,
+                keyRotationProofGroup,
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
 
@@ -237,18 +250,19 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 signersGroup,
+                keyRotationProofGroup,
                 newUnknownComponentEmptyGroup // A new unknown component with ordinal 101 that we cannot process.
         )
         assertFails { WireTransaction(componentGroupsCompatibleEmptyNew, privacySalt) }
     }
 
     @Test(timeout=300_000)
-	fun `FilteredTransaction constructors and compatibility`() {
+    fun `FilteredTransaction constructors and compatibility`() {
         // Filter out all of the components.
         val ftxNothing = wireTransactionA.buildFilteredTransaction { false } // Nothing filtered.
         // Although nothing filtered, we still receive the group hashes for the top level Merkle tree.
-        // Note that attachments are not sent, but group hashes include the allOnesHash flag for the attachment group hash; that's why we expect +1 group hashes.
-        assertEquals(wireTransactionA.componentGroups.size + 1, ftxNothing.groupHashes.size)
+        // Note that references, attachments, parameters, attachments version 2, and notary instructions are not sent, but group hashes include the allOnesHash flag for the attachment group hash; that's why we expect +1 group hashes.
+        assertEquals(wireTransactionA.componentGroups.size + 5, ftxNothing.groupHashes.size)
         ftxNothing.verify()
 
         // Include all of the components.
@@ -289,6 +303,7 @@ class CompatibleTransactionTests {
                 timeWindowGroup,
                 signersGroup,
                 notaryInstructionsGroup,
+                keyRotationProofGroup,
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
         val wireTransactionCompatibleA = WireTransaction(componentGroupsCompatibleA, privacySalt)
@@ -329,12 +344,12 @@ class CompatibleTransactionTests {
     }
 
     @Test(timeout=300_000)
-	fun `Command visibility tests`() {
+    fun `Command visibility tests`() {
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(
-                dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public),
-                dummyCommand(DUMMY_KEY_2.public),
-                dummyCommand(DUMMY_KEY_1.public)
+                dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP),
+                dummyCommand(DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP),
+                dummyCommand(DUMMY_KEY_1.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP)
         )
         val componentGroups = listOf(
                 inputGroup,
@@ -343,6 +358,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() }),
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap!!.serialize() }),
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
         val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt())
@@ -405,6 +421,12 @@ class CompatibleTransactionTests {
         oneKey1CommandFtxA.checkAllComponentsVisible(SIGNERS_GROUP) // If at least one Command is visible, then all Signers are visible.
         oneKey1CommandFtxB.checkAllComponentsVisible(SIGNERS_GROUP) // If at least one Command is visible, then all Signers are visible.
 
+        allCommandsFtx.checkAllComponentsVisible(KEY_ROTATION_PROOF_GROUP)
+        assertFailsWith<ComponentVisibilityException> { noCommandsFtx.checkAllComponentsVisible(KEY_ROTATION_PROOF_GROUP) } // If we filter out all commands, key rotation proofs  are not sent as well.
+        key1CommandsFtx.checkAllComponentsVisible(KEY_ROTATION_PROOF_GROUP) // If at least one Command is visible, then all Signers are visible.
+        oneKey1CommandFtxA.checkAllComponentsVisible(KEY_ROTATION_PROOF_GROUP) // If at least one Command is visible, then all key rotation proofs are visible.
+        oneKey1CommandFtxB.checkAllComponentsVisible(KEY_ROTATION_PROOF_GROUP) // If at least one Command is visible, then all key rotation proofs are visible.
+
         // We don't send a list of signers.
         val componentGroupsCompatible = listOf(
                 inputGroup,
@@ -427,6 +449,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() }.subList(0, 1)), // Send first signer only.
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap!!.serialize() }),
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
 
@@ -434,7 +457,7 @@ class CompatibleTransactionTests {
         assertFailsWith<IllegalStateException> { WireTransaction(componentGroups = componentGroupsLessSigners, privacySalt = PrivacySalt()) }
 
         // Test if there is no command to sign.
-        val commandsNoKey1 = listOf(dummyCommand(DUMMY_KEY_2.public))
+        val commandsNoKey1 = listOf(dummyCommand(DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP))
 
         val componentGroupsNoKey1ToSign = listOf(
                 inputGroup,
@@ -443,6 +466,7 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, commandsNoKey1.map { it.signers.serialize() }),
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, commandsNoKey1.map { it.keyRotationProofChainMap!!.serialize() }),
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
 
@@ -452,19 +476,20 @@ class CompatibleTransactionTests {
     }
 
     @Test(timeout=300_000)
-	fun `FilteredTransaction signer manipulation tests`() {
+    fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
         val ftxConstructor = FilteredTransaction::class.constructors.last()
 
         // 1st and 3rd commands require a signature from KEY_1.
-        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
+        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP), dummyCommand(DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP), dummyCommand(DUMMY_KEY_1.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP))
         val componentGroups = listOf(
                 inputGroup,
                 outputGroup,
                 ComponentGroup(COMMANDS_GROUP.ordinal, twoCommandsforKey1.map { it.value.serialize() }),
                 notaryGroup,
                 timeWindowGroup,
-                ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() })
+                ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() }),
+                ComponentGroup(KEY_ROTATION_PROOF_GROUP.ordinal, twoCommandsforKey1.map { it.keyRotationProofChainMap!!.serialize() })
         )
         val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt(), digestService = DigestService.default)
 
@@ -525,8 +550,8 @@ class CompatibleTransactionTests {
         val updatedFilteredComponentsNoSignersKey2 = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroup)
         val updatedFilteredComponentsNoSignersKey2SamePMT = listOf(key2CommandsFtx.filteredComponentGroups[0], noLastSignerGroupSamePartialTree)
 
-        // There are only two components in key1CommandsFtx (commandData and signers).
-        assertEquals(2, key1CommandsFtx.componentGroups.size)
+        // There are only three components in key1CommandsFtx (commandData and signers and key rotation proofs).
+        assertEquals(3, key1CommandsFtx.componentGroups.size)
 
         // Remove last signer for which there is a pointer from a visible commandData. This is the case of Key1.
         // This will result to an invalid transaction.
@@ -596,7 +621,7 @@ class CompatibleTransactionTests {
     }
 
     @Test(timeout=300_000)
-	fun `parameters hash visibility`() {
+    fun `parameters hash visibility`() {
         fun paramsFilter(elem: Any): Boolean = elem is NetworkParametersHash && elem.hash == paramsHash
         fun attachmentFilter(elem: Any): Boolean = elem is SecureHash && elem == paramsHash
         val attachments = ComponentGroup(ATTACHMENTS_V2_GROUP.ordinal, listOf(paramsHash.serialize())) // Same hash as network parameters
@@ -608,7 +633,8 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 signersGroup,
-                networkParamsGroup
+                networkParamsGroup,
+                keyRotationProofGroup
         )
         val wtx = WireTransaction(componentGroups, privacySalt)
         val ftx1 = wtx.buildFilteredTransaction(Predicate(::paramsFilter)) // Filter only network parameters hash.
