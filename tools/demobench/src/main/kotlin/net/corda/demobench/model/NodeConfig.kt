@@ -10,7 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig

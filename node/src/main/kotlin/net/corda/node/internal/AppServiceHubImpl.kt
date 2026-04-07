@@ -4,13 +4,13 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
 import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.node.AppServiceHub
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.vault.CordaTransactionSupport
@@ -24,15 +24,16 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import rx.Observable
-import java.util.*
+import java.util.Objects
 
 /**
  * This customizes the ServiceHub for each [net.corda.core.node.services.CordaService] that is initiating flows.
  */
-internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter,
+internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHubCoreInternal,
+                                                       private val flowStarter: FlowStarter,
                                                        override val database: CordaTransactionSupport,
                                                        private val nodeLifecycleEventsDistributor: NodeLifecycleEventsDistributor)
-        : AppServiceHub, ServiceHub by serviceHub {
+        : AppServiceHub, ServiceHubCoreInternal by serviceHub {
 
     companion object {
 

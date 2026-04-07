@@ -56,8 +56,8 @@ class AmountTests {
                 val splits = baseAmount.splitEvenly(partitionCount)
                 assertEquals(partitionCount, splits.size)
                 assertEquals(baseAmount, splits.sumOrZero(baseAmount.token))
-                val min = splits.min()!!
-                val max = splits.max()!!
+                val min = splits.min()
+                val max = splits.max()
                 assertTrue(max.quantity - min.quantity <= 1L, "Amount quantities should differ by at most one token")
             }
         }

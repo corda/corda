@@ -1,4 +1,4 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
@@ -6,6 +6,10 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'application'
 
 mainClassName = 'net.corda.irs.IRSDemo'
+
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}
 
 sourceSets {
     integrationTest {
@@ -17,25 +21,16 @@ sourceSets {
     }
 }
 
-cordapp {
-    info {
-        name "Corda IRS Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
-}
-
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     cordapp project(':samples:irs-demo:cordapp:contracts-irs')
     cordapp project(':samples:irs-demo:cordapp:workflows-irs')
@@ -56,6 +51,7 @@ def rpcUsersList = [
 ]
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
+configurations.cordaCordapp.canBeResolved = true
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
     nodeDefaults{
         projectCordapp {
@@ -75,7 +71,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             address("localhost:10003")
             adminAddress("localhost:10023")
         }
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10024']
@@ -87,7 +84,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             address("localhost:10006")
             adminAddress("localhost:10026")
         }
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10027']
@@ -99,7 +97,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             address("localhost:10009")
             adminAddress("localhost:10029")
         }
-        cordapps = ["${project.group}:contracts:$corda_release_version", "${project.group}:workflows:$corda_release_version"]
+        cordapp "${project.group}:contracts:$corda_release_version"
+        cordapp "${project.group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10030']
@@ -111,8 +110,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             address("localhost:10012")
             adminAddress("localhost:10032")
         }
-        cordapps = ["${project.group}:contracts:$corda_release_version", "${project.group}:workflows:$corda_release_version"]
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project.group}:contracts:$corda_release_version"
+        cordapp "${project.group}:workflows:$corda_release_version"
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10033']
@@ -130,25 +131,29 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', n
         notary = [validating : true,
                   serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Bank A,L=London,C=GB"
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Bank B,L=New York,C=US"
-        cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
+        cordapp "${project(":finance").group}:contracts:$corda_release_version"
+        cordapp "${project(":finance").group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
     }
     node {
         name "O=Regulator,L=Moscow,C=RU"
-        cordapps = ["${project.group}:contracts:$corda_release_version", "${project.group}:workflows:$corda_release_version"]
+        cordapp "${project.group}:contracts:$corda_release_version"
+        cordapp "${project.group}:workflows:$corda_release_version"
         rpcUsers = rpcUsersList
         useTestClock true
     }

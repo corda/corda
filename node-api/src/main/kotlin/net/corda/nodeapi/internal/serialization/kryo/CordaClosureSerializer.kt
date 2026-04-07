@@ -19,11 +19,3 @@ object CordaClosureSerializer : ClosureSerializer() {
         return target is Serializable
     }
 }
-
-object CordaClosureBlacklistSerializer : ClosureSerializer() {
-    const val ERROR_MESSAGE = "Java 8 Lambda expressions are not supported for serialization."
-
-    override fun write(kryo: Kryo, output: Output, target: Any) {
-        throw IllegalArgumentException(ERROR_MESSAGE)
-    }
-}

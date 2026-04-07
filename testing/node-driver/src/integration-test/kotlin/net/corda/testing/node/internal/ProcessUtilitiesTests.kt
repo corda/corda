@@ -1,12 +1,12 @@
 package net.corda.testing.node.internal
 
-import net.corda.core.internal.readText
-import net.corda.core.internal.writeText
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
