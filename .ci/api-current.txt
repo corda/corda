@@ -859,10 +859,6 @@ public interface net.corda.core.contracts.NamedByHash
 ##
 public @interface net.corda.core.contracts.NoConstraintPropagation
 ##
-@DoNotImplement
-@CordaSerializable
-public interface net.corda.core.contracts.NotaryInstruction
-##
 @CordaSerializable
 public interface net.corda.core.contracts.OwnableState extends net.corda.core.contracts.ContractState
   @NotNull
