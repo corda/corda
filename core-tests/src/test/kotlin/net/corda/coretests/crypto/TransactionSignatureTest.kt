@@ -12,10 +12,12 @@ import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
+import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Rule
 import org.junit.Test
+import java.io.File
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.SignatureException
@@ -47,6 +49,40 @@ class TransactionSignatureTest {
         assertTrue(transactionSignature.verify(testBytes.sha256()))
 
         // Check manual verification.
+        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
+    }
+
+    @Test(timeout=300_000)
+	fun `Signature metadata preserves legacy serialization format`() {
+        val keyPair = loadKeyPair()
+        val expectedSignatureMetadataSerializedBytes = File("src/test/resources/corda-414/signature-metadata/serialized", "signature-metadata.bin").readBytes()
+        assertTrue(
+                expectedSignatureMetadataSerializedBytes.contentEquals(SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID).serialize().bytes),
+                "SignatureMetadata serialization format has changed."
+        )
+    }
+
+    @Test(timeout=300_000)
+	fun `Signature remains unchanged from earlier corda versions`() {
+        val keyPair = loadKeyPair()
+        val expectedSignableDataSerializedBytes = File("src/test/resources/corda-414/signable-data/serialized", "signable-data.bin").readBytes()
+        val expectedSignableDataSignatureBytes = File("src/test/resources/corda-414/signable-data/signature", "signable-data.sig").readBytes()
+
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+
+        assertTrue(
+                expectedSignableDataSerializedBytes.contentEquals(signableData.serialize().bytes),
+                "Signable data serialization format has changed."
+        )
+
+        val transactionSignature: TransactionSignature = keyPair.sign(signableData)
+
+        assertTrue(
+                expectedSignableDataSignatureBytes.contentEquals(transactionSignature.bytes),
+                "The signature has changed."
+        )
+
+        assertTrue(transactionSignature.verify(testBytes.sha256()))
         assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
     }
 
@@ -186,5 +222,18 @@ class TransactionSignatureTest {
     private fun createProof(oldKeyPair: KeyPair, newPublicKey: java.security.PublicKey): KeyRotationProof {
         val signature = Crypto.doSign(oldKeyPair.private, newPublicKey.encoded)
         return KeyRotationProof(oldKeyPair.public, newPublicKey, signature)
+    }
+
+    private fun loadKeyPair(): KeyPair {
+        val publicKeyFile = File("src/test/resources/test-keys", "test-key.public")
+        val privateKeyFile = File("src/test/resources/test-keys", "test-key.private")
+
+        require(publicKeyFile.exists()) { "Public key file does not exist. File: ${publicKeyFile.absolutePath}" }
+        require(privateKeyFile.exists()) { "Private key file does not exist. File: ${privateKeyFile.absolutePath}" }
+
+        return KeyPair(
+                Crypto.decodePublicKey(publicKeyFile.readBytes()),
+                Crypto.decodePrivateKey(privateKeyFile.readBytes())
+        )
     }
 }
