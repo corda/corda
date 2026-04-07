@@ -411,12 +411,6 @@ allprojects {
 
     repositories {
         mavenLocal()
-        // Prevents cache giving use the wrong artemis
-//        mavenCentral {
-//            content {
-//                includeGroup 'org.apache.activemq'
-//            }
-//        }
         // Use system environment to activate caching with Artifactory,
         // because it is actually easier to pass that during parallel build.
         // NOTE: it has to be a name of a virtual repository with all
@@ -435,16 +429,6 @@ allprojects {
             }
         } else {
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies-dev"
-                content {
-                  includeGroup 'org.apache.activemq'
-                }
-                credentials {
-                    username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
-                    password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
-                }
-            }
-            maven {
                 url "${publicArtifactURL}/corda-dependencies"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
@@ -453,6 +437,7 @@ allprojects {
                     includeGroup 'org.crashub'
                     includeGroup 'com.github.bft-smart'
                     includeGroup 'com.github.detro'
+                    includeGroup 'org.apache.activemq'
                 }
             }
             maven {
