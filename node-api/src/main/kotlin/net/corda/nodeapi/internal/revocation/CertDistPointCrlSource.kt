@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import net.corda.core.internal.readFully
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -21,7 +20,6 @@ import javax.security.auth.x500.X500Principal
 /**
  * [CrlSource] which downloads CRLs from the distribution points in the X509 certificate and caches them.
  */
-@Suppress("TooGenericExceptionCaught")
 class CertDistPointCrlSource(cacheSize: Long = DEFAULT_CACHE_SIZE,
                              cacheExpiry: Duration = DEFAULT_CACHE_EXPIRY,
                              private val connectTimeout: Duration = DEFAULT_CONNECT_TIMEOUT,

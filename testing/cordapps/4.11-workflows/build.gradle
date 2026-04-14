@@ -1,0 +1,17 @@
+apply plugin: 'corda.kotlin-1.2'
+
+dependencies {
+    compileOnly "net.corda:corda-core:4.11.+"
+    compileOnly "net.corda:corda-finance-contracts:4.11.+"
+    compileOnly "net.corda:corda-finance-workflows:4.11.+"
+}
+
+jar {
+    archiveBaseName = "4.11-workflows-cordapp"
+    archiveVersion = ""
+    manifest {
+        // This JAR is part of Corda's testing framework.
+        // Driver will not include it as part of an out-of-process node.
+        attributes('Corda-Testing': true)
+    }
+}
