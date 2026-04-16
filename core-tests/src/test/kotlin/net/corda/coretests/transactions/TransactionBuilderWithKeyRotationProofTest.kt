@@ -37,7 +37,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Instant
 import kotlin.io.path.inputStream
 import kotlin.test.assertEquals
