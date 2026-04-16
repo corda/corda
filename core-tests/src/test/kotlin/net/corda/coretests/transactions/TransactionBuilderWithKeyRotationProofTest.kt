@@ -15,6 +15,7 @@ import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.PlatformVersionSwitches.CROSS_PROVIDER_KEY_ROTATION
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.digestService
 import net.corda.core.node.ZoneVersionTooLowException
@@ -36,6 +37,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Instant
 import kotlin.io.path.inputStream
 import kotlin.test.assertEquals
@@ -93,7 +95,7 @@ class TransactionBuilderWithKeyRotationProofTest {
     }
 
     @Test(timeout=300_000)
-	fun `reference states`() {
+	fun `compatibility zone`() {
         val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
         val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
         val builder = TransactionBuilder(notary)
@@ -101,14 +103,14 @@ class TransactionBuilderWithKeyRotationProofTest {
                 .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
                 .addCommand(dummyCommand)
 
-        with(testNetworkParameters(minimumPlatformVersion = 3)) {
+        with(testNetworkParameters(minimumPlatformVersion = 4)) {
             val services = MockServices(listOf("net.corda.testing.contracts"), TestIdentity(ALICE_NAME), this)
             assertThatThrownBy { builder.toWireTransaction(services) }
                     .isInstanceOf(ZoneVersionTooLowException::class.java)
-                    .hasMessageContaining("Reference states")
+                    .hasMessageContaining("Cross-Provider Key Rotation requires all nodes on the Corda compatibility zone")
         }
 
-        with(testNetworkParameters(minimumPlatformVersion = 4)) {
+        with(testNetworkParameters(minimumPlatformVersion = CROSS_PROVIDER_KEY_ROTATION)) {
             val services = MockServices(listOf("net.corda.testing.contracts"), TestIdentity(ALICE_NAME), this)
             val wtx = builder.toWireTransaction(services)
             assertThat(wtx.references).containsOnly(referenceStateRef)
