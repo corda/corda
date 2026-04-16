@@ -20,6 +20,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.BLAKE2s256DigestAlgorithm
+import net.corda.core.internal.PlatformVersionSwitches.CROSS_PROVIDER_KEY_ROTATION
 import net.corda.core.internal.SHA256BLAKE2s256DigestAlgorithm
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
@@ -157,7 +158,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
                 identityService = mock<IdentityService>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+                networkParameters = testNetworkParameters(minimumPlatformVersion = CROSS_PROVIDER_KEY_ROTATION, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
