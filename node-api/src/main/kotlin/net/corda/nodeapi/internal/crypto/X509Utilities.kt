@@ -448,7 +448,7 @@ fun X509Certificate.toSimpleString(): String {
         "null"
     }
     val authorityKeyIdentifier = try {
-        AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
+        AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifierOctets.toHex()
     } catch (e: Exception) {
         "null"
     }
