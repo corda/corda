@@ -39,7 +39,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
      */
-    operator fun get(key: K): V? = cache.get(key)?.orElse(null)
+    operator fun get(key: K): V? = cache.get(key).orElse(null)
 
     val size: Long get() = allPersisted.use { it.count() }
 
@@ -457,7 +457,7 @@ open class AppendOnlyPersistentMap<K : Any, V, E, out EK>(
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    override val cache = NonInvalidatingCache(
+    override val cache: LoadingCache<K, Transactional<V>> = NonInvalidatingCache(
             cacheFactory = cacheFactory,
             name = name,
             loadFunction = { key: K -> transactionalLoadValue(key) })
@@ -480,7 +480,7 @@ class WeightBasedAppendOnlyPersistentMap<K : Any, V, E, out EK>(
 
     override fun weight(key: K, value: V): Int = weighingFunc(key, value)
 
-    override val cache = NonInvalidatingWeightBasedCache(
+    override val cache: LoadingCache<K, Transactional<V>> = NonInvalidatingWeightBasedCache(
             cacheFactory = cacheFactory,
             name = name,
             weigher = { key, value: Transactional<V> ->

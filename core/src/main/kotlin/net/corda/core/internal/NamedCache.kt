@@ -26,7 +26,7 @@ interface NamedCacheFactory {
 
     fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V>
 
-    fun <K : Any, V : Any> buildNamed(name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> = buildNamed(Caffeine.newBuilder(), name, loader)
+    fun <K : Any, V : Any> buildNamed(name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?> = buildNamed(Caffeine.newBuilder(), name, loader)
 
-    fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V>
+    fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?>
 }

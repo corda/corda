@@ -26,7 +26,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     private val cache = NonInvalidatingUnboundCache(
             name,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
-            removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass),
+            removalListener = ExplicitRemoval<K, E, EK>(toPersistentEntityKey, persistentEntityClass),
             cacheFactory = cacheFactory
     )
 
@@ -38,8 +38,8 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 
-    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
-        override fun onRemoval(key: K?, value: V?, cause: RemovalCause) {
+    class ExplicitRemoval<K, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, Any> {
+        override fun onRemoval(key: K?, value: Any?, cause: RemovalCause) {
             when (cause) {
                 RemovalCause.EXPLICIT -> {
                     val session = currentDBSession()
@@ -58,11 +58,13 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     }
 
     override operator fun get(key: K): V? {
-        return cache.get(key)!!.orElse(null)
+        return cache.get(key).orElse(null)
     }
 
     fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().asSequence().filter { it.value.isPresent }.map { Pair(it.key, it.value.get()) }
+        return cache.asMap().asSequence().mapNotNull { (key, optionalValue) ->
+            optionalValue.orElse(null)?.let { value -> Pair(key, value) }
+        }
     }
 
     override val size get() = cache.estimatedSize().toInt()
@@ -76,7 +78,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
             // Value wasn't in the cache and wasn't in DB (because the cache is unbound) so save it.
             merge(key, value)
             Optional.of(value)
-        }!!
+        }
         if (!insertionAttempt) {
             if (existingInCache.isPresent) {
                 // Key already exists in cache, store the new value in the DB and refresh cache.
@@ -121,7 +123,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
      * Removes the mapping for the specified key from this map and underlying storage if present.
      */
     override fun remove(key: K): V? {
-        val result = cache.get(key)!!.orElse(null)
+        val result = cache.get(key).orElse(null)
         cache.invalidate(key)
         return result
     }
@@ -213,7 +215,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)
         set(key, value)
-        return old!!.orElse(null)
+        return old.orElse(null)
     }
 
     fun load() {

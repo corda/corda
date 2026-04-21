@@ -84,9 +84,9 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
         return configuredForNamed(caffeine, name).build<K, V>()
     }
 
-    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?> {
         checkState(name)
-        return configuredForNamed(caffeine, name).build<K, V>(loader)
+        return configuredForNamed(caffeine, name).build<K, V?>(loader)
     }
 
     protected open val defaultCacheSize = 1024L

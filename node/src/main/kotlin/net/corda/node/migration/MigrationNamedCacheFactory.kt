@@ -48,7 +48,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
         return configuredForNamed(caffeine, name).build()
     }
 
-    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?> {
         return configuredForNamed(caffeine, name).build(loader)
     }
 
