@@ -110,6 +110,10 @@ class BasicHSMKeyManagementService(
         candidateKeys.filter(::containsPublicKey)
     }
 
+    override fun isKeyRotated(candidateKey: PublicKey): Boolean {
+        return false
+    }
+
     override fun freshKeyInternal(externalId: UUID?): PublicKey {
         val keyPair = generateKeyPair()
         database.transaction {

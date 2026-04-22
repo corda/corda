@@ -39,6 +39,8 @@ class MockKeyManagementService(
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
+    override fun isKeyRotated(candidateKey: PublicKey): Boolean { return false }
+
     override fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
 
     override fun start(initialKeysAndAliases: Iterable<Pair<PublicKey, String>>) {
