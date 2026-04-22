@@ -33,7 +33,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
 
     protected class PendingKeyValue(val transactions: MutableSet<DatabaseTransaction>, val estimatedSize: Int)
 
-    protected abstract val cache: LoadingCache<K, Transactional<V>>
+    protected abstract val cache: LoadingCache<K, Transactional<V>?>
     protected val pendingKeys = ConcurrentHashMap<K, PendingKeyValue>()
 
     /**

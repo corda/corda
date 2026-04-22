@@ -15,7 +15,7 @@ class DeduplicationChecker(cacheExpiry: Duration, name: String = "DeduplicationC
     private val watermarkCache = cacheFactory.buildNamed(Caffeine.newBuilder()
             .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS), "${name}_watermark", WatermarkCacheLoader)
 
-    private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong> {
+    private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong?> {
         override fun load(key: Any) = AtomicLong(-1)
     }
 

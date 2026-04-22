@@ -17,12 +17,12 @@ class ExternalVerifierNamedCacheFactory : NamedCacheFactory {
         return configure(caffeine, name).build()
     }
 
-    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?> {
         checkCacheName(name)
         return configure(caffeine, name).build(loader)
     }
 
-    private fun<K, V> configure(caffeine: Caffeine<in K, in V>, name: String): Caffeine<in K, in V> {
+    private fun<K : Any, V : Any> configure(caffeine: Caffeine<in K, in V>, name: String): Caffeine<in K, in V> {
         return when (name) {
             "AttachmentsClassLoader_cache" -> caffeine.maximumSize(32)
             "ExternalVerifier_parties" -> caffeine.maximumSize(DEFAULT_CACHE_SIZE)

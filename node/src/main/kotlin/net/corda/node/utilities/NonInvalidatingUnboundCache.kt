@@ -7,7 +7,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.RemovalListener
 import net.corda.core.internal.NamedCacheFactory
 
-class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cache: LoadingCache<K, V>) : LoadingCache<K, V> by cache {
+class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cache: LoadingCache<K, V?>) : LoadingCache<K, V?> by cache {
     constructor(name: String,
                 cacheFactory: NamedCacheFactory,
                 loadFunction: (K) -> V?,
@@ -20,7 +20,7 @@ class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cach
                                                   cacheFactory: NamedCacheFactory,
                                                   loadFunction: (K) -> V?,
                                                   removalListener: RemovalListener<K, V>,
-                                                  keysToPreload: () -> Iterable<K>): LoadingCache<K, V> {
+                                                  keysToPreload: () -> Iterable<K>): LoadingCache<K, V?> {
             val builder = Caffeine.newBuilder().removalListener(removalListener).executor(SameThreadExecutor.getExecutor())
             return cacheFactory.buildNamed(builder, name, NonInvalidatingCacheLoader(loadFunction)).apply {
                 getAll(keysToPreload())
@@ -29,10 +29,7 @@ class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cach
     }
 
     // TODO look into overriding loadAll() if we ever use it
-    private class NonInvalidatingCacheLoader<K : Any, V : Any>(val loadFunction: (K) -> V?) : CacheLoader<K, V> {
-        override fun reload(key: K, oldValue: V): V {
-            throw IllegalStateException("Non invalidating cache refreshed")
-        }
+    private class NonInvalidatingCacheLoader<K : Any, V : Any>(val loadFunction: (K) -> V?) : CacheLoader<K, V?> {
 
         override fun load(key: K) = loadFunction(key)
     }

@@ -38,7 +38,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 
-    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
+    class ExplicitRemoval<K : Any, V : Any, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
         override fun onRemoval(key: K?, value: V?, cause: RemovalCause) {
             when (cause) {
                 RemovalCause.EXPLICIT -> {
@@ -62,7 +62,14 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     }
 
     fun all(): Sequence<Pair<K, V>> {
-        return cache.asMap().asSequence().filter { it.value.isPresent }.map { Pair(it.key, it.value.get()) }
+        return cache.asMap().asSequence()
+                .mapNotNull { (key, value) ->
+                    if (value != null && value.isPresent) {
+                        key to value.get()
+                    } else {
+                        null
+                    }
+                }
     }
 
     override val size get() = cache.estimatedSize().toInt()

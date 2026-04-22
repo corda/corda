@@ -12,7 +12,7 @@ class NamedCacheTest : NamedCacheFactory {
         throw IllegalStateException("Should not be called")
     }
 
-    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V?>): LoadingCache<K, V?> {
         throw IllegalStateException("Should not be called")
     }
 

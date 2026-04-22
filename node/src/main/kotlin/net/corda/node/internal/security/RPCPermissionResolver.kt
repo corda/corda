@@ -114,12 +114,12 @@ internal object RPCPermissionResolver : PermissionResolver {
             .build(InterfaceMethodMapCacheLoader())
 
     private class InterfaceMethodMapCacheLoader : CacheLoader<String, Map<String, Set<String>>> {
-        override fun load(interfaceName: String): Map<String, Set<String>>? {
+        override fun load(interfaceName: String): Map<String, Set<String>> {
             return try {
                 inspectInterface(interfaceName)
             } catch (ex: Exception) {
                 logger.error("Unexpected error when populating cache for $interfaceName", ex)
-                null
+                emptyMap()
             }
         }
     }
