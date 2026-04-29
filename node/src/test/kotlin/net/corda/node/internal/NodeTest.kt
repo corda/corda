@@ -1,19 +1,20 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.delete
-import net.corda.core.internal.getJavaUpdateVersion
-import net.corda.core.internal.list
 import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
-import net.corda.node.services.config.*
+import net.corda.node.services.config.FlowOverrideConfig
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.NodeRpcSettings
+import net.corda.node.services.config.TelemetryConfiguration
+import net.corda.node.services.config.VerifierType
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -21,21 +22,21 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.createNodeInfoAndSigned
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.nio.file.Path
 import java.time.Duration
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class NodeTest {
     @Rule
@@ -46,8 +47,8 @@ class NodeTest {
     val testSerialization = SerializationEnvironmentRule()
 
     private fun nodeInfoFile(): Path? {
-        return temporaryFolder.root.toPath().list { paths ->
-            paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findAny().orElse(null)
+        return temporaryFolder.root.toPath().useDirectoryEntries { paths ->
+            paths.find { it.name.startsWith(NODE_INFO_FILE_NAME_PREFIX) }
         }
     }
 
@@ -58,7 +59,7 @@ class NodeTest {
         try {
             return path.readObject<SignedNodeInfo>().verified()
         } finally {
-            path.delete()
+            path.deleteExisting()
         }
     }
 
@@ -90,7 +91,7 @@ class NodeTest {
                 val persistentNodeInfo = NodeInfoSchemaV1.PersistentNodeInfo(
                         id = 0,
                         hash = nodeInfo.serialize().hash.toString(),
-                        addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                        addresses = nodeInfo.addresses.map(NodeInfoSchemaV1.DBHostAndPort::fromHostAndPort),
                         legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
                             NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
                         },
@@ -137,11 +138,11 @@ class NodeTest {
                 serial = nodeInfo1.serial
         )
 
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
-            it.transaction {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { persistence ->
+            persistence.transaction {
                 session.save(persistentNodeInfo1)
             }
-            it.transaction {
+            persistence.transaction {
                 session.save(persistentNodeInfo2)
             }
 
@@ -154,22 +155,6 @@ class NodeTest {
             //this throws an exception with old behaviour
             node.generateNodeInfo()
         }
-    }
-
-    // JDK 11 check
-    @Test(timeout=300_000)
-	fun `test getJavaRuntimeVersion`() {
-        assertTrue(SystemUtils.IS_JAVA_1_8 || SystemUtils.IS_JAVA_11)
-    }
-
-    // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
-    @Ignore
-    @Test(timeout=300_000)
-	fun `test getJavaUpdateVersion`() {
-        assertThat(getJavaUpdateVersion("1.8.0_202-ea")).isEqualTo(202)
-        assertThat(getJavaUpdateVersion("1.8.0_202")).isEqualTo(202)
-        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0_202wrong-format") }
-        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0-adoptopenjdk") }
     }
 
     private fun getAllInfos(database: CordaPersistence): List<NodeInfoSchemaV1.PersistentNodeInfo> {

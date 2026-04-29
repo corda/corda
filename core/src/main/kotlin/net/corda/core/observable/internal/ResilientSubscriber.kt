@@ -33,7 +33,6 @@ class ResilientSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actua
      * It only delegates to [SafeSubscriber.onError] if it wraps an [ActionSubscriber] which is
      * a leaf in an Subscribers' tree structure.
      */
-    @Suppress("TooGenericExceptionCaught")
     override fun onNext(t: T) {
         try {
             actual.onNext(t)
@@ -62,7 +61,6 @@ class ResilientSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actua
     /**
      * Duplicate of [SafeSubscriber._onError]. However, it will not call [Subscriber.unsubscribe].
      */
-    @Suppress("TooGenericExceptionCaught")
     override fun _onError(e: Throwable) {
         @Suppress("DEPRECATION")
         RxJavaPlugins.getInstance().errorHandler.handleError(e)

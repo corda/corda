@@ -1,8 +1,6 @@
 package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
@@ -14,6 +12,8 @@ import picocli.CommandLine
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 

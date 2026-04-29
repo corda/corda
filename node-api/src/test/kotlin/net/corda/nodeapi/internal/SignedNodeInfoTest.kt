@@ -6,13 +6,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.signWith
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.coretesting.internal.TestNodeInfoBuilder
-import net.corda.coretesting.internal.signWith
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule

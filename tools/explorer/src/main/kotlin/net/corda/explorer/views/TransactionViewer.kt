@@ -57,7 +57,7 @@ class TransactionViewer : CordaView("Transactions") {
     override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
 
     private var scrollPosition: Int = 0
-    private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
+    private var expander: ExpanderColumn<TransactionViewer.Transaction>
     private var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
