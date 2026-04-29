@@ -61,8 +61,7 @@ pipeline {
 
         stage('Deploy Nodes') {
             steps {
-            /* excludeShell is temporary inclusion */
-                sh "./gradlew -DexcludeShell --no-daemon --build-cache jar deployNodes"
+                sh "./gradlew --no-daemon --build-cache jar deployNodes"
             }
         }
     }
