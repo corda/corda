@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.notary.experimental.raft
 
 import io.atomix.catalyst.transport.Address

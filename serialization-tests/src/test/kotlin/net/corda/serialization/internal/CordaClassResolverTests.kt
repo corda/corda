@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.serialization.internal
 
 import com.esotericsoftware.kryo.*

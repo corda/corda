@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.node.internal
 
 import net.corda.core.flows.FlowLogic

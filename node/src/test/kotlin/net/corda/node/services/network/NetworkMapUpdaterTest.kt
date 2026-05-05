@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix

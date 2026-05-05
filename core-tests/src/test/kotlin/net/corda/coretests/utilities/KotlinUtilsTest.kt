@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.coretests.utilities
 
 import com.esotericsoftware.kryo.KryoException

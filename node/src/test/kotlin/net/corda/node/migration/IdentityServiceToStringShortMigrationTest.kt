@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.node.migration
 
 import com.nhaarman.mockito_kotlin.doReturn

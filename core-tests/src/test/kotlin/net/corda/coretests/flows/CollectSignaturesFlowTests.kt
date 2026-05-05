@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable

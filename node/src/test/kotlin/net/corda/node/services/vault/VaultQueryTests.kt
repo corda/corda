@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.node.services.vault
 
 import com.nhaarman.mockito_kotlin.mock

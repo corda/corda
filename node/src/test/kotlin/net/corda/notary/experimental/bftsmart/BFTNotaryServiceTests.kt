@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.notary.experimental.bftsmart
 
 import com.nhaarman.mockito_kotlin.doReturn

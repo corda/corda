@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.toSynchronised
