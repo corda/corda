@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.nodeapitests.internal.network
 
 import com.typesafe.config.ConfigFactory

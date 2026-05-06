@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.instanceOf;
  *
  * but using the `registerFlowFactory` method implemented in response to https://r3-cev.atlassian.net/browse/CORDA-916
  */
+@SuppressWarnings("deprecation")
 public class TestResponseFlowInIsolationInJava {
 
     private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages()));

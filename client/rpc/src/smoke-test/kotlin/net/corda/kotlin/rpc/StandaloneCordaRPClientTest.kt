@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.kotlin.rpc
 
 import com.google.common.hash.Hashing
