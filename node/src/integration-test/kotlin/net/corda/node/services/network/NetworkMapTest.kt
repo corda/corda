@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.node.services.network
 
 import net.corda.core.crypto.random63BitValue
