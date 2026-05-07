@@ -45,7 +45,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
 import java.io.FilterInputStream
 import java.io.InputStream
