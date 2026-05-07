@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package net.corda.node.services.vault
 
 import net.corda.core.internal.packageName
@@ -13,7 +11,6 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
-import org.junit.rules.ExpectedException
 
 class VaultQueryExceptionsTests : VaultQueryParties by rule {
 
@@ -31,10 +28,6 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
                     DummyLinearStateSchemaV1::class.packageName)
         }
     }
-
-    @Rule
-    @JvmField
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     @Rule
     @JvmField

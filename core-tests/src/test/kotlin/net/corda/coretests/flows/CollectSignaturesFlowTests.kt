@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
@@ -38,11 +36,10 @@ import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
-import org.hamcrest.CoreMatchers.`is`
 import org.junit.AfterClass
-import org.junit.Assert
 import org.junit.Test
 import java.security.PublicKey
+import kotlin.test.assertTrue
 
 class CollectSignaturesFlowTests : WithContracts {
     companion object {
@@ -94,7 +91,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        Assert.assertThat(missingSigners, `is`(emptySet()))
+        assertTrue(missingSigners.isEmpty())
     }
 
     @Test(timeout=300_000)
@@ -124,7 +121,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        Assert.assertThat(missingSigners, `is`(emptySet()))
+        assertTrue(missingSigners.isEmpty())
     }
 
     @Test(expected = IllegalArgumentException::class, timeout=300_000)
@@ -154,7 +151,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice))).resultFuture
         mockNet.runNetwork()
         val signedTx = future.getOrThrow()
-        Assert.assertThat(signedTx.getMissingSigners(), `is`(emptySet()))
+        assertTrue(signedTx.getMissingSigners().isEmpty())
     }
 
     @Test(timeout=300_000)
