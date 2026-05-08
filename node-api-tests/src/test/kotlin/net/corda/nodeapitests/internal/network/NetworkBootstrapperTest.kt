@@ -38,7 +38,6 @@ import org.junit.After
 import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import java.nio.file.Path
@@ -50,10 +49,6 @@ class NetworkBootstrapperTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
-
-    @Rule
-    @JvmField
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     @Rule
     @JvmField
@@ -295,9 +290,9 @@ class NetworkBootstrapperTest {
         assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         // register overlapping package name
         createNodeConfFile("bob", bobConfig)
-        expectedEx.expect(IllegalArgumentException::class.java)
-        expectedEx.expectMessage("Multiple packages added to the packageOwnership overlap.")
-        bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
+        assertThatThrownBy {
+            bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
+        }.isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Multiple packages added to the packageOwnership overlap.")
     }
 
     @Test(timeout=300_000)

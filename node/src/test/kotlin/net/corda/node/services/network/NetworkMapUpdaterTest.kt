@@ -56,9 +56,7 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hamcrest.collection.IsIterableContainingInAnyOrder
 import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -161,7 +159,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash)
 
         assertThat(nodeReadyFuture).isDone()
 
@@ -173,13 +171,13 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         //4 node info from network map, and 1 from file.
 
-        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
                 signedNodeInfo4.raw.hash,
                 fileNodeInfoAndSigned.signed.raw.hash
-        ))
+        )
     }
 
     @Test(timeout=300_000)
@@ -204,13 +202,13 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
 
 
-        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
                 signedNodeInfo4.raw.hash,
                 fileNodeInfoAndSigned.signed.raw.hash
-        ))
+        )
 
         //Test remove node.
         listOf(nodeInfo1, nodeInfo2, nodeInfo3, nodeInfo4).forEach {
@@ -248,10 +246,10 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash
-        ))
+        )
 
         // remove one node, add another and update a third.
         server.removeNodeInfo(nodeInfo1)

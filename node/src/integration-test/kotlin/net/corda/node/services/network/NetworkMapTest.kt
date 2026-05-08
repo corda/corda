@@ -25,10 +25,8 @@ import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hamcrest.CoreMatchers.`is`
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -280,9 +278,9 @@ class NetworkMapTest {
         // Make sure the nodes aren't getting the node infos from their additional-node-infos directories
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
-            assertThat(nodeInfosDir.list().size, `is`(1))
-            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>()
-                    .verified().legalIdentities.first(), `is`(this.nodeInfo.legalIdentities.first()))
+            assertEquals(1, nodeInfosDir.list().size)
+            assertEquals(this.nodeInfo.legalIdentities.first(), nodeInfosDir.list().single().readObject<SignedNodeInfo>()
+                    .verified().legalIdentities.first())
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }

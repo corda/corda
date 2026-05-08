@@ -17,13 +17,11 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.hamcrest.CoreMatchers
-import org.hamcrest.Matcher
-import org.hamcrest.Matchers.*
 import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  */
@@ -100,9 +98,9 @@ class IdentityServiceToStringShortMigrationTest {
                 val hashToIdentityResultSet = hashToIdentityStatement.executeQuery()
 
                 //check that there is a row for every "new" hash
-                Assert.assertThat(hashToIdentityResultSet.next(), `is`(true))
+                assertTrue(hashToIdentityResultSet.next())
                 //check that the pk_hash actually matches what we expect (kinda redundant, but deserializing the whole PartyAndCertificate feels like overkill)
-                Assert.assertThat(hashToIdentityResultSet.getString(1), `is`(it.owningKey.toStringShort()))
+                assertEquals(it.owningKey.toStringShort(), hashToIdentityResultSet.getString(1))
 
                 val nameToHashStatement = connection.prepareStatement("SELECT name FROM node_named_identities WHERE pk_hash=?")
                 nameToHashStatement.setString(1, it.owningKey.toStringShort())
@@ -110,7 +108,8 @@ class IdentityServiceToStringShortMigrationTest {
 
                 //if there is no result for this key, this means its an identity that is not stored in the DB (IE, it's been seen after another identity has already been mapped to it)
                 if (nameToHashResultSet.next()) {
-                    Assert.assertThat(nameToHashResultSet.getString(1), `is`(anyOf(groupedByNameIdentities.getValue(it.name).map<PartyAndCertificate, Matcher<String>?> { identity -> CoreMatchers.equalTo(identity.name.toString()) })))
+                    val expectedNames = groupedByNameIdentities.getValue(it.name).map { identity -> identity.name.toString() }
+                    assertTrue(nameToHashResultSet.getString(1) in expectedNames)
                 } else {
                     logger.warn("did not find a PK_HASH for ${it.name}")
                     listOfNamesWithoutPkHash.add(it.name)
@@ -121,7 +120,7 @@ class IdentityServiceToStringShortMigrationTest {
 
         listOfNamesWithoutPkHash.forEach {
             //the only time an identity name does not have a PK_HASH is if there are multiple identities associated with that name
-            Assert.assertThat(groupedByNameIdentities[it]?.size, `is`(greaterThan(1)))
+            assertTrue((groupedByNameIdentities[it]?.size ?: 0) > 1)
         }
     }
 }
