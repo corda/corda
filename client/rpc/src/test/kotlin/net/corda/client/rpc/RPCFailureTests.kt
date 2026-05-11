@@ -49,14 +49,14 @@ class RPCFailureTests {
     @Test(timeout=300_000)
 	fun `kotlin NPE`() = rpc {
         assertThatThrownBy { it.kotlinNPE() }.isInstanceOf(CordaRuntimeException::class.java)
-                .hasMessageContaining("kotlin.KotlinNullPointerException")
+                .hasMessageContaining("java.lang.NullPointerException")
     }
 
     @Test(timeout=300_000)
 	fun `kotlin NPE async`() = rpc {
         val future = it.kotlinNPEAsync()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
-                .hasMessageContaining("kotlin.KotlinNullPointerException")
+                .hasMessageContaining("java.lang.NullPointerException")
     }
 
     @Test(timeout=300_000)

@@ -1,6 +1,5 @@
 plugins {
-    id "org.springframework.boot" version "1.5.21.RELEASE"
-    id 'io.spring.dependency-management' version '1.0.9.RELEASE' apply false
+    id "org.springframework.boot" version '3.0.4'
 }
 
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
@@ -14,7 +13,7 @@ ext['jackson.version'] = "$jackson_kotlin_version"
 ext['dropwizard-metrics.version'] = "$metrics_version"
 ext['mockito.version'] = "$mockito_version"
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'application'
@@ -39,24 +38,24 @@ sourceSets {
 }
 
 configurations {
-    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestCompile.extendsFrom testImplementation
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
     demoArtifacts.extendsFrom testRuntimeClasspath
-    systemTestCompile.extendsFrom testCompile
+    systemTestCompile.extendsFrom testImplementation
 }
 
 evaluationDependsOn("cordapp")
 evaluationDependsOn("web")
 
 dependencies {
-    compile "commons-io:commons-io:$commons_io_version"
-    compile project(":samples:irs-demo:web")
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    implementation "commons-io:commons-io:$commons_io_version"
+    implementation project(":samples:irs-demo:web")
+    implementation('org.springframework.boot:spring-boot-starter-web:3.0.4') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
 
-    testCompile project(':node-driver')
+    testImplementation project(':node-driver')
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -65,15 +64,15 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
     slowIntegrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
-    testCompile "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
-    testCompile "org.seleniumhq.selenium:selenium-java:$selenium_version"
-    testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
+    testImplementation "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
+    testImplementation "org.seleniumhq.selenium:selenium-java:$selenium_version"
+    testImplementation "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
-bootRepackage {
+bootJar {
     enabled = false
 }
 

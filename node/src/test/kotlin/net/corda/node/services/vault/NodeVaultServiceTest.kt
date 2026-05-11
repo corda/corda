@@ -1,9 +1,9 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
@@ -35,7 +35,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
-import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
@@ -469,7 +468,6 @@ class NodeVaultServiceTest {
 
     @Test(timeout=300_000)
 	fun `unconsumedStatesForSpending from two issuer parties`() {
-        Assume.assumeTrue(!IS_OPENJ9) // openj9 OOM issue
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(1))
