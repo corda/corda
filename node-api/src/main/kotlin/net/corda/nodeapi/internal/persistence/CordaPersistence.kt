@@ -315,7 +315,7 @@ class CordaPersistence(
             connectionBagField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
-            val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadList")
+            val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadLocalList")
             threadListField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
