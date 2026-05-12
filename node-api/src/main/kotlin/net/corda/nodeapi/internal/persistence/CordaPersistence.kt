@@ -315,12 +315,27 @@ class CordaPersistence(
             connectionBagField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
-            val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadLocalList")
+            val threadListField: Field = findThreadLocalListField(ConcurrentBag::class.java)
             threadListField.isAccessible = true
             @Suppress("UNCHECKED_CAST")
             val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
             threadList
         }
+    }
+
+    private fun findThreadLocalListField(clazz: Class<*>): Field {
+        // "threadList" is supported in Hikari 5.1.0, "threadLocalList" in 6.3.1 onwards
+        // this makes both compatible in Corda, and if the name changes again we will still be able to find it by type
+        for (name in listOf("threadList", "threadLocalList")) {
+            try {
+                return clazz.getDeclaredField(name)
+            } catch (_: NoSuchFieldException) { }
+        }
+        return clazz.declaredFields.singleOrNull { ThreadLocal::class.java.isAssignableFrom(it.type) }
+                ?: throw NoSuchFieldException(
+                        "Could not locate the per-thread bag-entry list on ${clazz.name}. " +
+                                "Tried names [threadList, threadLocalList] and type-based lookup for ThreadLocal."
+                )
     }
 }
 
