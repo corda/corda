@@ -3,20 +3,16 @@ package net.corda.serialization.internal.amqp;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.io.NotSerializableException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 
-@SuppressWarnings("deprecation")
 public class JavaEvolutionTests {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
     // Class as it was when it was serialized and written to disk. Uncomment
     // if the test referencing the object needs regenerating.
@@ -84,7 +80,7 @@ public class JavaEvolutionTests {
     }
 
     @Test
-    public void testN2AddsPrimitive() throws IOException {
+    public void testN2AddsPrimitive() {
         // Uncomment to regenerate the base state of the test
         /*
         N2 n = new N2("This is only a test");
@@ -93,11 +89,12 @@ public class JavaEvolutionTests {
                 n, TestSerializationContext.testSerializationContext));
         */
 
-        exception.expect(NotSerializableException.class);
-        new DeserializationInput(factory).deserialize(
-                new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
-                N2.class,
-                TestSerializationContext.testSerializationContext);
+        assertThrows(NotSerializableException.class, () ->
+            new DeserializationInput(factory).deserialize(
+                    new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
+                    N2.class,
+                    TestSerializationContext.testSerializationContext)
+        );
     }
 
     // Class as it was when it was serialized and written to disk. Uncomment

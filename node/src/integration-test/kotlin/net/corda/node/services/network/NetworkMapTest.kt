@@ -278,9 +278,10 @@ class NetworkMapTest {
         // Make sure the nodes aren't getting the node infos from their additional-node-infos directories
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
-            assertEquals(1, nodeInfosDir.list().size)
-            assertEquals(this.nodeInfo.legalIdentities.first(), nodeInfosDir.list().single().readObject<SignedNodeInfo>()
-                    .verified().legalIdentities.first())
+            val nodeInfos = nodeInfosDir.list()
+            assertThat(nodeInfos).hasSize(1)
+            assertThat(nodeInfos.single().readObject<SignedNodeInfo>().verified().legalIdentities.first())
+                    .isEqualTo(nodeInfo.legalIdentities.first())
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }

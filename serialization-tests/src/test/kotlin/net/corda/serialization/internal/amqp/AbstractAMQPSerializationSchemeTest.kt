@@ -9,12 +9,14 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.testutils.serializationProperties
 import net.corda.coretesting.internal.createTestSerializationEnv
+import org.hamcrest.CoreMatchers
+import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.Matchers
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.net.URLClassLoader
 import java.util.concurrent.ThreadLocalRandom
 import java.util.stream.IntStream
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class AbstractAMQPSerializationSchemeTest {
 
@@ -23,7 +25,7 @@ class AbstractAMQPSerializationSchemeTest {
     @Test(timeout=300_000)
 	fun `number of cached factories must be bounded by maxFactories`() {
         val genesisContext = SerializationContextImpl(
-                ByteSequence.of(byteArrayOf('c'.toByte(), 'o'.toByte(), 'r'.toByte(), 'd'.toByte(), 'a'.toByte(), 0.toByte(), 0.toByte(), 1.toByte())),
+                ByteSequence.of(byteArrayOf('c'.code.toByte(), 'o'.code.toByte(), 'r'.code.toByte(), 'd'.code.toByte(), 'a'.code.toByte(), 0.toByte(), 0.toByte(), 1.toByte())),
                 ClassLoader.getSystemClassLoader(),
                 AllWhitelist,
                 serializationProperties,
@@ -59,10 +61,10 @@ class AbstractAMQPSerializationSchemeTest {
             val testString = "TEST${ThreadLocalRandom.current().nextInt()}"
             val serialized = scheme.serialize(testString, context)
             val deserialized = serialized.deserialize(context = context, serializationFactory = serializationEnvironment.serializationFactory)
-            assertEquals(testString, deserialized)
-            assertTrue(backingMap.size <= maxFactories)
+            assertThat(testString, `is`(deserialized))
+            assertThat(backingMap.size, `is`(Matchers.lessThanOrEqualTo(maxFactories)))
         }
-        assertTrue(backingMap.size <= maxFactories)
+        assertThat(backingMap.size, CoreMatchers.`is`(Matchers.lessThanOrEqualTo(maxFactories)))
     }
 }
 

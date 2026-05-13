@@ -1,7 +1,7 @@
 package net.corda.node.migration
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.crypto.toStringShort
@@ -17,11 +17,15 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.hamcrest.CoreMatchers
+import org.hamcrest.Matcher
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.anyOf
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.number.OrderingComparison.greaterThan
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  */
@@ -98,9 +102,9 @@ class IdentityServiceToStringShortMigrationTest {
                 val hashToIdentityResultSet = hashToIdentityStatement.executeQuery()
 
                 //check that there is a row for every "new" hash
-                assertTrue(hashToIdentityResultSet.next())
+                assertThat(hashToIdentityResultSet.next(), `is`(true))
                 //check that the pk_hash actually matches what we expect (kinda redundant, but deserializing the whole PartyAndCertificate feels like overkill)
-                assertEquals(it.owningKey.toStringShort(), hashToIdentityResultSet.getString(1))
+                assertThat(hashToIdentityResultSet.getString(1), `is`(it.owningKey.toStringShort()))
 
                 val nameToHashStatement = connection.prepareStatement("SELECT name FROM node_named_identities WHERE pk_hash=?")
                 nameToHashStatement.setString(1, it.owningKey.toStringShort())
@@ -108,8 +112,7 @@ class IdentityServiceToStringShortMigrationTest {
 
                 //if there is no result for this key, this means its an identity that is not stored in the DB (IE, it's been seen after another identity has already been mapped to it)
                 if (nameToHashResultSet.next()) {
-                    val expectedNames = groupedByNameIdentities.getValue(it.name).map { identity -> identity.name.toString() }
-                    assertTrue(nameToHashResultSet.getString(1) in expectedNames)
+                    assertThat(nameToHashResultSet.getString(1), `is`(anyOf(groupedByNameIdentities.getValue(it.name).map<PartyAndCertificate, Matcher<String>?> { identity -> CoreMatchers.equalTo(identity.name.toString()) })))
                 } else {
                     logger.warn("did not find a PK_HASH for ${it.name}")
                     listOfNamesWithoutPkHash.add(it.name)
@@ -120,7 +123,7 @@ class IdentityServiceToStringShortMigrationTest {
 
         listOfNamesWithoutPkHash.forEach {
             //the only time an identity name does not have a PK_HASH is if there are multiple identities associated with that name
-            assertTrue((groupedByNameIdentities[it]?.size ?: 0) > 1)
+            assertThat(groupedByNameIdentities[it]?.size!!, greaterThan(1))
         }
     }
 }

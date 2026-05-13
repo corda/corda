@@ -6,10 +6,11 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.Test
 import org.mockito.Mockito
 import java.lang.IllegalStateException
-import kotlin.test.assertTrue
 
 private val marker = "This is a special marker"
 
@@ -55,12 +56,14 @@ class NodeFlowManagerTest {
     }
 
 
-    @Test(expected = IllegalStateException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `should fail to validate if more than one registration with equal weight`() {
         val nodeFlowManager = NodeFlowManager()
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp::class.java)
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp2::class.java)
-        nodeFlowManager.validateRegistrations()
+        assertThatIllegalStateException().isThrownBy {
+            nodeFlowManager.validateRegistrations()
+        }
     }
 
     @Test(timeout = 300_000)
@@ -71,7 +74,7 @@ class NodeFlowManagerTest {
         nodeFlowManager.validateRegistrations()
         val factory = nodeFlowManager.getFlowFactoryForInitiatingFlow(Init::class.java)!!
         val flow = factory.createFlow(Mockito.mock(FlowSession::class.java))
-        assertTrue(flow is RespSub)
+        assertThat(flow).isInstanceOf(RespSub::class.java)
     }
 
     @Test(timeout = 300_000)
@@ -82,14 +85,14 @@ class NodeFlowManagerTest {
         nodeFlowManager.validateRegistrations()
         var factory = nodeFlowManager.getFlowFactoryForInitiatingFlow(Init::class.java)!!
         var flow = factory.createFlow(Mockito.mock(FlowSession::class.java))
-        assertTrue(flow is RespSub)
+        assertThat(flow).isInstanceOf(RespSub::class.java)
         // update
         nodeFlowManager.registerInitiatedFlow(Init::class.java, RespSubSub::class.java)
         nodeFlowManager.validateRegistrations()
 
         factory = nodeFlowManager.getFlowFactoryForInitiatingFlow(Init::class.java)!!
         flow = factory.createFlow(Mockito.mock(FlowSession::class.java))
-        assertTrue(flow is RespSubSub)
+        assertThat(flow).isInstanceOf(RespSubSub::class.java)
     }
 
     @Test(timeout=300_000)
@@ -103,6 +106,6 @@ class NodeFlowManagerTest {
         val factory = nodeFlowManager.getFlowFactoryForInitiatingFlow(Init::class.java)!!
         val flow = factory.createFlow(Mockito.mock(FlowSession::class.java))
 
-        assertTrue(flow is Resp)
+        assertThat(flow).isInstanceOf(Resp::class.java)
     }
 }

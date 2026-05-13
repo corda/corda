@@ -36,10 +36,11 @@ import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.AfterClass
 import org.junit.Test
 import java.security.PublicKey
-import kotlin.test.assertTrue
 
 class CollectSignaturesFlowTests : WithContracts {
     companion object {
@@ -91,7 +92,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        assertTrue(missingSigners.isEmpty())
+        assertThat(missingSigners).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -121,10 +122,10 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        assertTrue(missingSigners.isEmpty())
+        assertThat(missingSigners).isEmpty()
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `throws exception when extra sessions are initiated`() {
         bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
@@ -136,7 +137,9 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice)))
                 .resultFuture
         mockNet.runNetwork()
-        future.getOrThrow()
+        assertThatIllegalArgumentException().isThrownBy {
+            future.getOrThrow()
+        }
     }
 
     @Test(timeout=300_000)
@@ -151,7 +154,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice))).resultFuture
         mockNet.runNetwork()
         val signedTx = future.getOrThrow()
-        assertTrue(signedTx.getMissingSigners().isEmpty())
+        assertThat(signedTx.getMissingSigners()).isEmpty()
     }
 
     @Test(timeout=300_000)

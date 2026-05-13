@@ -12,6 +12,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.rootCause
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.catchThrowable
+import org.hamcrest.Matchers.lessThanOrEqualTo
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -19,7 +21,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class FastThreadLocalTest {
     private inner class ExpensiveObj {
@@ -64,7 +65,7 @@ class FastThreadLocalTest {
                     override fun initialValue() = ExpensiveObj()
                 }
                 runFibers(100, threadLocal::get) // Return value could be anything.
-                assertTrue(expensiveObjCount.get() <= 3)
+                assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
             }
 
     /** @return the number of times a different expensive object was obtained post-suspend. */
