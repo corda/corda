@@ -142,6 +142,20 @@ class CordaModule : SimpleModule("corda-core") {
 }
 
 private class CordaSerializableClassIntrospector(private val context: Module.SetupContext) : BasicClassIntrospector() {
+    override fun constructPropertyCollector(
+            config: MapperConfig<*>?,
+            ac: AnnotatedClass?,
+            type: JavaType,
+            forSerialization: Boolean,
+            mutatorPrefix: String?
+    ): POJOPropertiesCollector {
+        if (hasCordaSerializable(type.rawClass)) {
+            // Adjust the field visibility of CordaSerializable classes on the fly as they are encountered.
+            context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
+        }
+        return super.constructPropertyCollector(config, ac, type, forSerialization, mutatorPrefix)
+    }
+
     override fun constructPropertyCollector(config: MapperConfig<*>?, classDef: AnnotatedClass?, type: JavaType, forSerialization: Boolean, accNaming: AccessorNamingStrategy?): POJOPropertiesCollector {
         if (hasCordaSerializable(type.rawClass)) {
             // Adjust the field visibility of CordaSerializable classes on the fly as they are encountered.
