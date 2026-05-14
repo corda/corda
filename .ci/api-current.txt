@@ -2526,6 +2526,11 @@ public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationPr
   public final int size()
   @NotNull
   public String toString()
+  @NotNull
+  public static final net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain$Companion Companion
+##
+public static final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationUtilsKt extends java.lang.Object
   @NotNull
@@ -5064,7 +5069,7 @@ public interface net.corda.core.node.services.IdentityService
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate certificateFromKey(java.security.PublicKey)
   @Suspendable
-  public abstract boolean containsProofChain(java.security.PublicKey)
+  public boolean containsProofChain(java.security.PublicKey)
   @Suspendable
   @Nullable
   public abstract java.util.UUID externalIdForPublicKey(java.security.PublicKey)
@@ -5074,7 +5079,7 @@ public interface net.corda.core.node.services.IdentityService
   public abstract java.security.cert.CertStore getCaCertStore()
   @Suspendable
   @NotNull
-  public abstract net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain(java.security.PublicKey)
+  public net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain getProofChain(java.security.PublicKey)
   @NotNull
   public abstract java.security.cert.TrustAnchor getTrustAnchor()
   @NotNull
@@ -5089,7 +5094,7 @@ public interface net.corda.core.node.services.IdentityService
   @NotNull
   public net.corda.core.identity.Party requireWellKnownPartyFromAnonymous(net.corda.core.identity.AbstractParty)
   @Suspendable
-  public abstract void updateProofCacheFromTransaction(net.corda.core.transactions.SignedTransaction)
+  public void updateProofCacheFromTransaction(net.corda.core.transactions.SignedTransaction)
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate verifyAndRegisterIdentity(net.corda.core.identity.PartyAndCertificate)
   @Nullable
@@ -5121,6 +5126,7 @@ public interface net.corda.core.node.services.KeyManagementService
   public abstract net.corda.core.identity.PartyAndCertificate freshKeyAndCert(net.corda.core.identity.PartyAndCertificate, boolean, java.util.UUID)
   @NotNull
   public abstract java.util.Set getKeys()
+  public boolean isKeyRotated(java.security.PublicKey)
   @Suspendable
   @NotNull
   public abstract net.corda.core.crypto.TransactionSignature sign(net.corda.core.crypto.SignableData, java.security.PublicKey)
