@@ -2,7 +2,9 @@ package net.corda.core.crypto.keyrotation.crossprovider
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.toStringShort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.loggerFor
 import java.security.GeneralSecurityException
 import java.security.PublicKey
 
@@ -16,6 +18,11 @@ import java.security.PublicKey
  */
 @CordaSerializable
 data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>) {
+
+    companion object {
+        private val logger = loggerFor<KeyRotationProofChain>()
+    }
+
     val originalKey: PublicKey
         get() = proofChain.first().publicKeyOld
 
@@ -109,7 +116,8 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         return try {
             Crypto.doVerify(scheme, proof.publicKeyOld, proof.signature, proof.publicKeyNew.encoded)
             true
-        } catch (_: GeneralSecurityException) {
+        } catch (e: GeneralSecurityException) {
+            logger.info("Invalid key rotation proof. Old key: ${proof.publicKeyOld.toStringShort()}, New key: ${proof.publicKeyNew.toStringShort()}, Message: ${e.message}")
             false
         }
     }
