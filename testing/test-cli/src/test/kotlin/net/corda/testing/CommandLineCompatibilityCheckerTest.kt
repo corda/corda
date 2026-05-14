@@ -1,7 +1,7 @@
 package net.corda.testing
 
 import org.hamcrest.CoreMatchers.*
-import org.junit.Assert
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import picocli.CommandLine
 import java.util.regex.Pattern
@@ -28,8 +28,8 @@ class CommandLineCompatibilityCheckerTest {
             var baseDirectory: String? = null
         }
         val breaks = CommandLineCompatibilityChecker().checkBackwardsCompatibility(CommandLine(value1), CommandLine(value2))
-        Assert.assertThat(breaks.size, `is`(1))
-        Assert.assertThat(breaks.first(), `is`(instanceOf(OptionsChangedError::class.java)))
+        assertThat(breaks.size, `is`(1))
+        assertThat(breaks.first(), `is`(instanceOf(OptionsChangedError::class.java)))
     }
 
 
@@ -48,8 +48,8 @@ class CommandLineCompatibilityCheckerTest {
             var depth: Int? = null
         }
         val breaks = CommandLineCompatibilityChecker().checkBackwardsCompatibility(CommandLine(value1), CommandLine(value2))
-        Assert.assertThat(breaks.size, `is`(2))
-        Assert.assertThat(breaks.first(), `is`(instanceOf(PositionalArgumentsChangedError::class.java)))
+        assertThat(breaks.size, `is`(2))
+        assertThat(breaks.first(), `is`(instanceOf(PositionalArgumentsChangedError::class.java)))
     }
 
     @Test(timeout=300_000)
@@ -61,8 +61,8 @@ class CommandLineCompatibilityCheckerTest {
         class Dummy2
 
         val breaks = CommandLineCompatibilityChecker().checkBackwardsCompatibility(CommandLine(Dummy()), CommandLine(Dummy2()))
-        Assert.assertThat(breaks.size, `is`(1))
-        Assert.assertThat(breaks.first(), `is`(instanceOf(CommandsChangedError::class.java)))
+        assertThat(breaks.size, `is`(1))
+        assertThat(breaks.first(), `is`(instanceOf(CommandsChangedError::class.java)))
     }
 
     @Test(timeout=300_000)
@@ -77,8 +77,8 @@ class CommandLineCompatibilityCheckerTest {
         }
 
         val breaks = CommandLineCompatibilityChecker().checkBackwardsCompatibility(CommandLine(value1), CommandLine(value2))
-        Assert.assertThat(breaks.size, `is`(1))
-        Assert.assertThat(breaks.first(), `is`(instanceOf(TypesChangedError::class.java)))
+        assertThat(breaks.size, `is`(1))
+        assertThat(breaks.first(), `is`(instanceOf(TypesChangedError::class.java)))
     }
 
     @Test(timeout=300_000)
@@ -93,8 +93,8 @@ class CommandLineCompatibilityCheckerTest {
         }
 
         val breaks = CommandLineCompatibilityChecker().checkBackwardsCompatibility(CommandLine(value1), CommandLine(value2))
-        Assert.assertThat(breaks.filter { it is EnumOptionsChangedError }.size, `is`(1))
-        Assert.assertThat(breaks.first { it is EnumOptionsChangedError }.message, containsString(AllOptions.MAYBZ.name))
+        assertThat(breaks.filter { it is EnumOptionsChangedError }.size, `is`(1))
+        assertThat(breaks.first { it is EnumOptionsChangedError }.message, containsString(AllOptions.MAYBZ.name))
     }
 
     @CommandLine.Command(name = "status")

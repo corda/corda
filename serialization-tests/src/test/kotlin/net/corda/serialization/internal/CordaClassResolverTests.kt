@@ -19,19 +19,19 @@ import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
-import net.corda.node.services.persistence.toInternal
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import java.net.URL
 import java.sql.Connection
 import java.util.Collections
@@ -230,7 +230,7 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
-        val storage = MockAttachmentStorage().toInternal()
+        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(
@@ -247,7 +247,7 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
     fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
-        val storage = MockAttachmentStorage().toInternal()
+        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage, "some_uploader")
         assertThatExceptionOfType(UntrustedAttachmentsException::class.java).isThrownBy {
@@ -258,8 +258,6 @@ class CordaClassResolverTests {
                     { attachmentTrustCalculator.calculate(it) }
             )
         }
-    }
-        CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
     @Test(timeout=300_000)
