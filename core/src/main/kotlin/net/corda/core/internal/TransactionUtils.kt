@@ -176,15 +176,9 @@ fun deserialiseCommands(
     // The key rotation proofs group contains one Map<PublicKey, KeyRotationProofChain> element per Command.
     // Deserialize it as a list of maps and provide a safe fallback (empty maps) if the group is missing
     // to maintain compatibility with older transactions.
-    val keyRotationProofRaw: List<Map<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, Map::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
-    val keyRotationProofList: List<Map<PublicKey, KeyRotationProofChain>> =
-            if (keyRotationProofRaw.isEmpty()) {
-                // No group present (older wire transaction); default to empty map per signer entry to preserve indexing.
-                List(signersList.size) { emptyMap<PublicKey, KeyRotationProofChain>() }
-            } else {
-                keyRotationProofRaw
-            }
-     val group = componentGroups.getGroup(COMMANDS_GROUP)
+    val keyRotationProofList: List<Map<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, Map::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
+    val group = componentGroups.getGroup(COMMANDS_GROUP)
+
     return if (group is FilteredComponentGroup) {
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
@@ -196,7 +190,11 @@ fun deserialiseCommands(
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
         }
         // the if else statement is required to keep the merkle tree the same when a command is created using the default value
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], if(keyRotationProofList[leafIndices[index]].isEmpty()) null else keyRotationProofList[leafIndices[index]]) }
+        if(keyRotationProofList.isEmpty()) {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], null) }
+        } else {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], keyRotationProofList[leafIndices[index]].ifEmpty { null }) }
+        }
     } else {
         // It is a WireTransaction
         // or a FilteredTransaction with no Commands (in which case group is null).
@@ -204,7 +202,11 @@ fun deserialiseCommands(
             "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
         }
         // the if else statement is required to keep the merkle tree the same when a command is created using the default value
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], if(keyRotationProofList[index].isEmpty()) null else keyRotationProofList[index]) }
+        if(keyRotationProofList.isEmpty()) {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], null) }
+        } else {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], keyRotationProofList[index].ifEmpty { null }) }
+        }
     }
 }
 
