@@ -13,6 +13,10 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectory
+import net.corda.core.internal.delete
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -51,12 +55,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeast
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.atLeast
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.never
+import com.nhaarman.mockito_kotlin.times
+import com.nhaarman.mockito_kotlin.verify
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
@@ -175,7 +179,7 @@ class NetworkMapUpdaterTest {
                 signedNodeInfo3.raw.hash,
                 signedNodeInfo4.raw.hash,
                 fileNodeInfoAndSigned.signed.raw.hash
-        )
+        ))
     }
 
     @Test(timeout=300_000)
@@ -443,7 +447,7 @@ class NetworkMapUpdaterTest {
 
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo1, nodeInfo2))
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(nodeInfoHash1, nodeInfoHash2))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2)
 
         // on subsequent updates, single requests are used
         val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("info3")
@@ -456,7 +460,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo3))
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo4))
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(nodeInfoHash1, nodeInfoHash2, nodeInfoHash3, nodeInfoHash4))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2, nodeInfoHash3, nodeInfoHash4)
     }
 
     @Test(timeout=300_000)
@@ -474,7 +478,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
 
         verify(networkMapCache, times(1)).addOrUpdateNodes(nodeInfos)
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(*(nodeInfoHashes.toTypedArray())))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
     }
 
     @Test(timeout=300_000)
@@ -493,7 +497,7 @@ class NetworkMapUpdaterTest {
         // we can't be sure about the number of requests (and updates), as it depends on the machine and the threads created
         // but if they are more than 1 it's enough to deduct that the parallel way was favored
         verify(networkMapCache, atLeast(2)).addOrUpdateNodes(any())
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(*(nodeInfoHashes.toTypedArray())))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
     }
 
     @Test(timeout=300_000)

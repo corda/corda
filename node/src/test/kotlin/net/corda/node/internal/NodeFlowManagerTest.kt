@@ -10,7 +10,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.Test
 import org.mockito.Mockito
-import java.lang.IllegalStateException
 
 private val marker = "This is a special marker"
 

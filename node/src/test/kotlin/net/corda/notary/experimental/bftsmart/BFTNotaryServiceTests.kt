@@ -33,21 +33,19 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.whenever
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.div
+import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -77,7 +75,7 @@ class BFTNotaryServiceTests {
         }
 
         fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
-            (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
+            Files.deleteIfExists(Paths.get("config").resolve("currentView")) // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
             val serviceLegalName = CordaX500Name("BFT", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(

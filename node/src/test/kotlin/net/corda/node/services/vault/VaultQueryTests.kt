@@ -1,6 +1,6 @@
 package net.corda.node.services.vault
 
-import org.mockito.kotlin.mock
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
@@ -39,14 +39,14 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndPersistentServices
 import net.corda.testing.node.makeTestIdentityService
+import net.corda.testing.internal.IS_OPENJ9
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
+import org.junit.Assume
 import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.assertThrows
 import org.junit.rules.ExternalResource
 import java.time.Duration
 import java.time.Instant
