@@ -193,7 +193,7 @@ fun deserialiseCommands(
         if(keyRotationProofList.isEmpty()) {
             commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], null) }
         } else {
-            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], keyRotationProofList[leafIndices[index]].ifEmpty { null }) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], if(keyRotationProofList[leafIndices[index]].isEmpty()) null else keyRotationProofList[leafIndices[index]]) }
         }
     } else {
         // It is a WireTransaction
@@ -205,7 +205,7 @@ fun deserialiseCommands(
         if(keyRotationProofList.isEmpty()) {
             commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], null) }
         } else {
-            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], keyRotationProofList[index].ifEmpty { null }) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], if(keyRotationProofList[index].isEmpty()) null else keyRotationProofList[index]) }
         }
     }
 }
