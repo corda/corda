@@ -71,7 +71,7 @@ interface KeyManagementService {
     /**
      * Returns true if the key has been rotated, otherwise false.
      */
-    fun isKeyRotated(candidateKey: PublicKey): Boolean
+    fun isKeyRotated(candidateKey: PublicKey): Boolean { return false }
 
     /**
      * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
