@@ -1,6 +1,5 @@
 package net.corda.node.services.identity
 
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -8,7 +7,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.IdentityServiceInternal
@@ -20,7 +18,6 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
-import javax.transaction.NotSupportedException
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashSet
 
@@ -29,7 +26,6 @@ import kotlin.collections.LinkedHashSet
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
-@Suppress("TooManyFunctions")
 @ThreadSafe
 class InMemoryIdentityService(
         identities: List<PartyAndCertificate> = emptyList(),
@@ -157,17 +153,5 @@ class InMemoryIdentityService(
 
     override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
         throw NotImplementedError("This method is not implemented in the InMemoryIdentityService at it requires access to CordaPersistence.")
-    }
-
-    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
-    }
-
-    override fun getProofChain(publicKey: PublicKey): KeyRotationProofChain {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
-    }
-
-    override fun containsProofChain(publicKey: PublicKey): Boolean {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 }

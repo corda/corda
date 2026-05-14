@@ -2,7 +2,6 @@ package net.corda.node.services.identity
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -17,7 +16,6 @@ import net.corda.core.internal.toSet
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -59,7 +57,6 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.transaction.NotSupportedException
 
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
@@ -513,18 +510,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         } else {
             keys
         }
-    }
-
-    override fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
-    }
-
-    override fun getProofChain(publicKey: PublicKey): KeyRotationProofChain {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
-    }
-
-    override fun containsProofChain(publicKey: PublicKey): Boolean {
-        throw NotSupportedException("Cross-Provider key rotation is not supported by Corda OS")
     }
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {

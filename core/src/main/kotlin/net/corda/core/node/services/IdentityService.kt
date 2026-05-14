@@ -14,6 +14,7 @@ import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
 import java.util.*
+import javax.transaction.NotSupportedException
 
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
@@ -187,13 +188,19 @@ interface IdentityService {
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 
     @Suspendable
-    fun updateProofCacheFromTransaction(stx: SignedTransaction)
+    fun updateProofCacheFromTransaction(stx: SignedTransaction) {
+        throw NotSupportedException("Cross-Provider key rotation is not supported")
+    }
 
     @Suspendable
-    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain
+    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
+        throw NotSupportedException("Cross-Provider key rotation is not supported")
+    }
 
     @Suspendable
-    fun containsProofChain(publicKey: PublicKey): Boolean
+    fun containsProofChain(publicKey: PublicKey): Boolean {
+        throw NotSupportedException("Cross-Provider key rotation is not supported")
+    }
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
