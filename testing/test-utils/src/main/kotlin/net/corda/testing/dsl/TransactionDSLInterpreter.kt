@@ -12,7 +12,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.TransactionBuilder
@@ -73,14 +72,6 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param commandData The contents of the command.
      */
     fun command(signers: List<PublicKey>, commandData: CommandData)
-
-    /**
-     * Adds a command to the transaction.
-     * @param signers The signer public keys.
-     * @param commandData The contents of the command.
-     * @param keyRotationProofChainMap The key rotation proof chain of the command.
-     */
-    fun command(signers: List<PublicKey>, commandData: CommandData, keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>)
 
     /**
      * Sets the time-window of the transaction.
@@ -202,11 +193,6 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * Adds a command to the transaction.
      */
     fun command(signer: PublicKey, commandData: CommandData) = command(listOf(signer), commandData)
-
-    /**
-     * Adds a command to the transaction.
-     */
-    fun command(signer: PublicKey, commandData: CommandData, keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>) = command(listOf(signer), commandData, keyRotationProofChainMap)
 
     /**
      * Sets the [TimeWindow] of the transaction.

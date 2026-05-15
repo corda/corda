@@ -6,7 +6,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
@@ -199,11 +198,6 @@ data class TestTransactionDSLInterpreter private constructor(
 
     override fun command(signers: List<PublicKey>, commandData: CommandData) {
         val command = Command(commandData, signers)
-        transactionBuilder.addCommand(command)
-    }
-
-    override fun command(signers: List<PublicKey>, commandData: CommandData, keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>) {
-        val command = Command(commandData, signers, keyRotationProofChainMap)
         transactionBuilder.addCommand(command)
     }
 

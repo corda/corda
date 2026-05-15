@@ -20,7 +20,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.BLAKE2s256DigestAlgorithm
-import net.corda.core.internal.PlatformVersionSwitches.CROSS_PROVIDER_KEY_ROTATION
 import net.corda.core.internal.SHA256BLAKE2s256DigestAlgorithm
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
@@ -110,9 +109,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
     private lateinit var expectedRoot: SecureHash
     private lateinit var merkleTree: MerkleTree
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
-    private lateinit var testLedgerWithKeyRotationProof: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
-    private lateinit var txsWithKeyRotationProof: List<WireTransaction>
     private lateinit var testTx: WireTransaction
     private lateinit var testTxWithKeyRotationProof: WireTransaction
 
@@ -152,40 +149,20 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
             }
         }
 
-        testLedgerWithKeyRotationProof = MockServices(
-                cordappPackages = emptyList(),
-                initialIdentity = TestIdentity(MEGA_CORP.name),
-                identityService = mock<IdentityService>().also {
-                    doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-                },
-                networkParameters = testNetworkParameters(minimumPlatformVersion = CROSS_PROVIDER_KEY_ROTATION, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
-        ).ledger(DUMMY_NOTARY) {
-            unverifiedTransaction {
-                attachments(Cash.PROGRAM_ID)
-                output(Cash.PROGRAM_ID, "MEGA_CORP cash",
-                        Cash.State(
-                                amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                                owner = MEGA_CORP))
-                output(Cash.PROGRAM_ID, "dummy cash 1",
-                        Cash.State(
-                                amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                                owner = MINI_CORP))
-            }
-            transaction {
-                attachments(Cash.PROGRAM_ID)
-                input("MEGA_CORP cash")
-                reference("dummy cash 1")
-                output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Move(), dummyKeyRotationProofChainMap)
-                timeWindow(TEST_TX_TIME)
-                this.verifies()
-            }
-        }
-
         txs = testLedger.interpreter.transactionsToVerify
-        txsWithKeyRotationProof = testLedgerWithKeyRotationProof.interpreter.transactionsToVerify
         testTx = txs[0]
-        testTxWithKeyRotationProof = txsWithKeyRotationProof[0]
+
+        // Build a transaction with a key rotation proof chain directly, since the DSL does not support it.
+        testTxWithKeyRotationProof = createWireTransaction(
+                inputs = testTx.inputs,
+                attachments = testTx.attachments,
+                outputs = testTx.outputs,
+                commands = listOf(Command(Cash.Commands.Move(), listOf(MEGA_CORP_PUBKEY), dummyKeyRotationProofChainMap)),
+                notary = testTx.notary,
+                timeWindow = testTx.timeWindow,
+                privacySalt = testTx.privacySalt,
+                digestService = digestService
+        )
     }
 
     // Building full Merkle Tree tests.
