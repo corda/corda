@@ -1,6 +1,5 @@
 package net.corda.node
 
-import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -16,7 +15,6 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import kotlin.collections.first
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -43,7 +41,9 @@ class CustomSerializationSchemeMockNetworkTest {
         val flow = alice.services.startFlow (CreateWireTxFlow(bob.info.legalIdentities.single()))
         mockNetwork.runNetwork()
         val wireTx =  flow.resultFuture.get()
-        val serializedHash = SerializedBytes<SecureHash>(wireTx.componentGroups.first { it.groupIndex == PARAMETERS_GROUP.ordinal }.components.single().bytes)
+        /** The NetworkParmeters is the last component in the list of component groups. If we ever change this this
+         *  in [net.corda.core.internal.createComponentGroups] this test will need to be updated.*/
+        val serializedHash = SerializedBytes<SecureHash>(wireTx.componentGroups.last().components.single().bytes)
         assertEquals(alice.internals.networkParametersStorage.defaultHash, serializedHash.deserialize())
     }
 
