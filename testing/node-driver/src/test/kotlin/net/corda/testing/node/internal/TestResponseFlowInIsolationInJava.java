@@ -10,16 +10,14 @@ import net.corda.testing.node.MockNetwork;
 import net.corda.testing.node.MockNetworkParameters;
 import net.corda.testing.node.StartedMockNode;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappsForPackages;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertThrows;
 
 /**
  * Java version of test based on the example given as an answer to this SO question:
@@ -28,6 +26,7 @@ import static org.junit.Assert.assertThrows;
  *
  * but using the `registerFlowFactory` method implemented in response to https://r3-cev.atlassian.net/browse/CORDA-916
  */
+@SuppressWarnings("deprecation")
 public class TestResponseFlowInIsolationInJava {
 
     private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages()));
@@ -38,6 +37,9 @@ public class TestResponseFlowInIsolationInJava {
     public void tearDown() {
         network.stopNodes();
     }
+
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void test() throws Exception {
@@ -56,9 +58,9 @@ public class TestResponseFlowInIsolationInJava {
         // We check that the invocation of the Responder flow object has caused an ExecutionException.
         Responder initiatedResponderFlow = initiatedResponderFlowFuture.get();
         CordaFuture initiatedResponderFlowResultFuture = initiatedResponderFlow.getStateMachine().getResultFuture();
-        ExecutionException ex = assertThrows(ExecutionException.class, () -> initiatedResponderFlowResultFuture.get());
-        assertThat(ex.getCause(), instanceOf(FlowException.class));
-        assertThat(ex.getMessage(), containsString("String did not contain the expected message."));
+        exception.expectCause(instanceOf(FlowException.class));
+        exception.expectMessage("String did not contain the expected message.");
+        initiatedResponderFlowResultFuture.get();
     }
 
     // This is the real implementation of Initiator.
