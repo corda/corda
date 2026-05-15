@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect.Value
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -320,9 +321,33 @@ private interface TransactionStateMixin {
     val constraint: AttachmentConstraint
 }
 
+// Corda OS does not support cross-provider key rotation, therefore `keyRotationProofChainMap` is always null
+// and can safely be ignored during JSON serialization and deserialization.
+//
+// A custom deserializer is still required to allow deserialization to succeed. Without it, Jackson attempts
+// to resolve a deserializer for the `PublicKey` map keys which does not exist and it will not be implemented
+// because the map is always null, so the deserializer will never actually be called.
+@JsonDeserialize(using = CommandDeserializer::class)
 private interface CommandMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
     val value: CommandData
+    @get:JsonIgnore
+    val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>?
+}
+
+private data class CommandJson(
+        @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+        val value: CommandData,
+        val signers: List<PublicKey>
+)
+
+private class CommandDeserializer : JsonDeserializer<Command<*>>() {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): Command<*> {
+        val wrapper = parser.readValueAs(CommandJson::class.java)
+        val value = wrapper.value
+        val signers = wrapper.signers
+        return Command(value, signers)
+    }
 }
 
 @JsonDeserialize(using = TimeWindowDeserializer::class)
@@ -370,11 +395,6 @@ private class SignatureMetadataSerializer : JsonSerializer<SignatureMetadata>() 
         gen.jsonObject {
             writeNumberField("platformVersion", value.platformVersion)
             writeObjectField("scheme", value.schemeNumberID.let { signatureSchemesByNumberID[it] ?: it })
-
-            // Only write the proofChain field if it's not null, to maintain backwards compatibility with older payloads that don't have this field.
-            // This is important because the data in the signature metadata is part of the bytes that are signed,
-            // so changing the serialized form would break signature verification for older nodes.
-            value.proofChain?.let { writeObjectField("proofChain", it) }
         }
     }
 }
@@ -388,10 +408,7 @@ private class SignatureMetadataDeserializer : JsonDeserializer<SignatureMetadata
         } else {
             Crypto.findSignatureScheme(scheme.textValue()).schemeNumberID
         }
-        val proofChain = json.get("proofChain")?.takeUnless { it.isNull }?.let {
-            parser.codec.treeToValue(it, KeyRotationProofChain::class.java)
-        }
-        return SignatureMetadata(json["platformVersion"].intValue(), schemeNumberID, proofChain)
+        return SignatureMetadata(json["platformVersion"].intValue(), schemeNumberID)
     }
 }
 
@@ -515,8 +532,8 @@ private interface NodeInfoMixin
 @JsonDeserialize(using = JacksonSupport.SecureHashDeserializer::class)
 private interface SecureHashMixin
 
-@JsonSerialize(using = JacksonSupport.PublicKeySerializer::class, keyUsing = JacksonSupport.PublicKeyKeySerializer::class)
-@JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class, keyUsing = JacksonSupport.PublicKeyKeyDeserializer::class)
+@JsonSerialize(using = JacksonSupport.PublicKeySerializer::class)
+@JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class)
 private interface PublicKeyMixin
 
 @JsonSerialize(using = StateMachineRunIdSerializer::class)
