@@ -24,14 +24,15 @@ class DuplicateSerializerLogWithSameSerializerTest {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
-            val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
+            // Log4j 2.25.x changed log format, so we search for WARN anywhere in the line
+            val text = node.logFile().readLines().filter { "WARN" in it }
 
-            // Initial message is not logged
+            // Initial message is not logged - no warning should contain this
             Assertions.assertThat(text)
-                    .anyMatch { !it.contains("Duplicate custom checkpoint serializer for type ") }
+                    .noneMatch { it.contains("Duplicate custom checkpoint serializer for type ") }
             // Log does not mention DuplicateSerializerThatShouldNotBeLogged
             Assertions.assertThat(text)
-                    .anyMatch { !it.contains("DuplicateSerializerThatShouldNotBeLogged") }
+                    .noneMatch { it.contains("DuplicateSerializerThatShouldNotBeLogged") }
         }
     }
 
