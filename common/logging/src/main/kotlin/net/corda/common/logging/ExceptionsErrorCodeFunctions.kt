@@ -33,8 +33,10 @@ fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
     return when {
         error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
             val logMessage = this.formattedMessage
+            val originalParameters = this.parameters
+            val originalThrowable = this.throwable
             val message = error.walkExceptionCausedByList().asSequence().mapNotNull(Throwable::message).joinToString(" - ")
-            CompositeMessage("$logMessage - $message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
+            CompositeMessage("$logMessage - $message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", null, originalParameters, originalThrowable)
         }
         else -> this
     }
@@ -86,5 +88,6 @@ private class CompositeMessage(message: String?, private val formatArg: String?,
 
     override fun getParameters(): Array<out Any?>? = parameters
 
+    @Suppress("DEPRECATION")
     override fun getFormat(): String? = formatArg
 }
