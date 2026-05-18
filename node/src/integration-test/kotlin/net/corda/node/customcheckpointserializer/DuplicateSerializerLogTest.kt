@@ -19,7 +19,8 @@ class DuplicateSerializerLogTest{
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
-            val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
+            // Log4j 2.25.x changed log format, so we search for WARN anywhere in the line
+            val text = node.logFile().readLines().filter { "WARN" in it }
 
             // Initial message is correct
             Assertions.assertThat(text).anyMatch {it.contains("Duplicate custom checkpoint serializer for type net.corda.node.customcheckpointserializer.DifficultToSerialize\$BrokenMapInterface<java.lang.Object, java.lang.Object>. Serializers: ")}
