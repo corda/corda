@@ -24,8 +24,8 @@ class DuplicateSerializerLogWithSameSerializerTest {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
-            // Log4j 2.25.x changed log format, so we search for WARN anywhere in the line
-            val text = node.logFile().readLines().filter { "WARN" in it }
+            // Use same filter as enterprise - logs start with [WARN
+            val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
 
             // Initial message is not logged - no warning should contain this
             Assertions.assertThat(text)
