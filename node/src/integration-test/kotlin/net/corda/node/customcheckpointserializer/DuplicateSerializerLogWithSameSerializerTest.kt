@@ -24,7 +24,6 @@ class DuplicateSerializerLogWithSameSerializerTest {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
-            // Use same filter as enterprise - logs start with [WARN
             val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
 
             // Initial message is not logged - no warning should contain this
