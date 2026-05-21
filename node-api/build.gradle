@@ -24,6 +24,15 @@ dependencies {
 
     compile "io.netty:netty-handler-proxy:$netty_version"
 
+    // Override Artemis's older Netty native classifier JARs to prevent a JNI version mismatch at runtime in corda-shell
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-epoll:$netty_version:linux-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-x86_64"
+    runtimeOnly "io.netty:netty-transport-native-kqueue:$netty_version:osx-aarch_64"
+    runtimeOnly "io.netty:netty-transport-native-unix-common:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-epoll:$netty_version"
+    runtimeOnly "io.netty:netty-transport-classes-kqueue:$netty_version"
+
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
