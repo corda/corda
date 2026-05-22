@@ -19,4 +19,82 @@ ignore:
           unpack any TAR archives. Corda is not exposed to this vulnerability.
         expires: 2029-08-01T01:00:00.000Z
         created: 2024-05-30T10:37:24.413Z
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-15365924:
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.fasterxml.jackson.core:jackson-databind@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of JSON
+          documents containing inordinately large numbers. This is reported
+          through the network-builder tool which is only used for testing. The
+          expectation is that Corda tests are run in a securely-controlled
+          environment, and so there should be no opportunity to exploit this
+          issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:28.307Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.fasterxml.jackson.dataformat:jackson-dataformat-yaml@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of JSON
+          documents containing inordinately large numbers. This is reported
+          through the network-builder tool which is only used for testing. The
+          expectation is that Corda tests are run in a securely-controlled
+          environment, and so there should be no opportunity to exploit this
+          issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:30.272Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.azure.resourcemanager:azure-resourcemanager@2.62.0 > com.azure:azure-core@1.58.0 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of JSON
+          documents containing inordinately large numbers. This is reported
+          through the network-builder tool which is only used for testing. The
+          expectation is that Corda tests are run in a securely-controlled
+          environment, and so there should be no opportunity to exploit this
+          issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:37.398Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > net.corda:node@4.12-SNAPSHOT > net.corda:jackson@4.12-SNAPSHOT > com.fasterxml.jackson.datatype:jackson-datatype-jsr310@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of JSON
+          documents containing inordinately large numbers. This is reported
+          through the network-builder tool which is only used for testing. The
+          expectation is that Corda tests are run in a securely-controlled
+          environment, and so there should be no opportunity to exploit this
+          issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:46.672Z
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-15907551:
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.fasterxml.jackson.core:jackson-databind@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of
+          oversized JSON documents. This is reported through the network-builder
+          tool which is only used for testing. The expectation is that Corda
+          tests are run in a securely-controlled environment, and so there
+          should be no opportunity to exploit this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:48.778Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.fasterxml.jackson.dataformat:jackson-dataformat-yaml@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of
+          oversized JSON documents. This is reported through the network-builder
+          tool which is only used for testing. The expectation is that Corda
+          tests are run in a securely-controlled environment, and so there
+          should be no opportunity to exploit this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:50.670Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > com.azure.resourcemanager:azure-resourcemanager@2.62.0 > com.azure:azure-core@1.58.0 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of
+          oversized JSON documents. This is reported through the network-builder
+          tool which is only used for testing. The expectation is that Corda
+          tests are run in a securely-controlled environment, and so there
+          should be no opportunity to exploit this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:52.497Z
+    - 'corda-project/tools/network-builder@4.12-SNAPSHOT > net.corda:node@4.12-SNAPSHOT > net.corda:jackson@4.12-SNAPSHOT > com.fasterxml.jackson.datatype:jackson-datatype-jsr310@2.19.2 > com.fasterxml.jackson.core:jackson-core@2.19.2':
+        reason: >-
+          CWE-770: This is an issue with FasterXML Jackson's handling of
+          oversized JSON documents. This is reported through the network-builder
+          tool which is only used for testing. The expectation is that Corda
+          tests are run in a securely-controlled environment, and so there
+          should be no opportunity to exploit this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-05-22T15:39:54.615Z
 patch: {}
