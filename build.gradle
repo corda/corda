@@ -524,6 +524,8 @@ allprojects {
                         details.useVersion commons_configuration2_version
                     }
 
+                    // Force the version of kotlin for Jackson to stop it being transitively upgraded
+                    // by com.fasterxml.jackson:jackson-bom:${jackson_version}
                     if (details.requested.group == 'com.fasterxml.jackson.module' && details.requested.name == 'jackson-module-kotlin') {
                         details.useVersion jackson_kotlin_version
                     }
