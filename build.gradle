@@ -523,6 +523,10 @@ allprojects {
                     if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-configuration2') {
                         details.useVersion commons_configuration2_version
                     }
+
+                    if (details.requested.group == 'com.fasterxml.jackson.module' && details.requested.name == 'jackson-module-kotlin') {
+                        details.useVersion jackson_kotlin_version
+                    }
                 }
 
                 dependencySubstitution {
