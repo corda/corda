@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.BeanDescription
+import com.fasterxml.jackson.databind.BeanProperty
 import com.fasterxml.jackson.databind.DeserializationConfig
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.cfg.ConstructorDetector
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -464,9 +466,30 @@ object JacksonSupport {
     private data class CurrencyAmountWrapper(val quantity: Long, val token: Currency)
 
     @Deprecated("This is an internal class, do not use")
-    object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
+    object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>(), ContextualDeserializer {
+
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
             return OpaqueBytes(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
+        }
+
+        override fun createContextual(ctxt: DeserializationContext, property: BeanProperty?): JsonDeserializer<*> {
+            val targetType = ctxt.contextualType?.rawClass ?: return this
+            if (targetType == OpaqueBytes::class.java || !OpaqueBytes::class.java.isAssignableFrom(targetType)) {
+                return this
+            }
+            // For OpaqueBytes subclasses, return a deserializer that constructs the right type
+            return OpaquesBytesSubclassDeserializer(targetType)
+        }
+    }
+
+    private class OpaquesBytesSubclassDeserializer(private val targetType: Class<*>) : JsonDeserializer<OpaqueBytes>() {
+        private val constructor = targetType.getDeclaredConstructor(ByteArray::class.java).also {
+            it.isAccessible = true
+        }
+
+        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
+            val bytes = parser.text?.toByteArray(UTF_8) ?: parser.binaryValue
+            return constructor.newInstance(bytes) as OpaqueBytes
         }
     }
 
