@@ -466,33 +466,12 @@ object JacksonSupport {
     private data class CurrencyAmountWrapper(val quantity: Long, val token: Currency)
 
     @Deprecated("This is an internal class, do not use")
-    object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>(), ContextualDeserializer {
+    object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
 
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
             return OpaqueBytes(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
         }
-
-        override fun createContextual(ctxt: DeserializationContext, property: BeanProperty?): JsonDeserializer<*> {
-            val targetType = ctxt.contextualType?.rawClass ?: return this
-            if (targetType == OpaqueBytes::class.java || !OpaqueBytes::class.java.isAssignableFrom(targetType)) {
-                return this
-            }
-            // For OpaqueBytes subclasses, return a deserializer that constructs the right type
-            return OpaquesBytesSubclassDeserializer(targetType)
-        }
     }
-
-    private class OpaquesBytesSubclassDeserializer(private val targetType: Class<*>) : JsonDeserializer<OpaqueBytes>() {
-        private val constructor = targetType.getDeclaredConstructor(ByteArray::class.java).also {
-            it.isAccessible = true
-        }
-
-        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
-            val bytes = parser.text?.toByteArray(UTF_8) ?: parser.binaryValue
-            return constructor.newInstance(bytes) as OpaqueBytes
-        }
-    }
-
 
     //
     // Everything below this point is no longer used but can't be deleted as they leaked into the public API
