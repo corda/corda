@@ -61,7 +61,7 @@ class NodeAttachmentTrustCalculator(
                 )
                 (attachmentStorage.queryAttachments(queryCriteria).isNotEmpty() ||
                     calculateTrustUsingRotatedKeys(signer))
-            }!!
+            }
         }
     }
 

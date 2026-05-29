@@ -10,7 +10,7 @@ import net.corda.core.internal.NamedCacheFactory
 class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cache: LoadingCache<K, V>) : LoadingCache<K, V> by cache {
     constructor(name: String,
                 cacheFactory: NamedCacheFactory,
-                loadFunction: (K) -> V?,
+                loadFunction: (K) -> V,
                 removalListener: RemovalListener<K, V> = RemovalListener { _, _, _ -> },
                 keysToPreload: () -> Iterable<K> = { emptyList() }) :
             this(buildCache(name, cacheFactory, loadFunction, removalListener, keysToPreload))
@@ -18,7 +18,7 @@ class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cach
     private companion object {
         private fun <K : Any, V : Any> buildCache(name: String,
                                                   cacheFactory: NamedCacheFactory,
-                                                  loadFunction: (K) -> V?,
+                                                  loadFunction: (K) -> V,
                                                   removalListener: RemovalListener<K, V>,
                                                   keysToPreload: () -> Iterable<K>): LoadingCache<K, V> {
             val builder = Caffeine.newBuilder().removalListener(removalListener).executor(SameThreadExecutor.getExecutor())
@@ -29,7 +29,7 @@ class NonInvalidatingUnboundCache<K : Any, V : Any> private constructor(val cach
     }
 
     // TODO look into overriding loadAll() if we ever use it
-    private class NonInvalidatingCacheLoader<K : Any, V : Any>(val loadFunction: (K) -> V?) : CacheLoader<K, V> {
+    private class NonInvalidatingCacheLoader<K : Any, V : Any>(val loadFunction: (K) -> V) : CacheLoader<K, V> {
         override fun reload(key: K, oldValue: V): V {
             throw IllegalStateException("Non invalidating cache refreshed")
         }
