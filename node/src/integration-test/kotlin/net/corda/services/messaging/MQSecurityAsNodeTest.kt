@@ -23,7 +23,6 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
-import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
