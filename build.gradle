@@ -516,8 +516,7 @@ allprojects {
 
                     // SNYK-JAVA-ORGAPACHECOMMONS-16690473 / CVE-2026-45205
                     // vulnerability in org.apache.commons:commons-configuration2@2.13.0, fixed in commons-configuration2@2.15.0
-                    // commons-configuration2@2.13.0 is a transitive dependency via artemis-amqp-protocol@2.52.0
-                    // artemis-amqp-protocol@2.54.0 is the latest version, but still only depends on commons-configuration2@2.13.0
+                    // commons-configuration2@2.13.0 is a transitive dependency via artemis-amqp-protocol@2.54.0
                     // force-upgrade to commons-configuration2@2.15.0 to fix the issue
                     // Review this when Artemis is upgraded
                     if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-configuration2') {
