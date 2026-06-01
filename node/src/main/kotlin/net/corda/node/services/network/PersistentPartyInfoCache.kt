@@ -43,9 +43,15 @@ class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMap
         }
     }
 
-    fun getPartyIdByCordaX500Name(name: CordaX500Name): SecureHash = cordaX500NameToPartyIdCache[name].orElseThrow { IllegalStateException("Missing cache entry for $name") }
+    fun getPartyIdByCordaX500Name(name: CordaX500Name): SecureHash = cordaX500NameToPartyIdCache[name].orElseThrow {
+        cordaX500NameToPartyIdCache.invalidate(name)
+        IllegalStateException("Missing cache entry for $name")
+    }
 
-    fun getCordaX500NameByPartyId(partyId: SecureHash): CordaX500Name = partyIdToCordaX500NameCache[partyId].orElseThrow { IllegalStateException("Missing cache entry for $partyId") }
+    fun getCordaX500NameByPartyId(partyId: SecureHash): CordaX500Name = partyIdToCordaX500NameCache[partyId].orElseThrow {
+        partyIdToCordaX500NameCache.invalidate(partyId)
+        IllegalStateException("Missing cache entry for $partyId")
+    }
 
     private fun add(partyHashCode: SecureHash, partyName: CordaX500Name) {
         partyIdToCordaX500NameCache.cache.put(partyHashCode, Optional.ofNullable(partyName))
