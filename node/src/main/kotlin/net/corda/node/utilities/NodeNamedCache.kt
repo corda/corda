@@ -34,7 +34,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
     override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory = DefaultNamedCacheFactory(this.metricRegistry, nodeConfiguration)
 
     @Suppress("ComplexMethod")
-    protected open fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
+    protected open fun <K: Any, V: Any> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return with(nodeConfiguration!!) {
             when {
                 name.startsWith("RPCSecurityManagerShiroCache_") -> with(security?.authService?.options?.cache!!) { caffeine.maximumSize(maxEntries).expireAfterWrite(expireAfterSecs, TimeUnit.SECONDS) }
@@ -81,12 +81,12 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
 
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         checkState(name)
-        return configuredForNamed(caffeine, name).build<K, V>()
+        return configuredForNamed(caffeine, name).build()
     }
 
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         checkState(name)
-        return configuredForNamed(caffeine, name).build<K, V>(loader)
+        return configuredForNamed(caffeine, name).build(loader)
     }
 
     protected open val defaultCacheSize = 1024L

@@ -39,7 +39,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
      */
-    operator fun get(key: K): V? = cache.get(key)?.orElse(null)
+    operator fun get(key: K): V? = cache.get(key).orElse(null)
 
     val size: Long get() = allPersisted.use { it.count() }
 

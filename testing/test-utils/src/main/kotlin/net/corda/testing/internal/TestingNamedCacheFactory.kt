@@ -18,7 +18,7 @@ class TestingNamedCacheFactory private constructor(private val sizeOverride: Lon
 
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         // Does not check metricRegistry or nodeConfiguration, because for tests we don't care.
-        return caffeine.maximumSize(sizeOverride).build<K, V>()
+        return caffeine.maximumSize(sizeOverride).build()
     }
 
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
@@ -29,6 +29,6 @@ class TestingNamedCacheFactory private constructor(private val sizeOverride: Lon
             "AttachmentsClassLoader_cache" -> caffeine.maximumSize(sizeOverride)
             else -> caffeine.maximumSize(sizeOverride)
         }
-        return configuredCaffeine.build<K, V>(loader)
+        return configuredCaffeine.build(loader)
     }
 }
