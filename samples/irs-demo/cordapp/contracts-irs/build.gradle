@@ -11,7 +11,7 @@ dependencies {
     // Apache JEXL: An embeddable expression evaluation library.
     implementation "org.apache.commons:commons-jexl3:3.1"
     
-    implementation "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations"
 
     testImplementation project(':node-driver')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

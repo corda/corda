@@ -97,6 +97,7 @@ import java.security.cert.CertPath
 import java.time.Instant
 import java.util.Currency
 import java.util.UUID
+import kotlin.text.Charsets.UTF_8
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
@@ -139,6 +140,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(NodeInfo::class.java, NodeInfoMixin::class.java)
         context.setMixInAnnotations(StateMachineRunId::class.java, StateMachineRunIdMixin::class.java)
         context.setMixInAnnotations(DigestService::class.java, DigestServiceMixin::class.java)
+        context.setMixInAnnotations(DigitalSignature::class.java, DigitalSignatureMixin::class.java)
     }
 }
 
@@ -172,6 +174,16 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
         return beanProperties
     }
 }
+
+private class DigitalSignatureDeserializer : JsonDeserializer<DigitalSignature>() {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): DigitalSignature {
+        return DigitalSignature(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
+    }
+}
+
+@JsonDeserialize(using = DigitalSignatureDeserializer::class)
+private interface DigitalSignatureMixin
+
 
 @ToStringSerialize
 @JsonDeserialize(using = NetworkHostAndPortDeserializer::class)
