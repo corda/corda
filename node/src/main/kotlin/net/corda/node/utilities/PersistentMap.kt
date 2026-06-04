@@ -38,7 +38,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
 
-    class ExplicitRemoval<K, V, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
+    class ExplicitRemoval<K: Any, V: Any, E, EK>(private val toPersistentEntityKey: (K) -> EK, private val persistentEntityClass: Class<E>) : RemovalListener<K, V> {
         override fun onRemoval(key: K?, value: V?, cause: RemovalCause) {
             when (cause) {
                 RemovalCause.EXPLICIT -> {
@@ -58,7 +58,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     }
 
     override operator fun get(key: K): V? {
-        return cache.get(key)!!.orElse(null)
+        return cache.get(key).orElse(null)
     }
 
     fun all(): Sequence<Pair<K, V>> {
@@ -121,7 +121,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
      * Removes the mapping for the specified key from this map and underlying storage if present.
      */
     override fun remove(key: K): V? {
-        val result = cache.get(key)!!.orElse(null)
+        val result = cache.get(key).orElse(null)
         cache.invalidate(key)
         return result
     }
@@ -213,7 +213,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)
         set(key, value)
-        return old!!.orElse(null)
+        return old.orElse(null)
     }
 
     fun load() {

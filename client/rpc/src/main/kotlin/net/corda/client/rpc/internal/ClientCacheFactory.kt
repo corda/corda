@@ -9,11 +9,11 @@ import net.corda.core.internal.NamedCacheFactory
 class ClientCacheFactory : NamedCacheFactory {
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         checkCacheName(name)
-        return caffeine.build<K, V>()
+        return caffeine.build()
     }
 
     override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         checkCacheName(name)
-        return caffeine.build<K, V>(loader)
+        return caffeine.build(loader)
     }
 }

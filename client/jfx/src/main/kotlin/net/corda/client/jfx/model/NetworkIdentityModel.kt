@@ -1,6 +1,5 @@
 package net.corda.client.jfx.model
 
-import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -31,9 +30,9 @@ class NetworkIdentityModel {
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
     private val identityCache = Caffeine.newBuilder()
-            .build<PublicKey, ObservableValue<NodeInfo?>>(CacheLoader { publicKey: PublicKey ->
+            .build { publicKey: PublicKey ->
                 publicKey.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
-            })
+            }
     val notaries = ChosenList(rpcProxy.map { FXCollections.observableList(it?.notaryIdentities() ?: emptyList()) }, "notaries")
     val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities

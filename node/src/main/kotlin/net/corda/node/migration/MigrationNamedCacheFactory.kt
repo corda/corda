@@ -19,7 +19,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
     override fun bindWithMetrics(metricRegistry: MetricRegistry) = MigrationNamedCacheFactory(metricRegistry, this.nodeConfiguration)
     override fun bindWithConfig(nodeConfiguration: NodeConfiguration) = MigrationNamedCacheFactory(this.metricRegistry, nodeConfiguration)
 
-    private fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
+    private fun <K: Any, V: Any> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return when(name) {
             "HibernateConfiguration_sessionFactories" -> caffeine.maximumSize(
                     nodeConfiguration?.database?.mappedSchemaCacheSize ?: DatabaseConfig.Defaults.mappedSchemaCacheSize
