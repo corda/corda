@@ -23,7 +23,6 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
-import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -66,8 +65,9 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test(timeout=300_000)
 	fun `login as the default cluster user`() {
+        // Artemis guards against connecting with the default cluster credentials
         val attacker = clientTo(alice.node.configuration.p2pAddress)
-        assertThatExceptionOfType(ActiveMQClusterSecurityException::class.java).isThrownBy {
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(ActiveMQDefaultConfiguration.getDefaultClusterUser(), ActiveMQDefaultConfiguration.getDefaultClusterPassword())
         }
     }

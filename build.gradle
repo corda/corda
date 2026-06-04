@@ -126,6 +126,7 @@ buildscript {
     ext.nimbus_oauth2_version= constants.getProperty("nimbusOauth2Version")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     ext.nimbus_jose_jwt_version= constants.getProperty("nimbusJoseJwtVersion")
+    ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
 
     ext.corda_revision = {
         try {
@@ -511,6 +512,21 @@ allprojects {
                     // Review this when com.azure:azure-identity is upgraded
                     if (details.requested.group == 'com.nimbusds' && details.requested.name == 'nimbus-jose-jwt') {
                         details.useVersion nimbus_jose_jwt_version
+                    }
+
+                    // SNYK-JAVA-ORGAPACHECOMMONS-16690473 / CVE-2026-45205
+                    // vulnerability in org.apache.commons:commons-configuration2@2.13.0, fixed in commons-configuration2@2.15.0
+                    // commons-configuration2@2.13.0 is a transitive dependency via artemis-amqp-protocol@2.54.0
+                    // force-upgrade to commons-configuration2@2.15.0 to fix the issue
+                    // Review this when Artemis is upgraded
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-configuration2') {
+                        details.useVersion commons_configuration2_version
+                    }
+
+                    // Force the version of kotlin for Jackson to stop it being transitively upgraded
+                    // by com.fasterxml.jackson:jackson-bom:${jackson_version}
+                    if (details.requested.group == 'com.fasterxml.jackson.module' && details.requested.name == 'jackson-module-kotlin') {
+                        details.useVersion jackson_kotlin_version
                     }
                 }
 
