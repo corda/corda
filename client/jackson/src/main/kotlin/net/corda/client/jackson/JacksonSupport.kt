@@ -465,11 +465,11 @@ object JacksonSupport {
 
     @Deprecated("This is an internal class, do not use")
     object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
-
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
             return OpaqueBytes(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
         }
     }
+
 
     //
     // Everything below this point is no longer used but can't be deleted as they leaked into the public API
