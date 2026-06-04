@@ -106,7 +106,7 @@ class CertDistPointCrlSource(cacheSize: Long = DEFAULT_CACHE_SIZE,
     }
 
     private fun getPossibleCRL(uri: URI): X509CRL {
-        return cache[uri]!!
+        return cache[uri]
     }
 
     // DistributionPointFetcher.verifyCRL

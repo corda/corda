@@ -319,8 +319,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = database.transaction {
-        if (nameToParty[name]?.isPresent == true) {
-            nameToParty[name]?.get()
+        if (nameToParty[name].isPresent == true) {
+            nameToParty[name].get()
         }
         else {
             retrievePartyFromArchive(name)

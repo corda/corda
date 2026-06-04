@@ -109,11 +109,11 @@ internal object RPCPermissionResolver : PermissionResolver {
         }
     }
 
-    private val cache: LoadingCache<String, Map<String, Set<String>>> = Caffeine.newBuilder()
+    private val cache: LoadingCache<String, Map<String, Set<String>>?> = Caffeine.newBuilder()
             .maximumSize(java.lang.Long.getLong("net.corda.node.internal.security.rpc.interface.cacheSize", 20))
             .build(InterfaceMethodMapCacheLoader())
 
-    private class InterfaceMethodMapCacheLoader : CacheLoader<String, Map<String, Set<String>>> {
+    private class InterfaceMethodMapCacheLoader : CacheLoader<String, Map<String, Set<String>>?> {
         override fun load(interfaceName: String): Map<String, Set<String>>? {
             return try {
                 inspectInterface(interfaceName)
