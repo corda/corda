@@ -61,7 +61,7 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         val flowStackSnapshot = getFlowStackSnapshot(flowClass)
         val mapper = JacksonSupport.createNonRpcMapper().apply {
             disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
         }
         val file = createFile(baseDir, flowId)
         file.write(createDirs = true) {

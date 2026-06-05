@@ -41,7 +41,7 @@ object HttpUtils {
     inline fun <reified T : Any> getJson(url: URL, params: Map<String, String> = mapOf(), mapper: ObjectMapper = defaultMapper): T {
         val paramString = if (params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
-        return mapper.readValue(parameterisedUrl, T::class.java)
+        return parameterisedUrl.openStream().use { mapper.readValue(it, T::class.java) }
     }
 
     private fun makeRequest(request: Request) {
