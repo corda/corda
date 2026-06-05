@@ -75,7 +75,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.hamcrest.MatcherAssert.assertThat as hamcrestAssertThat
+import org.hamcrest.MatcherAssert
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -161,7 +161,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
 
         assertThat(nodeReadyFuture).isDone()
 
@@ -173,7 +173,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         //4 node info from network map, and 1 from file.
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
@@ -204,7 +204,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
 
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
@@ -225,7 +225,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).removeNode(nodeInfo4)
 
         //Node info from file should not be deleted
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
     }
 
     @Test(timeout=300_000)
@@ -248,7 +248,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash
         ))
@@ -265,7 +265,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(0)).removeNode(nodeInfo2)
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo2_2))
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo3))
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo2_2.raw.hash,
                 signedNodeInfo3.raw.hash
         ))
@@ -289,7 +289,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
         assertThat(nodeReadyFuture).isDone()
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
     }
 
     @Test(timeout=300_000)
@@ -323,7 +323,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
         assertThat(nodeReadyFuture).isDone
 
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
     }
 
     @Test(timeout=300_000)
@@ -513,14 +513,14 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(2)).addOrUpdateNode(any())
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned1.nodeInfo)
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned2.nodeInfo)
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned1.signed.raw.hash, fileNodeInfoAndSigned2.signed.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned1.signed.raw.hash, fileNodeInfoAndSigned2.signed.raw.hash))
         //Remove one of the nodes
         val fileName1 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${fileNodeInfoAndSigned1.nodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName1).delete()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache, times(1)).removeNode(fileNodeInfoAndSigned1.nodeInfo)
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned2.signed.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned2.signed.raw.hash))
     }
 
     @Test(timeout=300_000)
@@ -543,7 +543,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         //Node from file has higher serial than the one from NetworkMapServer
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(localSignedNodeInfo.signed.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(localSignedNodeInfo.signed.raw.hash))
         val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName).delete()
         advanceTime()
@@ -551,7 +551,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache).removeNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         //Instead of node from file we should have now the one from NetworkMapServer
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(serverSignedNodeInfo.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(serverSignedNodeInfo.raw.hash))
     }
 
     //Test fix for ENT-1882
@@ -568,7 +568,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
-        hamcrestAssertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash))
+        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash))
     }
 
     @Test(timeout=300_000)

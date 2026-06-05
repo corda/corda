@@ -250,15 +250,13 @@ class StandaloneCordaRPClientTest {
     @Test(timeout=300_000)
 	fun `test kill flow without killFlow permission`() {
         val flowHandle = rpcProxy.startFlow(::SleepingFlow, 1.minutes)
-        val ex = assertFailsWith<PermissionException> {
-            notary.connect(nonUser).use { connection ->
-                val rpcProxy = connection.proxy
+        notary.connect(nonUser).use { connection ->
+            val rpcProxy = connection.proxy
+            val exception = assertFailsWith<PermissionException> {
                 rpcProxy.killFlow(flowHandle.id)
             }
+            assertTrue(Pattern.compile("User not authorized to perform RPC call .*killFlow.*").matcher(exception.message).find())
         }
-        // Verify the message manually
-        val pattern = Pattern.compile("User not authorized to perform RPC call .*killFlow.*")
-        assertTrue(pattern.matcher(ex.message!!).matches(), "Exception message did not match expected pattern")
     }
 
     @Test(timeout=300_000)

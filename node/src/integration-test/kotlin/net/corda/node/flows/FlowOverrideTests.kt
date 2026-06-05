@@ -15,7 +15,7 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappForClasses
 import org.hamcrest.CoreMatchers.`is`
-import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.MatcherAssert
 import org.junit.Test
 
 class FlowOverrideTests {
@@ -77,7 +77,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
+            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
         }
     }
 
@@ -94,7 +94,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
+            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
         }
     }
 }

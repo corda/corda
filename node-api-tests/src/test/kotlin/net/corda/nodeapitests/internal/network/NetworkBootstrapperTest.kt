@@ -260,8 +260,8 @@ class NetworkBootstrapperTest {
         assertThat(networkParameters.eventHorizon).isEqualTo(eventHorizon)
     }
 
-    private val alice = TestIdentity(ALICE_NAME, 70)
-    private val bob = TestIdentity(BOB_NAME, 80)
+    private val ALICE = TestIdentity(ALICE_NAME, 70)
+    private val BOB = TestIdentity(BOB_NAME, 80)
 
     private val alicePackageName = "com.example.alice"
     private val bobPackageName = "com.example.bob"
@@ -269,31 +269,31 @@ class NetworkBootstrapperTest {
     @Test(timeout=300_000)
 	fun `register new package namespace in existing network`() {
         createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, alice.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
     }
 
     @Test(timeout=300_000)
 	fun `register additional package namespace in existing network`() {
         createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, alice.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
         // register additional package name
         createNodeConfFile("bob", bobConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
-        assertContainsPackageOwner("bob", mapOf(Pair(alicePackageName, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
+        assertContainsPackageOwner("bob", mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
     }
 
     @Test(timeout=300_000)
 	fun `attempt to register overlapping namespaces in existing network`() {
         createNodeConfFile("alice", aliceConfig)
         val greedyNamespace = "com.example"
-        bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, alice.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, alice.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         // register overlapping package name
         createNodeConfFile("bob", bobConfig)
         val anException = assertThrows<IllegalArgumentException> {
-            bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+            bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         }
         assertEquals("Multiple packages added to the packageOwnership overlap.", anException.message)
     }
@@ -301,8 +301,8 @@ class NetworkBootstrapperTest {
     @Test(timeout=300_000)
 	fun `unregister single package namespace in network of one`() {
         createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, alice.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
         // unregister package name
         bootstrap(packageOwnership = emptyMap())
         assertContainsPackageOwner("alice", emptyMap())
@@ -311,16 +311,16 @@ class NetworkBootstrapperTest {
     @Test(timeout=300_000)
 	fun `unregister single package namespace in network of many`() {
         createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         // unregister package name
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, alice.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
     }
 
     @Test(timeout=300_000)
 	fun `unregister all package namespaces in existing network`() {
         createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         // unregister all package names
         bootstrap(packageOwnership = emptyMap())
         assertContainsPackageOwner("alice", emptyMap())

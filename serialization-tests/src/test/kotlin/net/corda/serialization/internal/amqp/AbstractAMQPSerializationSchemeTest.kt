@@ -11,8 +11,8 @@ import net.corda.serialization.internal.amqp.testutils.serializationProperties
 import net.corda.coretesting.internal.createTestSerializationEnv
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers
-import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.net.URLClassLoader
 import java.util.concurrent.ThreadLocalRandom
@@ -61,10 +61,10 @@ class AbstractAMQPSerializationSchemeTest {
             val testString = "TEST${ThreadLocalRandom.current().nextInt()}"
             val serialized = scheme.serialize(testString, context)
             val deserialized = serialized.deserialize(context = context, serializationFactory = serializationEnvironment.serializationFactory)
-            assertThat(testString, `is`(deserialized))
-            assertThat(backingMap.size, `is`(Matchers.lessThanOrEqualTo(maxFactories)))
+            MatcherAssert.assertThat(testString, `is`(deserialized))
+            MatcherAssert.assertThat(backingMap.size, `is`(Matchers.lessThanOrEqualTo(maxFactories)))
         }
-        assertThat(backingMap.size, CoreMatchers.`is`(Matchers.lessThanOrEqualTo(maxFactories)))
+        MatcherAssert.assertThat(backingMap.size, CoreMatchers.`is`(Matchers.lessThanOrEqualTo(maxFactories)))
     }
 }
 

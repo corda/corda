@@ -1,7 +1,7 @@
 package net.corda.coretesting.internal
 
 import org.assertj.core.api.Assertions.catchThrowable
-import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers.isA
 import org.junit.Test
 import java.io.Closeable
@@ -100,7 +100,7 @@ class RigorousMockTest {
     @Test(timeout=300_000)
 	fun `method return type resolution works`() {
         val m = spectator<CDImpl>()
-        assertThat(m.b, isA(Runnable::class.java))
+        MatcherAssert.assertThat(m.b, isA(Runnable::class.java))
         assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.a }.javaClass) // Can't mock String.
     }
 

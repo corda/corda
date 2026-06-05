@@ -1,18 +1,17 @@
 package net.corda.serialization.internal
 
-import com.esotericsoftware.kryo.DefaultSerializer
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoException
-import com.esotericsoftware.kryo.KryoSerializable
-import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException.UntrustedAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
@@ -28,13 +27,9 @@ import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
 import java.net.URL
 import java.sql.Connection
-import java.util.Collections
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -224,9 +219,7 @@ class CordaClassResolverTests {
         }
     }
 
-    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER): AttachmentId {
-        return ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
-    }
+    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
 
     @Test(timeout=300_000)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {

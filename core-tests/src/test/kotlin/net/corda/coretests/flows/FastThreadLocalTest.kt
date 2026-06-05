@@ -12,8 +12,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.rootCause
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.catchThrowable
+import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers.lessThanOrEqualTo
-import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -65,7 +65,7 @@ class FastThreadLocalTest {
                     override fun initialValue() = ExpensiveObj()
                 }
                 runFibers(100, threadLocal::get) // Return value could be anything.
-                assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
+                MatcherAssert.assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
             }
 
     /** @return the number of times a different expensive object was obtained post-suspend. */

@@ -26,7 +26,7 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers.instanceOf
 import org.junit.After
 import org.junit.Before
@@ -119,7 +119,7 @@ class RaftTransactionCommitLogTests {
                 states, txId, requestingPartyName.toString(), requestSignature, timeWindow
         )
         val commitError = client.submit(commitCommand).getOrThrow()
-        assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+        MatcherAssert.assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
     }
 
     @Test(timeout=300_000)
