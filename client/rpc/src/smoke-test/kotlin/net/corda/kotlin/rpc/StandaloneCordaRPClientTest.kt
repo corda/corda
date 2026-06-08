@@ -41,7 +41,6 @@ import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -51,7 +50,9 @@ import java.io.InputStream
 import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.regex.Pattern
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -251,9 +252,10 @@ class StandaloneCordaRPClientTest {
         val flowHandle = rpcProxy.startFlow(::SleepingFlow, 1.minutes)
         notary.connect(nonUser).use { connection ->
             val rpcProxy = connection.proxy
-            assertThatThrownBy {
+            val exception = assertFailsWith<PermissionException> {
                 rpcProxy.killFlow(flowHandle.id)
-            }.isInstanceOf(PermissionException::class.java).hasMessageMatching("User not authorized to perform RPC call .*killFlow.*")
+            }
+            assertTrue(Pattern.compile("User not authorized to perform RPC call .*killFlow.*").matcher(exception.message).find())
         }
     }
 

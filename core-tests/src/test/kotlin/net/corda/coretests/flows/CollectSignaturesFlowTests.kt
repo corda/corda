@@ -36,10 +36,11 @@ import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
+import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.MatcherAssert
 import org.junit.AfterClass
 import org.junit.Test
 import java.security.PublicKey
-import kotlin.test.assertTrue
 
 class CollectSignaturesFlowTests : WithContracts {
     companion object {
@@ -91,7 +92,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        assertTrue(missingSigners.isEmpty())
+        MatcherAssert.assertThat(missingSigners, `is`(emptySet()))
     }
 
     @Test(timeout=300_000)
@@ -121,7 +122,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        assertTrue(missingSigners.isEmpty())
+        MatcherAssert.assertThat(missingSigners, `is`(emptySet()))
     }
 
     @Test(expected = IllegalArgumentException::class, timeout=300_000)
@@ -151,7 +152,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice))).resultFuture
         mockNet.runNetwork()
         val signedTx = future.getOrThrow()
-        assertTrue(signedTx.getMissingSigners().isEmpty())
+        MatcherAssert.assertThat(signedTx.getMissingSigners(), `is`(emptySet()))
     }
 
     @Test(timeout=300_000)

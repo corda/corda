@@ -30,6 +30,8 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
+import org.hamcrest.MatcherAssert
+import org.hamcrest.Matchers.instanceOf
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Ignore
@@ -160,9 +162,9 @@ class BFTNotaryServiceTests {
             val resultFuture = services.startFlow(flow).resultFuture
             mockNet.runNetwork()
             val exception = assertFailsWith<ExecutionException> { resultFuture.get() }
-            assertTrue(exception.cause is NotaryException)
+            MatcherAssert.assertThat(exception.cause, instanceOf(NotaryException::class.java))
             val error = (exception.cause as NotaryException).error
-            assertTrue(error is NotaryError.TimeWindowInvalid)
+            MatcherAssert.assertThat(error, instanceOf(NotaryError.TimeWindowInvalid::class.java))
         }
     }
 
