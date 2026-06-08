@@ -4,8 +4,7 @@ import net.corda.core.crypto.TransactionSignature
 import java.security.PublicKey
 
 fun List<TransactionSignature>.getKeyLineage(): Set<PublicKey> {
-    return filter { signature -> signature.signatureMetadata.proofChain != null }
-            .flatMap { signature -> signature.signatureMetadata.proofChain!!.getKeyLineage() }.toSet()
+    return mapNotNull { signature -> signature.signatureMetadata.proofChain?.getKeyLineage() }.flatten().toSet()
 }
 
 fun TransactionSignature.getOriginalKey(): PublicKey {
