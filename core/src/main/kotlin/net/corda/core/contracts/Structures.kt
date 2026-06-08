@@ -201,6 +201,7 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, 
     // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.isNotEmpty()) { "The map of key rotation proofs must not be empty. Use null instead to maintain backward compatibility" }
     }
 
     constructor(data: T, signers: List<PublicKey>) : this(data, signers, null)
