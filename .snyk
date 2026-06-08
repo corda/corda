@@ -31,11 +31,14 @@ ignore:
   SNYK-JAVA-COMSQUAREUPOKHTTP3-2958044:
     - '*':
         reason: >-
-          The vulnerability in okhttp’s error handling is only exploitable in
-          services that receive and parse HTTP requests. Corda does not receive
-          HTTP requests and thus is not exposed to this issue.
-        expires: 2023-07-21T11:42:55.546Z
-        created: 2022-12-29T11:42:55.556Z
+          CVE-2023-0833: This issue concerns the handling of
+          IllegalArgumentException exceptions thrown when an HTTP header
+          contains an illegal character. This can only be exploited from a
+          malicious CorDapp that produces such requests. Since Corda is
+          administered in a tightly-controlled environment there is no
+          opportunity to exploit this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-08T10:14:02.388Z
   SNYK-JAVA-IONETTY-1042268:
     - '*':
         reason: >-
