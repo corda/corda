@@ -194,8 +194,8 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes
- * Never pass an empty proof chain map to the construct as it will have impact on how the merkle tree is calculated after a deserialization. Use null instead, which will be converted to an empty map internally.
- * */
+ * Never pass an empty proof chain map to the construct as it will have impact on how the merkle tree is calculated after a deserialization. Use null instead for backwards compatibility.
+ */
 @CordaSerializable
 data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null) {
     // TODO Introduce NonEmptyList?
