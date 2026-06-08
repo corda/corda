@@ -14,8 +14,9 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappForClasses
+import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.MatcherAssert
 import org.junit.Test
-import kotlin.test.assertEquals
 
 class FlowOverrideTests {
 
@@ -76,7 +77,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            assertEquals(Pongiest.GORGONZOLA, nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow())
+            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
         }
     }
 
@@ -93,7 +94,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            assertEquals(Pong.PONG, nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow())
+            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
         }
     }
 }

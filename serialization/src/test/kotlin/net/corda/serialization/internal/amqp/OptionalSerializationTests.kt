@@ -6,9 +6,9 @@ import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.equalTo
-import org.junit.Assert
 import org.junit.Test
 import java.util.*
 
@@ -30,8 +30,8 @@ class OptionalSerializationTests {
 
             val deserialized = DeserializationInput(factory).deserialize(bytes)
             val deserialized2 = DeserializationInput(deserializerFactory).deserialize(bytes)
-            Assert.assertThat(deserialized, `is`(equalTo(deserialized2)))
-            Assert.assertThat(obj, `is`(equalTo(deserialized2)))
+            assertThat(deserialized, `is`(equalTo(deserialized2)))
+            assertThat(obj, `is`(equalTo(deserialized2)))
         }
 
         `java optionals should serialize`()

@@ -38,12 +38,14 @@ import org.junit.After
 import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Duration
 import kotlin.streams.toList
+import kotlin.test.assertEquals
 
 class NetworkBootstrapperTest {
     @Rule
@@ -290,9 +292,10 @@ class NetworkBootstrapperTest {
         assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         // register overlapping package name
         createNodeConfFile("bob", bobConfig)
-        assertThatThrownBy {
+        val anException = assertThrows<IllegalArgumentException> {
             bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
-        }.isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Multiple packages added to the packageOwnership overlap.")
+        }
+        assertEquals("Multiple packages added to the packageOwnership overlap.", anException.message)
     }
 
     @Test(timeout=300_000)
