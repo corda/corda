@@ -189,17 +189,17 @@ interface IdentityService {
 
     @Suspendable
     fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        throw NotSupportedException("Cross-Provider key rotation is not supported")
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
     }
 
     @Suspendable
     fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
-        throw NotSupportedException("Cross-Provider key rotation is not supported")
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
     }
 
     @Suspendable
     fun containsProofChain(publicKey: PublicKey): Boolean {
-        throw NotSupportedException("Cross-Provider key rotation is not supported")
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
     }
 }
 
