@@ -373,4 +373,13 @@ ignore:
           unpack any TAR archives. Corda is not exposed to this vulnerability.
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-06-04T16:01:04.852Z
+  SNYK-JAVA-COMSQUAREUPOKHTTP3-13961111:
+    - '*':
+        reason: >-
+          CVE-2021-0341: com.squareup.okhttp3:okhttp is a direct dependency for
+          Corda and Corda doesn't use the vulnerable function
+          OkHostnameVerifier.verifyHostName(), and so is not exposed to this
+          vulnerability. 
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-05T15:18:18.653Z
 patch: {}
