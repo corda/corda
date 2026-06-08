@@ -211,7 +211,7 @@ class FilteredTransaction internal constructor(
                     filteredComponentNonces[componentGroupIndex]!!.add(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
                     filteredComponentHashes[componentGroupIndex]!!.add(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
                 }
-                // If at least one command is visible, then all command-signers should be visible as well.
+                // If at least one command is visible, then all command-signers should be visible as well. Same applies to the key rotation proof if it is not set to null.
                 // This is required for visibility purposes, see FilteredTransaction.checkAllCommandsVisible() for more details.
                 if (componentGroupIndex == COMMANDS_GROUP.ordinal && !signersIncluded) {
                     signersIncluded = true
