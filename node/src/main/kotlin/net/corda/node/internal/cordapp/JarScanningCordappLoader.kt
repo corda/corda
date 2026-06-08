@@ -291,8 +291,10 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         }
     }
 
-    private fun ClassInfoList.fromJar(jar: Path): ClassInfoList =
-            filter { it.isFromJar(jar) }
+    private fun ClassInfoList.fromJar(jar: Path): ClassInfoList {
+        val classNamesInJar = jar.readClassNames()
+        return filter { it.name in classNamesInJar }
+    }
 
     private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info {
         if (manifest == null) return UNKNOWN_INFO
