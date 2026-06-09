@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class KeyRotationProofTest {
+class KeyRotationProofChainTest {
 
     @Test(timeout=300_000)
     fun `empty chain reports empty and validates only for inferred original equals current path`() {
