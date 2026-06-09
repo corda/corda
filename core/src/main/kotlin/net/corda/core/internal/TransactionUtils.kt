@@ -201,6 +201,11 @@ fun deserialiseCommands(
         check(commandDataList.size == signersList.size) {
             "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
         }
+
+        check(commandDataList.size == keyRotationProofList.size || keyRotationProofList.isEmpty()) {
+            "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and keyRotationProofList (${keyRotationProofList.size}) do not match and keyRotationProofList is not empty"
+        }
+
         // the if else statement is required to keep the merkle tree the same when a command is created using the default value
         if(keyRotationProofList.isEmpty()) {
             commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], null) }
