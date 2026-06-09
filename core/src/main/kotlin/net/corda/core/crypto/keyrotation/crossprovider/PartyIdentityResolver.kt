@@ -12,6 +12,8 @@ import java.util.Collections
 /**
  * Resolves whether two Party instances represent the same legal entity even if their keys have been rotated.
  * This is a best effort resolver that relies on the presence of key rotation proofs to determine if two keys are equivalent.
+ * N.B. Use the `generateProofChainMap` function to create the proof map that is passed to the constructor when using the in-memory implementation.
+ * This avoids constructing it manually and prevents inconsistencies in how proof chains are accessed and used.
  */
 class PartyIdentityResolver private constructor(private val proofProvider: ProofProvider) {
 
