@@ -308,6 +308,7 @@ interface ServiceHub : ServicesForResolution {
      * Any existing signatures on the builder will be preserved.
      * @return Returns a SignedTransaction with the new node signature attached.
      */
+    @Suppress("NestedBlockDepth")
     fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction {
 
         if(keyManagementService.hasRotatedKeys()) {
