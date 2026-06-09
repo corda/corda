@@ -56,7 +56,7 @@ class KotlinUtilsTest {
             val original = NonCapturingTransientProperty()
             original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
         }
-        anException.message?.let { assertTrue(it.contains("is not annotated or on the whitelist, so cannot be used in serialization")) }
+        assertTrue(anException.message!!.contains("is not annotated or on the whitelist, so cannot be used in serialization"))
     }
 
     @Test(timeout=300_000)
@@ -76,7 +76,7 @@ class KotlinUtilsTest {
             val original = CapturingTransientProperty("Hello")
             original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
         }
-        anException.message?.let { assertTrue(it.contains("is not annotated or on the whitelist, so cannot be used in serialization")) }
+        assertTrue(anException.message!!.contains("is not annotated or on the whitelist, so cannot be used in serialization"))
     }
 
     private class NullTransientProperty {
