@@ -19,7 +19,7 @@ class KeyRotationProofChainTest {
         assertEquals(0, chain.size(), "Expected chain size to be 0 when initialized with no proofs")
         assertTrue(chain.getKeyLineage().isEmpty(), "Expected key lineage to be empty when initialized with no proofs")
         assertTrue(chain.isValid(key), "Any empty chain should be valid for any key since it implies original and current keys are the same")
-        assertFalse(chain.isValid(key, generateKeyPair().public), "Any empty chain should be invalid if original and current keys are different since they is no proof of rotation")
+        assertFalse(chain.isValid(key, generateKeyPair().public), "Any empty chain should be invalid if original and current keys are different since there is no proof of rotation")
     }
 
     @Test(timeout=300_000)
