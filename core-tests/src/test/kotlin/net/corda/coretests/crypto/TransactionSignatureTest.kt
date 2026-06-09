@@ -119,7 +119,7 @@ class TransactionSignatureTest {
 
     /** Verification should fail if the proof contains an invalid signature. */
     @Test(timeout=300_000)
-    fun `Signiture verification should fail if key rotation proof is tampered `() {
+    fun `Signature verification should fail if key rotation proof is tampered `() {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
         val newKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
         val proof = createProof(keyPair, newKeyPair.public)
