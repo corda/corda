@@ -385,4 +385,28 @@ ignore:
           vulnerability. 
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-06-05T15:18:18.653Z
+  SNYK-JAVA-ORGAPACHESHIRO-17116505:
+    - '*':
+        reason: >-
+          CVE-2026-43827: This vulnerability applies to web applications that
+          use Apache Shiro to manage HTTP sessions. Corda does not use Shiro for
+          any web or HTTP functionality. Shiro is used solely to authenticate
+          and authorise connections over Corda's internal RPC interface, which
+          has no concept of sessions or cookies. The attack vector described —
+          planting a session ID before a user logs in via a browser — does not
+          exist in this context. Corda is not exposed to this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-09T11:23:23.674Z
+  SNYK-JAVA-ORGAPACHESHIRO-17116503:
+    - '*':
+        reason: >-
+          CVE-2026-43828: This vulnerability concerns Apache Shiro sending
+          authentication cookies over unencrypted HTTP connections. Corda does
+          not use Shiro for any web or HTTP functionality, and Corda does not
+          use cookies at all. Shiro is used solely to authenticate and authorise
+          connections over Corda's internal RPC interface. As no cookies are
+          ever created or transmitted, the risk described in this vulnerability
+          cannot materialise, and so is not applicable to Corda.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-09T11:23:25.815Z
 patch: {}
