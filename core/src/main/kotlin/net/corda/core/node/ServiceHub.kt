@@ -314,7 +314,7 @@ interface ServiceHub : ServicesForResolution {
             val requiredSigners = builder.commands().flatMap { it.signers }.toSet()
             if (legalIdentityKey !in requiredSigners) {
                 // The node might have rotated its key but the CorDapp is still using the old one,
-                // so we need to check if any of the required keys is an old key that has been rotated and if so, sign with the new key instead.
+                // so we need to check if any of the required keys is an old key that has been rotated and if so, sign with that key instead.
                 for (requiredSigner in requiredSigners) {
                     if (keyManagementService.isKeyRotated(requiredSigner)) {
                         return signInitialTransaction(builder, requiredSigner)
