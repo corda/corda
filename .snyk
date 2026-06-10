@@ -1,5 +1,5 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
-version: v1.25.0
+version: v1.25.1
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
   SNYK-JAVA-COMGOOGLEGUAVA-1015415:
@@ -31,11 +31,11 @@ ignore:
   SNYK-JAVA-COMSQUAREUPOKHTTP3-2958044:
     - '*':
         reason: >-
-          The vulnerability in okhttp’s error handling is only exploitable in
-          services that receive and parse HTTP requests. Corda does not receive
-          HTTP requests and thus is not exposed to this issue.
-        expires: 2023-07-21T11:42:55.546Z
-        created: 2022-12-29T11:42:55.556Z
+          CVE-2023-0833: The vulnerability in okhttp’s error handling is only
+          exploitable in services that receive and parse HTTP requests. Corda
+          does not receive HTTP requests and thus is not exposed to this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-09T12:24:19.438Z
   SNYK-JAVA-IONETTY-1042268:
     - '*':
         reason: >-
@@ -52,22 +52,22 @@ ignore:
   SNYK-JAVA-ORGJETBRAINSKOTLIN-2628385:
     - '*':
         reason: >-
-          This is a build time vulnerability. It relates to the inability to
-          lock dependencies for Kotlin Multiplatform Gradle Projects. At build
-          time for Corda we do not use Multiplatform Gradle Projects so are not
-          affected by this vulnerability. In addition as it is a build time
-          vulnerability released artifacts are not affected.
-        expires: 2023-07-21T11:52:35.855Z
-        created: 2022-12-29T11:52:35.870Z
+          CVE-2022-24329: This is a build time vulnerability. It relates to the
+          inability to lock dependencies for Kotlin Multiplatform Gradle
+          Projects. At build time for Corda we do not use Multiplatform Gradle
+          Projects so are not affected by this vulnerability. In addition as it
+          is a build time vulnerability released artifacts are not affected.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:01:10.418Z
   SNYK-JAVA-ORGJETBRAINSKOTLIN-2393744:
     - '*':
         reason: >-
-          This vulnerability relates to information exposure via creation of
-          temporary files (via Kotlin functions) with insecure permissions.
-          Corda does not use any of the vulnerable functions so it not
-          susceptible to this vulnerability.
-        expires: 2023-07-21T13:39:03.244Z
-        created: 2022-12-29T13:39:03.262Z
+          CVE-2020-29582: This vulnerability relates to information exposure via
+          creation of temporary files (via Kotlin functions) with insecure
+          permissions. Corda does not use any of the vulnerable functions so it
+          not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:01:08.069Z
   SNYK-JAVA-ORGYAML-3016888:
     - '*':
         reason: >-
@@ -199,15 +199,13 @@ ignore:
   SNYK-JAVA-ORGYAML-3152153:
     - '*':
         reason: >-
-          There is a transitive dependency on snakeyaml from the third party
-          components jackson-dataformat-yaml and liquidbase-core. The
-          jackson-dataformat-yaml component does not use the snakeyaml
-          databinding layer. For liquidbase we use xml in the changelog files
-          not yaml. So given this Corda is not susceptible to this
-          vulnerability.Cordapp authors should exercise their own judgment if
-          using this library directly in their cordapp.
-        expires: 2023-07-03T11:35:04.385Z
-        created: 2023-01-04T11:35:04.414Z
+          CVE-2022-1471: There is a transitive dependency on snakeyaml from the
+          third party components jackson-dataformat-yaml and liquidbase-core.
+          The jackson-dataformat-yaml component does not use the snakeyaml
+          databinding layer. For Liquibase we use xml in the changelog files not
+          yaml. So given this Corda is not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:01:12.723Z
   SNYK-JAVA-IONETTY-3167773:
     - '*':
         reason: >-
@@ -225,4 +223,187 @@ ignore:
           susceptible to this reported vulnerability
         expires: 2023-07-03T11:45:11.295Z
         created: 2023-01-04T11:45:11.322Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-15423960:
+    - '*':
+        reason: >-
+          CVE-2026-27446: This vulnerability is reported for Apache Artemis.
+          This version Corda is built with an R3-specific version of Artemis
+          that resolves this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:32.904Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-9598037:
+    - '*':
+        reason: >-
+          CVE-2025-27427: This vulnerability allows a user with queue creation
+          permissions to improperly modify an addresses routing type without
+          having address-creation permissions. In Corda Artemis is embedded or
+          used in tightly controlled external configurations accessible only to
+          trusted Corda nodes under authenticated conditions. There are no
+          untrusted users with the permissions needed to exploit the
+          vulnerability. Therefore Corda is not susceptible to this
+          vulnerability. 
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:35.476Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-9689862:
+    - '*':
+        reason: >-
+          CVE-2025-27391: This vulnerability allows sensitive information to be
+          written to the Corda log file when debugging is enabled. Debug logging
+          is an exceptional (and temporary) configuration, and the expectation
+          is that logs are only accessed by trusted administrators.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:37.541Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-9689863:
+    - '*':
+        reason: >-
+          CVE-2025-27391: This vulnerability allows sensitive information to be
+          written to the Corda log file when debugging is enabled. Debug logging
+          is an exceptional (and temporary) configuration, and the expectation
+          is that logs are only accessed by trusted administrators.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:39.716Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-9689864:
+    - '*':
+        reason: >-
+          CVE-2025-27391: This vulnerability allows sensitive information to be
+          written to the Corda log file when debugging is enabled. Debug logging
+          is an exceptional (and temporary) configuration, and the expectation
+          is that logs are only accessed by trusted administrators.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:42.305Z
+  SNYK-JAVA-ORGAPACHELOGGINGLOG4J-14532782:
+    - '*':
+        reason: >-
+          CVE-2025-68161: This is a Log4j vulnerbility that can occur when the
+          node's logging is configured with a Socket Appender - the appender
+          does not perform TLS hostname verification of the peer certificate.
+          The Log4j package cannot be upgraded for this version of Corda. The
+          default Log4j configuration provided in the Corda node does not
+          include any Socket Appenders. If a node has a custom Log4j
+          configuration that includes Socket Appenders then to mitigate against
+          this vulnerability the Socket Appender definitions may be configured
+          to use a private or restricted trust root to limit the set of trusted
+          certificates.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:44.361Z
+  SNYK-JAVA-ORGAPACHELOGGINGLOG4J-15967727:
+    - '*':
+        reason: >-
+          CVE-2026-34477: This is a Log4j vulnerbility that can occur when the
+          node's logging is configured with a Socket Appender - the appender
+          does not perform TLS hostname verification of the peer certificate.
+          The Log4j package cannot be upgraded for this version of Corda. The
+          default Log4j configuration provided in the Corda node does not
+          include any Socket Appenders. If a node has a custom Log4j
+          configuration that includes Socket Appenders then to mitigate against
+          this vulnerability the Socket Appender definitions may be configured
+          to use a private or restricted trust root to limit the set of trusted
+          certificates.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:46.765Z
+  SNYK-JAVA-ORGAPACHELOGGINGLOG4J-15967769:
+    - '*':
+        reason: >-
+          CVE-2026-34480: This is a Log4j vulnerbility that can occur when the
+          node's logging is configured to generate XML-formatted log messages.
+          The Log4j package cannot be upgraded for this version of Corda. The
+          default Log4j configuration provided in the Corda node does not
+          include configuration for XML formatted log messages. If a node has a
+          custom Log4j configuration that specifies XML output then CorDapps
+          need to be sure to only include characters permitted in XML 1.0.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:49.259Z
+  SNYK-JAVA-ORGAPACHELOGGINGLOG4J-15967804:
+    - '*':
+        reason: >-
+          CVE-2026-34479: This is a Log4j vulnerbility that can occur when the
+          node's logging is configured to generate XML-formatted log messages.
+          The Log4j package cannot be upgraded for this version of Corda. The
+          default Log4j configuration provided in the Corda node does not
+          include configuration for XML formatted log messages. If a node has a
+          custom Log4j configuration that specifies XML output then CorDapps
+          need to be sure to only include characters permitted in XML 1.0.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:51.735Z
+  SNYK-JAVA-ORGAPACHESHIRO-15253617:
+    - '*':
+        reason: >-
+          CVE-2026-23903: This is an issue reported for Apache Shiro and can
+          only be exploited from a case-insensitive filesystem such as MacOS.
+          Linux is the only supported production platform for Corda, which is by
+          default a case-sensitive filesystem, and so Corda is not exposed to
+          this issue whilst running in production. It should be noted that Corda
+          is supported for development on Windows and MacOS and so development
+          deployments may be susceptbile to this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:54.264Z
+  SNYK-JAVA-ORGAPACHESHIRO-15253618:
+    - '*':
+        reason: >-
+          CVE-2026-23901: This is an issue reported for Apache Shiro that is
+          exploited by measuring time delays from repeated authentication
+          attempts. This can only be exploited from a local attacker, such as a
+          malicious RPC client running within the Corda environment. Since Corda
+          is deployed in a securely-administered environment there is no
+          opportunity for such an attack to take place.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:56.835Z
+  SNYK-JAVA-ORGECLIPSEJETTY-15426540:
+    - '*':
+        reason: >-
+          CVE-2025-11143: This is an issue with handling invalid or unusual HTTP
+          URIs. Corda only uses Jetty in tests and some samples, and so an
+          external attacker would not be able to exploit this.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:00:59.863Z
+  SNYK-JAVA-ORGECLIPSEJETTY-16061843:
+    - '*':
+        reason: >-
+          CVE-2026-2332: This is an issue with handling HTTP requests with
+          improperly terminated quoted strings. Corda only uses Jetty in tests
+          and some samples, and so an external attacker would not be able to
+          exploit this.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:01:02.567Z
+  SNYK-JAVA-ORGGRADLE-5750785:
+    - '*':
+        reason: >-
+          CVE-2023-35947: This is a build-related vulnerability that does not
+          affect the running of Corda. The Gradle build for Corda does not
+          unpack any TAR archives. Corda is not exposed to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-04T16:01:04.852Z
+  SNYK-JAVA-COMSQUAREUPOKHTTP3-13961111:
+    - '*':
+        reason: >-
+          CVE-2021-0341: com.squareup.okhttp3:okhttp is a direct dependency for
+          Corda and Corda doesn't use the vulnerable function
+          OkHostnameVerifier.verifyHostName(), and so is not exposed to this
+          vulnerability. 
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-05T15:18:18.653Z
+  SNYK-JAVA-ORGAPACHESHIRO-17116505:
+    - '*':
+        reason: >-
+          CVE-2026-43827: This vulnerability applies to web applications that
+          use Apache Shiro to manage HTTP sessions. Corda does not use Shiro for
+          any web or HTTP functionality. Shiro is used solely to authenticate
+          and authorise connections over Corda's internal RPC interface, which
+          has no concept of sessions or cookies. The attack vector described —
+          planting a session ID before a user logs in via a browser — does not
+          exist in this context. Corda is not exposed to this issue.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-09T11:23:23.674Z
+  SNYK-JAVA-ORGAPACHESHIRO-17116503:
+    - '*':
+        reason: >-
+          CVE-2026-43828: This vulnerability concerns Apache Shiro sending
+          authentication cookies over unencrypted HTTP connections. Corda does
+          not use Shiro for any web or HTTP functionality, and Corda does not
+          use cookies at all. Shiro is used solely to authenticate and authorise
+          connections over Corda's internal RPC interface. As no cookies are
+          ever created or transmitted, the risk described in this vulnerability
+          cannot materialise, and so is not applicable to Corda.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-09T11:23:25.815Z
 patch: {}

@@ -32,6 +32,8 @@ dependencies {
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
+    compile "commons-beanutils:commons-beanutils:$beanutils_version"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

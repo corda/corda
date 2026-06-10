@@ -129,6 +129,8 @@ buildscript {
     ext.azure_identity_version = constants.getProperty("azureIdentityVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
     ext.http_client_version = constants.getProperty("httpClientVersion")
+    ext.okio_version = constants.getProperty("okioVersion")
+    ext.commons_dbcp_version = constants.getProperty("commonsDbcpVersion")
 
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
@@ -521,6 +523,24 @@ allprojects {
                     // force-upgrade to latest httpclient@4.5.14
                     if (details.requested.group == 'org.apache.httpcomponents' && details.requested.name == 'httpclient') {
                         details.useVersion http_client_version
+                    }
+
+                    // SNYK-JAVA-COMSQUAREUPOKIO-5773320 / CVE-2023-3635
+                    // vulnerability in com.squareup.okio:okio@1.17.2 fixed in okio@1.17.6
+                    // okio@1.17.2 is a transitive dependency via com.squareup.okhttp3:okhttp@3.14.9, which is the latest
+                    // Kotlin-compatible version of OkHttp available.
+                    // force-upgrade to okio@1.17.6
+                    if (details.requested.group == 'com.squareup.okio' && details.requested.name == 'okio') {
+                        details.useVersion okio_version
+                    }
+
+                    // SNYK-JAVA-ORGAPACHECOMMONS-559327 / CWE-200
+                    // vulnerability in org.apache.commons:commons-dbcp2@2.7.0 fixed in commons-dbcp2@2.9.0
+                    // commons-dbcp2@2.7.0 is a transitive dependency via org.apache.activemq:artemis-server@2.19.2_r3,
+                    // which is the latest compatible version available.
+                    // force-upgrade to latest available commons-dbcp2@2.14.0
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-dbcp2') {
+                        details.useVersion commons_dbcp_version
                     }
                 }
 
