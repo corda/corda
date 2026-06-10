@@ -11,8 +11,6 @@ import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.USD
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.createDevNetworkMapCa
@@ -110,9 +108,7 @@ class TrustRootTest {
         assertEquals(rootCa1.certificate, alice.services.identityService.trustRoot)
         assertEquals(rootCa2.certificate, bob.services.identityService.trustRoot)
 
-        alice.services.startFlow(CashIssueFlow(1000.DOLLARS, ref, notary.party))
-        mockNet.runNetwork()
-        alice.services.startFlow(CashPaymentFlow(1000.DOLLARS, bob.party, false, notary.party))
+        alice.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, bob.party, false, notary.party))
         mockNet.runNetwork()
 
         // Ledger state remains unchanged.

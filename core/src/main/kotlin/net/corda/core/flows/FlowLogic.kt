@@ -166,8 +166,7 @@ abstract class FlowLogic<out T> {
     fun initiateFlow(party: Party): FlowSession {
         // The method `wellKnownPartyFromAnonymous` is called in case the party passed in contains a key that has been rotated. In such a case,
         // the well known party will be returned with the new key, and the flow session will be initiated with that new key.
-        val upToDateParty = serviceHub.identityService.wellKnownPartyFromAnonymous(party)
-                ?: throw IllegalArgumentException("Could not resolve party: $party")
+        val upToDateParty = serviceHub.identityService.wellKnownPartyFromAnonymous(party) ?: party
 
         return stateMachine.initiateFlow(upToDateParty, upToDateParty, serviceHub.telemetryServiceInternal.getCurrentTelemetryData())
     }
