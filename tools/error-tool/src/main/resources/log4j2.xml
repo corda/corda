@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="info">
     <Properties>
-        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
-        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="default_log_level">${sys:defaultLogLevel:-info}</Property>
+        <Property name="console_log_level">${sys:consoleLogLevel:-error}</Property>
     </Properties>
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
@@ -11,8 +11,8 @@
     </Appenders>
 
     <Loggers>
-        <Root level="${defaultLogLevel}">
-            <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
+        <Root level="${default_log_level}">
+            <AppenderRef ref="Console-Appender" level="${console_log_level}"/>
         </Root>
     </Loggers>
 </Configuration>

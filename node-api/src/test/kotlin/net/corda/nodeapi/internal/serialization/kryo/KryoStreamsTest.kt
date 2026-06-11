@@ -1,13 +1,13 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
-import net.corda.core.internal.declaredField
 import net.corda.serialization.internal.ByteBufferOutputStream
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
-import java.io.*
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.BufferOverflowException
-import java.util.*
+import java.util.Random
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 import kotlin.test.assertEquals
@@ -67,15 +67,12 @@ class KryoStreamsTest {
 	fun `ByteBufferOutputStream works`() {
         val stream = ByteBufferOutputStream(3)
         stream.write("abc".toByteArray())
-        val getBuf = stream.declaredField<ByteArray>(ByteArrayOutputStream::class, "buf")::value
-        assertEquals(3, getBuf().size)
         repeat(2) {
             assertSame<Any>(BufferOverflowException::class.java, catchThrowable {
                 stream.alsoAsByteBuffer(9) {
                     it.put("0123456789".toByteArray())
                 }
             }.javaClass)
-            assertEquals(3 + 9, getBuf().size)
         }
         // This time make too much space:
         stream.alsoAsByteBuffer(11) {

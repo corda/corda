@@ -1,6 +1,10 @@
 package net.corda.serialization.internal
 
-import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.DefaultSerializer
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
@@ -9,27 +13,27 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.TransactionVerificationException.UntrustedAttachmentsException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
+import org.junit.rules.ExpectedException
 import java.net.URL
 import java.sql.Connection
-import java.util.*
+import java.util.Collections
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -104,7 +108,7 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<DefaultSerializable>): DefaultSerializable {
+    override fun read(kryo: Kryo, input: Input, type: Class<out DefaultSerializable>): DefaultSerializable {
         return DefaultSerializable()
     }
 }
@@ -114,7 +118,7 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("/isolated.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("/isolated.jar")!!
     }
 
     private val emptyWhitelistContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, null)
@@ -219,11 +223,13 @@ class CordaClassResolverTests {
         }
     }
 
-    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
+    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER): AttachmentId {
+        return ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
+    }
 
     @Test(timeout=300_000)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
-        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
+        val storage = MockAttachmentStorage().toInternal()
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(
@@ -240,7 +246,7 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
     fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
-        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
+        val storage = MockAttachmentStorage().toInternal()
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage, "some_uploader")
         assertThatExceptionOfType(UntrustedAttachmentsException::class.java).isThrownBy {
@@ -267,6 +273,9 @@ class CordaClassResolverTests {
     }
 
     // Blacklist tests. Note: leave the variable public or else expected messages do not work correctly
+    @get:Rule
+    val expectedEx = ExpectedException.none()!!
+
     @Test(timeout=300_000)
 	fun `Check blacklisted class`() {
         val anException = assertThrows<IllegalStateException> {
@@ -359,12 +368,11 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
 	fun `Check blacklisted subsubclass`() {
-        val anException = assertThrows<IllegalStateException> {
-            val resolver = CordaClassResolver(allButBlacklistedContext)
-            // SubSubHashSet extends SubHashSet, which extends the blacklisted HashSet.
-            resolver.getRegistration(SubSubHashSet::class.java)
-        }
-        assertEquals("The superclass java.util.HashSet of net.corda.serialization.internal.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.", anException.message)
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.serialization.internal.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.")
+        val resolver = CordaClassResolver(allButBlacklistedContext)
+        // SubSubHashSet extends SubHashSet, which extends the blacklisted HashSet.
+        resolver.getRegistration(SubSubHashSet::class.java)
     }
 
     class ConnectionImpl(private val connection: Connection) : Connection by connection
@@ -384,12 +392,11 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
 	fun `Check blacklisted super-interface impl`() {
-        val anException = assertThrows<IllegalStateException> {
-            val resolver = CordaClassResolver(allButBlacklistedContext)
-            // SubConnectionImpl implements SubConnection, which extends the blacklisted Connection.
-            resolver.getRegistration(SubConnectionImpl::class.java)
-        }
-        assertEquals("The superinterface java.sql.Connection of net.corda.serialization.internal.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.", anException.message)
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superinterface java.sql.Connection of net.corda.serialization.internal.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.")
+        val resolver = CordaClassResolver(allButBlacklistedContext)
+        // SubConnectionImpl implements SubConnection, which extends the blacklisted Connection.
+        resolver.getRegistration(SubConnectionImpl::class.java)
     }
 
     @Test(timeout=300_000)
