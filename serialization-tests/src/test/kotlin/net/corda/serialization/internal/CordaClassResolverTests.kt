@@ -13,7 +13,6 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentId
@@ -26,7 +25,6 @@ import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.coretesting.internal.rigorousMock
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test

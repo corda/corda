@@ -39,7 +39,6 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndPersistentServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.internal.IS_OPENJ9
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.ClassRule

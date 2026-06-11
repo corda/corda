@@ -11,7 +11,6 @@ import net.corda.serialization.internal.amqp.testutils.serializationProperties
 import net.corda.coretesting.internal.createTestSerializationEnv
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
-import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
