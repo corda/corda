@@ -9,10 +9,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.TransactionVerificationException.UntrustedAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentId
@@ -20,15 +17,21 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.toInternal
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.net.URL
 import java.sql.Connection
 import java.util.Collections
@@ -271,8 +274,6 @@ class CordaClassResolverTests {
     }
 
     // Blacklist tests. Note: leave the variable public or else expected messages do not work correctly
-    @get:Rule
-    val expectedEx = ExpectedException.none()!!
 
     @Test(timeout=300_000)
 	fun `Check blacklisted class`() {
@@ -366,11 +367,13 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
 	fun `Check blacklisted subsubclass`() {
-        expectedEx.expect(IllegalStateException::class.java)
-        expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.serialization.internal.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.")
-        val resolver = CordaClassResolver(allButBlacklistedContext)
-        // SubSubHashSet extends SubHashSet, which extends the blacklisted HashSet.
-        resolver.getRegistration(SubSubHashSet::class.java)
+        val anException = assertThrows<IllegalStateException> {
+            val resolver = CordaClassResolver(allButBlacklistedContext)
+            // SubSubHashSet extends SubHashSet, which extends the blacklisted HashSet.
+            resolver.getRegistration(SubSubHashSet::class.java)
+        }
+        assertEquals("The superclass java.util.HashSet of net.corda.serialization.internal.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.", anException.message)
+
     }
 
     class ConnectionImpl(private val connection: Connection) : Connection by connection
@@ -390,11 +393,13 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
 	fun `Check blacklisted super-interface impl`() {
-        expectedEx.expect(IllegalStateException::class.java)
-        expectedEx.expectMessage("The superinterface java.sql.Connection of net.corda.serialization.internal.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.")
-        val resolver = CordaClassResolver(allButBlacklistedContext)
-        // SubConnectionImpl implements SubConnection, which extends the blacklisted Connection.
-        resolver.getRegistration(SubConnectionImpl::class.java)
+        val anException = assertThrows<IllegalStateException> {
+            val resolver = CordaClassResolver(allButBlacklistedContext)
+            // SubConnectionImpl implements SubConnection, which extends the blacklisted Connection.
+            resolver.getRegistration(SubConnectionImpl::class.java)
+        }
+        assertEquals("The superinterface java.sql.Connection of net.corda.serialization.internal.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.", anException.message)
+
     }
 
     @Test(timeout=300_000)

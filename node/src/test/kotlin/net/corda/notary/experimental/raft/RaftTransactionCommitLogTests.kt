@@ -119,7 +119,7 @@ class RaftTransactionCommitLogTests {
                 states, txId, requestingPartyName.toString(), requestSignature, timeWindow
         )
         val commitError = client.submit(commitCommand).getOrThrow()
-        MatcherAssert.assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+        assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
     }
 
     @Test(timeout=300_000)
