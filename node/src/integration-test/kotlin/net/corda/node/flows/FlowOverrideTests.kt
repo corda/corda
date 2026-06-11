@@ -77,7 +77,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
+            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
         }
     }
 
@@ -94,7 +94,7 @@ class FlowOverrideTests {
                     .map { startNode(it) }
                     .transpose()
                     .getOrThrow()
-            MatcherAssert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
+            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
         }
     }
 }
