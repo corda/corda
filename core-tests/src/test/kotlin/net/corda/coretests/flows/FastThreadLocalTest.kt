@@ -12,7 +12,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.rootCause
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.catchThrowable
-import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers.lessThanOrEqualTo
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
