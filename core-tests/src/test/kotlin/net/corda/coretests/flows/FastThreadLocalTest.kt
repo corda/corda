@@ -66,7 +66,7 @@ class FastThreadLocalTest {
                     override fun initialValue() = ExpensiveObj()
                 }
                 runFibers(100, threadLocal::get) // Return value could be anything.
-                MatcherAssert.assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
+                assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
             }
 
     /** @return the number of times a different expensive object was obtained post-suspend. */
