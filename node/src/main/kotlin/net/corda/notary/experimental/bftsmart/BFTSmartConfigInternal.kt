@@ -1,7 +1,5 @@
 package net.corda.notary.experimental.bftsmart
 
-import net.corda.core.internal.div
-import net.corda.core.internal.writer
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -12,6 +10,8 @@ import java.net.Socket
 import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
+import kotlin.io.path.div
+import kotlin.io.path.writer
 
 data class BFTSmartConfig(
         /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
@@ -59,7 +59,13 @@ class BFTSmartConfigInternal(private val replicaAddresses: List<NetworkHostAndPo
                 println("$index ${InetAddress.getByName(host).hostAddress} $port")
             }
         }
-        val systemConfig = String.format(javaClass.getResource("system.config.printf").readText(), n, maxFaultyReplicas(n), if (debug) 1 else 0, (0 until n).joinToString(","))
+        val systemConfig = String.format(
+                javaClass.getResource("system.config.printf")!!.readText(),
+                n,
+                maxFaultyReplicas(n),
+                if (debug) 1 else 0,
+                (0 until n).joinToString(",")
+        )
         configWriter("system.config") {
             print(systemConfig)
         }

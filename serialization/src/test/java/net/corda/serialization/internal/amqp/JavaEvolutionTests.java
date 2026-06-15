@@ -13,7 +13,6 @@ import java.io.NotSerializableException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-@SuppressWarnings("deprecation")
 public class JavaEvolutionTests {
     @Rule
     public final ExpectedException exception = ExpectedException.none();

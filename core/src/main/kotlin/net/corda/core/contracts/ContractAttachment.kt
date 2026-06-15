@@ -27,6 +27,7 @@ class ContractAttachment private constructor(
 
     companion object {
         @CordaInternal
+        @JvmSynthetic
         fun create(attachment: Attachment,
                    contract: ContractClassName,
                    additionalContracts: Set<ContractClassName> = emptySet(),
