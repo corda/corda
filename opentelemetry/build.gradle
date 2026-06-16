@@ -10,7 +10,7 @@ dependencies {
     implementation platform("io.opentelemetry:opentelemetry-bom:$open_telemetry_version")
     implementation "io.opentelemetry:opentelemetry-sdk"
     implementation "io.opentelemetry:opentelemetry-exporter-otlp"
-    implementation "io.opentelemetry:opentelemetry-semconv:$open_telemetry_sem_conv_version"
+    implementation "io.opentelemetry.semconv:opentelemetry-semconv:$open_telemetry_sem_conv_version"
     implementation ("com.squareup.okhttp3:okhttp:$okhttp_version") {
         force = true
     }
