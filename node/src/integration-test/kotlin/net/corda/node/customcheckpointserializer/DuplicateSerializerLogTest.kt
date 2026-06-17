@@ -20,12 +20,15 @@ class DuplicateSerializerLogTest{
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
             // Log4j 2.25.x async logging may delay flushing - retry until logs appear or timeout
+            // Also, scripting is disabled by default in Log4j 2.17.2+, so ScriptPatternSelector may
+            // fall back to outputting just the message without any log level prefix.
+            // Filter directly by the message content rather than log level.
 
             var text: List<String> = emptyList()
             val maxAttempts = 20
             for (attempt in 1..maxAttempts) {
-                text = node.logFile().readLines().filter { it.startsWith("[WARN") }
-                if (text.any { it.contains("Duplicate custom checkpoint serializer") }) {
+                text = node.logFile().readLines().filter { it.contains("Duplicate custom checkpoint serializer") }
+                if (text.isNotEmpty()) {
                     break
                 }
                 Thread.sleep(500)
