@@ -46,6 +46,9 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
                 InputStreamReader(process.errorStream))
                 .lines()
                 .filter { !it.startsWith("Warning: Nashorn") }
+                // Log4j 2.17.2+ disables scripting by default, producing this error when log4j2-test.xml
+                // tries to use ScriptPatternSelector. Filter it out as it's not relevant to CLI error handling.
+                .filter { !it.contains("Script support is not enabled") }
                 .collect(Collectors.joining("\n"))
                 .toString()
 
