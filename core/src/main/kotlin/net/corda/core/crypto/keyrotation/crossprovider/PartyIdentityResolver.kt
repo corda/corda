@@ -22,7 +22,7 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
 
     companion object {
 
-        fun generateProofChainMap(vararg resolvedParties: PartyIdentityResolved): MutableMap<PublicKey, KeyRotationProofChain> {
+        fun generateProofChainMap(vararg resolvedParties: PartyIdentityResolved): Map<PublicKey, KeyRotationProofChain>? {
             val keyRotationProofs: MutableMap<PublicKey, KeyRotationProofChain> = LinkedHashMap<PublicKey, KeyRotationProofChain>()
 
             for (resolved in resolvedParties) {
@@ -30,6 +30,11 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
                     keyRotationProofs[resolved.getOriginalKey()] = resolved.proofChain!!
                 }
             }
+
+            if(keyRotationProofs.isEmpty()) {
+                return null
+            }
+
             return Collections.unmodifiableMap(keyRotationProofs)
         }
 
