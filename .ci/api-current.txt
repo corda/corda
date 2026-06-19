@@ -2567,7 +2567,7 @@ public final class net.corda.core.crypto.keyrotation.crossprovider.PartyIdentity
 ##
 public static final class net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver$Companion extends java.lang.Object
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
-  @NotNull
+  @Nullable
   public final java.util.Map generateProofChainMap(net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolved...)
   @NotNull
   public final net.corda.core.identity.Party resolveToCurrentParty(java.security.PublicKey, net.corda.core.node.services.IdentityService)
