@@ -8,6 +8,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException.UnsupportedHashTypeException
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
@@ -51,8 +52,8 @@ class TransactionBuilderWithKeyRotationProofTest {
     private val notary = TestIdentity(DUMMY_NOTARY_NAME).party
     private val dummyKeyRotationProof = KeyRotationProofChain(listOf(KeyRotationProof(notary.owningKey, notary.owningKey, secureRandomBytes(32))))
     private val dummyKeyRotationProof2 = KeyRotationProofChain(listOf(KeyRotationProof(notary.owningKey, notary.owningKey, secureRandomBytes(32))))
-    private val dummyKeyRotationMap = mapOf(notary.owningKey to dummyKeyRotationProof)
-    private val dummyKeyRotationMap2 = mapOf(notary.owningKey to dummyKeyRotationProof2)
+    private val dummyKeyRotationMap = mapOf(notary.owningKey to dummyKeyRotationProof).toSortedMap()
+    private val dummyKeyRotationMap2 = mapOf(notary.owningKey to dummyKeyRotationProof2).toSortedMap()
     private val dummyCommand = dummyCommand( notary.owningKey).copy(keyRotationProofChainMap = dummyKeyRotationMap)
     private val dummyCommand2 = dummyCommand( notary.owningKey).copy(keyRotationProofChainMap = dummyKeyRotationMap2)
     private val services = MockServices(

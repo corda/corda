@@ -17,6 +17,7 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.PartialMerkleTree
@@ -63,7 +64,7 @@ class CompatibleTransactionWithKeyRotationChainProofTests {
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
         val DUMMY_KEY_ROTATION_PROOF_CHAIN = KeyRotationProofChain(listOf(KeyRotationProof(DUMMY_KEY_1.public, DUMMY_KEY_2.public, secureRandomBytes(32))))
-        val DUMMY_KEY_ROTATION_PROOF_MAP = mapOf(DUMMY_KEY_1.public to DUMMY_KEY_ROTATION_PROOF_CHAIN)
+        val DUMMY_KEY_ROTATION_PROOF_MAP = mapOf(DUMMY_KEY_1.public to DUMMY_KEY_ROTATION_PROOF_CHAIN, DUMMY_KEY_2.public to DUMMY_KEY_ROTATION_PROOF_CHAIN).toSortedMap()
         val BOB = TestIdentity(BOB_NAME, 80).party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }

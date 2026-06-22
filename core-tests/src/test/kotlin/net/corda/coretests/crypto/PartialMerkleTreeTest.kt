@@ -5,6 +5,7 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
@@ -101,7 +102,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
                     )
             )
     )
-    private val dummyKeyRotationProofChainMap = mapOf(TestIdentity(MEGA_CORP.name).party.owningKey to dummyKeyRotationProofChain)
+    private val dummyKeyRotationProofChainMap = mapOf(TestIdentity(MEGA_CORP.name).party.owningKey to dummyKeyRotationProofChain).toSortedMap()
 
 
     private val nodes = "abcdef"
@@ -157,7 +158,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
                 inputs = testTx.inputs,
                 attachments = testTx.attachments,
                 outputs = testTx.outputs,
-                commands = listOf(Command(Cash.Commands.Move(), listOf(MEGA_CORP_PUBKEY), dummyKeyRotationProofChainMap)),
+                commands = listOf(Command(Cash.Commands.Move(), listOf(MEGA_CORP_PUBKEY), dummyKeyRotationProofChainMap.toSortedMap())),
                 notary = testTx.notary,
                 timeWindow = testTx.timeWindow,
                 privacySalt = testTx.privacySalt,

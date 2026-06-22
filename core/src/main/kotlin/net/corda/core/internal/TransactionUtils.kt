@@ -25,6 +25,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
@@ -50,6 +51,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
+import java.util.TreeMap
 import kotlin.reflect.KClass
 
 /** Constructs a [NotaryChangeWireTransaction]. */
@@ -176,7 +178,7 @@ fun deserialiseCommands(
     // The key rotation proofs group contains one Map<PublicKey, KeyRotationProofChain> element per Command.
     // Deserialize it as a list of maps and provide a safe fallback (empty maps) if the group is missing
     // to maintain compatibility with older transactions.
-    val keyRotationProofList: List<Map<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, Map::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
+    val keyRotationProofList: List<TreeMap<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, TreeMap::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
     val group = componentGroups.getGroup(COMMANDS_GROUP)
 
     return if (group is FilteredComponentGroup) {
@@ -254,7 +256,7 @@ fun createComponentGroups(inputs: List<StateRef>,
         // Adding key rotation proof map to its own group. If all the commands have null key rotation proof map,
         // we skip adding the group to ensure compatibility with older versions of Corda which don't have this group.
         // To keep the list of key rotation proof maps aligned with the list of commands, we add an empty map for commands which don't have a key rotation proof map.
-        componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap() }, serialize)
+        componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap<PublicKey, KeyRotationProofChain>().toSortedMap() }, serialize)
     }
 
     return componentGroupMap

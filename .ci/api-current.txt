@@ -617,19 +617,19 @@ public final class net.corda.core.contracts.BrokenAttachmentException extends ne
 public final class net.corda.core.contracts.Command extends java.lang.Object
   public <init>(T, java.security.PublicKey)
   public <init>(T, java.util.List)
-  public <init>(T, java.util.List, java.util.Map)
-  public <init>(net.corda.core.contracts.CommandData, java.util.List, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(T, java.util.List, java.util.SortedMap)
+  public <init>(net.corda.core.contracts.CommandData, java.util.List, java.util.SortedMap, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final T component1()
   @NotNull
   public final java.util.List component2()
   @Nullable
-  public final java.util.Map component3()
+  public final java.util.SortedMap component3()
   @NotNull
-  public final net.corda.core.contracts.Command copy(T, java.util.List, java.util.Map)
+  public final net.corda.core.contracts.Command copy(T, java.util.List, java.util.SortedMap)
   public boolean equals(Object)
   @Nullable
-  public final java.util.Map getKeyRotationProofChainMap()
+  public final java.util.SortedMap getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
   @NotNull
@@ -661,8 +661,8 @@ public interface net.corda.core.contracts.CommandData
 @CordaSerializable
 public final class net.corda.core.contracts.CommandWithParties extends java.lang.Object
   public <init>(java.util.List, java.util.List, T)
-  public <init>(java.util.List, java.util.List, T, java.util.Map)
-  public <init>(java.util.List, java.util.List, net.corda.core.contracts.CommandData, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.util.List, java.util.List, T, java.util.SortedMap)
+  public <init>(java.util.List, java.util.List, net.corda.core.contracts.CommandData, java.util.SortedMap, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final java.util.List component1()
   @NotNull
@@ -670,12 +670,12 @@ public final class net.corda.core.contracts.CommandWithParties extends java.lang
   @NotNull
   public final T component3()
   @Nullable
-  public final java.util.Map component4()
+  public final java.util.SortedMap component4()
   @NotNull
-  public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T, java.util.Map)
+  public final net.corda.core.contracts.CommandWithParties copy(java.util.List, java.util.List, T, java.util.SortedMap)
   public boolean equals(Object)
   @Nullable
-  public final java.util.Map getKeyRotationProofChainMap()
+  public final java.util.SortedMap getKeyRotationProofChainMap()
   @NotNull
   public final java.util.List getSigners()
   @NotNull

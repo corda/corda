@@ -1,5 +1,7 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.contracts.PublicKeyComparator
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -9,8 +11,10 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.security.PublicKey
 import java.util.*
 import kotlin.collections.LinkedHashMap
+import kotlin.collections.get
 
 private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 
@@ -31,7 +35,13 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
-                TreeMap::class.java to { map -> TreeMap(map) },
+                TreeMap::class.java to { map ->
+                    if(map.keys.firstOrNull() is PublicKey && map.values.firstOrNull() is KeyRotationProofChain) {
+                        TreeMap<PublicKey, KeyRotationProofChain>(PublicKeyComparator).apply { putAll(uncheckedCast<Map<*, *>, Map<PublicKey, KeyRotationProofChain>>(map)) }
+                    } else {
+                        TreeMap(map)
+                    }
+                },
                 EnumMap::class.java to { map ->
                     EnumMap(uncheckedCast<Map<*, *>, Map<EnumJustUsedForCasting, Any>>(map))
                 }

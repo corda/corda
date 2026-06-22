@@ -15,6 +15,10 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
+import java.util.Comparator
+import java.util.SortedMap
+import java.util.TreeMap
+import kotlin.math.min
 
 // DOCSTART 1
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
@@ -197,11 +201,12 @@ abstract class TypeOnlyCommandData : CommandData {
  * Never pass an empty proof chain map to the construct as it will have impact on how the merkle tree is calculated after a deserialization. Use null instead for backwards compatibility.
  */
 @CordaSerializable
-data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null) {
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: SortedMap<PublicKey, KeyRotationProofChain>? = null) {
     // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
         require(keyRotationProofChainMap == null || keyRotationProofChainMap.isNotEmpty()) { "The map of key rotation proofs must not be empty. Use null instead to maintain backward compatibility" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.comparator() is PublicKeyComparator) { "The map of key rotation proofs have PublicKeyComparator as comparator" }
     }
 
     constructor(data: T, signers: List<PublicKey>) : this(data, signers, null)
@@ -213,6 +218,27 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, 
             return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
         }
         return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }} and proof chains ${keyRotationProofChainMap.entries.joinToString { "${it.key.toStringShort()} -> ${it.value}" }}"
+    }
+}
+
+object PublicKeyComparator : Comparator<PublicKey> {
+    @Suppress("MagicNumber")
+    override fun compare(a: PublicKey, b: PublicKey): Int {
+        if (a === b) return 0
+        val aEnc = a.encoded ?: return -1
+        val bEnc = b.encoded ?: return 1
+        val minLen = min(aEnc.size, bEnc.size)
+        for (i in 0 until minLen) {
+            val diff = (aEnc[i].toInt() and 0xff) - (bEnc[i].toInt() and 0xff)
+            if (diff != 0) return diff
+        }
+        return aEnc.size - bEnc.size
+    }
+}
+
+fun Map<PublicKey, KeyRotationProofChain>.toSortedMap(): TreeMap<PublicKey, KeyRotationProofChain> {
+    return TreeMap<PublicKey, KeyRotationProofChain> (PublicKeyComparator).apply {
+        putAll(this@toSortedMap)
     }
 }
 
@@ -235,8 +261,13 @@ data class CommandWithParties<out T : CommandData>(
         @Deprecated("Should not be used in contract verification code as it is non-deterministic, will be disabled for some future target platform version onwards and will take effect only for CorDapps targeting those versions.")
         val signingParties: List<Party>,
         val value: T,
-        val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>? = null
+        val keyRotationProofChainMap: SortedMap<PublicKey, KeyRotationProofChain>? = null
 ) {
+
+    init {
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.isNotEmpty()) { "The map of key rotation proofs must not be empty. Use null instead to maintain backward compatibility" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.comparator() is PublicKeyComparator) { "The map of key rotation proofs have PublicKeyComparator as comparator" }
+    }
 
     constructor(
             signers: List<PublicKey>,
