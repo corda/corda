@@ -127,6 +127,8 @@ buildscript {
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     ext.nimbus_jose_jwt_version= constants.getProperty("nimbusJoseJwtVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
+    ext.reactor_netty_version = constants.getProperty("reactorNettyVersion")
+    ext.micrometer_core_version = constants.getProperty("micrometerCoreVersion")
 
     ext.corda_revision = {
         try {
@@ -510,6 +512,40 @@ allprojects {
                     // by com.fasterxml.jackson:jackson-bom:${jackson_version}
                     if (details.requested.group == 'com.fasterxml.jackson.module' && details.requested.name == 'jackson-module-kotlin') {
                         details.useVersion jackson_kotlin_version
+                    }
+
+                    // SNYK-JAVA-COMFASTERXMLJACKSONCORE-15365924/ CWE-770
+                    // SNYK-JAVA-COMFASTERXMLJACKSONCORE-15907551/ CWE-770
+                    // vulnerability in com.fasterxml.jackson.core:jackson-core@2.18.0 fixed in jackson-core@2.18.6
+                    // jackson-core@2.18.0 is a transitive dependency via org.glassfish.jersey.media:jersey-media-json-jackson@2.47
+                    // which is the latest version available.
+                    // force-upgrade to the same version used by Corda
+                    // Review when Jersey is upgraded
+                    if (details.requested.group == 'com.fasterxml.jackson.core' || details.requested.group == 'com.fasterxml.jackson.databind') {
+                        // jackson-annotations doesn't follow the same versioning pattern as the rest of Jackson, so don't force
+                        // that particular module and instead let jackson-bom dictate which version to use.
+                        if (details.requested.name != "jackson-annotations") {
+                            details.useVersion jackson_version
+                        }
+                    }
+
+                    // SNYK-JAVA-IOPROJECTREACTORNETTY-17260961 / CVE-2026-41715
+                    // vulnerability in io.projectreactor.netty:reactor-netty-http@1.2.10 fixed in reactor-netty-http@1.2.18
+                    // reactor-netty-http@1.2.18 is a transitive dependency via com.azure:azure-identity@1.18.1
+                    // force-upgrade reactor-netty to a fixed version
+                    // Review when Azure Identity is upgraded
+                    if (details.requested.group == 'io.projectreactor.netty' && details.requested.name == "reactor-netty-http") {
+                        details.useVersion reactor_netty_version
+                    }
+
+                    // SNYK-JAVA-IOMICROMETER-17339194 / CVE-2026-40983
+                    // SNYK-JAVA-IOMICROMETER-17260885 / CVE-2026-40984
+                    // vulnerability in io.micrometer:micrometer-core@1.16.5 fixed in micrometer-core@1.16.6
+                    // micrometer-core@1.16.5 is a transitive dependency via artemis-server@2.54.0
+                    // force-upgrade micrometer-core to a fixed version
+                    // Review when Artemis is upgraded
+                    if (details.requested.group == 'io.micrometer' && details.requested.name == "micrometer-core") {
+                        details.useVersion micrometer_core_version
                     }
                 }
 
