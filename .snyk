@@ -406,4 +406,16 @@ ignore:
           cannot materialise, and so is not applicable to Corda.
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-06-09T11:23:25.815Z
+  SNYK-JAVA-ORGAPACHESHIRO-17378764:
+    - '*':
+        reason: >-
+          CVE-2026-49268: This is a vulnerability in Apache Shiro that allows
+          attackers to manipulate directory service (LDAP) queries. Corda does
+          not use the affected LDAP authentication feature — Shiro is used
+          solely to enforce access controls for internal connections, backed by
+          configuration files or an internal database. As the vulnerable
+          functionality is never invoked there is no exploitable attack surface,
+          and so Corda is not impacted by this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-22T14:58:24.280Z
 patch: {}
