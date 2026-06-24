@@ -12,16 +12,20 @@ import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.io.File
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.SignatureException
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -204,6 +208,28 @@ class TransactionSignatureTest {
 
         // We signed the txId itself, not its hash (because it was a signature over one tx only and no partial tree has been received).
         assertFailsWith<SignatureException> { Crypto.doVerify(txId.sha256(), txSignature) }
+    }
+
+    /*
+    *  This test ensures that Corda Open Source can verify signatures of transactions that have a proof chain, which is a feature
+    *  introduced in Corda Enterprise for cross-provider key rotation. The test loads a pre-signed transaction with a key rotation
+    *  proof from a binary file and checks that at least one signature has a proof chain. It then verifies that the open source
+    * version of Corda can successfully validate the signatures of the transaction, demonstrating compatibility with the key
+    *  rotation feature.
+    */
+    @Test(timeout = 300_000)
+    fun verifyCordaOSCanVerifyTransactionSignaturesAfterCrossProviderKeyRotation() {
+        val inputStream = javaClass.classLoader.getResourceAsStream("corda-415/transaction_with_key_rotation_proof.bin")
+        assertNotNull(inputStream, "Failed to load the signed transaction from the resource file.")
+
+        val loadedTx = inputStream.readBytes() .deserialize<SignedTransaction>()
+
+        // make sure at least one signature has a proof chain
+        val loadedSig = loadedTx.sigs.filter { it.signatureMetadata.proofChain != null }
+        assertTrue(loadedSig.isNotEmpty(), "At least one signature must have a proof chain")
+
+        // make sure that the open source can verify the signature of a transaction that has a proof chain
+        assertDoesNotThrow { loadedTx.checkSignaturesAreValid() }
     }
 
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.
