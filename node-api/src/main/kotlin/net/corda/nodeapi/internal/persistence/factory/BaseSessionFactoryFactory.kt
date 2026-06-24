@@ -56,7 +56,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     fun buildSessionFactory(
             config: Configuration,
             metadataSources: MetadataSources,
-            customClassLoader: ClassLoader?,
             attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
@@ -93,7 +92,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
-        val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader, attributeConverters)
+        val sessionFactory = buildSessionFactory(config, metadataSources, attributeConverters)
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }
