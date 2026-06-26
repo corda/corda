@@ -1,7 +1,5 @@
 package net.corda.common.logging
 
-import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 //Returns an iterator that traverses all the exception's cause chain stopping in case of loops (an exception caused by itself)
@@ -25,18 +23,6 @@ fun Throwable.walkExceptionCausedByList() : Iterator<Throwable> {
             }
             return result!!
         }
-    }
-}
-
-fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
-
-    return when {
-        error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
-            val logMessage = this.formattedMessage
-            val message = error.walkExceptionCausedByList().asSequence().mapNotNull(Throwable::message).joinToString(" - ")
-            CompositeMessage("$logMessage - $message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
-        }
-        else -> this
     }
 }
 

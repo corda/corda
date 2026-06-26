@@ -1,0 +1,39 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'java'
+
+compileJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
+description 'Legacy CorDapp for testing'
+
+dependencies {
+    cordaProvided("net.corda:corda-core:4.11") {
+        exclude group: quasar_group, module: 'quasar-core'
+    }
+    cordaProvided configurations['quasar']
+    cordaProvided "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+}
+
+cordapp {
+    targetPlatformVersion 1
+    minimumPlatformVersion 1
+    sealing {
+        enabled false // This needs to be disabled for AttachmentsClassLoaderSerializationTests to work
+    }
+    contract {
+        name "Legacy Test CorDapp"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "Legacy Test CorDapp"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+}
