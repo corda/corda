@@ -19,4 +19,18 @@ ignore:
           unpack any TAR archives. Corda is not exposed to this vulnerability.
         expires: 2029-08-01T01:00:00.000Z
         created: 2024-05-30T10:37:24.413Z
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-17457695:
+    - '*':
+        reason: >-
+          CVE-2026-54515: This is a medium-severity vulnerability in the Jackson
+          data-processing library that could allow an attacker to manipulate
+          security-sensitive fields by bypassing certain data protections.
+          Exploitation requires two specific features to be used together in a
+          particular way within application code. A thorough review of the Corda
+          codebase confirms that neither feature is used anywhere in the
+          project, so the conditions required to trigger this vulnerability are
+          not present. Corda is not affected by CVE-2026-54515 and no
+          remediation action is required.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-06-26T09:13:17.563Z
 patch: {}
