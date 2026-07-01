@@ -198,7 +198,7 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes
- * Never pass an empty proof chain map to the construct as it will have impact on how the merkle tree is calculated after a deserialization. Use null instead for backwards compatibility.
+ * Empty proof-chain maps must not be used as they break backwards compatibility. Instead, null must be used.
  */
 @CordaSerializable
 data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: SortedMap<PublicKey, KeyRotationProofChain>? = null) {
@@ -253,7 +253,9 @@ interface MoveCommand : CommandData {
 }
 
 // DOCSTART 6
-/** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
+/** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key.
+ * Empty proof-chain maps must not be used as they break backwards compatibility. Instead, null must be used.
+ */
 @CordaSerializable
 data class CommandWithParties<out T : CommandData>(
         val signers: List<PublicKey>,
