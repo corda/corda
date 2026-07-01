@@ -214,7 +214,7 @@ class TransactionSignatureTest {
     *  This test ensures that Corda Open Source can verify signatures of transactions that have a proof chain, which is a feature
     *  introduced in Corda Enterprise for cross-provider key rotation. The test loads a pre-signed transaction with a key rotation
     *  proof from a binary file and checks that at least one signature has a proof chain. It then verifies that the open source
-    * version of Corda can successfully validate the signatures of the transaction, demonstrating compatibility with the key
+    *  version of Corda can successfully validate the signatures of the transaction, demonstrating compatibility with the key
     *  rotation feature.
     */
     @Test(timeout = 300_000)
@@ -222,7 +222,7 @@ class TransactionSignatureTest {
         val inputStream = javaClass.classLoader.getResourceAsStream("corda-415/transaction_with_key_rotation_proof.bin")
         assertNotNull(inputStream, "Failed to load the signed transaction from the resource file.")
 
-        val loadedTx = inputStream.readBytes() .deserialize<SignedTransaction>()
+        val loadedTx = inputStream.readBytes().deserialize<SignedTransaction>()
 
         // make sure at least one signature has a proof chain
         val loadedSig = loadedTx.sigs.filter { it.signatureMetadata.proofChain != null }
