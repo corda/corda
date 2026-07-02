@@ -36,7 +36,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map ->
-                    if(map.keys.firstOrNull() is PublicKey && map.values.firstOrNull() is KeyRotationProofChain) {
+                    if(map.keys.all { it is PublicKey } && map.values.all { it is KeyRotationProofChain } ) {
                         TreeMap<PublicKey, KeyRotationProofChain>(PublicKeyComparator).apply { putAll(uncheckedCast<Map<*, *>, Map<PublicKey, KeyRotationProofChain>>(map)) }
                     } else {
                         TreeMap(map)
