@@ -25,7 +25,7 @@ import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
 import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
-import org.apache.shiro.subject.SimplePrincipalCollection
+import org.apache.shiro.subject.ImmutablePrincipalCollection
 import java.util.concurrent.ConcurrentHashMap
 import javax.security.auth.login.FailedLoginException
 
@@ -49,14 +49,14 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
                 throw FailedLoginException(authcException.toString())
             }
             return ShiroAuthorizingSubject(
-                    subjectId = SimplePrincipalCollection(principal, id.value),
+                    subjectId = ImmutablePrincipalCollection.ofSinglePrincipal(principal, id.value),
                     manager = manager)
         }
     }
 
     override fun buildSubject(principal: String): AuthorizingSubject =
             ShiroAuthorizingSubject(
-                    subjectId = SimplePrincipalCollection(principal, id.value),
+                    subjectId = ImmutablePrincipalCollection.ofSinglePrincipal(principal, id.value),
                     manager = manager)
 
     override fun close() {
@@ -159,7 +159,7 @@ class InMemoryRealm(users: List<User>,
         authenticationInfoByUser = users.associate { user ->
             user.username to SimpleAuthenticationInfo().apply {
                 credentials = user.password
-                principals = SimplePrincipalCollection(user.username, realmId)
+                principals = ImmutablePrincipalCollection.ofSinglePrincipal(user.username, realmId)
             }
         }
         credentialsMatcher = buildCredentialMatcher(passwordEncryption)
