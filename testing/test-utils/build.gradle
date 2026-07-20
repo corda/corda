@@ -3,6 +3,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
+apply plugin: 'corda.api-scanner'
 
 description 'Testing utilities for Corda'
 

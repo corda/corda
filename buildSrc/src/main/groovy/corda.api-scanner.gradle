@@ -1,0 +1,4 @@
+// Apply api-scanner
+if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
+    project.pluginManager.apply('net.corda.internal.gradle.plugins.api-scanner')
+}
