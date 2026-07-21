@@ -77,30 +77,30 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         }
         
         if (isEmpty()) {
-            logger.info("Validation failed. Chain is empty")
+            logger.warn("Validation failed. Chain is empty. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
             return false
         }
 
         // Validate first proof
         if(!startsWithKey(originalKey)){
-            logger.info("Validation failed. The chain does not start with the expected original key. Expected: ${originalKey.toStringShort()}, Actual: ${this.originalKey.toStringShort()}")
+            logger.warn("Validation failed. The chain does not start with the expected original key. Expected: ${originalKey.toStringShort()}, Actual: ${this.originalKey.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
             return false
         }
 
         if(!isValid(proofChain[0])){
-            logger.info("Validation failed. Proof is invalid")
+            logger.warn("Validation failed. Proof is invalid. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
             return false
         }
 
         // Validate intermediate proofChain (continuity + proof)
         proofChain.zipWithNext().forEach { (previous, current) ->
             if(!isContinuous(previous, current)) {
-                logger.info("Validation failed. The chain is not continuous. Previous proof new key and current proof old key must match. Previous proof new key: ${previous.publicKeyOld.toStringShort()}. Current proof old key: ${current.publicKeyOld.toStringShort()}")
+                logger.warn("Validation failed. The chain is not continuous. Previous proof new key and current proof old key must match. Previous proof new key: ${previous.publicKeyOld.toStringShort()}, Current proof old key: ${current.publicKeyOld.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
                 return false
             }
 
             if(!isValid(current)) {
-                logger.info("Validation failed. Proof is invalid")
+                logger.warn("Validation failed. Proof is invalid. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
                 return false
             }
         }
@@ -110,7 +110,7 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         // The validation of the last proof is already covered in the intermediate proofChain validation,
         // so we only need to check the current key matches
         if(!endsWithKey(currentKey)) {
-            logger.info("Validation failed. The chain does not end with the expected key. Expected: ${currentKey.toStringShort()}, Actual: ${this.currentKey.toStringShort()}")
+            logger.warn("Validation failed. The chain does not end with the expected key. Expected: ${currentKey.toStringShort()}, Actual: ${this.currentKey.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
             return false
         }
 
@@ -135,7 +135,7 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
             Crypto.doVerify(scheme, proof.publicKeyOld, proof.signature, proof.publicKeyNew.encoded)
             true
         } catch (e: GeneralSecurityException) {
-            logger.info("Invalid key rotation proof. Old key: ${proof.publicKeyOld.toStringShort()}, New key: ${proof.publicKeyNew.toStringShort()}, Message: ${e.message}")
+            logger.warn("Invalid key rotation proof. Old key: ${proof.publicKeyOld.toStringShort()}, New key: ${proof.publicKeyNew.toStringShort()}, Message: ${e.message}")
             false
         }
     }
