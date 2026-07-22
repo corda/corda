@@ -8,16 +8,24 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import java.io.File
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.SignatureException
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -48,6 +56,60 @@ class TransactionSignatureTest {
         assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
     }
 
+    @Test(timeout=300_000)
+	fun `Signature metadata preserves legacy serialization format`() {
+        val keyPair = loadKeyPair()
+        val expectedSignatureMetadataSerializedBytes = File("src/test/resources/corda-414/signature-metadata/serialized", "signature-metadata.bin").readBytes()
+        assertTrue(
+                expectedSignatureMetadataSerializedBytes.contentEquals(SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID).serialize().bytes),
+                "SignatureMetadata serialization format has changed."
+        )
+    }
+
+    @Test(timeout=300_000)
+	fun `Signature remains unchanged from earlier corda versions`() {
+        val keyPair = loadKeyPair()
+        val expectedSignableDataSerializedBytes = File("src/test/resources/corda-414/signable-data/serialized", "signable-data.bin").readBytes()
+        val expectedSignableDataSignatureBytes = File("src/test/resources/corda-414/signable-data/signature", "signable-data.sig").readBytes()
+
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+
+        assertTrue(
+                expectedSignableDataSerializedBytes.contentEquals(signableData.serialize().bytes),
+                "Signable data serialization format has changed."
+        )
+
+        val transactionSignature: TransactionSignature = keyPair.sign(signableData)
+
+        assertTrue(
+                expectedSignableDataSignatureBytes.contentEquals(transactionSignature.bytes),
+                "The signature has changed."
+        )
+
+        assertTrue(transactionSignature.verify(testBytes.sha256()))
+        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
+    }
+
+    /** Valid sign and verify with key rotation proof. */
+    @Test(timeout=300_000)
+    fun `Signature metadata full sign and verify with key rotation proof`() {
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val newKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val proof = createProof(keyPair, newKeyPair.public)
+
+        // Create a SignableData object.
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(newKeyPair.public).schemeNumberID, KeyRotationProofChain(listOf(proof))))
+
+        // Sign the meta object.
+        val transactionSignature: TransactionSignature = newKeyPair.sign(signableData)
+
+        // Check auto-verification.
+        assertTrue(transactionSignature.verify(testBytes.sha256()))
+
+        // Check manual verification.
+        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
+    }
+
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
     @Test(timeout=300_000)
     fun `Signature metadata full failure clearData has changed`() {
@@ -57,6 +119,28 @@ class TransactionSignatureTest {
         assertThatExceptionOfType(SignatureException::class.java).isThrownBy {
             Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
         }
+    }
+
+    /** Verification should fail if the proof contains an invalid signature. */
+    @Test(timeout=300_000)
+    fun `Signature verification should fail if key rotation proof is tampered `() {
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val newKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val proof = createProof(keyPair, newKeyPair.public)
+        val tempProof = createProof(newKeyPair, newKeyPair.public)
+        val tamperedProof = proof.copy(signature = tempProof.signature)
+
+        // Create a SignableData object.
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(newKeyPair.public).schemeNumberID, KeyRotationProofChain(listOf(tamperedProof))))
+
+        // Sign the meta object.
+        val transactionSignature: TransactionSignature = newKeyPair.sign(signableData)
+
+        // Check auto-verification.
+        assertFailsWith<SignatureException> { transactionSignature.verify(testBytes.sha256()) }
+
+        // Check manual verification.
+        assertFailsWith<SignatureException> { Crypto.doVerify(testBytes.sha256(), transactionSignature) }
     }
 
     @Test(timeout=300_000)
@@ -126,6 +210,28 @@ class TransactionSignatureTest {
         assertFailsWith<SignatureException> { Crypto.doVerify(txId.sha256(), txSignature) }
     }
 
+    /*
+    *  This test ensures that Corda Open Source can verify signatures of transactions that have a proof chain, which is a feature
+    *  introduced in Corda Enterprise for cross-provider key rotation. The test loads a pre-signed transaction with a key rotation
+    *  proof from a binary file and checks that at least one signature has a proof chain. It then verifies that the open source
+    *  version of Corda can successfully validate the signatures of the transaction, demonstrating compatibility with the key
+    *  rotation feature.
+    */
+    @Test(timeout = 300_000)
+    fun verifyCordaOSCanVerifyTransactionSignaturesAfterCrossProviderKeyRotation() {
+        val inputStream = javaClass.classLoader.getResourceAsStream("corda-415/transaction_with_key_rotation_proof.bin")
+        assertNotNull(inputStream, "Failed to load the signed transaction from the resource file.")
+
+        val loadedTx = inputStream.readBytes().deserialize<SignedTransaction>()
+
+        // make sure at least one signature has a proof chain
+        val loadedSig = loadedTx.sigs.filter { it.signatureMetadata.proofChain != null }
+        assertTrue(loadedSig.isNotEmpty(), "At least one signature must have a proof chain")
+
+        // make sure that the open source can verify the signature of a transaction that has a proof chain
+        assertDoesNotThrow { loadedTx.checkSignaturesAreValid() }
+    }
+
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.
     private fun signMultipleTx(txIds: List<SecureHash>, keyPair: KeyPair): TransactionSignature {
         val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.sha256() }).hash
@@ -137,5 +243,23 @@ class TransactionSignatureTest {
     private fun signOneTx(txId: SecureHash, keyPair: KeyPair): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(3, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return keyPair.sign(signableData)
+    }
+
+    private fun createProof(oldKeyPair: KeyPair, newPublicKey: java.security.PublicKey): KeyRotationProof {
+        val signature = Crypto.doSign(oldKeyPair.private, newPublicKey.encoded)
+        return KeyRotationProof(oldKeyPair.public, newPublicKey, signature)
+    }
+
+    private fun loadKeyPair(): KeyPair {
+        val publicKeyFile = File("src/test/resources/test-keys", "test-key.public")
+        val privateKeyFile = File("src/test/resources/test-keys", "test-key.private")
+
+        require(publicKeyFile.exists()) { "Public key file does not exist. File: ${publicKeyFile.absolutePath}" }
+        require(privateKeyFile.exists()) { "Private key file does not exist. File: ${privateKeyFile.absolutePath}" }
+
+        return KeyPair(
+                Crypto.decodePublicKey(publicKeyFile.readBytes()),
+                Crypto.decodePrivateKey(privateKeyFile.readBytes())
+        )
     }
 }

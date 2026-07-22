@@ -2,6 +2,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogicRef
@@ -14,6 +15,10 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
+import java.util.Comparator
+import java.util.SortedMap
+import java.util.TreeMap
+import kotlin.math.min
 
 // DOCSTART 1
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
@@ -192,18 +197,49 @@ abstract class TypeOnlyCommandData : CommandData {
     override fun hashCode() = javaClass.name.hashCode()
 }
 
-/** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
+/** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes
+ * Empty proof-chain maps must not be used as they break backwards compatibility. Instead, null must be used.
+ */
 @CordaSerializable
-data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
+data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>, val keyRotationProofChainMap: SortedMap<PublicKey, KeyRotationProofChain>? = null) {
     // TODO Introduce NonEmptyList?
     init {
         require(signers.isNotEmpty()) { "The list of signers cannot be empty" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.isNotEmpty()) { "The map of key rotation proofs must not be empty. Use null instead to maintain backward compatibility" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.comparator() is PublicKeyComparator) { "The map of key rotation proofs have PublicKeyComparator as comparator" }
     }
 
-    constructor(data: T, key: PublicKey) : this(data, listOf(key))
+    constructor(data: T, signers: List<PublicKey>) : this(data, signers, null)
+    constructor(data: T, key: PublicKey) : this(data, listOf(key), null)
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
+    override fun toString(): String {
+        if(keyRotationProofChainMap == null) {
+            return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
+        }
+        return "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }} and proof chains ${keyRotationProofChainMap.entries.joinToString { "${it.key.toStringShort()} -> ${it.value}" }}"
+    }
+}
+
+object PublicKeyComparator : Comparator<PublicKey> {
+    @Suppress("MagicNumber")
+    override fun compare(a: PublicKey, b: PublicKey): Int {
+        if (a === b) return 0
+        val aEnc = a.encoded ?: return -1
+        val bEnc = b.encoded ?: return 1
+        val minLen = min(aEnc.size, bEnc.size)
+        for (i in 0 until minLen) {
+            val diff = (aEnc[i].toInt() and 0xff) - (bEnc[i].toInt() and 0xff)
+            if (diff != 0) return diff
+        }
+        return aEnc.size - bEnc.size
+    }
+}
+
+fun Map<PublicKey, KeyRotationProofChain>.toSortedMap(): TreeMap<PublicKey, KeyRotationProofChain> {
+    return TreeMap<PublicKey, KeyRotationProofChain> (PublicKeyComparator).apply {
+        putAll(this@toSortedMap)
+    }
 }
 
 /** A common move command for contract states which can change owner. */
@@ -217,15 +253,31 @@ interface MoveCommand : CommandData {
 }
 
 // DOCSTART 6
-/** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
+/** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key.
+ * Empty proof-chain maps must not be used as they break backwards compatibility. Instead, null must be used.
+ */
 @CordaSerializable
 data class CommandWithParties<out T : CommandData>(
         val signers: List<PublicKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
         @Deprecated("Should not be used in contract verification code as it is non-deterministic, will be disabled for some future target platform version onwards and will take effect only for CorDapps targeting those versions.")
         val signingParties: List<Party>,
-        val value: T
-)
+        val value: T,
+        val keyRotationProofChainMap: SortedMap<PublicKey, KeyRotationProofChain>? = null
+) {
+
+    init {
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.isNotEmpty()) { "The map of key rotation proofs must not be empty. Use null instead to maintain backward compatibility" }
+        require(keyRotationProofChainMap == null || keyRotationProofChainMap.comparator() is PublicKeyComparator) { "The map of key rotation proofs have PublicKeyComparator as comparator" }
+    }
+
+    constructor(
+            signers: List<PublicKey>,
+            signingParties: List<Party>,
+            value: T
+    ) : this(signers, signingParties, value, null)
+}
+
 // DOCEND 6
 
 // DOCSTART 5

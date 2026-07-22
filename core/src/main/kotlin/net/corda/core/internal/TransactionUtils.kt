@@ -14,6 +14,7 @@ import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.NamedByHash
@@ -24,10 +25,12 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
@@ -48,6 +51,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
+import java.util.TreeMap
 import kotlin.reflect.KClass
 
 /** Constructs a [NotaryChangeWireTransaction]. */
@@ -158,6 +162,7 @@ class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: 
  *
  *  This method used the [deserialiseComponentGroup] method.
  */
+@Suppress("ComplexMethod")
 fun deserialiseCommands(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
@@ -170,7 +175,12 @@ fun deserialiseCommands(
     //      and it will throw if any of the signers objects is not List of public keys).
     val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP, forceDeserialize, factory, context))
     val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, COMMANDS_GROUP, forceDeserialize, factory, context)
+    // The key rotation proofs group contains one Map<PublicKey, KeyRotationProofChain> element per Command.
+    // Deserialize it as a list of maps and provide a safe fallback (empty maps) if the group is missing
+    // to maintain compatibility with older transactions.
+    val keyRotationProofList: List<TreeMap<PublicKey, KeyRotationProofChain>> = uncheckedCast(deserialiseComponentGroup(componentGroups, TreeMap::class, KEY_ROTATION_PROOF_GROUP, forceDeserialize, factory, context))
     val group = componentGroups.getGroup(COMMANDS_GROUP)
+
     return if (group is FilteredComponentGroup) {
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
@@ -181,14 +191,29 @@ fun deserialiseCommands(
             @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")   // Because the external verifier uses Kotlin 1.2
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
+        // the if else statement is required to keep the merkle tree the same when a command is created using the default value
+        if(keyRotationProofList.isEmpty()) {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], null) }
+        } else {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]], if(keyRotationProofList[leafIndices[index]].isEmpty()) null else keyRotationProofList[leafIndices[index]]) }
+        }
     } else {
         // It is a WireTransaction
         // or a FilteredTransaction with no Commands (in which case group is null).
         check(commandDataList.size == signersList.size) {
             "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
         }
-        commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
+
+        check(commandDataList.size == keyRotationProofList.size || keyRotationProofList.isEmpty()) {
+            "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and keyRotationProofList (${keyRotationProofList.size}) do not match and keyRotationProofList is not empty"
+        }
+
+        // the if else statement is required to keep the merkle tree the same when a command is created using the default value
+        if(keyRotationProofList.isEmpty()) {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], null) }
+        } else {
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index], if(keyRotationProofList[index].isEmpty()) null else keyRotationProofList[index]) }
+        }
     }
 }
 
@@ -226,6 +251,14 @@ fun createComponentGroups(inputs: List<StateRef>,
         componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     }
     componentGroupMap.addListGroup(NOTARY_INSTRUCTIONS_GROUP, notaryInstructions, serialize)
+
+    if(commands.any { it.keyRotationProofChainMap != null }) {
+        // Adding key rotation proof map to its own group. If all the commands have null key rotation proof map,
+        // we skip adding the group to ensure compatibility with older versions of Corda which don't have this group.
+        // To keep the list of key rotation proof maps aligned with the list of commands, we add an empty map for commands which don't have a key rotation proof map.
+        componentGroupMap.addListGroup(KEY_ROTATION_PROOF_GROUP, commands.map { it.keyRotationProofChainMap ?: emptyMap<PublicKey, KeyRotationProofChain>().toSortedMap() }, serialize)
+    }
+
     return componentGroupMap
 }
 

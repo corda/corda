@@ -4,14 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaException
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.hash
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
 import java.util.*
+import javax.transaction.NotSupportedException
 
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
@@ -22,6 +25,7 @@ import java.util.*
  * whereas confidential identities are distributed only on a need to know basis (typically between parties in
  * a transaction being built). See [NetworkMapCache] for retrieving well known identities from the network map.
  */
+@Suppress("TooManyFunctions")
 @DoNotImplement
 interface IdentityService {
     val trustRoot: X509Certificate
@@ -182,6 +186,21 @@ interface IdentityService {
      * @param externalId the external ID to lookup [PublicKey]s for
      */
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
+
+    @Suspendable
+    fun updateProofCacheFromTransaction(stx: SignedTransaction) {
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
+    }
+
+    @Suspendable
+    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
+    }
+
+    @Suspendable
+    fun containsProofChain(publicKey: PublicKey): Boolean {
+        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
+    }
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)

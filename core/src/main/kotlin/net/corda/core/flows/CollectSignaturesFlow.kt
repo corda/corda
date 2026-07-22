@@ -99,6 +99,10 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
         }
 
+        require(partiallySignedTx.sigs.all { it.signatureMetadata.proofChain == null || it.signatureMetadata.proofChain.isEmpty() }) {
+            "Cross-provider key rotation is not supported by Corda OS."
+        }
+
         // The signatures must be valid and the transaction must be valid.
         partiallySignedTx.verify(serviceHub, checkSufficientSignatures = false)
 
