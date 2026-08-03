@@ -10,8 +10,6 @@ import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
-import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
-import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.MaterializedBlobType
@@ -58,15 +56,8 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     fun buildSessionFactory(
             config: Configuration,
             metadataSources: MetadataSources,
-            customClassLoader: ClassLoader?,
             attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
-
-        if (customClassLoader != null) {
-            config.standardServiceRegistryBuilder.addService(
-                    ClassLoaderService::class.java,
-                    ClassLoaderServiceImpl(customClassLoader))
-        }
 
         @Suppress("DEPRECATION")
         val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
@@ -86,14 +77,22 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             attributeConverters: Collection<AttributeConverter<*, *>>,
             allowHibernateToMananageAppSchema: Boolean): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
-        val serviceRegistry = BootstrapServiceRegistryBuilder().build()
+        // HHH-15693 (Hibernate 5.6.15): ClassLoaderService lookups on the StandardServiceRegistry
+        // now fast-path to the parent BootstrapServiceRegistry, bypassing any service registered
+        // directly on the StandardServiceRegistryBuilder. Register the custom classloader on the
+        // BootstrapServiceRegistryBuilder so it is visible via that fast-path.
+        val bootstrapServiceRegistryBuilder = BootstrapServiceRegistryBuilder()
+        if (customClassLoader != null) {
+            bootstrapServiceRegistryBuilder.applyClassLoader(customClassLoader)
+        }
+        val serviceRegistry = bootstrapServiceRegistryBuilder.build()
         val metadataSources = MetadataSources(serviceRegistry)
 
         val config = buildHibernateConfig(metadataSources, allowHibernateToMananageAppSchema)
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
-        val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader, attributeConverters)
+        val sessionFactory = buildSessionFactory(config, metadataSources, attributeConverters)
         logger.info("Created session factory for schemas: $schemas")
         return sessionFactory
     }
