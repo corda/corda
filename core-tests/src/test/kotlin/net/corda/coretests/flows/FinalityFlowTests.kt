@@ -3,7 +3,10 @@ package net.corda.coretests.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
+import com.natpryce.hamkrest.containsSubstring
+import com.natpryce.hamkrest.has
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.StateAndRef
@@ -107,6 +110,28 @@ class FinalityFlowTests : WithFinality {
                 willReturn(
                         requiredSignatures(1)
                                 and visibleTo(bob)))
+    }
+
+    @Test(timeout=300_000)
+    fun `finalise a simple transaction without input states and with notary instruction`() {
+
+        data class DummyNotaryInstruction(val id: Int) : NotaryInstruction
+
+        val stx = with(aliceNode) {
+            // no input states, no other identities involved apart from self and notary
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary,
+                    PartyAndReference(this.info.singleIdentity(), OpaqueBytes.of(0)))
+            builder.addNotaryInstruction(DummyNotaryInstruction(1))
+            services.signInitialTransaction(builder)
+        }
+
+        // Checks indirectly if a transaction was created - the provider manages to create it and sends it to a notary,
+        // however for the notary (one used in the test) the transaction is invalid (no input states), so it throws an exception.
+        // The exception message proves that a notary instruction was indeed added to the transaction.
+        assertThat(aliceNode.finalise(stx),
+                willThrow<NotaryException>(
+                        has<Throwable, String>("message", { it.message.orEmpty() },
+                                containsSubstring("Notary instructions not supported"))))
     }
 
     @Test(timeout=300_000)
