@@ -1,4 +1,4 @@
-FROM corda/open-source:4.12.8-zulu-openjdk
+FROM corda/open-source:4.12.11-zulu-openjdk
 
 # Copy corda files
 ADD --chown=corda:corda node.conf               /opt/corda/node.conf
