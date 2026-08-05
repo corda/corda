@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
 // We need to set mainClassName before applying the shadow plugin.
@@ -21,7 +21,12 @@ mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies{
-    compile project(':node')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+
+    implementation "com.typesafe:config:$typesafe_config_version"
 }
 
 shadowJar {
@@ -33,25 +38,24 @@ shadowJar {
 }
 
 enum ImageVariant {
-    UBUNTU_ZULU("Dockerfile", "1.8", "zulu-openjdk8"),
-    UBUNTU_ZULU_11("Dockerfile11", "11", "zulu-openjdk11"),
-    AL_CORRETTO("DockerfileAL", "1.8", "amazonlinux2"),
+    UBUNTU_ZULU("Dockerfile", "17", "zulu-openjdk"),
+    AL_CORRETTO("DockerfileAL", "17", "amazonlinux2"),
     OFFICIAL(UBUNTU_ZULU)
 
     String dockerFile
     String javaVersion
-    String baseImgaeFullName
+    String baseImageFullName
 
     ImageVariant(ImageVariant other) {
         this.dockerFile = other.dockerFile
         this.javaVersion = other.javaVersion
-        this.baseImgaeFullName = other.baseImgaeFullName
+        this.baseImageFullName = other.baseImageFullName
     }
 
-    ImageVariant(String dockerFile, String javaVersion, String baseImgaeFullName) {
+    ImageVariant(String dockerFile, String javaVersion, String baseImageFullName) {
         this.dockerFile = dockerFile
         this.javaVersion = javaVersion
-        this.baseImgaeFullName = baseImgaeFullName
+        this.baseImageFullName = baseImageFullName
     }
 
     static final String getRepository(Project project) {
@@ -59,7 +63,7 @@ enum ImageVariant {
     }
 
     Set<Identifier> buildTags(Project project) {
-        return ["${project.version.toString().toLowerCase()}-${baseImgaeFullName}"].stream().map {
+        return ["${project.version.toString().toLowerCase()}-${baseImageFullName}"].stream().map {
             toAppend -> "${getRepository(project)}:${toAppend}".toString()
         }.map(Identifier.&fromCompoundString).collect(Collectors.toSet())
     }
@@ -75,12 +79,12 @@ class BuildDockerFolderTask extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
     @Input
-    Iterable<ImageVariant> variantsToBuild() {
+    Iterable<ImageVariant> getVariantsToBuild() {
         return ImageVariant.toBeBuilt
     }
 
@@ -94,16 +98,12 @@ class BuildDockerFolderTask extends DefaultTask {
         return project.fileTree("${project.projectDir}/src/bash")
     }
 
-    @Lazy
-    private File cordaJar = project.findProject(":node:capsule").tasks.buildCordaJAR.outputs.files.singleFile
+    private File cordaJar = project.findProject(":node:capsule").tasks.buildCordaJAR.outputs.files.filter {
+        it.name.contains("corda")
+    }.singleFile
 
-    @Lazy
     private File configExporter = project.tasks.shadowJar.outputs.files.singleFile
 
-    @Lazy
-    private File dbMigrator = project.findProject(":tools:dbmigration").tasks.shadowJar.outputs.files.singleFile
-
-    @InputFiles
     private FileCollection getRequiredArtifacts() {
         FileCollection res = project.tasks.shadowJar.outputs.files
         def capsuleProject = project.findProject(":node:capsule")
@@ -150,10 +150,11 @@ class BuildDockerImageTask extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
+    @OutputDirectory
     final File dockerBuildDir = project.file("${project.buildDir}/docker/build")
 
     @OutputDirectory
@@ -211,7 +212,7 @@ class PushDockerImage extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
@@ -247,7 +248,10 @@ class PushDockerImage extends DefaultTask {
     }
 }
 
-def buildDockerFolderTask = tasks.register("buildDockerFolder", BuildDockerFolderTask)
+def buildDockerFolderTask = tasks.register("buildDockerFolder", BuildDockerFolderTask) {
+    dependsOn = [ tasks.named('shadowJar') ]
+}
+
 def buildDockerImageTask = tasks.register("buildDockerImage", BuildDockerImageTask) {
     from(buildDockerFolderTask.get())
 }

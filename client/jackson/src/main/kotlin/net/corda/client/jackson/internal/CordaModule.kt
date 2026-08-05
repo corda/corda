@@ -58,7 +58,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
@@ -94,10 +93,11 @@ import net.corda.serialization.internal.amqp.hasCordaSerializable
 import net.corda.serialization.internal.amqp.registerCustomSerializers
 import java.math.BigDecimal
 import java.security.PublicKey
-import java.security.cert.X509Certificate
 import java.security.cert.CertPath
 import java.time.Instant
-import java.util.*
+import java.util.Currency
+import java.util.UUID
+import kotlin.text.Charsets.UTF_8
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
@@ -126,8 +126,8 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(SecureHash::class.java, SecureHashMixin::class.java)
         context.setMixInAnnotations(SerializedBytes::class.java, SerializedBytesMixin::class.java)
         context.setMixInAnnotations(DigitalSignature.WithKey::class.java, ByteSequenceWithPropertiesMixin::class.java)
-        context.setMixInAnnotations(DigitalSignatureWithCert::class.java, DigitalSignatureWithCertMixin::class.java)
-        context.setMixInAnnotations(TransactionSignature::class.java, TransactionSignatureMixin::class.java)
+        context.setMixInAnnotations(DigitalSignatureWithCert::class.java, ByteSequenceWithPropertiesMixin::class.java)
+        context.setMixInAnnotations(TransactionSignature::class.java, ByteSequenceWithPropertiesMixin::class.java)
         context.setMixInAnnotations(SignedTransaction::class.java, SignedTransactionMixin::class.java)
         context.setMixInAnnotations(WireTransaction::class.java, WireTransactionMixin::class.java)
         context.setMixInAnnotations(TransactionState::class.java, TransactionStateMixin::class.java)
@@ -140,6 +140,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(NodeInfo::class.java, NodeInfoMixin::class.java)
         context.setMixInAnnotations(StateMachineRunId::class.java, StateMachineRunIdMixin::class.java)
         context.setMixInAnnotations(DigestService::class.java, DigestServiceMixin::class.java)
+        context.setMixInAnnotations(DigitalSignature::class.java, DigitalSignatureMixin::class.java)
     }
 }
 
@@ -173,6 +174,16 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
         return beanProperties
     }
 }
+
+private class DigitalSignatureDeserializer : JsonDeserializer<DigitalSignature>() {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): DigitalSignature {
+        return DigitalSignature(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
+    }
+}
+
+@JsonDeserialize(using = DigitalSignatureDeserializer::class)
+private interface DigitalSignatureMixin
+
 
 @ToStringSerialize
 @JsonDeserialize(using = NetworkHostAndPortDeserializer::class)
@@ -244,6 +255,7 @@ private data class StxJson(
 private interface WireTransactionMixin
 
 private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
+    @Suppress("INVISIBLE_MEMBER")
     override fun serialize(value: WireTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
         gen.writeObject(WireTransactionJson(
                 value.digestService,
@@ -253,7 +265,7 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.outputs,
                 value.commands,
                 value.timeWindow,
-                value.attachments,
+                value.legacyAttachments.map { "$it-legacy" } + value.nonLegacyAttachments.map { it.toString() },
                 value.references,
                 value.privacySalt,
                 value.networkParametersHash
@@ -264,15 +276,18 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
 private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): WireTransaction {
         val wrapper = parser.readValueAs<WireTransactionJson>()
+        // We're not concerned with backwards compatibility for any JSON string that was created with 4.11 and being materialised in 4.12.
+        val (legacyAttachments, newerAttachments) = wrapper.attachments.partition { it.endsWith("-legacy") }
         val componentGroups = createComponentGroups(
                 wrapper.inputs,
                 wrapper.outputs,
                 wrapper.commands,
-                wrapper.attachments,
+                newerAttachments.map(SecureHash::parse),
                 wrapper.notary,
                 wrapper.timeWindow,
                 wrapper.references,
-                wrapper.networkParametersHash
+                wrapper.networkParametersHash,
+                legacyAttachments.map { SecureHash.parse(it.removeSuffix("-legacy")) }
         )
         return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }
@@ -285,26 +300,19 @@ private class WireTransactionJson(@get:JsonInclude(Include.NON_NULL) val digestS
                                   val outputs: List<TransactionState<*>>,
                                   val commands: List<Command<*>>,
                                   val timeWindow: TimeWindow?,
-                                  val attachments: List<SecureHash>,
+                                  val attachments: List<String>,
                                   val references: List<StateRef>,
                                   val privacySalt: PrivacySalt,
-                                  val networkParametersHash: SecureHash?)
+                                  val networkParametersHash: SecureHash?
+)
 
-@Suppress("UNUSED_PARAMETER")
-private abstract class TransactionStateMixin @JsonCreator constructor(
-        @JsonProperty("data") @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS) data: ContractState,
-        @JsonProperty("contract") contract: String,
-        @JsonProperty("notary") notary: Party,
-        @JsonProperty("encumbrance") encumbrance: Int?,
-        @JsonProperty("constraint") @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS) constraint: AttachmentConstraint
-) {
+private interface TransactionStateMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-    abstract val data: ContractState
+    val data: ContractState
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-    abstract val constraint: AttachmentConstraint
+    val constraint: AttachmentConstraint
 }
 
-@JsonDeserialize(using = CommandDeserializer::class)
 private interface CommandMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
     val value: CommandData
@@ -405,12 +413,11 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
 }
 
 @JsonInclude(Include.NON_NULL)
-private class PartialTreeJson @JsonCreator constructor(
-        @JsonProperty("includedLeaf") val includedLeaf: SecureHash? = null,
-        @JsonProperty("leaf") val leaf: SecureHash? = null,
-        @JsonProperty("left") val left: PartialTreeJson? = null,
-        @JsonProperty("right") val right: PartialTreeJson? = null,
-        @JsonProperty("hashAlgorithm") val hashAlgorithm: String? = null) {
+private class PartialTreeJson(val includedLeaf: SecureHash? = null,
+                              val leaf: SecureHash? = null,
+                              val left: PartialTreeJson? = null,
+                              val right: PartialTreeJson? = null,
+                              val hashAlgorithm: String? = null) {
     init {
         if (includedLeaf != null) {
             require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
@@ -622,44 +629,4 @@ private interface ByteSequenceWithPropertiesMixin {
     @Suppress("unused")
     @JsonValue(false)
     fun copyBytes(): ByteArray
-}
-
-@Suppress("UNUSED_PARAMETER")
-@JsonSerialize
-@JsonDeserialize
-private abstract class TransactionSignatureMixin @JsonCreator constructor(
-        @JsonProperty("bytes") bytes: ByteArray,
-        @JsonProperty("by") val by: PublicKey,
-        @JsonProperty("signatureMetadata") val signatureMetadata: SignatureMetadata,
-        @JsonProperty("partialMerkleTree") val partialMerkleTree: PartialMerkleTree?
-) {
-    @Suppress("unused")
-    @JsonValue(false)
-    abstract fun copyBytes(): ByteArray
-}
-
-@Suppress("UNUSED_PARAMETER")
-@JsonSerialize
-@JsonDeserialize
-private abstract class DigitalSignatureWithCertMixin @JsonCreator constructor(
-        @JsonProperty("by") val by: X509Certificate,
-        @JsonProperty("parentCertsChain") val parentCertsChain: List<X509Certificate>,
-        @JsonProperty("bytes") bytes: ByteArray
-) {
-    @Suppress("unused")
-    @JsonValue(false)
-    abstract fun copyBytes(): ByteArray
-}
-
-private class CommandJson(
-        @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-        val value: CommandData,
-        val signers: List<PublicKey>
-)
-
-private class CommandDeserializer : JsonDeserializer<Command<*>>() {
-    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): Command<*> {
-        val wrapper = parser.readValueAs(CommandJson::class.java)
-        return Command(wrapper.value, wrapper.signers)
-    }
 }
