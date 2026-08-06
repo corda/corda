@@ -111,7 +111,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
         val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         // Set name constrain to the legal name.
-        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
+        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), null)
         val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, DEV_INTERMEDIATE_CA.certificate, DEV_INTERMEDIATE_CA.keyPair, legalName.x500Principal, clientKeyPair.public, nameConstraints = nameConstraints)
 
         val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
