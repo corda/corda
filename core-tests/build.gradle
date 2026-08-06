@@ -123,6 +123,7 @@ dependencies {
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "org.hibernate:hibernate-core:$hibernate_version"
     testImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
     testImplementation "io.netty:netty-common:$netty_version"
     testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"

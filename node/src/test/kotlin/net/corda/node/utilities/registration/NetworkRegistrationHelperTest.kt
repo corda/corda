@@ -316,7 +316,7 @@ class NetworkRegistrationHelperTest {
                                rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath()): List<X509Certificate> {
         val (rootCa, intermediateCa) = rootAndIntermediateCA
         val nameConstraints = if (type == CertificateType.NODE_CA) {
-            NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
+            NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), null)
         } else {
             null
         }
