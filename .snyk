@@ -2,6 +2,14 @@
 version: v1.25.1
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
+  SNYK-JAVA-IOGITLABARTURBOSCHDETEKT-2803842:
+    - '*':
+        reason: >-
+          CVE-2022-0272: This CVE requires an attacker to inject an XML payload directly
+          into our codebase's detekt-baseline.xml file. This theoretical XXE poses no
+          practical risk; exploiting it requires write access to our repository, which
+          is already mitigated by our internal security controls.
+        expires: 2029-08-01T01:00:00.000Z
   SNYK-JAVA-COMGOOGLEGUAVA-1015415:
     - '*':
         reason: >-
