@@ -328,5 +328,15 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
 data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
         val distributionList: ByteArray,
-        val isFinality: Boolean
-)
+        val isFinality: Boolean,
+        // ENT-14904: when true, this transaction reached the peer over a duplicate session to the same
+        // counterparty; the receiver must skip writing its distribution record to avoid a PK violation.
+        val ignoreDistributionRecord: Boolean
+) {
+    // AMQP evolution (serialization-default-evolution): keep the original 3-arg constructor so a payload
+    // serialized by an older node (which has no ignoreDistributionRecord property) deserialises here with the
+    // flag defaulted to false. A new payload received by an older node simply ignores the extra property.
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(stx: SignedTransaction, distributionList: ByteArray, isFinality: Boolean) :
+            this(stx, distributionList, isFinality, false)
+}
