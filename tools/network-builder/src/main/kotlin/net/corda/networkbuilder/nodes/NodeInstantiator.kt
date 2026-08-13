@@ -5,6 +5,7 @@ import net.corda.networkbuilder.Constants
 import net.corda.networkbuilder.containers.instance.InstanceInfo
 import net.corda.networkbuilder.containers.instance.Instantiator
 import net.corda.networkbuilder.context.Context
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 
 class NodeInstantiator(val instantiator: Instantiator,
@@ -12,9 +13,9 @@ class NodeInstantiator(val instantiator: Instantiator,
 
     fun createInstanceRequests(pushedNode: PushedNode, nodeCount: Map<FoundNode, Int>): List<NodeInstanceRequest> {
 
-        val namedMap = nodeCount.map { it.key.name.toLowerCase() to it.value }.toMap()
+        val namedMap = nodeCount.map { it.key.name.lowercase(Locale.getDefault()) to it.value }.toMap()
 
-        return (0 until (namedMap[pushedNode.name.toLowerCase()] ?: 1)).map { i ->
+        return (0 until (namedMap[pushedNode.name.lowercase(Locale.getDefault())] ?: 1)).map { i ->
             createInstanceRequest(pushedNode, i)
         }
     }

@@ -3,7 +3,8 @@ package net.corda.testing.core.internal
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
+import net.corda.coretesting.internal.modifyJarManifest
+import net.corda.coretesting.internal.useZipFile
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.io.Closeable
 import java.io.FileInputStream
@@ -18,6 +19,10 @@ import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 
 /**
@@ -31,12 +36,11 @@ class SelfCleaningDir : Closeable {
 }
 
 object JarSignatureTestUtils {
-    val bin = Paths.get(System.getProperty("java.home")).let { if (it.endsWith("jre")) it.parent else it } / "bin"
+    private val bin = Paths.get(System.getProperty("java.home")).let { if (it.endsWith("jre")) it.parent else it } / "bin"
 
-    fun Path.executeProcess(vararg command: String) {
+    private fun Path.executeProcess(vararg command: String) {
         val shredder = (this / "_shredder").toFile() // No need to delete after each test.
         assertEquals(0, ProcessBuilder()
-                .inheritIO()
                 .redirectOutput(shredder)
                 .redirectError(shredder)
                 .directory(this.toFile())
@@ -45,7 +49,7 @@ object JarSignatureTestUtils {
                 .waitFor())
     }
 
-    val CODE_SIGNER = CordaX500Name("Test Code Signing Service", "London", "GB")
+    private val CODE_SIGNER = CordaX500Name("Test Code Signing Service", "London", "GB")
 
     fun Path.generateKey(alias: String = "Test", storePassword: String = "secret!", name: String = CODE_SIGNER.toString(), keyalg: String = "RSA", keyPassword: String = storePassword, storeName: String = "_teststore") : PublicKey {
         executeProcess("keytool", "-genkeypair", "-keystore", storeName, "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
@@ -67,6 +71,17 @@ object JarSignatureTestUtils {
         executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
         val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
+    }
+
+    fun Path.unsignJar() {
+        // Remove the signatures
+        useZipFile { zipFs ->
+            zipFs.getPath("META-INF").takeIf { it.exists() }?.listDirectoryEntries("*.{SF,DSA,RSA,EC}")?.forEach(Path::deleteExisting)
+        }
+        // Remove all the hash information of the jar contents
+        modifyJarManifest { manifest ->
+            manifest.entries.clear()
+        }
     }
 
     fun Path.getPublicKey(alias: String, storeName: String, storePassword: String) : PublicKey {

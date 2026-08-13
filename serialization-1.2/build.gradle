@@ -1,0 +1,39 @@
+apply plugin: "corda.kotlin-1.2"
+apply plugin: "corda.common-publishing"
+
+description 'Corda serialization built with Kotlin 1.2'
+
+sourceSets {
+    main {
+        java.srcDir("../serialization/src/main/java")
+        kotlin.srcDir("../serialization/src/main/kotlin")
+    }
+}
+
+dependencies {
+    implementation project(":core-1.2")
+    // Use the same dependencies as serialization (minus Kotlin and core)
+    implementation(project(path: ":serialization", configuration: "resolvableImplementation")) {
+        exclude(module: "core")
+        exclude(group: "org.jetbrains.kotlin")
+    }
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_1_2_version"
+}
+
+jar {
+    archiveBaseName = 'corda-serialization-1.2'
+}
+
+tasks.withType(Javadoc).configureEach {
+    enabled = false
+}
+
+// TODO Don't publish publicly as it's only needed by the `verifier` module which consumes this into a fat jar.
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-serialization-1.2'
+            from components.java
+        }
+    }
+}

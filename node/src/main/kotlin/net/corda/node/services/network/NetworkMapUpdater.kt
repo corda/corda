@@ -9,15 +9,12 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.AutoAcceptable
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -44,15 +41,15 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import java.util.function.Consumer
-import java.util.function.Supplier
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
@@ -247,7 +244,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             networkMapClient!!.getNodeInfos()
         } catch (e: Exception) {
             logger.warn("Error encountered when downloading node infos", e)
-            emptyList<NodeInfo>()
+            emptyList()
         }
         (allHashesFromNetworkMap - nodeInfos.map { it.serialize().sha256() }).forEach {
             logger.warn("Error encountered when downloading node info '$it', skipping...")
@@ -273,7 +270,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             val networkMapDownloadFutures = hashesToFetch.chunked(max(hashesToFetch.size / threadsToUseForNetworkMapDownload, 1))
                     .map { nodeInfosToGet ->
                         //for a set of chunked hashes, get the nodeInfo for each hash
-                        CompletableFuture.supplyAsync(Supplier<List<NodeInfo>> {
+                        CompletableFuture.supplyAsync({
                             nodeInfosToGet.mapNotNull { nodeInfo ->
                                 try {
                                     networkMapClient.getNodeInfo(nodeInfo)
@@ -283,7 +280,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                                     null
                                 }
                             }
-                        }, executorToUseForDownloadingNodeInfos).thenAcceptAsync(Consumer { retrievedNodeInfos ->
+                        }, executorToUseForDownloadingNodeInfos).thenAcceptAsync({ retrievedNodeInfos ->
                             // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
                             networkMapCache.addOrUpdateNodes(retrievedNodeInfos)
                         }, executorToUseForInsertionIntoDB)
@@ -309,7 +306,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 } catch (e: Exception) {
                     // Failure to retrieve one network map using UUID shouldn't stop the whole update.
                     logger.warn("Error encountered when downloading network map with uuid '$it', skipping...", e)
-                    emptyList<SecureHash>()
+                    emptyList()
                 }
             }
         } else {
