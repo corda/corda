@@ -172,6 +172,69 @@ class KeyRotationProofChainTest {
         assertFalse(chain.isValid(k2.public))
     }
 
+    @Test(timeout=300_000)
+    fun `self-proof where a key rotates to itself is invalid`() {
+        val k1 = generateKeyPair()
+
+        // A -> A: a validly-signed proof, but a key cannot rotate to itself.
+        val chain = KeyRotationProofChain(listOf(createProof(k1, k1.public)))
+
+        assertFalse(chain.isValid(k1.public, k1.public), "A self-proof A -> A must be rejected")
+        assertFalse(chain.isValid(k1.public), "A self-proof A -> A must be rejected via the single-key overload")
+    }
+
+    @Test(timeout=300_000)
+    fun `chain that loops back to the original key is invalid`() {
+        val k1 = generateKeyPair()
+        val k2 = generateKeyPair()
+
+        // A -> B -> A: every link is validly signed and continuous, but A is seen twice.
+        val chain = KeyRotationProofChain(
+            listOf(
+                createProof(k1, k2.public),
+                createProof(k2, k1.public)
+            )
+        )
+
+        assertFalse(chain.isValid(k1.public, k1.public), "A loop A -> B -> A must be rejected")
+        assertFalse(chain.isValid(k1.public), "A loop A -> B -> A must be rejected via the single-key overload")
+    }
+
+    @Test(timeout=300_000)
+    fun `chain that revisits an intermediate key is invalid`() {
+        val k1 = generateKeyPair()
+        val k2 = generateKeyPair()
+        val k3 = generateKeyPair()
+
+        // A -> B -> C -> B: continuous and validly signed, but B is seen twice.
+        val chain = KeyRotationProofChain(
+            listOf(
+                createProof(k1, k2.public),
+                createProof(k2, k3.public),
+                createProof(k3, k2.public)
+            )
+        )
+
+        assertFalse(chain.isValid(k1.public, k2.public), "A chain revisiting an intermediate key must be rejected")
+        assertFalse(chain.isValid(k2.public), "A chain revisiting an intermediate key must be rejected via the single-key overload")
+    }
+
+    @Test(timeout=300_000)
+    fun `isValid does not short-circuit when the original and current key are the same`() {
+        val k1 = generateKeyPair()
+        val k2 = generateKeyPair()
+
+        // A genuine, fully valid rotation A -> B.
+        val chain = KeyRotationProofChain(listOf(createProof(k1, k2.public)))
+
+        // Sanity: still valid for its real endpoints.
+        assertTrue(chain.isValid(k1.public, k2.public), "A genuine A -> B rotation must remain valid")
+
+        // Passing the same key as original and current must NOT return true.
+        assertFalse(chain.isValid(k1.public, k1.public), "isValid(originalKey, originalKey) must not short-circuit to true")
+        assertFalse(chain.isValid(k1.public), "isValid(originalKey) must not short-circuit to true")
+    }
+
     private fun createProof(oldKeyPair: java.security.KeyPair, newKey: PublicKey): KeyRotationProof {
         val signature = Crypto.doSign(oldKeyPair.private, newKey.encoded)
         return KeyRotationProof(oldKeyPair.public, newKey, signature)
