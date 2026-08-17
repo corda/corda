@@ -92,6 +92,14 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
             return false
         }
 
+        // Track keys as the chain is processed: a key may appear only once, so a self-proof
+        // (A -> A) or a loop (A -> B -> A) is rejected on the offending proof.
+        val seenKeys = hashSetOf(proofChain[0].publicKeyOld)
+        if(!seenKeys.add(proofChain[0].publicKeyNew)) {
+            logger.warn("Validation failed. The chain revisits a key; each key must appear only once. Repeated key: ${proofChain[0].publicKeyNew.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            return false
+        }
+
         // Validate intermediate proofChain (continuity + proof)
         proofChain.zipWithNext().forEach { (previous, current) ->
             if(!isContinuous(previous, current)) {
@@ -101,6 +109,11 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
 
             if(!isValid(current)) {
                 logger.warn("Validation failed. Proof is invalid. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+                return false
+            }
+
+            if(!seenKeys.add(current.publicKeyNew)) {
+                logger.warn("Validation failed. The chain revisits a key. Each key must appear only once. Repeated key: ${current.publicKeyNew.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
                 return false
             }
         }
