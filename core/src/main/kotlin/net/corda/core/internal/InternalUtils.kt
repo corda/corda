@@ -497,6 +497,8 @@ Cert path: $this
 
 Trust anchors:
 $trustAnchors""", e, this, e.index)
+    } catch (e: IllegalArgumentException) {
+        throw CertPathValidatorException("Cert path failed to validate (BC malformed extension): ${e.message}", e)
     }
 }
 
