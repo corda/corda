@@ -17,7 +17,6 @@ class KeyRotationProofChainTest {
         assertTrue(chain.isEmpty(), "Expected chain to report empty when initialized with no proofs")
         assertFalse(chain.isNotEmpty(), "Expected chain to report empty when initialized with no proofs")
         assertEquals(0, chain.size(), "Expected chain size to be 0 when initialized with no proofs")
-        assertTrue(chain.getKeyLineage().isEmpty(), "Expected key lineage to be empty when initialized with no proofs")
         assertTrue(chain.isValid(key), "Any empty chain should be valid for any key since it implies original and current keys are the same")
         assertFalse(chain.isValid(key, generateKeyPair().public), "Any empty chain should be invalid if original and current keys are different since there is no proof of rotation")
     }
@@ -33,7 +32,6 @@ class KeyRotationProofChainTest {
         assertEquals(1, chain.size())
         assertEquals(old.public, chain.originalKey, "Expected original key to match the old key from the proof")
         assertEquals(new.public, chain.currentKey, "Expected current key to match the new key from the proof")
-        assertEquals(listOf(old.public, new.public), chain.getKeyLineage(), "Expected key lineage to include both the old and new keys in order")
     }
 
     @Test(timeout=300_000)
@@ -54,7 +52,6 @@ class KeyRotationProofChainTest {
         assertEquals(2, chain.size())
         assertEquals(k1.public, chain.originalKey, "Expected original key to match the old key from the proof")
         assertEquals(k3.public, chain.currentKey, "Expected current key to match the new key from the proof")
-        assertEquals(listOf(k1.public, k2.public, k3.public), chain.getKeyLineage(), "Expected key lineage to include both the old and new keys in order")
         assertTrue(chain.isValid(k1.public, k3.public), "Expected chain to be valid when validating against the original key and the current key")
         assertTrue(chain.isValid(k3.public), "The chain is expected to be valid without specifying the original key, as the proofs in the chain should establish a link from the original key to the current key.")
     }

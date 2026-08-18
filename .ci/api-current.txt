@@ -2515,8 +2515,6 @@ public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationPr
   @NotNull
   public final java.security.PublicKey getCurrentKey()
   @NotNull
-  public final java.util.List getKeyLineage()
-  @NotNull
   public final java.security.PublicKey getOriginalKey()
   public int hashCode()
   public final boolean isEmpty()
@@ -2533,8 +2531,6 @@ public static final class net.corda.core.crypto.keyrotation.crossprovider.KeyRot
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public final class net.corda.core.crypto.keyrotation.crossprovider.KeyRotationUtilsKt extends java.lang.Object
-  @NotNull
-  public static final java.util.Set getKeyLineage(java.util.List)
   @NotNull
   public static final java.security.PublicKey getOriginalKey(net.corda.core.crypto.TransactionSignature)
 ##

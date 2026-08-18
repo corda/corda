@@ -35,21 +35,6 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
 
     fun size() = proofChain.size
 
-    fun getKeyLineage(): List<PublicKey> {
-        if (isEmpty()) {
-            return emptyList()
-        }
-
-        val keys = mutableListOf<PublicKey>()
-        keys.add(originalKey)
-
-        proofChain.forEach { proof ->
-            keys.add(proof.publicKeyNew) // Add the new key from each proof
-        }
-
-        return keys
-    }
-
     fun isValid(currentKey: PublicKey): Boolean {
         if(isEmpty()) {
             return true
