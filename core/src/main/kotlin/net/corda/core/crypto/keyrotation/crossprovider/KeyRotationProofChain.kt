@@ -71,6 +71,7 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
      *
      * This ensures the history of key rotations is complete and trustworthy.
      */
+    @Suppress("ComplexMethod")
     fun isValid(originalKey: PublicKey, currentKey: PublicKey): Boolean {
         if (isEmpty()) {
             logger.warn("Validation failed. Chain is empty. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
