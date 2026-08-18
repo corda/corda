@@ -339,4 +339,11 @@ data class SignedTransactionWithDistributionList(
     @DeprecatedConstructorForDeserialization(version = 1)
     constructor(stx: SignedTransaction, distributionList: ByteArray, isFinality: Boolean) :
             this(stx, distributionList, isFinality, false)
+
+    // Backward-compatible copy() method (3-param version) to maintain API stability for existing code.
+    // The data class-generated copy(4 params) remains available alongside this deprecated overload.
+    @Deprecated("Use copy(stx, distributionList, isFinality, ignoreDistributionRecord) with the 4-parameter version instead",
+            replaceWith = ReplaceWith("copy(stx, distributionList, isFinality, false)"))
+    fun copy(stx: SignedTransaction, distributionList: ByteArray, isFinality: Boolean) =
+            copy(stx, distributionList, isFinality, false)
 }
