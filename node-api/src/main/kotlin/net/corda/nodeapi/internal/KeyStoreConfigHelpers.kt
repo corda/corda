@@ -94,7 +94,7 @@ fun createDevNetworkParametersCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): C
 fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
                     legalName: CordaX500Name,
                     nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): CertificateAndKeyPair {
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
+    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), null)
     val cert = X509Utilities.createCertificate(
             CertificateType.NODE_CA,
             intermediateCa.certificate,
