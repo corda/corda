@@ -35,42 +35,47 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
 
     fun size() = proofChain.size
 
-    fun isValid(currentKey: PublicKey): Boolean {
+    fun isValid(rotatedToKey: PublicKey): Boolean {
         if(isEmpty()) {
             return true
         }
 
-        return isValid(originalKey, currentKey)
+        return isValid(originalKey, rotatedToKey)
     }
 
     fun asList(): List<KeyRotationProof> = proofChain
 
     /**
-     * Checks that a key rotation proof chain is valid.
+     * Checks whether this proof chain proves a valid rotation lineage FROM [rotatedFromKey] TO [rotatedToKey].
      *
-     * The chain is valid if:
-     * 1. It starts with the original key.
-     * 2. Each key change follows the previous one (continuous chain).
-     * 3. It ends with the current key.
-     * 4. Each key change is signed by the previous key.
+     * The chain is valid only if all of the following hold:
+     * 1. It STARTS at [rotatedFromKey] - the chain's first proof.publicKeyOld must equal [rotatedFromKey].
+     * 2. It ENDS at [rotatedToKey] - the chain's last proof.publicKeyNew must equal [rotatedToKey].
+     * 3. Each proof is continuous with the next (previous.publicKeyNew == next.publicKeyOld).
+     * 4. Each proof is cryptographically signed by its own publicKeyOld.
+     * 5. No key appears more than once, so the lineage is acyclic.
      *
-     * This ensures the history of key rotations is complete and trustworthy.
+     * [rotatedFromKey] and [rotatedToKey] must be the exact endpoints: it is NOT enough for them to
+     * appear somewhere inside the chain. A chain that merely contains them in the middle is rejected.
+     *
+     * @param rotatedFromKey the key the lineage must start from (matched against the chain's first publicKeyOld).
+     * @param rotatedToKey the key the lineage must end at (matched against the chain's last publicKeyNew).
      */
     @Suppress("ComplexMethod")
-    fun isValid(originalKey: PublicKey, currentKey: PublicKey): Boolean {
+    fun isValid(rotatedFromKey: PublicKey, rotatedToKey: PublicKey): Boolean {
         if (isEmpty()) {
-            logger.warn("Validation failed. Chain is empty. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            logger.warn("Validation failed. Chain is empty. Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
             return false
         }
 
         // Validate first proof
-        if(!startsWithKey(originalKey)){
-            logger.warn("Validation failed. The chain does not start with the expected original key. Expected: ${originalKey.toStringShort()}, Actual: ${this.originalKey.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+        if(!startsWithKey(rotatedFromKey)){
+            logger.warn("Validation failed. The chain does not start with the expected original key. Expected: ${rotatedFromKey.toStringShort()}, Actual: ${originalKey.toStringShort()}")
             return false
         }
 
         if(!isValid(proofChain[0])){
-            logger.warn("Validation failed. Proof is invalid. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            logger.warn("Validation failed. Proof is invalid. Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
             return false
         }
 
@@ -78,24 +83,24 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         // (A -> A) or a loop (A -> B -> A) is rejected on the offending proof.
         val seenKeys = hashSetOf(proofChain[0].publicKeyOld)
         if(!seenKeys.add(proofChain[0].publicKeyNew)) {
-            logger.warn("Validation failed. The chain revisits a key; each key must appear only once. Repeated key: ${proofChain[0].publicKeyNew.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            logger.warn("Validation failed. The chain revisits a key; each key must appear only once. Repeated key: ${proofChain[0].publicKeyNew.toStringShort()}, Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
             return false
         }
 
         // Validate intermediate proofChain (continuity + proof)
-        proofChain.zipWithNext().forEach { (previous, current) ->
-            if(!isContinuous(previous, current)) {
-                logger.warn("Validation failed. The chain is not continuous. Previous proof new key and current proof old key must match. Previous proof new key: ${previous.publicKeyOld.toStringShort()}, Current proof old key: ${current.publicKeyOld.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+        proofChain.zipWithNext().forEach { (previousProof, nextProof) ->
+            if(!isContinuous(previousProof, nextProof)) {
+                logger.warn("Validation failed. The chain is not continuous. The previous proof's new key must match the next proof's old key. Previous proof new key: ${previousProof.publicKeyNew.toStringShort()}, Next proof old key: ${nextProof.publicKeyOld.toStringShort()}, Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
                 return false
             }
 
-            if(!isValid(current)) {
-                logger.warn("Validation failed. Proof is invalid. Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            if(!isValid(nextProof)) {
+                logger.warn("Validation failed. Proof is invalid. Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
                 return false
             }
 
-            if(!seenKeys.add(current.publicKeyNew)) {
-                logger.warn("Validation failed. The chain revisits a key. Each key must appear only once. Repeated key: ${current.publicKeyNew.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+            if(!seenKeys.add(nextProof.publicKeyNew)) {
+                logger.warn("Validation failed. The chain revisits a key. Each key must appear only once. Repeated key: ${nextProof.publicKeyNew.toStringShort()}, Rotated-from key: ${rotatedFromKey.toStringShort()}, Rotated-to key: ${rotatedToKey.toStringShort()}")
                 return false
             }
         }
@@ -104,20 +109,20 @@ data class KeyRotationProofChain(private val proofChain: List<KeyRotationProof>)
         // Check it ends with the expected current key
         // The validation of the last proof is already covered in the intermediate proofChain validation,
         // so we only need to check the current key matches
-        if(!endsWithKey(currentKey)) {
-            logger.warn("Validation failed. The chain does not end with the expected key. Expected: ${currentKey.toStringShort()}, Actual: ${this.currentKey.toStringShort()}, Original key: ${originalKey.toStringShort()}, Current key: ${currentKey.toStringShort()}")
+        if(!endsWithKey(rotatedToKey)) {
+            logger.warn("Validation failed. The chain does not end with the expected key. Expected: ${rotatedToKey.toStringShort()}, Actual: ${currentKey.toStringShort()}")
             return false
         }
 
         return true
     }
 
-    private fun startsWithKey(expectedOriginalKey: PublicKey): Boolean {
-        return originalKey == expectedOriginalKey
+    private fun startsWithKey(rotatedFromKey: PublicKey): Boolean {
+        return originalKey == rotatedFromKey
     }
 
-    private fun endsWithKey(expectedCurrentKey: PublicKey): Boolean {
-        return currentKey == expectedCurrentKey
+    private fun endsWithKey(rotatedToKey: PublicKey): Boolean {
+        return currentKey == rotatedToKey
     }
 
     private fun isContinuous(previous: KeyRotationProof, current: KeyRotationProof): Boolean {
