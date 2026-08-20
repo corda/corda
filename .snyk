@@ -440,4 +440,17 @@ ignore:
           remediation action is required.
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-06-25T08:34:14.244Z
+  SNYK-JAVA-ORGECLIPSEJETTY-18230938:
+    - '*':
+        reason: >-
+          CVE-2026-10050, CVE-2026-6790: (Jetty request-authority/Host-header
+          mismatch) affects Jetty's HTTP server request handling, but the
+          vulnerable Jetty server classes are only pulled in by test-only
+          tooling, none of which ship in the released Corda Enterprise node
+          artifact. Production nodes carry no embedded Jetty HTTP server and use
+          Artemis/AMQP for P2P and RPC, so the exploitable attack surface
+          (untrusted HTTP traffic hitting a live Jetty server) does not exist in
+          our shipped product.
+        expires: 2029-08-01T01:00:00.000Z
+        created: 2026-08-20T00:00:00.000Z
 patch: {}
