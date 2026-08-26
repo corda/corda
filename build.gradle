@@ -537,10 +537,7 @@ allprojects {
                         details.useVersion reactor_netty_version
                     }
 
-                    // SNYK-JAVA-IOMICROMETER-17339194 / CVE-2026-40983
-                    // SNYK-JAVA-IOMICROMETER-17260885 / CVE-2026-40984
-                    // vulnerability in io.micrometer:micrometer-core@1.16.5 fixed in micrometer-core@1.16.6
-                    // micrometer-core@1.16.5 is a transitive dependency via artemis-server@2.54.0
+                    // SNYK-JAVA-IOMICROMETER-19233327 / CVE-2026-59296
                     // force-upgrade micrometer-core to a fixed version
                     // Review when Artemis is upgraded
                     if (details.requested.group == 'io.micrometer' && details.requested.name == "micrometer-core") {
