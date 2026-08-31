@@ -105,6 +105,7 @@ buildscript {
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = constants.getProperty("jschVersion")
     ext.protonj_version = constants.getProperty("protonjVersion")
+    ext.qpid_version = constants.getProperty("qpidVersion")
     ext.snappy_version = constants.getProperty("snappyVersion")
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = constants.getProperty("jcabiManifestsVersion")

@@ -235,7 +235,7 @@ dependencies {
     integrationTestImplementation "de.javakaffee:kryo-serializers:$kryo_serializer_version"
     integrationTestImplementation "junit:junit:$junit_version"
     integrationTestImplementation "org.assertj:assertj-core:${assertj_version}"
-    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${protonj_version}"
+    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${qpid_version}"
 
     // used by FinalityFlowErrorHandlingTest
     slowIntegrationTestImplementation project(':testing:cordapps:cashobservers')
