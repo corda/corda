@@ -21,6 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
 class CashPaymentFlowTests {
     private lateinit var mockNet: MockNetwork
@@ -78,6 +79,56 @@ class CashPaymentFlowTests {
                 assertThat(produced).hasSize(1)
                 val paymentState = produced.single().state.data
                 assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+	fun `pay some cash sends the change to the well known identity when anonymous is false`() {
+        // As anonymous is false, the change should be spent back to Bank of Corda's well known identity rather than
+        // to a freshly generated confidential (anonymous) identity.
+        payAndAssertChangeOwner(anonymous = false) { changeState ->
+            assertEquals(bankOfCorda, changeState.owner)
+            assertEquals(bankOfCorda.owningKey, changeState.owner.owningKey)
+        }
+    }
+
+    @Test(timeout=300_000)
+	fun `pay some cash sends the change to an anonymous identity when anonymous is true`() {
+        // As anonymous is true, the change should be spent to a freshly generated confidential (anonymous) identity
+        // which is not the well known identity, but still resolves back to it.
+        payAndAssertChangeOwner(anonymous = true) { changeState ->
+            assertNotEquals(bankOfCorda, changeState.owner)
+            assertNotEquals(bankOfCorda.owningKey, changeState.owner.owningKey)
+            assertEquals(bankOfCorda, bankOfCordaNode.services.identityService.wellKnownPartyFromAnonymous(changeState.owner))
+        }
+    }
+
+    /**
+     * Pays $500 of the initial $2,000 balance to Alice and asserts the resulting $1,500 change state, delegating
+     * the ownership check of that change state to [assertChangeOwner] so each test can verify the [anonymous] behaviour.
+     */
+    private fun payAndAssertChangeOwner(anonymous: Boolean, assertChangeOwner: (Cash.State) -> Unit) {
+        val recipient = aliceNode.info.singleIdentity()
+        val expectedPayment = 500.DOLLARS
+        val expectedChange = 1500.DOLLARS
+
+        // Register for vault updates
+        val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+        val (_, vaultUpdatesTrackerBankOfCorda) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
+
+        // Make a payment
+        val future = bankOfCordaNode.startFlow(CashPaymentFlow(expectedPayment, recipient, anonymous = anonymous))
+        mockNet.runNetwork()
+        future.getOrThrow()
+
+        vaultUpdatesTrackerBankOfCorda.expectEvents {
+            expect { (consumed, produced) ->
+                assertThat(consumed).hasSize(1)
+                assertThat(produced).hasSize(1)
+                val changeState = produced.single().state.data
+                assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
+                assertChangeOwner(changeState)
             }
         }
     }

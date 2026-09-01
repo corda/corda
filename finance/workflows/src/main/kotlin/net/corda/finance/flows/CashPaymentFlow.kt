@@ -69,7 +69,8 @@ open class CashPaymentFlow(
                     amount,
                     ourIdentityAndCert,
                     anonymousRecipient,
-                    issuerConstraint
+                    issuerConstraint,
+                    anonymous = anonymous
             )
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)
