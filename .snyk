@@ -426,6 +426,17 @@ ignore:
           and so Corda is not impacted by this vulnerability.
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-06-22T14:58:24.280Z
+  SNYK-JAVA-ORGAPACHESHIRO-17756768:
+    - '*':
+        reason: >-
+          CVE-2026-56130: Apache Shiro is used exclusively for stateless RPC
+          authorization in Corda 4.11. CVE-2026-56130 is conditional on Shiro's
+          RememberMe functionality being enabled — this project does not enable,
+          configure, or reference RememberMeManager or any RememberMe API
+          anywhere in the codebase. As the prerequisite for exploitation is
+          absent, Corda OS 4.11 is not affected by this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-08-12T00:00:00.000Z
   SNYK-JAVA-COMFASTERXMLJACKSONCORE-17457695:
     - '*':
         reason: >-
