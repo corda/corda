@@ -149,11 +149,13 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
 
     open fun resolvePayload(payload: Any): SignedTransaction {
         return if (payload is SignedTransactionWithDistributionList) {
-            if (checkSufficientSignatures) {
+            if (checkSufficientSignatures && !payload.ignoreDistributionRecord) {
                 (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(payload.stx.id, otherSideSession.counterparty.name,
                         TransactionMetadata(otherSideSession.counterparty.name, DistributionList.ReceiverDistributionList(payload.distributionList, statesToRecord)))
-                payload.stx
-            } else payload.stx
+            } else if (payload.ignoreDistributionRecord) {
+                logger.debug { "ENT-14904: skipping receiver distribution record for ${payload.stx.id} from ${otherSideSession.counterparty.name} (duplicate session to same peer)." }
+            }
+            payload.stx
         } else payload as SignedTransaction
     }
 
