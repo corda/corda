@@ -37,7 +37,6 @@ import net.corda.core.internal.pooledScan
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.toPath
 import net.corda.core.internal.toTypedArray
-import net.corda.core.internal.warnContractWithoutConstraintPropagation
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -58,6 +57,7 @@ import java.util.ServiceLoader
 import java.util.TreeSet
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
+import java.util.zip.ZipFile
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
@@ -125,10 +125,26 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
     override fun close() = appClassLoader.close()
 
     private inner class InternalHolder {
-        val nonLegacyCordapps = cordappJars.mapTo(ArrayList(), ::scanCordapp)
-        val legacyContractCordapps = legacyContractJars.map(::scanCordapp)
+        val nonLegacyCordapps: ArrayList<CordappImpl>
+        val legacyContractCordapps: List<CordappImpl>
 
         init {
+            val allJarPaths = (cordappJars + legacyContractJars).map { it.absolutePathString() }
+            if (allJarPaths.isEmpty()) {
+                nonLegacyCordapps = ArrayList()
+                legacyContractCordapps = emptyList()
+            } else {
+                ClassGraph()
+                        .overrideClasspath(allJarPaths)
+                        .enableAllInfo()
+                        .pooledScan()
+                        .use { scanResult ->
+                            nonLegacyCordapps = cordappJars.mapTo(ArrayList()) { scanResult.toCordapp(it) }
+                            legacyContractCordapps = legacyContractJars.map {
+                                scanResult.toCordapp(it)
+                            }
+                        }
+            }
             commonChecks(nonLegacyCordapps, LanguageVersion::isNonLegacyCompatible)
             nonLegacyCordapps += extraCordapps
             if (legacyContractCordapps.isNotEmpty()) {
@@ -245,25 +261,39 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         logger.debug { "$path: $languageVersion" }
         return CordappImpl(
                 path,
-                findContractClassNames(this),
-                findInitiatedFlows(this),
-                findRPCFlows(this),
-                findServiceFlows(this),
-                findSchedulableFlows(this),
-                findServices(this),
-                findTelemetryComponents(this),
+                findContractClassNames(this, path),
+                findInitiatedFlows(this, path),
+                findRPCFlows(this, path),
+                findServiceFlows(this, path),
+                findSchedulableFlows(this, path),
+                findServices(this, path),
+                findTelemetryComponents(this, path),
                 findWhitelists(path),
-                findSerializers(this),
-                findCheckpointSerializers(this),
-                findCustomSchemas(this),
-                findAllFlows(this),
+                findSerializers(this, path),
+                findCheckpointSerializers(this, path),
+                findCustomSchemas(this, path),
+                findAllFlows(this, path),
                 info,
                 minPlatformVersion,
                 targetPlatformVersion,
                 languageVersion = languageVersion,
-                notaryService = findNotaryService(this),
-                explicitCordappClasses = findAllCordappClasses(this)
+                notaryService = findNotaryService(this, path),
+                explicitCordappClasses = findAllCordappClasses(this, path)
         )
+    }
+
+    // Returns true if this ClassInfo was loaded from the given JAR
+    private fun ClassInfo.isFromJar(jar: Path): Boolean {
+        return try {
+            classpathElementFile?.toPath()?.isSameFileAs(jar) == true
+        } catch (_: IllegalArgumentException) {
+            false
+        }
+    }
+
+    private fun ClassInfoList.fromJar(jar: Path): ClassInfoList {
+        val classNamesInJar = jar.readClassNames()
+        return filter { it.name in classNamesInJar }
     }
 
     private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info {
@@ -330,63 +360,72 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         return version
     }
 
-    private fun findNotaryService(scanResult: ScanResult): Class<out NotaryService>? {
+    private fun findNotaryService(scanResult: ScanResult, jar: Path): Class<out NotaryService>? {
         // Note: we search for implementations of both NotaryService and SinglePartyNotaryService as
         // the scanner won't find subclasses deeper down the hierarchy if any intermediate class is not
         // present in the CorDapp.
-        val result = scanResult.getClassesExtending(NotaryService::class) +
-                scanResult.getClassesExtending(SinglePartyNotaryService::class)
+        val result = scanResult.getClassesExtending(NotaryService::class, jar) +
+                scanResult.getClassesExtending(SinglePartyNotaryService::class, jar)
         if (result.isNotEmpty()) {
             logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
         }
         return result.firstOrNull()
     }
 
-    private fun findServices(scanResult: ScanResult): List<Class<out SerializeAsToken>> {
-        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+    private fun findServices(scanResult: ScanResult, jar: Path): List<Class<out SerializeAsToken>> {
+        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class, jar)
     }
 
-    private fun findTelemetryComponents(scanResult: ScanResult): List<Class<out TelemetryComponent>> {
-        return scanResult.getClassesImplementing(TelemetryComponent::class)
+    private fun findTelemetryComponents(scanResult: ScanResult, jar: Path): List<Class<out TelemetryComponent>> {
+        return scanResult.getClassesImplementing(TelemetryComponent::class, jar)
     }
 
-    private fun findInitiatedFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
+    private fun findInitiatedFlows(scanResult: ScanResult, jar: Path): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class, jar)
     }
 
     private fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
         return Modifier.isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || Modifier.isStatic(modifiers))
     }
 
-    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() }
+    private fun findRPCFlows(scanResult: ScanResult, jar: Path): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class, jar).filter { it.isUserInvokable() }
     }
 
-    private fun findServiceFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByService::class)
+    private fun findServiceFlows(scanResult: ScanResult, jar: Path): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByService::class, jar)
     }
 
-    private fun findSchedulableFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
+    private fun findSchedulableFlows(scanResult: ScanResult, jar: Path): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class, jar)
     }
 
-    private fun findAllFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
-        return scanResult.getClassesExtending(FlowLogic::class)
+    private fun findAllFlows(scanResult: ScanResult, jar: Path): List<Class<out FlowLogic<*>>> {
+        return scanResult.getClassesExtending(FlowLogic::class, jar)
     }
 
-    private fun findAllCordappClasses(scanResult: ScanResult): List<String> {
+    private fun findAllCordappClasses(scanResult: ScanResult, jar: Path): List<String> {
         val cordappClasses = ArrayList<String>()
-        scanResult.allStandardClasses.mapTo(cordappClasses) { it.name }
-        scanResult.allInterfaces.mapTo(cordappClasses) { it.name }
+        scanResult.allStandardClasses.fromJar(jar).mapTo(cordappClasses) { it.name }
+        scanResult.allInterfaces.fromJar(jar).mapTo(cordappClasses) { it.name }
         return cordappClasses
     }
 
-    private fun findContractClassNames(scanResult: ScanResult): List<String> {
-        val contractClasses = coreContractClasses.flatMapToSet(scanResult::getClassesImplementing)
-        for (contractClass in contractClasses) {
-            contractClass.name.warnContractWithoutConstraintPropagation(appClassLoader)
+    private fun findContractClassNames(scanResult: ScanResult, jar: Path): List<String> {
+        val classNamesInJar = jar.readClassNames()  // reads ZIP entries directly
+        return coreContractClasses.flatMapToSet { type ->
+            val classInfoList = if (type.isInterface) scanResult.getClassesImplementing(type)
+            else scanResult.getSubclasses(type)
+            classInfoList.filter { it.name in classNamesInJar && !it.isAbstract && !it.isInterface }
+        }.map { it.name }
+    }
+
+    private fun Path.readClassNames(): Set<String> {
+        return ZipFile(toFile()).use { zip ->
+            zip.entries().asSequence()
+                    .filter { it.name.endsWith(".class") }
+                    .mapTo(HashSet()) { it.name.removeSuffix(".class").replace('/', '.') }
         }
-        return contractClasses.map { it.name }
     }
 
     private fun findWhitelists(cordappJar: Path): List<SerializationWhitelist> {
@@ -396,31 +435,22 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
 
-    private fun findSerializers(scanResult: ScanResult): List<SerializationCustomSerializer<*, *>> {
-        return scanResult.getClassesImplementing(SerializationCustomSerializer::class).map { it.kotlin.objectOrNewInstance() }
+    private fun findSerializers(scanResult: ScanResult, jar: Path): List<SerializationCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementing(SerializationCustomSerializer::class, jar).map { it.kotlin.objectOrNewInstance() }
     }
 
-    private fun findCheckpointSerializers(scanResult: ScanResult): List<CheckpointCustomSerializer<*, *>> {
-        return scanResult.getClassesImplementing(CheckpointCustomSerializer::class).map { it.kotlin.objectOrNewInstance() }
+    private fun findCheckpointSerializers(scanResult: ScanResult, jar: Path): List<CheckpointCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementing(CheckpointCustomSerializer::class, jar).map { it.kotlin.objectOrNewInstance() }
     }
 
-    private fun findCustomSchemas(scanResult: ScanResult): Set<MappedSchema> {
-        return scanResult.getClassesExtending(MappedSchema::class).mapToSet { it.kotlin.objectOrNewInstance() }
-    }
-
-    private fun scanCordapp(cordappJar: Path): CordappImpl {
-        logger.info("Scanning CorDapp ${cordappJar.absolutePathString()}")
-        return ClassGraph()
-                .overrideClasspath(cordappJar.absolutePathString())
-                .enableAllInfo()
-                .pooledScan()
-                .use { it.toCordapp(cordappJar) }
+    private fun findCustomSchemas(scanResult: ScanResult, jar: Path): Set<MappedSchema> {
+        return scanResult.getClassesExtending(MappedSchema::class, jar).mapToSet { it.kotlin.objectOrNewInstance() }
     }
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
             loadClassOfType(type.java, className, false, appClassLoader)
-        } catch (e: ClassCastException) {
+        } catch (_: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null
         } catch (e: Exception) {
@@ -429,43 +459,48 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         }
     }
 
-    private fun <T : Any> ScanResult.getClassesExtending(type: KClass<T>): List<Class<out T>> {
-        return getSubclasses(type.java).getAllConcreteClasses(type)
+    private fun <T : Any> ScanResult.getClassesExtending(type: KClass<T>, jar: Path): List<Class<out T>> {
+        return getSubclasses(type.java).fromJar(jar).getAllConcreteClasses(type)
     }
 
-    private fun <T : Any> ScanResult.getClassesImplementing(type: KClass<T>): List<Class<out T>> {
-        return getClassesImplementing(type.java).getAllConcreteClasses(type)
+    private fun <T : Any> ScanResult.getClassesImplementing(type: KClass<T>, jar: Path): List<Class<out T>> {
+        return getClassesImplementing(type.java).fromJar(jar).getAllConcreteClasses(type)
     }
 
-    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-        return getClassesWithAnnotation(annotation.java).getAllConcreteClasses(type)
+    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>, jar: Path): List<Class<out T>> {
+        return getClassesWithAnnotation(annotation.java).fromJar(jar).getAllConcreteClasses(type)
     }
 
     private fun <T : Any> ClassInfoList.getAllConcreteClasses(type: KClass<T>): List<Class<out T>> {
         return mapNotNull { loadClass(it.name, type)?.takeUnless(Class<*>::isAbstractClass) }
     }
 
-    private fun ScanResult.determineLanguageVersion(cordappJar: Path): LanguageVersion {
-        val allClasses = allClassesAsMap.values
-        if (allClasses.isEmpty()) {
-            return LanguageVersion.Data
-        }
-        val classFileMajorVersion = allClasses.maxOf { it.classfileMajorVersion }
-        val kotlinMetadataVersion = allClasses
-                .mapNotNullTo(TreeSet()) { it.kotlinMetadataVersion() }
-                .let { kotlinMetadataVersions ->
-                    // If there's more than one minor version of Kotlin
-                    if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
-                        logger.warn("CorDapp $cordappJar comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
-                                "This may cause compatibility issues.")
+    private fun determineLanguageVersion(cordappJar: Path): LanguageVersion {
+        return ClassGraph()
+                .overrideClasspath(cordappJar.absolutePathString())
+                .enableClassInfo()
+                .enableAnnotationInfo()
+                .scan()
+                .use { scanResult ->
+                    val allClasses = scanResult.allClassesAsMap.values
+                    if (allClasses.isEmpty()) return@use LanguageVersion.Data
+                    val classFileMajorVersion = allClasses.maxOf { it.classfileMajorVersion }
+                    val kotlinMetadataVersion = allClasses
+                            .mapNotNullTo(TreeSet()) { it.kotlinMetadataVersion() }
+                            .let { kotlinMetadataVersions ->
+                                // If there's more than one minor version of Kotlin
+                                if (kotlinMetadataVersions.size > 1 && kotlinMetadataVersions.mapToSet { it.copy(patch = 0) }.size > 1) {
+                                    logger.warn("CorDapp $cordappJar comprised of multiple Kotlin versions (kotlinMetadataVersions=$kotlinMetadataVersions). " +
+                                            "This may cause compatibility issues.")
+                                }
+                                kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last()
+                            }
+                    try {
+                        LanguageVersion.Bytecode(classFileMajorVersion, kotlinMetadataVersion)
+                    } catch (e: IllegalArgumentException) {
+                        throw IllegalStateException("Unable to load CorDapp $cordappJar: ${e.message}")
                     }
-                    kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last()
                 }
-        try {
-            return LanguageVersion.Bytecode(classFileMajorVersion, kotlinMetadataVersion)
-        } catch (e: IllegalArgumentException) {
-            throw IllegalStateException("Unable to load CorDapp $cordappJar: ${e.message}")
-        }
     }
 
     private fun ClassInfo.kotlinMetadataVersion(): KotlinMetadataVersion? {
