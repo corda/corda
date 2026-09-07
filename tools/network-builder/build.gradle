@@ -33,6 +33,7 @@ configurations {
     implementation {
         exclude group: "log4j", module: "log4j"
         exclude group: "org.apache.logging.log4j"
+        exclude group: "io.netty", module: "netty-codec-http3"
     }
 }
 
