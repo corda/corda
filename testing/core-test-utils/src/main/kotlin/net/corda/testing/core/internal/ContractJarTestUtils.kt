@@ -115,6 +115,40 @@ object ContractJarTestUtils {
         return Paths.get(outFile.name)
     }
 
+    /**
+     * Compiles [abstractContractName] and [concreteContractName] in a single javac invocation (so
+     * the concrete class can reference the abstract one), then packages each into its own JAR.
+     * Use this to test contract discovery across a multi-JAR inheritance hierarchy.
+     */
+    fun makeTestContractJarPair(
+            workingDir: Path,
+            abstractContractName: String,
+            abstractContractSource: String,
+            concreteContractName: String,
+            concreteContractSource: String
+    ): Pair<Path, Path> {
+        val compiler = ToolProvider.getSystemJavaCompiler()
+        val fileManager = compiler.getStandardFileManager(null, null, null)
+        fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(workingDir.toFile()))
+
+        val sources = listOf(abstractContractName, concreteContractName).zip(
+                listOf(abstractContractSource, concreteContractSource)
+        ).map { (name, source) ->
+            val path = name.replace('.', '/')
+            object : SimpleJavaFileObject(URI.create("string:///$path.java"), JavaFileObject.Kind.SOURCE) {
+                override fun getCharContent(ignoreEncodingErrors: Boolean): CharSequence = source
+            }
+        }
+        compiler.getTask(System.out.writer(), fileManager, null, listOf("-source", "8", "-target", "8"), null, sources).call()
+
+        val abstractJarName = "${abstractContractName.substringAfterLast('.')}.jar"
+        val concreteJarName = "${concreteContractName.substringAfterLast('.')}.jar"
+        workingDir.createJar(abstractJarName, "${abstractContractName.replace('.', '/')}.class")
+        workingDir.createJar(concreteJarName, "${concreteContractName.replace('.', '/')}.class")
+
+        return workingDir.resolve(abstractJarName) to workingDir.resolve(concreteJarName)
+    }
+
     fun signContractJar(jarURL: URL, copyFirst: Boolean, keyStoreDir: Path? = null, alias: String = "testAlias", pwd: String  = "testPassword"): Pair<Path, PublicKey> {
         val urlAsPath = jarURL.toPath()
         val jarName =
