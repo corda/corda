@@ -6,6 +6,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
+import net.corda.core.serialization.internal._rpcClientSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.internal.NodeStartup
@@ -32,7 +33,6 @@ import java.io.Serializable
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
 import kotlin.io.path.readLines
 import kotlin.io.path.useDirectoryEntries
 import kotlin.io.path.useLines
