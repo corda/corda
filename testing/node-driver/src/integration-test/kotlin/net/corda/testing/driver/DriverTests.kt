@@ -96,12 +96,7 @@ class DriverTests {
         driver(DriverParameters(
                 isDebug = true,
                 notarySpecs = emptyList(),
-                // Log4j 2.17.2+ disables scripting by default. The dev log4j2.xml uses ScriptPatternSelector
-                // which requires JavaScript scripting to be enabled for proper log formatting.
-                systemProperties = mapOf(
-                        "log4j.configurationFile" to logConfigFile.toString(),
-                        "log4j2.Script.enableLanguages" to "javascript"
-                )
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
         )) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).useDirectoryEntries { it.single { a -> a.isRegularFile() && a.name.startsWith("node") } }
