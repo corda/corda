@@ -213,7 +213,7 @@ internal class RPCClientProxyHandler(
                         "where the leak is coming from, set -Dnet.corda.client.rpc.trackRpcCallSites=true on the JVM",
                         "command line and you will get a stack trace with this warning."
                 ).joinToString(" "), rpcCallSite)
-                rpcCallSite?.printStackTrace()
+                rpcCallSite?.let { log.warn("Call site stack trace:", it) }
             }
             observablesToReap.locked { observables.add(observableId) }
         }

@@ -197,17 +197,21 @@ fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply 
  * TODO remove this once deserialisation is figured out.
  */
 private class DummySecureRandomSpi : SecureRandomSpi() {
+    companion object {
+        private val log = contextLogger()
+    }
+
     override fun engineSetSeed(bytes: ByteArray?) {
-        Exception("DummySecureRandomSpi.engineSetSeed called").printStackTrace(System.out)
+        log.warn("DummySecureRandomSpi.engineSetSeed called", Exception("DummySecureRandomSpi.engineSetSeed called"))
     }
 
     override fun engineNextBytes(bytes: ByteArray?) {
-        Exception("DummySecureRandomSpi.engineNextBytes called").printStackTrace(System.out)
+        log.warn("DummySecureRandomSpi.engineNextBytes called", Exception("DummySecureRandomSpi.engineNextBytes called"))
         bytes?.fill(0)
     }
 
     override fun engineGenerateSeed(numberOfBytes: Int): ByteArray {
-        Exception("DummySecureRandomSpi.engineGenerateSeed called").printStackTrace(System.out)
+        log.warn("DummySecureRandomSpi.engineGenerateSeed called", Exception("DummySecureRandomSpi.engineGenerateSeed called"))
         return ByteArray(numberOfBytes)
     }
 }
