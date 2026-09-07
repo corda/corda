@@ -1,11 +1,10 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
@@ -24,7 +23,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThat
@@ -35,6 +34,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.KeyPair
 import java.security.PublicKey
+import kotlin.io.path.div
 
 class KeyStoreHandlerTest {
     @Rule
@@ -47,7 +47,7 @@ class KeyStoreHandlerTest {
 
     private val keyStore get() = config.signingCertificateStore.get()
 
-    private lateinit var cryptoService: BCCryptoService
+    private lateinit var cryptoService: DefaultCryptoService
 
     private lateinit var keyStoreHandler: KeyStoreHandler
 
@@ -64,7 +64,7 @@ class KeyStoreHandlerTest {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn(null).whenever(it).notary
         }
-        cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
+        cryptoService = DefaultCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
         keyStoreHandler = KeyStoreHandler(config, cryptoService)
     }
 
@@ -190,7 +190,7 @@ class KeyStoreHandlerTest {
         val devCertificateDir = tempFolder.root.toPath() / "certificates-dev"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(devCertificateDir)
         val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(devCertificateDir)
-        val devCryptoService = BCCryptoService(config.myLegalName.x500Principal, signingCertificateStore)
+        val devCryptoService = DefaultCryptoService(config.myLegalName.x500Principal, signingCertificateStore)
 
         doReturn(true).whenever(config).devMode
         doReturn(signingCertificateStore).whenever(config).signingCertificateStore

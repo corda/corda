@@ -6,9 +6,20 @@ import com.typesafe.config.ConfigFactory
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.div
+import net.corda.core.internal.location
+import net.corda.core.internal.read
+import net.corda.core.internal.readObject
+import net.corda.core.internal.times
+import net.corda.core.internal.toPath
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -21,7 +32,11 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.*
+import net.corda.nodeapi.internal.ContractsJar
+import net.corda.nodeapi.internal.ContractsJarFile
+import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
@@ -29,7 +44,6 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
-import java.io.File
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -38,7 +52,7 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Timer
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarInputStream
@@ -46,7 +60,16 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
 import kotlin.concurrent.schedule
-import kotlin.streams.toList
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.isSameFileAs
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
+import kotlin.io.path.readBytes
+import kotlin.io.path.useDirectoryEntries
 
 /**
  * Class to bootstrap a local network of Corda nodes on the same filesystem.
@@ -89,7 +112,7 @@ constructor(private val initSerEnv: Boolean,
         private val jarsThatArentCordapps = setOf("corda.jar", "runnodes.jar")
 
         private fun extractEmbeddedCordaJar(): URL {
-            return Thread.currentThread().contextClassLoader.getResource("corda.jar")
+            return Thread.currentThread().contextClassLoader.getResource("corda.jar")!!
         }
 
         private fun generateNodeInfos(nodeDirs: List<Path>): List<Path> {
@@ -112,9 +135,7 @@ constructor(private val initSerEnv: Boolean,
 
         private fun generateNodeInfo(nodeDir: Path): Path {
             runNodeJob(nodeInfoGenCmd, nodeDir, "node-info-gen.log")
-            return nodeDir.list { paths ->
-                paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
-            }
+            return nodeDir.useDirectoryEntries { paths -> paths.single { it.name.startsWith(NODE_INFO_FILE_NAME_PREFIX) } }
         }
 
         private fun createDbSchemas(nodeDir: Path) {
@@ -123,11 +144,11 @@ constructor(private val initSerEnv: Boolean,
 
         private fun runNodeJob(command: List<String>, nodeDir: Path, logfileName: String) {
             val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
-            val nodeRedirectFile = (logsDir / logfileName).toFile()
+            val nodeRedirectFile = logsDir / logfileName
             val process = ProcessBuilder(command)
                     .directory(nodeDir.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput(nodeRedirectFile)
+                    .redirectOutput(nodeRedirectFile.toFile())
                     .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                     .start()
             try {
@@ -143,7 +164,7 @@ constructor(private val initSerEnv: Boolean,
             }
         }
 
-        private fun printNodeOutputToConsoleAndThrow(stdoutFile: File) {
+        private fun printNodeOutputToConsoleAndThrow(stdoutFile: Path) {
             val nodeDir = stdoutFile.parent
             val nodeIdentifier = try {
                 ConfigFactory.parseFile((nodeDir / "node.conf").toFile()).getString("myLegalName")
@@ -151,7 +172,7 @@ constructor(private val initSerEnv: Boolean,
                 nodeDir
             }
             System.err.println("#### Error while generating node info file $nodeIdentifier ####")
-            stdoutFile.inputStream().copyTo(System.err)
+            stdoutFile.copyTo(System.err)
             throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
         }
 
@@ -239,9 +260,8 @@ constructor(private val initSerEnv: Boolean,
         require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
-        val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && !jarsThatArentCordapps.contains(it.fileName.toString().toLowerCase()) }
-                    .toList()
+        val cordappJars =  directory.useDirectoryEntries("*.jar") { jars ->
+            jars.filter { !it.isSameFileAs(bootstrapperJar) && it.name.lowercase() !in jarsThatArentCordapps }.toList()
         }
         bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParameterOverrides)
     }
@@ -263,7 +283,7 @@ constructor(private val initSerEnv: Boolean,
             println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
         }
 
-        val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
+        val configs = nodeDirs.associateWith { ConfigFactory.parseFile((it / "node.conf").toFile()) }
         checkForDuplicateLegalNames(configs.values)
 
         copyCordapps.copy(cordappJars, nodeDirs, networkAlreadyExists, fromCordform)
@@ -301,9 +321,7 @@ constructor(private val initSerEnv: Boolean,
         }
     }
 
-    private fun Path.listEndingWith(suffix: String): List<Path> {
-        return list { file -> file.filter { it.toString().endsWith(suffix) }.toList() }
-    }
+    private fun Path.listEndingWith(suffix: String): List<Path> = listDirectoryEntries("*$suffix")
 
     private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean {
         var networkAlreadyExists = false
@@ -320,7 +338,7 @@ constructor(private val initSerEnv: Boolean,
         val webServerConfFiles = directory.listEndingWith("_web-server.conf")
 
         for (confFile in confFiles) {
-            val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
+            val nodeName = confFile.name.removeSuffix("_node.conf")
             println("Generating node directory for $nodeName")
             if ((directory / nodeName).exists()) {
                 //directory already exists, so assume this network has been bootstrapped before
@@ -333,25 +351,28 @@ constructor(private val initSerEnv: Boolean,
             cordaJar.copyToDirectory(nodeDir, REPLACE_EXISTING)
         }
 
-        val nodeDirs = directory.list { subDir -> subDir.filter { (it / "node.conf").exists() && !(it / "corda.jar").exists() }.toList() }
-        for (nodeDir in nodeDirs) {
-            println("Copying corda.jar into node directory ${nodeDir.fileName}")
-            cordaJar.copyToDirectory(nodeDir)
+        directory.useDirectoryEntries { subDir ->
+            subDir
+                .filter { (it / "node.conf").exists() && !(it / "corda.jar").exists() }
+                .forEach { nodeDir ->
+                    println("Copying corda.jar into node directory ${nodeDir.fileName}")
+                    cordaJar.copyToDirectory(nodeDir)
+                }
         }
 
         if (fromCordform) {
-            confFiles.forEach(Path::delete)
-            webServerConfFiles.forEach(Path::delete)
+            confFiles.forEach(Path::deleteExisting)
+            webServerConfFiles.forEach(Path::deleteExisting)
         }
 
         if (fromCordform || usingEmbedded) {
-            cordaJar.delete()
+            cordaJar.deleteExisting()
         }
         return networkAlreadyExists
     }
 
     private fun gatherNodeDirectories(directory: Path): List<Path> {
-        val nodeDirs = directory.list { subDir -> subDir.filter { (it / "corda.jar").exists() }.toList() }
+        val nodeDirs = directory.useDirectoryEntries { subDir -> subDir.filter { (it / "corda.jar").exists() }.toList() }
         for (nodeDir in nodeDirs) {
             require((nodeDir / "node.conf").exists()) { "Missing node.conf in node directory ${nodeDir.fileName}" }
         }
@@ -395,7 +416,7 @@ constructor(private val initSerEnv: Boolean,
         val netParamsFilesGrouped = nodeDirs.mapNotNull {
             val netParamsFile = it / NETWORK_PARAMS_FILE_NAME
             if (netParamsFile.exists()) netParamsFile else null
-        }.groupBy { SerializedBytes<SignedNetworkParameters>(it.readAll()) }
+        }.groupBy { SerializedBytes<SignedNetworkParameters>(it.readBytes()) }
 
         when (netParamsFilesGrouped.size) {
             0 -> return null
@@ -493,9 +514,7 @@ constructor(private val initSerEnv: Boolean,
     }
 
     private fun isSigned(file: Path): Boolean = file.read {
-        JarInputStream(it).use {
-            JarSignatureCollector.collectSigningParties(it).isNotEmpty()
-        }
+        JarInputStream(it).use(JarSignatureCollector::collectSigningParties).isNotEmpty()
     }
 }
 
@@ -505,8 +524,7 @@ fun NetworkParameters.overrideWith(override: NetworkParametersOverrides): Networ
             maxMessageSize = override.maxMessageSize ?: this.maxMessageSize,
             maxTransactionSize = override.maxTransactionSize ?: this.maxTransactionSize,
             eventHorizon = override.eventHorizon ?: this.eventHorizon,
-            packageOwnership = override.packageOwnership?.map { it.javaPackageName to it.publicKey }?.toMap()
-                    ?: this.packageOwnership
+            packageOwnership = override.packageOwnership?.associate { it.javaPackageName to it.publicKey } ?: this.packageOwnership
     )
 }
 

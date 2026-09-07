@@ -2,10 +2,11 @@ package net.corda.networkbuilder.nodes
 
 import net.corda.networkbuilder.Constants
 import java.io.File
+import java.util.Locale
 
 open class FoundNode(open val configFile: File,
                      open val baseDirectory: File = configFile.parentFile,
-                     val name: String = configFile.parentFile.name.toLowerCase().replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "")) {
+                     val name: String = configFile.parentFile.name.lowercase(Locale.getDefault()).replace(Constants.ALPHA_NUMERIC_ONLY_REGEX, "")) {
 
     operator fun component1(): File {
         return baseDirectory

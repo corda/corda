@@ -364,7 +364,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
         assertNotEquals(clazz, deserializedObj::class.java)
         assertTrue(deserializedObj is I)
-        assertEquals(testVal, (deserializedObj as I).getName())
+        assertEquals(testVal, deserializedObj.getName())
     }
 
     @Test(timeout=300_000)

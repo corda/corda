@@ -1,19 +1,20 @@
 package net.corda.smoketesting
 
+import com.google.common.collect.Lists
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.identity.Party
-import net.corda.core.internal.createDirectories
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.internal.toPath
-import net.corda.core.internal.writeText
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
@@ -23,12 +24,18 @@ import java.nio.file.Paths
 import java.time.Instant
 import java.time.ZoneId.systemDefault
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createDirectory
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 class NodeProcess(
-        private val config: NodeConfig,
-        private val nodeDir: Path,
+        private val config: NodeParams,
+        val nodeDir: Path,
         private val node: Process,
         private val client: CordaRPCClient
 ) : AutoCloseable {
@@ -43,6 +50,7 @@ class NodeProcess(
     }
 
     override fun close() {
+        if (!node.isAlive) return
         log.info("Stopping node '${config.commonName}'")
         node.destroy()
         if (!node.waitFor(60, SECONDS)) {
@@ -56,65 +64,98 @@ class NodeProcess(
 
     // TODO All use of this factory have duplicate code which is either bundling the calling module or a 3rd party module
     // as a CorDapp for the nodes.
-    class Factory(private val buildDirectory: Path = Paths.get("build")) {
-        val cordaJar: Path by lazy {
-            val cordaJarUrl = requireNotNull(this::class.java.getResource("/corda.jar")) {
-                "corda.jar could not be found in classpath"
-            }
-            cordaJarUrl.toPath()
-        }
+    class Factory(
+            private val baseNetworkParameters: NetworkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION),
+            private val buildDirectory: Path = Paths.get("build")
+    ) : AutoCloseable {
+        companion object {
+            private val formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
+            private val cordaJars = ConcurrentHashMap<String, CordaJar>()
 
-        private companion object {
-            val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
             init {
                 checkNotOnClasspath("net.corda.node.Corda") {
                     "Smoke test has the node in its classpath. Please remove the offending dependency."
                 }
             }
+
+            @Suppress("MagicNumber")
+            private fun getCordaJarInfo(version: String): CordaJar {
+                return cordaJars.computeIfAbsent(version) {
+                    val (javaHome, versionSuffix) = if (version.isEmpty()) {
+                        System.getProperty("java.home") to ""
+                    } else {
+                        val javaHome = if (version.split(".")[1].toInt() > 11) {
+                            System.getProperty("java.home")
+                        } else {
+                            // 4.11 and below need JDK 8 to run
+                            checkNotNull(System.getenv("JAVA_8_HOME")) { "Please set JAVA_8_HOME env variable to home directory of JDK 8" }
+                        }
+                        javaHome to "-$version"
+                    }
+                    val cordaJar = this::class.java.getResource("/corda$versionSuffix.jar")!!.toPath()
+                    CordaJar(cordaJar, Path(javaHome, "bin", "java"))
+                }
+            }
+
+            fun getCordaJar(version: String? = null): Path = getCordaJarInfo(version ?: "").jarPath
         }
 
+        private val nodesDirectory: Path = (buildDirectory / "smoke-testing" / formatter.format(Instant.now())).createDirectories()
+        private val nodeInfoFilesCopier = NodeInfoFilesCopier()
+        private var nodes: MutableList<NodeProcess>? = ArrayList()
         private lateinit var networkParametersCopier: NetworkParametersCopier
 
-        private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
+        fun baseDirectory(config: NodeParams): Path = nodesDirectory / config.commonName
 
-        private var notaryParty: Party? = null
+        fun createNotaries(first: NodeParams, vararg rest: NodeParams): List<NodeProcess> {
+            check(!::networkParametersCopier.isInitialized) { "Notaries have already been created" }
 
-        private fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
-            try {
-                networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+            val notariesParams = Lists.asList(first, rest)
+            val notaryInfos = notariesParams.map { notaryParams ->
+                val nodeDir = baseDirectory(notaryParams).createDirectories()
+                val notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, notaryParams.legalName)
+                NotaryInfo(notaryParty, true)
+            }
+            val networkParameters = baseNetworkParameters.copy(notaries = notaryInfos)
+            networkParametersCopier = try {
+                NetworkParametersCopier(networkParameters)
             } catch (_: IllegalStateException) {
                 // Assuming serialization env not in context.
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+                    NetworkParametersCopier(networkParameters)
                 }
             }
-            networkParametersCopier.install(nodeDir)
+
+            return notariesParams.map { createNode(it, isNotary = true) }
         }
 
-        fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
+        fun createNode(params: NodeParams): NodeProcess = createNode(params, isNotary = false)
 
-        fun create(config: NodeConfig): NodeProcess {
-            val nodeDir = baseDirectory(config).createDirectories()
+        private fun createNode(params: NodeParams, isNotary: Boolean): NodeProcess {
+            check(::networkParametersCopier.isInitialized) { "Notary not created. Please call `creatNotaries` first." }
+
+            val nodeDir = baseDirectory(params).createDirectories()
             log.info("Node directory: {}", nodeDir)
-            if (config.isNotary) {
-                require(notaryParty == null) { "Only one notary can be created." }
-                notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
-            } else {
-                require(notaryParty != null) { "Notary not created. Please call `create` with a notary config first." }
+            val cordappsDir = (nodeDir / CORDAPPS_DIR_NAME).createDirectory()
+            params.cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+            if (params.legacyContractJars.isNotEmpty()) {
+                val legacyContractsDir = (nodeDir / "legacy-contracts").createDirectories()
+                params.legacyContractJars.forEach { it.copyToDirectory(legacyContractsDir) }
             }
+            (nodeDir / "node.conf").writeText(params.createNodeConfig(isNotary))
+            networkParametersCopier.install(nodeDir)
+            nodeInfoFilesCopier.addConfig(nodeDir)
 
-            (nodeDir / "node.conf").writeText(config.toText())
-            createNetworkParameters(NotaryInfo(notaryParty!!, true), nodeDir)
-
-            createSchema(nodeDir)
-            val process = startNode(nodeDir)
-            val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
-            waitForNode(process, config, client)
-            return NodeProcess(config, nodeDir, process, client)
+            createSchema(nodeDir, params.version)
+            val process = startNode(nodeDir, params.version)
+            val client = CordaRPCClient(NetworkHostAndPort("localhost", params.rpcPort), params.clientRpcConfig)
+            waitForNode(process, params, client)
+            val nodeProcess = NodeProcess(params, nodeDir, process, client)
+            nodes!! += nodeProcess
+            return nodeProcess
         }
 
-        private fun waitForNode(process: Process, config: NodeConfig, client: CordaRPCClient) {
+        private fun waitForNode(process: Process, config: NodeParams, client: CordaRPCClient) {
             val executor = Executors.newSingleThreadScheduledExecutor()
             try {
                 executor.scheduleWithFixedDelay({
@@ -129,7 +170,7 @@ class NodeProcess(
                         // Cancel the "setup" task now that we've created the RPC client.
                         executor.shutdown()
                     } catch (e: Exception) {
-                        log.warn("Node '{}' not ready yet (Error: {})", config.commonName, e.message)
+                        log.debug("Node '{}' not ready yet (Error: {})", config.commonName, e.message)
                     }
                 }, 5, 1, SECONDS)
 
@@ -147,30 +188,42 @@ class NodeProcess(
         class SchemaCreationFailedError(nodeDir: Path) : Exception("Creating node schema failed for $nodeDir")
 
 
-        private fun createSchema(nodeDir: Path){
-            val process = startNode(nodeDir, arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas"))
+        private fun createSchema(nodeDir: Path, version: String?) {
+            val process = startNode(nodeDir, version, "run-migration-scripts", "--core-schemas", "--app-schemas")
             if (!process.waitFor(schemaCreationTimeOutSeconds, SECONDS)) {
-                process.destroy()
+                process.destroyForcibly()
                 throw SchemaCreationTimedOutError(nodeDir)
             }
-            if (process.exitValue() != 0){
+            if (process.exitValue() != 0) {
                 throw SchemaCreationFailedError(nodeDir)
             }
         }
 
-        @Suppress("SpreadOperator")
-        private fun startNode(nodeDir: Path, extraArgs: Array<String> = emptyArray()): Process {
+        private fun startNode(nodeDir: Path, version: String?, vararg extraArgs: String): Process {
+            val cordaJar = getCordaJarInfo(version ?: "")
+            val command = arrayListOf("${cordaJar.javaPath}", "-Dcapsule.log=verbose", "-jar", "${cordaJar.jarPath}", "--logging-level=debug")
+            command += extraArgs
+            val now = formatter.format(Instant.now())
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString(), *extraArgs)
+                    .command(command)
                     .directory(nodeDir.toFile())
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-
+                    .redirectError((nodeDir / "$now-stderr.log").toFile())
+                    .redirectOutput((nodeDir / "$now-stdout.log").toFile())
             builder.environment().putAll(mapOf(
                     "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
             ))
 
-            return builder.start()
+            val process = builder.start()
+            Runtime.getRuntime().addShutdownHook(Thread(process::destroyForcibly))
+            return process
         }
+
+        override fun close() {
+            nodes?.parallelStream()?.forEach { it.close() }
+            nodes = null
+            nodeInfoFilesCopier.close()
+        }
+
+        private data class CordaJar(val jarPath: Path, val javaPath: Path)
     }
 }

@@ -3,10 +3,12 @@ package net.corda.node.services.statemachine
 import com.google.common.primitives.Primitives
 import net.corda.core.flows.*
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.loadClassOfType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
+import java.lang.ClassCastException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -57,13 +59,13 @@ open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : Singl
     }
 
     private fun validatedFlowClassFromName(flowClassName: String): Class<out FlowLogic<*>> {
-        val forName = try {
-            Class.forName(flowClassName, true, classloader)
+        return try {
+            loadClassOfType<FlowLogic<*>>(flowClassName, true, classloader)
         } catch (e: ClassNotFoundException) {
             throw IllegalFlowLogicException(flowClassName, "Flow not found: $flowClassName")
-        }
-        return forName.asSubclass(FlowLogic::class.java) ?:
+        } catch (e: ClassCastException) {
             throw IllegalFlowLogicException(flowClassName, "The class $flowClassName is not a subclass of FlowLogic.")
+        }
     }
 
     override fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {

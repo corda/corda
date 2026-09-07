@@ -2,6 +2,7 @@ package net.corda.coretesting.internal.performance
 
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -23,7 +24,7 @@ data class Rate(
      */
     operator fun times(inUnit: TimeUnit): Long = inUnit.convert(numberOfEvents, perTimeUnit)
 
-    override fun toString(): String = "$numberOfEvents / ${perTimeUnit.name.dropLast(1).toLowerCase()}"  // drop the "s" at the end
+    override fun toString(): String = "$numberOfEvents / ${perTimeUnit.name.dropLast(1).lowercase(Locale.getDefault())}"  // drop the "s" at the end
 }
 
 operator fun Long.div(timeUnit: TimeUnit) = Rate(this, timeUnit)

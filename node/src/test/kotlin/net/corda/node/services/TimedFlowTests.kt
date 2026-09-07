@@ -1,9 +1,9 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.StateRef

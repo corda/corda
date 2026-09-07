@@ -9,6 +9,7 @@ import net.corda.testing.node.User
 import org.assertj.core.api.Assertions
 import org.junit.Assume
 import org.junit.Test
+import java.util.Locale
 
 class FlowsExecutionModeRpcTest {
 
@@ -16,7 +17,7 @@ class FlowsExecutionModeRpcTest {
 	fun `persistent state survives node restart`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
         // More investigation is needed to establish why.
-        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
+        Assume.assumeFalse(System.getProperty("os.name").lowercase(Locale.getDefault()).startsWith("win"))
 
         val user = User("mark", "dadada", setOf(Permissions.invokeRpc("setFlowsDrainingModeEnabled"), Permissions.invokeRpc("isFlowsDrainingModeEnabled")))
         driver(DriverParameters(

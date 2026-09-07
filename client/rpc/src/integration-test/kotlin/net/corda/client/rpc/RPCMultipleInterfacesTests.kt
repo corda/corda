@@ -1,6 +1,6 @@
 package net.corda.client.rpc
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.client.rpc.RPCMultipleInterfacesTests.StringRPCOpsImpl.testPhrase
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps

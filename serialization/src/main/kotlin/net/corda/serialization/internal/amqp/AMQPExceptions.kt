@@ -1,18 +1,10 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.VisibleForTesting
+import net.corda.serialization.internal.NotSerializableException
 import org.slf4j.Logger
 import java.io.NotSerializableException
 import java.lang.reflect.Type
-
-/**
- * Not a public property so will have to use reflection
- */
-private fun Throwable.setMessage(newMsg: String) {
-    val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage")
-    detailMessageField.isAccessible = true
-    detailMessageField.set(this, newMsg)
-}
 
 /**
  * Utility function which helps tracking the path in the object graph when exceptions are thrown.
@@ -22,15 +14,13 @@ private fun Throwable.setMessage(newMsg: String) {
 internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T {
     try {
         return block()
-    } catch (th: Throwable) {
-        when (th) {
-            is AMQPNotSerializableException -> th.classHierarchy.add(strToAppendFn())
-            // Do not overwrite the message of these exceptions as it may be used.
-            is ClassNotFoundException -> {}
-            is NoClassDefFoundError -> {}
-            else -> th.setMessage("${strToAppendFn()} -> ${th.message}")
-        }
-        throw th
+    } catch (e: AMQPNotSerializableException) {
+        e.classHierarchy += strToAppendFn()
+        throw e
+    } catch (e: Exception) {
+        // Avoid creating heavily nested NotSerializableExceptions
+        val cause = if (e.message?.contains(" -> ") == true) { e.cause ?: e } else { e }
+        throw NotSerializableException("${strToAppendFn()} -> ${e.message}", cause)
     }
 }
 
@@ -77,8 +67,3 @@ open class AMQPNotSerializableException(
         logger.debug("", cause)
     }
 }
-
-class SyntheticParameterException(type: Type) : AMQPNotSerializableException(
-        type,
-        "Type '${type.typeName} has synthetic "
-        + "fields and is likely a nested inner class. This is not support by the Corda AMQP serialization framework")

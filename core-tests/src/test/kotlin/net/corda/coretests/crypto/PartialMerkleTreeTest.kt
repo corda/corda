@@ -1,11 +1,19 @@
 package net.corda.coretests.crypto
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.MerkleTreeException
+import net.corda.core.crypto.PartialMerkleTree
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
+import net.corda.core.crypto.keys
+import net.corda.core.crypto.randomHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.BLAKE2s256DigestAlgorithm
@@ -16,9 +24,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.WireTransaction
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.`issued by`
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -26,20 +35,29 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.security.PublicKey
 import java.util.function.Predicate
 import java.util.stream.IntStream
 import kotlin.streams.toList
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class PartialMerkleTreeTest(private var digestService: DigestService) {
@@ -204,7 +222,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
 
     @Test(timeout=300_000)
 	fun `nothing filtered`() {
-        val ftxNothing = testTx.buildFilteredTransaction(Predicate { false })
+        val ftxNothing = testTx.buildFilteredTransaction { false }
         assertTrue(ftxNothing.componentGroups.isEmpty())
         assertTrue(ftxNothing.attachments.isEmpty())
         assertTrue(ftxNothing.commands.isEmpty())
@@ -291,10 +309,12 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test(expected = Exception::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        hm1.serialize()
+        assertThatIllegalArgumentException().isThrownBy {
+            hm1.serialize()
+        }
     }
 
     private fun makeSimpleCashWtx(
@@ -322,11 +342,11 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         val merkleTree = MerkleTree.getMerkleTree(sampleLeaves, digestService)
 
         // Provided hashes are not in the tree.
-        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("20"))) }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf(digestService.hash("20"))) }
         // One of the provided hashes is not in the tree.
-        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("20"), digestService.hash("1"), digestService.hash("5"))) }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf(digestService.hash("20"), digestService.hash("1"), digestService.hash("5"))) }
 
-        val pmt = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("1"), digestService.hash("5"), digestService.hash("0"), digestService.hash("19")))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf(digestService.hash("1"), digestService.hash("5"), digestService.hash("0"), digestService.hash("19")))
         // First leaf.
         assertEquals(0, pmt.leafIndex(digestService.hash("0")))
         // Second leaf.
@@ -340,17 +360,17 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         // The provided hash is not in the tree (using a leaf that didn't exist in the original Merkle tree).
         assertFailsWith<MerkleTreeException> { pmt.leafIndex(digestService.hash("30")) }
 
-        val pmtFirstElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("0")))
+        val pmtFirstElementOnly = PartialMerkleTree.build(merkleTree, listOf(digestService.hash("0")))
         assertEquals(0, pmtFirstElementOnly.leafIndex(digestService.hash("0")))
         // The provided hash is not in the tree.
         assertFailsWith<MerkleTreeException> { pmtFirstElementOnly.leafIndex(digestService.hash("10")) }
 
-        val pmtLastElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("19")))
+        val pmtLastElementOnly = PartialMerkleTree.build(merkleTree, listOf(digestService.hash("19")))
         assertEquals(19, pmtLastElementOnly.leafIndex(digestService.hash("19")))
         // The provided hash is not in the tree.
         assertFailsWith<MerkleTreeException> { pmtLastElementOnly.leafIndex(digestService.hash("10")) }
 
-        val pmtOneElement = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("5")))
+        val pmtOneElement = PartialMerkleTree.build(merkleTree, listOf(digestService.hash("5")))
         assertEquals(5, pmtOneElement.leafIndex(digestService.hash("5")))
         // The provided hash is not in the tree.
         assertFailsWith<MerkleTreeException> { pmtOneElement.leafIndex(digestService.hash("10")) }

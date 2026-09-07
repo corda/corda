@@ -4,13 +4,10 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.NODE_INFO_DIRECTORY
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
 import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.MockKeyManagementService
@@ -26,8 +23,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.fileSize
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest {
     @Rule
@@ -63,17 +64,20 @@ class NodeInfoWatcherTest {
 
     @Test(timeout=300_000)
 	fun `save a NodeInfo`() {
-        assertEquals(0,
-                tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
+        assertThat(nodeInfoFiles()).isEmpty()
+
         NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), nodeInfoAndSigned)
 
-        val nodeInfoFiles = tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
-        assertEquals(1, nodeInfoFiles.size)
-        val fileName = nodeInfoFiles.first()
-        assertTrue(fileName.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX))
-        val file = (tempFolder.root.path / fileName)
+        val nodeInfoFiles = nodeInfoFiles()
+        assertThat(nodeInfoFiles).hasSize(1)
         // Just check that something is written, another tests verifies that the written value can be read back.
-        assertThat(file.size).isGreaterThan(0)
+        assertThat(nodeInfoFiles[0].fileSize()).isGreaterThan(0)
+    }
+
+    private fun nodeInfoFiles(): List<Path> {
+        return tempFolder.root.toPath().useDirectoryEntries { paths ->
+            paths.filter { it.name.startsWith(NODE_INFO_FILE_NAME_PREFIX) }.toList()
+        }
     }
 
     @Test(timeout=300_000)

@@ -1,16 +1,22 @@
 package net.corda.core.transactions
 
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.indexOfOrThrow
+import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.uncheckedCast
 import java.util.function.Predicate
 
 /**
  * An abstract class defining fields shared by all transaction types in the system.
  */
+@Suppress("RedundantSamConstructor")  // Because the external verifier uses Kotlin 1.2
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
     /** A list of reusable reference data states which can be referred to by other contracts in this transaction. */
@@ -163,5 +169,5 @@ abstract class BaseTransaction : NamedByHash {
         return findOutRef(T::class.java, Predicate { predicate(it) })
     }
 
-    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
+    override fun toString(): String = toSimpleString()
 }

@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Test
@@ -40,9 +41,11 @@ class C2(var b: Int) {
 }
 
 class StaticInitialisationOfSerializedObjectTest {
-    @Test(expected = java.lang.ExceptionInInitializerError::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun itBlowsUp() {
-        C()
+        assertThatExceptionOfType(ExceptionInInitializerError::class.java).isThrownBy {
+            C()
+        }
     }
 
     @Ignore("Suppressing this, as it depends on obtaining internal access to serialiser cache")

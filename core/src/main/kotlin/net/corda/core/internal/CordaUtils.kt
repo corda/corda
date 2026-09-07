@@ -1,35 +1,27 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("MatchingDeclarationName")
 package net.corda.core.internal
 
-import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.cordapp.CordappProvider
+import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
-import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import org.slf4j.MDC
 import java.security.PublicKey
-import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
 
 // When incrementing platformVersion make sure to update PLATFORM_VERSION in constants.properties as well.
-const val PLATFORM_VERSION = 13
+const val PLATFORM_VERSION = 140
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
@@ -43,34 +35,6 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
                         "$minimumPlatformVersion. Please contact your zone operator."
         )
     }
-}
-
-// JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
-@Throws(NumberFormatException::class)
-fun getJavaUpdateVersion(javaVersion: String): Long = javaVersion.substringAfter("_").substringBefore("-").toLong()
-
-enum class JavaVersion(val versionString: String) {
-    Java_1_8("1.8"),
-    Java_11("11");
-
-    companion object {
-        fun isVersionAtLeast(version: JavaVersion): Boolean {
-            return currentVersion.toFloat() >= version.versionString.toFloat()
-        }
-
-        private val currentVersion: String = System.getProperty("java.specification.version") ?:
-                                               throw IllegalStateException("Unable to retrieve system property java.specification.version")
-    }
-}
-
-/** Provide access to internal method for AttachmentClassLoaderTests. */
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(services, serializationContext)
-}
-
-/** Provide access to internal method for AttachmentClassLoaderTests. */
-fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
-    return toLedgerTransactionWithContext(services, serializationContext)
 }
 
 /** Checks if this flow is an idempotent flow. */
@@ -125,40 +89,10 @@ fun noPackageOverlap(packages: Collection<String>): Boolean {
     return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
 }
 
-/**
- * @return The set of [AttachmentId]s after the node's fix-up rules have been applied to [attachmentIds].
- */
-fun CordappProvider.internalFixupAttachmentIds(attachmentIds: Collection<AttachmentId>): Set<AttachmentId> {
-    return (this as CordappFixupInternal).fixupAttachmentIds(attachmentIds)
+fun TransactionStorage.getRequiredTransaction(txhash: SecureHash): SignedTransaction {
+    return getTransaction(txhash) ?: throw TransactionResolutionException(txhash)
 }
 
-/**
- * Scans trusted (installed locally) attachments to find all that contain the [className].
- * This is required as a workaround until explicit cordapp dependencies are implemented.
- * DO NOT USE IN CLIENT code.
- *
- * @return the attachments with the highest version.
- *
- * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
- */
-fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): Attachment? {
-    val allTrusted = queryAttachments(
-            AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-            AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+fun ServiceHub.getRequiredTransaction(txhash: SecureHash): SignedTransaction = validatedTransactions.getRequiredTransaction(txhash)
 
-    // TODO - add caching if performance is affected.
-    for (attId in allTrusted) {
-        val attch = openAttachment(attId)!!
-        if (attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
-    }
-    return null
-}
-
-private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
-    while (true) {
-        val e = jarStream.nextJarEntry ?: return false
-        if (e.name == className) {
-            return true
-        }
-    }
-}
+fun NamedByHash.toSimpleString(): String = "${javaClass.simpleName}(id=$id)"

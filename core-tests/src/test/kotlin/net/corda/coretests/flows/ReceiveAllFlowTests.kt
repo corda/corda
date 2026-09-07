@@ -58,7 +58,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
                     assertEquals(message, receivedMessage)
                     session.send(answer)
                 }
-            } as FlowLogic<Unit>
+            }
         }
 
         assertThat(

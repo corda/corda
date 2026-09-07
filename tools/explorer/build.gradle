@@ -3,73 +3,76 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.0.7' apply false
 }
 
-if (JavaVersion.current().isJava9Compatible()) {
-    apply plugin: 'org.openjfx.javafxplugin'
-    javafx {
-        version = "11.0.2"
-        modules = ['javafx.controls',
-                   'javafx.fxml',
-                   'javafx.swing'
-        ]
-    }
+apply plugin: 'org.openjfx.javafxplugin'
+javafx {
+    version = "11.0.2"
+    modules = [
+        'javafx.controls',
+        'javafx.fxml',
+        'javafx.swing'
+    ]
 }
 
-apply plugin: 'java'
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
-sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
     testImplementation "junit:junit:$junit_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile 'no.tornado:tornadofx:1.5.9'
+    implementation 'no.tornado:tornadofx:1.5.9'
 
     // Corda Core: Data structures and basic types needed to work with Corda.
-    compile project(':core')
-    compile project(':client:jfx')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
-    compile project(':tools:worldmap')
-    compile project(':common-logging')
+    implementation project(':core')
+    implementation project(':client:rpc')
+    implementation project(':client:jfx')
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
+    implementation project(':tools:worldmap')
+    implementation project(':common-logging')
 
     // Log4J: logging framework (with SLF4J bindings)
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
 
     // Capsule is a library for building independently executable fat JARs.
-    // We only need this dependency to compile our Caplet against.
-    compileOnly "co.paralleluniverse:capsule:$capsule_version"
+    // We only need this dependency to implementation our Caplet against.
+    implementation "co.paralleluniverse:capsule:$capsule_version"
 
     // FontAwesomeFX: The "FontAwesome" icon library.
-    compile "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
-    compile "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
+    implementation "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
+    implementation "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
 
     // ReactFX: Functional reactive UI programming.
-    compile 'org.reactfx:reactfx:2.0-M5'
-    compile 'org.fxmisc.easybind:easybind:1.0.3'
+    implementation 'org.reactfx:reactfx:2.0-M5'
+    implementation 'org.fxmisc.easybind:easybind:1.0.3'
 
-    compile 'org.jfxtras:jfxtras-font-roboto:8.0-r6'
+    implementation 'org.jfxtras:jfxtras-font-roboto:8.0-r6'
 
     // Humanize: formatting
-    compile 'com.github.mfornos:humanize-icu:1.2.2'
+    implementation 'com.github.mfornos:humanize-icu:1.2.2'
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
-    compile "org.controlsfx:controlsfx:$controlsfx_version"
+    implementation "org.controlsfx:controlsfx:$controlsfx_version"
     // This provide com.apple.eawt stub for non-mac system.
-    compile 'com.yuvimasory:orange-extensions:1.3.0'
+    implementation 'com.yuvimasory:orange-extensions:1.3.0'
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 }
+
+compileJava.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+startScripts.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+startScripts.dependsOn ':node:capsule:buildCordaJAR'
 
 tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.

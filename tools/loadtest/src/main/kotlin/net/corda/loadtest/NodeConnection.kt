@@ -47,7 +47,7 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
         val connection = rpcConnection
         require(connection != null) { "doWhileClientStopped called with no running client" }
         log.info("Stopping RPC proxy to ${remoteNode.hostname}, tunnel at $localTunnelAddress")
-        connection!!.close()
+        connection.close()
         try {
             return action()
         } finally {

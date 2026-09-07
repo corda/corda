@@ -11,6 +11,8 @@ import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.RetrieveAnyTransactionPayload
 import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -169,13 +171,10 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
             is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
             is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilter(acceptAll = true)
             is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { someObject ->
-                if (someObject is StateAndRef<*>) {
-                    getInputTransactions(serviceHub.validatedTransactions.getTransaction(someObject.ref.txhash)!!) + someObject.ref.txhash
-                }
-                else if (someObject is NamedByHash) {
-                    setOf(someObject.id)
-                } else {
-                    throw Exception("Unknown payload type: ${someObject!!::class.java} ?")
+                when (someObject) {
+                    is StateAndRef<*> -> getInputTransactions(serviceHub.getRequiredTransaction(someObject.ref.txhash)) + someObject.ref.txhash
+                    is NamedByHash -> setOf(someObject.id)
+                    else -> throw Exception("Unknown payload type: ${someObject!!::class.java} ?")
                 }
             }.toSet())
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
@@ -308,7 +307,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
 
     @Suspendable
     private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
-        return tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()
+        return tx.inputs.mapToSet { it.txhash } + tx.references.mapToSet { it.txhash }
     }
 
     private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {

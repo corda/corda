@@ -1,6 +1,5 @@
 package net.corda.node.utilities
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -101,7 +100,7 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
         }
     }
 
-    private val backingCache = cacheFactory.buildNamed<K, Wrapper<V>>(Caffeine.newBuilder(), name)
+    private val backingCache = cacheFactory.buildNamed<K, Wrapper<V>>(name)
 
     // This protects against the cache purging something that is marked as invalid and thus we "forget" it shouldn't be cached.
     private val currentlyInvalid = ConcurrentHashMap<K, Wrapper.Invalidated<V>>()

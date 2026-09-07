@@ -131,7 +131,7 @@ object SimmFlow {
 
             val valuer = serviceHub.identityService.wellKnownPartyFromAnonymous(state.valuer)
             require(valuer != null) { "Valuer party must be known to this node" }
-            val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
+            val valuation = agreeValuation(portfolio, valuationDate, valuer)
             val update = PortfolioState.Update(valuation = valuation)
             return subFlow(StateRevisionFlowRequester(otherPartySession, stateRef, update)).state.data
         }

@@ -32,7 +32,7 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
                 } // Anything else, such as arrays, will be taken care of by the above
             }
         } catch (e: ClassCarpenterException) {
-            throw NotSerializableException("${typeInformation.typeIdentifier.name}: ${e.message}")
+            throw NotSerializableException("${typeInformation.typeIdentifier.name}: ${e.message}").apply { initCause(e) }
         }
 
         return try {
@@ -40,7 +40,7 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
         } catch (e: ClassNotFoundException) {
             // This might happen if we've been asked to carpent up a parameterised type, and it's the rawtype itself
             // rather than any of its type parameters that were missing.
-            throw NotSerializableException("Could not carpent ${typeInformation.typeIdentifier.prettyPrint(false)}")
+            throw NotSerializableException("Could not carpent ${typeInformation.typeIdentifier.prettyPrint(false)}").apply { initCause(e) }
         }
     }
 
@@ -87,6 +87,6 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
             }
 
     private fun RemoteTypeInformation.AnEnum.carpentEnum() {
-        carpenter.build(EnumSchema(name = typeIdentifier.name, fields = members.associate { it to EnumField() }))
+        carpenter.build(EnumSchema(name = typeIdentifier.name, fields = members.associateWith { EnumField() }))
     }
 }

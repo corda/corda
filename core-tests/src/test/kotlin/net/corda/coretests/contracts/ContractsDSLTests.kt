@@ -1,11 +1,16 @@
 package net.corda.coretests.contracts
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.requireSingleCommand
+import net.corda.core.contracts.select
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.testing.core.TestIdentity
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -35,8 +40,8 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun data(): Collection<Array<Any>> = listOf(
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>> -> commands.requireSingleCommand<TestCommands>() }, "Inline version"),
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>> -> commands.requireSingleCommand(TestCommands::class.java) }, "Interop version")
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>> -> commands.requireSingleCommand<TestCommands>() }, "Inline version"),
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>> -> commands.requireSingleCommand(TestCommands::class.java) }, "Interop version")
         )
     }
 
@@ -47,16 +52,18 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         assertEquals(returnedCommand, validCommandOne, "they should be the same")
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `check error is thrown if more than one valid command`() {
         val commands = listOf(validCommandOne, validCommandTwo)
-        testFunction(commands)
+        assertThatIllegalArgumentException().isThrownBy {
+            testFunction(commands)
+        }
     }
 
     @Test(timeout=300_000)
 	fun `check error is thrown when command is of wrong type`() {
         val commands = listOf(invalidCommand)
-        Assertions.assertThatThrownBy { testFunction(commands) }
+        assertThatThrownBy { testFunction(commands) }
                 .isInstanceOf(IllegalStateException::class.java)
                 .hasMessage("Required net.corda.coretests.contracts.TestCommands command")
     }
@@ -69,8 +76,8 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun data(): Collection<Array<Any>> = listOf(
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>>, signer: PublicKey?, party: AbstractParty? -> commands.select<TestCommands>(signer, party) }, "Inline version"),
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>>, signer: PublicKey?, party: AbstractParty? -> commands.select(TestCommands::class.java, signer, party) }, "Interop version")
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>>, signer: PublicKey?, party: AbstractParty? -> commands.select<TestCommands>(signer, party) }, "Inline version"),
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>>, signer: PublicKey?, party: AbstractParty? -> commands.select(TestCommands::class.java, signer, party) }, "Interop version")
         )
     }
 
@@ -118,8 +125,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
         fun data(): Collection<Array<Any>> = listOf(
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>>, signers: Collection<PublicKey>?, party: Collection<Party>? -> commands.select<TestCommands>(signers, party) }, "Inline version"),
-                arrayOf<Any>({ commands: Collection<CommandWithParties<CommandData>>, signers: Collection<PublicKey>?, party: Collection<Party>? -> commands.select(TestCommands::class.java, signers, party) }, "Interop version")
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>>, signers: Collection<PublicKey>?, party: Collection<Party>? -> commands.select<TestCommands>(signers, party) }, "Inline version"),
+                arrayOf({ commands: Collection<CommandWithParties<CommandData>>, signers: Collection<PublicKey>?, party: Collection<Party>? -> commands.select(TestCommands::class.java, signers, party) }, "Interop version")
         )
     }
 

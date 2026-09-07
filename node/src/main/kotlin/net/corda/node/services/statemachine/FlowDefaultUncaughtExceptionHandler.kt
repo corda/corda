@@ -63,7 +63,6 @@ internal class FlowDefaultUncaughtExceptionHandler(
         scheduledExecutor.schedule({ setFlowToHospitalizedRescheduleOnFailure(id) }, 0, TimeUnit.SECONDS)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun setFlowToHospitalizedRescheduleOnFailure(id: StateMachineRunId) {
         try {
             innerState.withLock {

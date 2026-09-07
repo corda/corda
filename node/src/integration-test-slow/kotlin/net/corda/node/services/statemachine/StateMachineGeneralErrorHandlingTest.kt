@@ -703,7 +703,6 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * On shutdown this flow will still terminate correctly and not prevent the node from shutting down.
      */
-    @Suppress("TooGenericExceptionCaught")
     @Test(timeout = 300_000)
     fun `a dead flow can be shutdown`() {
         startDriver {

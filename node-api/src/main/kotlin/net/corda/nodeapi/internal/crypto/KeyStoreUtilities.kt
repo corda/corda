@@ -3,13 +3,22 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
+import net.corda.core.internal.read
+import net.corda.core.internal.safeSymbolicRead
+import net.corda.core.internal.write
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
-import java.security.*
+import java.security.Key
+import java.security.KeyPair
+import java.security.KeyStore
+import java.security.KeyStoreException
+import java.security.PrivateKey
+import java.security.Provider
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 
 const val KEYSTORE_TYPE = "JKS"
 
@@ -144,8 +153,8 @@ fun KeyStore.getX509Certificate(alias: String): X509Certificate {
  * @param keyPassword Password to unlock the private key entries.
  * @return the requested private key in supported type.
  * @throws KeyStoreException if the keystore has not been initialized.
- * @throws NoSuchAlgorithmException if the algorithm for recovering the key cannot be found (not supported from the Keystore provider).
- * @throws UnrecoverableKeyException if the key cannot be recovered (e.g., the given password is wrong).
+ * @throws java.security.NoSuchAlgorithmException if the algorithm for recovering the key cannot be found (not supported from the Keystore provider).
+ * @throws java.security.UnrecoverableKeyException if the key cannot be recovered (e.g., the given password is wrong).
  * @throws IllegalArgumentException on not supported scheme or if the given key specification
  * is inappropriate for a supported key factory to produce a private key.
  */

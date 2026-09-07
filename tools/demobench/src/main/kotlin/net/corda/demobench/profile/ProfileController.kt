@@ -92,7 +92,7 @@ class ProfileController : Controller() {
 
         val configs = LinkedList<InstallConfig>()
 
-        FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
+        FileSystems.newFileSystem(chosen.toPath()).use { fs ->
             // Identify the nodes first...
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
                     .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() && attr.isRegularFile }) }

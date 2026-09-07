@@ -2,11 +2,18 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
-import java.util.*
+import java.io.NotSerializableException
+import java.util.AbstractMap
+import java.util.Dictionary
+import java.util.Hashtable
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
+import java.util.WeakHashMap
 
 class DeserializeMapTests {
     companion object {
@@ -28,24 +35,26 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected = java.io.NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun abstractMapFromMapOf() {
         data class C(val c: AbstractMap<String, Int>)
 
         val c = C(mapOf("A" to 1, "B" to 2) as AbstractMap)
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        DeserializationInput(sf).deserialize(serialisedBytes)
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            TestSerializationOutput(VERBOSE, sf).serialize(c)
+        }
     }
 
-    @Test(expected = java.io.NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun abstractMapFromTreeMap() {
         data class C(val c: AbstractMap<String, Int>)
 
         val c = C(TreeMap(mapOf("A" to 1, "B" to 2)))
 
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
-        DeserializationInput(sf).deserialize(serialisedBytes)
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            TestSerializationOutput(VERBOSE, sf).serialize(c)
+        }
     }
 
     @Test(timeout=300_000)
@@ -77,8 +86,9 @@ class DeserializeMapTests {
         val c = C(v)
 
         // expected to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
-                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(NotSerializableException::class.java)
+                .hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
     }
 
     @Test(timeout=300_000)
@@ -91,7 +101,7 @@ class DeserializeMapTests {
         val c = C(v)
 
         // expected to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Hashtable. Suggested fix: prefer java.util.map implementations")
     }
 
@@ -102,7 +112,7 @@ class DeserializeMapTests {
         val c = C(HashMap(mapOf("A" to 1, "B" to 2)))
 
         // expect this to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
@@ -112,7 +122,7 @@ class DeserializeMapTests {
 
         val c = C(WeakHashMap(mapOf("A" to 1, "B" to 2)))
 
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Weak references with map types not supported. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 

@@ -544,7 +544,7 @@ class RPCStabilityTests {
     }
 
     @Test(timeout=300_000)
-@Ignore // TODO: This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
+    @Ignore // TODO: This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
     fun `slow consumers are kicked`() {
         rpcDriver {
             val server = startRpcServer(maxBufferedBytesPerClient = 10 * 1024 * 1024, ops = SlowConsumerRPCOpsImpl()).get()
@@ -552,7 +552,7 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createQueue(QueueConfiguration(myQueue)
+            session.createQueue(QueueConfiguration.of(myQueue)
                     .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
                     .setAddress(myQueue)
                     .setTemporary(true)
@@ -569,7 +569,7 @@ class RPCStabilityTests {
 
             val message = session.createMessage(false)
             val request = RPCApi.ClientToServer.RpcRequest(
-                    clientAddress = SimpleString(myQueue),
+                    clientAddress = SimpleString.of(myQueue),
                     methodName = SlowConsumerRPCOps::streamAtInterval.name,
                     serialisedArguments = listOf(100.millis, 1234).serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
                     replyId = Trace.InvocationId.newInstance(),
@@ -593,7 +593,7 @@ class RPCStabilityTests {
             // Construct an RPC client session manually
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createQueue(QueueConfiguration(myQueue)
+            session.createQueue(QueueConfiguration.of(myQueue)
                     .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
                     .setAddress(myQueue)
                     .setTemporary(true)
@@ -612,7 +612,7 @@ class RPCStabilityTests {
 
             val message = session.createMessage(false)
             val request = RPCApi.ClientToServer.RpcRequest(
-                    clientAddress = SimpleString(myQueue),
+                    clientAddress = SimpleString.of(myQueue),
                     methodName = DummyOps::protocolVersion.name,
                     serialisedArguments = emptyList<Any>().serialize(context = SerializationDefaults.RPC_SERVER_CONTEXT),
                     replyId = Trace.InvocationId.newInstance(),

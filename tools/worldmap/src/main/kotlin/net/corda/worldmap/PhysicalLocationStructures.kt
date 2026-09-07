@@ -9,8 +9,11 @@ data class ScreenCoordinate(val screenX: Double, val screenY: Double)
 @CordaSerializable
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
-        require(latitude in -90..90){"Latitude must be between -90 and +90"}
-        require(longitude in -180..180){"Longitude must be between -180 and +180"}
+        @Suppress("MagicNumber")
+        require(latitude in -90.0..90.0){"Latitude must be between -90 and +90"}
+
+        @Suppress("MagicNumber")
+        require(longitude in -180.0..180.0){"Longitude must be between -180 and +180"}
     }
 
     /**
@@ -63,11 +66,11 @@ object CityDatabase {
                 val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
                 val (city, country) = matchResult.destructured
                 val location = WorldMapLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
-                caseInsensitiveLookups[city.toLowerCase()] = location
+                caseInsensitiveLookups[city.lowercase(Locale.getDefault())] = location
                 cityMap[city] = location
             }
         }
     }
 
-    operator fun get(name: String) = caseInsensitiveLookups[name.toLowerCase()]
+    operator fun get(name: String) = caseInsensitiveLookups[name.lowercase(Locale.getDefault())]
 }

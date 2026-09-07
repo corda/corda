@@ -2,7 +2,6 @@ package net.corda.demobench.explorer
 
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.utilities.contextLogger
 import net.corda.demobench.model.JVMConfig

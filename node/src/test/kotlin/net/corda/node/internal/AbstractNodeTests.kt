@@ -1,6 +1,6 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.contextLogger

@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.serialization
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.context.Trace
 import net.corda.nodeapi.internal.serialization.testutils.TestObservableContext
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
@@ -49,7 +49,7 @@ class RpcServerObservableSerializerTests {
                 subscriptionMap(),
                 clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString("clientAddress"))
+                clientAddress = SimpleString.of("clientAddress"))
 
         val newContext = RpcServerObservableSerializer.createContext(serializationContext, observable)
 
@@ -65,7 +65,7 @@ class RpcServerObservableSerializerTests {
                 subscriptionMap(),
                 clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString(testClientAddress))
+                clientAddress = SimpleString.of(testClientAddress))
 
         val sf = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())

@@ -1,8 +1,9 @@
 package net.corda.testing.node.internal
 
-import net.corda.core.internal.div
 import java.io.File
 import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.div
 
 object ProcessUtilities {
     @Suppress("LongParameterList")
@@ -38,19 +39,16 @@ object ProcessUtilities {
             maximumHeapSize: String? = null,
             identifier: String = "",
             environmentVariables: Map<String,String> = emptyMap(),
-            inheritIO: Boolean = true
     ): Process {
         val command = mutableListOf<String>().apply {
             add(javaPath)
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
-            add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
             add(className)
             addAll(arguments)
         }
         return ProcessBuilder(command).apply {
-            if (inheritIO) inheritIO()
             environment().putAll(environmentVariables)
             environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
@@ -63,7 +61,7 @@ object ProcessUtilities {
         }.start()
     }
 
-    private val javaPath = (System.getProperty("java.home") / "bin" / "java").toString()
+    private val javaPath = Path(System.getProperty("java.home"), "bin", "java").toString()
 
     val defaultClassPath: List<String> = System.getProperty("java.class.path").split(File.pathSeparator)
 }

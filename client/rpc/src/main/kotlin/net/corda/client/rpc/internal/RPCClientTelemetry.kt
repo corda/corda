@@ -1,14 +1,15 @@
 package net.corda.client.rpc.internal
 
-import net.corda.core.internal.telemetry.OpenTelemetryComponent
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.telemetry.OpenTelemetryComponent
 
-class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Boolean,
-                         val simpleLogTelemetryEnabled: Boolean, val spanStartEndEventsEnabled: Boolean,
+class RPCClientTelemetry(serviceName: String,
+                         val openTelemetryEnabled: Boolean,
+                         val simpleLogTelemetryEnabled: Boolean,
+                         val spanStartEndEventsEnabled: Boolean,
                          val copyBaggageToTags: Boolean) {
-
     companion object {
         private val log = contextLogger()
     }

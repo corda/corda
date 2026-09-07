@@ -37,11 +37,7 @@ import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.objectOrNewInstance
-import net.corda.core.internal.outputStream
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
@@ -80,12 +76,16 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.name
+import kotlin.io.path.outputStream
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.memberProperties
@@ -107,7 +107,6 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                    context: CheckpointSerializationContext,
                                    runId: StateMachineRunId,
                                    flowState: FlowState.Started) {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 flowState.frozenFiber.checkpointDeserialize(context)
             } catch (e: Exception) {
@@ -271,9 +270,9 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                 if(flowState is FlowState.Started) writeFiber2Zip(zip, checkpointSerializationContext, runId, flowState)
                             }
 
-                            val jarFilter = { directoryEntry : Path -> directoryEntry.fileName.toString().endsWith(".jar") }
+                            val jarFilter = { directoryEntry : Path -> directoryEntry.name.endsWith(".jar") }
                             //Dump cordApps jar in the "cordapp" folder
-                            for(cordappDirectory in cordappDirectories) {
+                            for (cordappDirectory in cordappDirectories) {
                                 val corDappJars = Files.list(cordappDirectory).filter(jarFilter).asSequence()
                                 corDappJars.forEach { corDappJar ->
                                     //Jar files are already compressed, so they are stored in the zip as they are
@@ -285,7 +284,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                             // the driver jars in the driver folder of the node to the driver folder of the dump file
                             val pairs = listOf(
                                 "lib" to FileSystems.newFileSystem(
-                                        Paths.get(System.getProperty("capsule.jar")), null).getPath("/"),
+                                        Paths.get(System.getProperty("capsule.jar"))).getPath("/"),
                                 "drivers" to baseDirectory.resolve("drivers")
                             )
                             for((dest, source) in pairs) {
@@ -319,7 +318,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     }
 
     /**
-     * Note that this method dynamically uses [net.corda.tools.CheckpointAgent.running], make sure to keep it up to date with
+     * Note that this method dynamically uses `net.corda.tools.CheckpointAgent.running`, make sure to keep it up to date with
      * the checkpoint agent source code
      */
     private fun checkpointAgentRunning() = try {
@@ -594,6 +593,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             gen.writeEndArray()
         }
 
-        override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java)
+        @Suppress("UNCHECKED_CAST")
+        override fun handledType(): Class<Map<Any, Any>> = Map::class.java as Class<Map<Any, Any>>
     }
 }

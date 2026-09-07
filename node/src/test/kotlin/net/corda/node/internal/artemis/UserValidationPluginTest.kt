@@ -1,9 +1,9 @@
 package net.corda.node.internal.artemis
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.doThrow
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.whenever
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.testing.core.ALICE_NAME

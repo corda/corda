@@ -2,12 +2,12 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.contextLogger
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
 class CordappConfigFileProvider(cordappDirectories: List<Path>) : CordappConfigProvider {
     companion object {

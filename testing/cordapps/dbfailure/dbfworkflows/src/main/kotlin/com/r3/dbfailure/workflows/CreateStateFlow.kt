@@ -36,25 +36,25 @@ object CreateStateFlow {
     }
 
     fun errorTargetsToNum(vararg targets: ErrorTarget): Int {
-        return targets.map { it.targetNumber }.sum()
+        return targets.sumOf { it.targetNumber }
     }
 
     private val targetMap = ErrorTarget.values().associateBy(ErrorTarget::targetNumber)
 
     fun getServiceTarget(target: Int?): ErrorTarget {
-        return target?.let { targetMap.getValue(((it/10000) % 1000)*10000) } ?: CreateStateFlow.ErrorTarget.NoError
+        return target?.let { targetMap.getValue(((it/10000) % 1000)*10000) } ?: ErrorTarget.NoError
     }
 
     fun getServiceExceptionHandlingTarget(target: Int?): ErrorTarget {
-        return target?.let { targetMap.getValue(((it / 1000) % 10) * 1000) } ?: CreateStateFlow.ErrorTarget.NoError
+        return target?.let { targetMap.getValue(((it / 1000) % 10) * 1000) } ?: ErrorTarget.NoError
     }
 
     fun getTxTarget(target: Int?): ErrorTarget {
-        return target?.let { targetMap.getValue(((it / 10) % 10) * 10) } ?: CreateStateFlow.ErrorTarget.NoError
+        return target?.let { targetMap.getValue(((it / 10) % 10) * 10) } ?: ErrorTarget.NoError
     }
 
     fun getFlowTarget(target: Int?): ErrorTarget {
-        return target?.let { targetMap.getValue(((it / 100) % 10) * 100) } ?: CreateStateFlow.ErrorTarget.NoError
+        return target?.let { targetMap.getValue(((it / 100) % 10) * 100) } ?: ErrorTarget.NoError
     }
 
     @InitiatingFlow
@@ -73,7 +73,7 @@ object CreateStateFlow {
             val state = DbFailureContract.TestState(
                 UniqueIdentifier(),
                 listOf(ourIdentity),
-                if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else randomValue,
+                if (txTarget == ErrorTarget.TxInvalidState) null else randomValue,
                 errorTarget, ourIdentity
             )
             val txCommand = Command(DbFailureContract.Commands.Create(), ourIdentity.owningKey)
@@ -88,12 +88,11 @@ object CreateStateFlow {
 
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            @Suppress("TooGenericExceptionCaught") // this is fully intentional here, to allow twiddling with exceptions according to config
             try {
                 logger.info("Test flow: recording transaction")
                 serviceHub.recordTransactions(signedTx)
             } catch (t: Throwable) {
-                if (getFlowTarget(errorTarget) == CreateStateFlow.ErrorTarget.FlowSwallowErrors) {
+                if (getFlowTarget(errorTarget) == ErrorTarget.FlowSwallowErrors) {
                     logger.info("Test flow: Swallowing all exception! Muahahaha!", t)
                 } else {
                     logger.info("Test flow: caught exception - rethrowing")

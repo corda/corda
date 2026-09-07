@@ -117,7 +117,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun loginToRPCAndGetClientQueue(): String {
         loginToRPC(alice.node.configuration.rpcOptions.address, rpcUser)
-        val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
+        val clientQueueQuery = SimpleString.of("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
         val client = clientTo(alice.node.configuration.rpcOptions.address)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
@@ -131,7 +131,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertTempQueueCreationAttackFails(queue: String) {
         assertAttackFails(queue, "CREATE_NON_DURABLE_QUEUE") {
-            attacker.session.createQueue(QueueConfiguration(queue)
+            attacker.session.createQueue(QueueConfiguration.of(queue)
                     .setRoutingType(RoutingType.MULTICAST)
                     .setAddress(queue)
                     .setTemporary(true)
@@ -153,7 +153,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         val permission = if (durable) "CREATE_DURABLE_QUEUE" else "CREATE_NON_DURABLE_QUEUE"
         assertAttackFails(queue, permission) {
             attacker.session.createQueue(
-                    QueueConfiguration(queue).setAddress(queue).setRoutingType(RoutingType.MULTICAST).setDurable(durable))
+                    QueueConfiguration.of(queue).setAddress(queue).setRoutingType(RoutingType.MULTICAST).setDurable(durable))
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {

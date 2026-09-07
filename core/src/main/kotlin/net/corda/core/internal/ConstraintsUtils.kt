@@ -3,7 +3,6 @@ package net.corda.core.internal
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.utilities.loggerFor
 
 /**

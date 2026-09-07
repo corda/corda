@@ -12,12 +12,16 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.security.PublicKey
-import java.util.*
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
@@ -33,7 +37,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     /** A map of the currently stored files by their [SecureHash] */
     val files: Map<SecureHash, Pair<Attachment, ByteArray>> get() = _files
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, UNKNOWN_UPLOADER, null)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
@@ -78,11 +82,11 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun hasAttachment(attachmentId: AttachmentId) = files.containsKey(attachmentId)
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         return try {
             importAttachment(jar, UNKNOWN_UPLOADER, null)
-        } catch (e: java.nio.file.FileAlreadyExistsException) {
+        } catch (e: FileAlreadyExistsException) {
             AttachmentId.create(e.message!!)
         }
     }
@@ -109,7 +113,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers, uploader)
             val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)) } catch (e: Exception) { DEFAULT_CORDAPP_VERSION }
             val attachment =
-                    if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
+                    if (contractClassNames.isNullOrEmpty()) baseAttachment
                     else {
                         contractClassNames.map {contractClassName ->
                             val contractClassMetadata = ContractAttachmentMetadata(contractClassName, version, signers.isNotEmpty(), signers, uploader)

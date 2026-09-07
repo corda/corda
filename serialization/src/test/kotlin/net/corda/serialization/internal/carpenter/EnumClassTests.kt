@@ -50,7 +50,7 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
     @Test(timeout=300_000)
 	fun manyValues() {
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
-                "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })
+                "GGG", "HHH", "III", "JJJ").associateWith { EnumField() }
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
 
@@ -67,7 +67,7 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test(timeout=300_000)
 	fun assignment() {
-        val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateBy({ it }, { EnumField() })
+        val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateWith { EnumField() }
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
 
@@ -88,7 +88,7 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
         val cc2 = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val schema1 = EnumSchema("gen.enum",
-                listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateBy({ it }, { EnumField() }))
+                listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateWith { EnumField() })
 
         val enumClazz = cc2.build(schema1)
 

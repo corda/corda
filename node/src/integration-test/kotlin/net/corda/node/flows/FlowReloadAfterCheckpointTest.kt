@@ -13,6 +13,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.mapToSet
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
@@ -69,8 +70,8 @@ class FlowReloadAfterCheckpointTest {
             val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, false)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
-            assertEquals(5, reloads.filter { it == flowStartedByAlice }.count())
-            assertEquals(6, reloads.filter { it == ReloadFromCheckpointResponder.flowId }.count())
+            assertEquals(5, reloads.count { it == flowStartedByAlice })
+            assertEquals(6, reloads.count { it == ReloadFromCheckpointResponder.flowId })
         }
     }
 
@@ -127,8 +128,8 @@ class FlowReloadAfterCheckpointTest {
             observations.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(flowStartedByAlice, observations.singleOrNull())
-            assertEquals(4, reloads.filter { it == flowStartedByAlice }.count())
-            assertEquals(4, reloads.filter { it == ReloadFromCheckpointResponder.flowId }.count())
+            assertEquals(4, reloads.count { it == flowStartedByAlice })
+            assertEquals(4, reloads.count { it == ReloadFromCheckpointResponder.flowId })
         }
     }
 
@@ -154,8 +155,8 @@ class FlowReloadAfterCheckpointTest {
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
             reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
-            assertEquals(5, reloads.filter { it == flowStartedByAlice }.count())
-            assertEquals(6, reloads.filter { it == ReloadFromCheckpointResponder.flowId }.count())
+            assertEquals(5, reloads.count { it == flowStartedByAlice })
+            assertEquals(6, reloads.count { it == ReloadFromCheckpointResponder.flowId })
         }
     }
 
@@ -332,8 +333,7 @@ class FlowReloadAfterCheckpointTest {
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow(30.seconds)
             val flowStartedByBob = bob.rpc.stateMachineRecordedTransactionMappingSnapshot()
-                .map(StateMachineTransactionMapping::stateMachineRunId)
-                .toSet()
+                .mapToSet(StateMachineTransactionMapping::stateMachineRunId)
                 .single()
             reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(8, reloads.filter { it == flowStartedByAlice }.size)
@@ -522,6 +522,6 @@ class FlowReloadAfterCheckpointTest {
 }
 
 internal class BrokenMap<K, V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K, V> by delegate {
-    override fun put(key: K, value: V): V? = throw IllegalStateException("Broken on purpose")
+    override fun put(key: K, value: V): V = throw IllegalStateException("Broken on purpose")
 }
 

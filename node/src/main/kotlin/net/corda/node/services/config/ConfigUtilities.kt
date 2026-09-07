@@ -8,9 +8,6 @@ import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.node.internal.Node
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
@@ -20,7 +17,7 @@ import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
@@ -28,6 +25,9 @@ import net.corda.nodeapi.internal.storeLegalIdentity
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.math.min
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
@@ -42,7 +42,7 @@ object ConfigHelper {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    val DEFAULT_CONFIG_FILENAME = "node.conf"
+    const val DEFAULT_CONFIG_FILENAME = "node.conf"
 
     @Suppress("LongParameterList")
     fun loadConfig(baseDirectory: Path,
@@ -74,7 +74,7 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
 
         // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.
-        val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
+        val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && "server" !in CordaSystemUtils.getOsName().lowercase())
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
         // Detect the number of cores
@@ -121,7 +121,7 @@ object ConfigHelper {
 
                     // Reject environment variable that are in all caps
                     // since these cannot be properties.
-                    if (original == original.toUpperCase()){
+                    if (original == original.uppercase()){
                         return@mapKeys original
                     }
 
@@ -195,7 +195,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         FileBasedCertificateStoreSupplier(keyStore.path, keyStore.storePassword, keyStore.entryPassword).get(true)
                 .also { it.registerDevP2pCertificates(myLegalName) }
         when (cryptoService) {
-            is BCCryptoService, null -> {
+            is DefaultCryptoService, null -> {
                 val signingKeyStore = FileBasedCertificateStoreSupplier(signingCertificateStore.path, signingCertificateStore.storePassword, signingCertificateStore.entryPassword).get(true)
                         .also {
                             it.installDevNodeCaCertPath(myLegalName)

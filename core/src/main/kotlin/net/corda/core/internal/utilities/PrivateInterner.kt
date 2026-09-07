@@ -38,20 +38,20 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
             }
 
             fun isSerializableCore(clazz: Class<*>): Boolean {
-                if (!(clazz.packageNameOrNull?.startsWith("net.corda.core") ?: false)) return false
+                if (clazz.packageNameOrNull?.startsWith("net.corda.core") != true) return false
                 return hasCordaSerializable(clazz)
             }
 
             fun findInterner(clazz: Class<*>?): PrivateInterner<Any>? {
                 // Kotlin reflection has a habit of throwing exceptions, so protect just in case.
-                try {
-                    return clazz?.kotlin?.companionObjectInstance?.let {
+                return try {
+                    clazz?.kotlin?.companionObjectInstance?.let {
                         (it as? Internable<*>)?.let {
                             uncheckedCast(it.interner)
                         }
                     }
                 } catch (_: Throwable) {
-                    return null
+                    null
                 }
             }
             return if (clazz != null) {
@@ -64,6 +64,6 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
 
     private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<T>()
 
-    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample)))
+    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!)))
 }
 

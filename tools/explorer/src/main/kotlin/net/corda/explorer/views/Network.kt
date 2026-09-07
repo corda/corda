@@ -131,6 +131,7 @@ class Network : CordaView() {
         }
     }
 
+    @Suppress("SpreadOperator")
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
         val identities = node.legalIdentitiesAndCerts.sortedBy { it.owningKey.toBase58String() }
@@ -148,7 +149,7 @@ class Network : CordaView() {
             val coordinate = Bindings.createObjectBinding({
                 // These coordinates are obtained when we generate the map using TileMill.
                 node.getWorldMapLocation()?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)
-            }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
+            }, *arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
             // Center point of the label.
             layoutXProperty().bind(coordinate.map { it.screenX - width / 2 })
             layoutYProperty().bind(coordinate.map { it.screenY - height / 4 })

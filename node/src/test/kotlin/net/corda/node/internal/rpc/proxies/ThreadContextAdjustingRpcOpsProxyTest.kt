@@ -1,7 +1,7 @@
 package net.corda.node.internal.rpc.proxies
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat

@@ -26,6 +26,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
@@ -67,7 +68,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
@@ -78,22 +78,20 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
-import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.util.ArrayList
 import java.util.Collections
 import java.util.Currency
 import java.util.Random
 import java.util.UUID
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
-import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -189,7 +187,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
     }
 
-    @Test(expected = InsufficientBalanceException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP), threadPerNode = true)
         val notaryNode = mockNet.defaultNotaryNode
@@ -229,7 +227,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notary, bob, aliceNode, bobNode,
                     "alice's paper".outputStateAndRef())
 
-            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
+            assertThatExceptionOfType(InsufficientBalanceException::class.java).isThrownBy {
+                bobStateMachine.flatMap { it.resultFuture }.getOrThrow()
+            }
+
+            assertThatExceptionOfType(InsufficientBalanceException::class.java).isThrownBy {
+                aliceResult.getOrThrow()
+            }
 
             aliceNode.dispose()
             bobNode.dispose()
@@ -247,7 +251,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test(timeout=300_000)
 	fun `shutdown and restore`() {
-        Assume.assumeTrue(!IS_OPENJ9)
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP))
         val notaryNode = mockNet.defaultNotaryNode
         val notary = mockNet.defaultNotaryIdentity
@@ -738,7 +741,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
         val eb3Txns = insertFakeTransactions(listOf(bc2), node, identity, notaryNode, *extraSigningNodes)
 
-        val vault = Vault<ContractState>(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
+        val vault = Vault(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
         return Triple(vault, listOf(eb1, bc1, bc2), eb1Txns + eb2Txns + eb3Txns)
     }
 
@@ -751,10 +754,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary,
-                    contractState = CommercialPaper.State(issuer, owner, amount, net.corda.coretesting.internal.TEST_TX_TIME + 7.days))
+                    contractState = CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days))
             command(issuer.party.owningKey, CommercialPaper.Commands.Issue())
             if (!withError)
-                timeWindow(time = net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(time = TEST_TX_TIME)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {
@@ -764,7 +767,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        val vault = Vault<ContractState>(listOf("alice's paper".outputStateAndRef()))
+        val vault = Vault(listOf("alice's paper".outputStateAndRef()))
         return Pair(vault, listOf(ap))
     }
 
@@ -790,7 +793,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList<TxRecord>())
+        val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList())
         override val updates: Observable<SignedTransaction>
             get() = delegate.updates
 

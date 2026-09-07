@@ -1,0 +1,16 @@
+// Gradle Build Cache configuration recommendation: https://docs.gradle.org/current/userguide/build_cache.html
+ext {
+    isCiServer = System.getenv().containsKey("CORDA_CI")
+    gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
+}
+
+buildCache {
+    local {
+        enabled = !isCiServer
+    }
+    remote(HttpBuildCache) {
+        enabled = isCiServer
+        url = gradleBuildCacheURL
+        push = isCiServer
+    }
+}

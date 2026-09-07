@@ -1,21 +1,35 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.getRequiredSigningKeysInternal
+import net.corda.core.internal.indexOfOrThrow
+import net.corda.core.internal.verification.NodeVerificationSupport
+import net.corda.core.internal.verification.VerificationResult
+import net.corda.core.internal.verification.VerificationSupport
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
+import net.corda.core.transactions.NotaryChangeWireTransaction.Component.INPUTS
+import net.corda.core.transactions.NotaryChangeWireTransaction.Component.NEW_NOTARY
+import net.corda.core.transactions.NotaryChangeWireTransaction.Component.NOTARY
+import net.corda.core.transactions.NotaryChangeWireTransaction.Component.PARAMETERS_HASH
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
@@ -88,32 +102,22 @@ data class NotaryChangeWireTransaction(
 
     /** Resolves input states and network parameters and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
-        val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        val hashToResolve = networkParametersHash ?: services.networkParametersService.defaultHash
-        val resolvedNetworkParameters = services.networkParametersService.lookup(hashToResolve)
-                ?: throw TransactionResolutionException(id)
-        return NotaryChangeLedgerTransaction.create(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
+        return NotaryChangeLedgerTransaction.resolve(services.toVerifyingServiceHub(), this, sigs)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
+    fun resolve(services: ServiceHub, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+        return resolve(services as ServicesForResolution, sigs)
+    }
 
-    /**
-     * This should return a serialized virtual output state, that will be used to verify spending transactions.
-     * The binary output should not depend on the classpath of the node that is verifying the transaction.
-     *
-     * Ideally the serialization engine would support partial deserialization so that only the Notary ( and the encumbrance can be replaced from the binary input state)
-     *
-     *
-     * TODO - currently this uses the main classloader.
-     */
     @CordaInternal
-    internal fun resolveOutputComponent(
-            services: ServicesForResolution,
-            stateRef: StateRef,
-            @Suppress("UNUSED_PARAMETER") params: NetworkParameters
-    ): SerializedBytes<TransactionState<ContractState>> {
-        return services.loadState(stateRef).serialize()
+    @JvmSynthetic
+    internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult.InProcess {
+        return VerificationResult.InProcess(Try.on {
+            // No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation.
+            NotaryChangeLedgerTransaction.resolve(verificationSupport, this, emptyList())
+            null
+        })
     }
 
     enum class Component {
@@ -140,13 +144,25 @@ private constructor(
 ) : FullTransaction(), TransactionWithSignatures {
     companion object {
         @CordaInternal
-        internal fun create(inputs: List<StateAndRef<ContractState>>,
-                            notary: Party,
-                            newNotary: Party,
-                            id: SecureHash,
-                            sigs: List<TransactionSignature>,
-                            networkParameters: NetworkParameters): NotaryChangeLedgerTransaction {
-            return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs, networkParameters)
+        @JvmSynthetic
+        fun resolve(verificationSupport: VerificationSupport,
+                    wireTx: NotaryChangeWireTransaction,
+                    sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+            val inputs = wireTx.inputs.map(verificationSupport::getStateAndRef)
+            val networkParameters = verificationSupport.getNetworkParameters(wireTx.networkParametersHash)
+                    ?: throw TransactionResolutionException(wireTx.id)
+            return NotaryChangeLedgerTransaction(inputs, wireTx.notary, wireTx.newNotary, wireTx.id, sigs, networkParameters)
+        }
+
+        @CordaInternal
+        @JvmSynthetic
+        internal inline fun computeOutput(input: StateAndRef<*>, newNotary: Party, inputs: () -> List<StateRef>): TransactionState<*> {
+            val (state, ref) = input
+            val newEncumbrance = state.encumbrance?.let {
+                val encumbranceStateRef = ref.copy(index = state.encumbrance)
+                inputs().indexOfOrThrow(encumbranceStateRef)
+            }
+            return state.copy(notary = newNotary, encumbrance = newEncumbrance)
         }
     }
 
@@ -174,22 +190,10 @@ private constructor(
 
     /** We compute the outputs on demand by applying the notary field modification to the inputs. */
     override val outputs: List<TransactionState<ContractState>>
-        get() = computeOutputs()
-
-    private fun computeOutputs(): List<TransactionState<ContractState>> {
-        val inputPositionIndex: Map<StateRef, Int> = inputs.mapIndexed { index, stateAndRef -> stateAndRef.ref to index }.toMap()
-        return inputs.map { (state, ref) ->
-            if (state.encumbrance != null) {
-                val encumbranceStateRef = StateRef(ref.txhash, state.encumbrance)
-                val encumbrancePosition = inputPositionIndex[encumbranceStateRef]
-                        ?: throw IllegalStateException("Unable to generate output states – transaction not constructed correctly.")
-                state.copy(notary = newNotary, encumbrance = encumbrancePosition)
-            } else state.copy(notary = newNotary)
-        }
-    }
+        get() = inputs.map { computeOutput(it, newNotary) { inputs.map(StateAndRef<ContractState>::ref) } }
 
     override val requiredSigningKeys: Set<PublicKey>
-        get() = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet() + notary.owningKey
+        get() = getRequiredSigningKeysInternal(inputs.asSequence(), notary)
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): List<String> {
         return keys.map { it.toBase58String() }

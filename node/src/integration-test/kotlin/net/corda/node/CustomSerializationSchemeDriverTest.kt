@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.BelongsToContract
@@ -40,6 +41,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.nodeapi.internal.serialization.kryo.PublicKeySerializer
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.testing.core.ALICE_NAME
@@ -50,6 +52,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.enclosedCordapp
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.junit.Test
 import org.objenesis.instantiator.ObjectInstantiator
 import org.objenesis.strategy.InstantiatorStrategy
@@ -57,7 +60,7 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
 import java.security.PublicKey
-import java.util.*
+import java.util.Arrays
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -93,7 +96,10 @@ class CustomSerializationSchemeDriverTest {
 
     @Test(timeout = 300_000)
     fun `flow can write a wire transaction serialized with custom kryo serializer to the ledger`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(
+                cordappsForAllNodes = listOf(enclosedCordapp()),
+                systemProperties = mapOf("experimental.corda.customSerializationScheme" to KryoScheme::class.java.name)
+        )) {
             val (alice, bob) = listOf(
                 startNode(NodeParameters(providedName = ALICE_NAME)),
                 startNode(NodeParameters(providedName = BOB_NAME))
@@ -134,7 +140,7 @@ class CustomSerializationSchemeDriverTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class WriteTxToLedgerFlow(val counterparty: Party, val notary: Party) : FlowLogic<SecureHash>() {
+    class WriteTxToLedgerFlow(private val counterparty: Party, val notary: Party) : FlowLogic<SecureHash>() {
         @Suspendable
         override fun call(): SecureHash {
             val wireTx = createWireTx(serviceHub, notary, counterparty.owningKey, KryoScheme.SCHEME_ID)
@@ -145,7 +151,7 @@ class CustomSerializationSchemeDriverTest {
             return fullySignedTx.id
         }
 
-        fun signWireTx(wireTx: WireTransaction) : SignedTransaction {
+        private fun signWireTx(wireTx: WireTransaction) : SignedTransaction {
             val signatureMetadata = SignatureMetadata(
                 serviceHub.myInfo.platformVersion,
                 Crypto.findSignatureScheme(serviceHub.myInfo.legalIdentitiesAndCerts.first().owningKey).schemeNumberID
@@ -156,17 +162,17 @@ class CustomSerializationSchemeDriverTest {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(WriteTxToLedgerFlow::class)
     class SignWireTxFlow(private val session: FlowSession): FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val signTransactionFlow = object : SignTransactionFlow(session) {
-                override fun checkTransaction(stx: SignedTransaction) {
-                    return
-                }
-            }
-            val txId = subFlow(signTransactionFlow).id
+            val txId = subFlow(NoCheckSignTransactionFlow(session)).id
             return subFlow(ReceiveFinalityFlow(session, expectedTxId = txId))
+        }
+
+        class NoCheckSignTransactionFlow(session: FlowSession) : SignTransactionFlow(session) {
+            override fun checkTransaction(stx: SignedTransaction) = Unit
         }
     }
 
@@ -225,7 +231,7 @@ class CustomSerializationSchemeDriverTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class SendFlow(val counterparty: Party) : FlowLogic<Boolean>() {
+    class SendFlow(private val counterparty: Party) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             val wtx = createWireTx(serviceHub, counterparty, counterparty.owningKey, KryoScheme.SCHEME_ID)
@@ -236,13 +242,14 @@ class CustomSerializationSchemeDriverTest {
     }
 
     @StartableByRPC
-    class CreateWireTxFlow(val counterparty: Party) : FlowLogic<WireTransaction>() {
+    class CreateWireTxFlow(private val counterparty: Party) : FlowLogic<WireTransaction>() {
         @Suspendable
         override fun call(): WireTransaction {
             return createWireTx(serviceHub, counterparty, counterparty.owningKey, KryoScheme.SCHEME_ID)
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(SendFlow::class)
     class ReceiveFlow(private val session: FlowSession): FlowLogic<Unit>() {
         @Suspendable
@@ -296,9 +303,13 @@ class CustomSerializationSchemeDriverTest {
         }
 
         private fun customiseKryo(kryo: Kryo, classLoader: ClassLoader) {
+            kryo.references = true
+            kryo.isRegistrationRequired = false
             kryo.instantiatorStrategy = CustomInstantiatorStrategy()
             kryo.classLoader = classLoader
+            @Suppress("ReplaceJavaStaticMethodWithKotlinAnalog")
             kryo.register(Arrays.asList("").javaClass, ArraysAsListSerializer())
+            kryo.addDefaultSerializer(BCEdDSAPublicKey::class.java, PublicKeySerializer)
         }
 
         //Stolen from DefaultKryoCustomizer.kt
@@ -307,7 +318,7 @@ class CustomSerializationSchemeDriverTest {
 
             // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
             // is no no-arg constructor available.
-            private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+            private val defaultStrategy = DefaultInstantiatorStrategy(fallbackStrategy)
 
             override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
                 // However this doesn't work for non-public classes in the java. namespace

@@ -7,7 +7,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -49,13 +48,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.Properties
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
@@ -111,7 +108,7 @@ fun createDevIntermediateCaCertPath(
  */
 fun createDevNodeCaCertPath(
         legalName: CordaX500Name,
-        nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME),
+        nodeKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME),
         rootCaName: X500Principal = defaultRootCaName,
         intermediateCaName: X500Principal = defaultIntermediateCaName
 ): Triple<CertificateAndKeyPair, CertificateAndKeyPair, CertificateAndKeyPair> {
@@ -156,7 +153,6 @@ fun fixedCrlSource(crls: Set<X509CRL>): CrlSource {
     }
 }
 
-/** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
 @SuppressWarnings("LongParameterList")
 fun createWireTransaction(inputs: List<StateRef>,
                           attachments: List<SecureHash>,
@@ -164,9 +160,10 @@ fun createWireTransaction(inputs: List<StateRef>,
                           commands: List<Command<*>>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
+                          legacyAttachments: List<SecureHash> = emptyList(),
                           privacySalt: PrivacySalt = PrivacySalt(),
                           digestService: DigestService = DigestService.default): WireTransaction {
-    val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
+    val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null, legacyAttachments)
     return WireTransaction(componentGroups, privacySalt, digestService)
 }
 
@@ -250,24 +247,6 @@ fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
         createTestSerializationEnv().asTestContextEnv { block() }
     }
 }
-
-/**
- * Used to check if particular port is already bound i.e. not vacant
- */
-fun isLocalPortBound(port: Int): Boolean {
-    return try {
-        ServerSocket(port).use {
-            // Successful means that the port was vacant
-            false
-        }
-    } catch (e: IOException) {
-        // Failed to open server socket means that it is already bound by someone
-        true
-    }
-}
-
-@JvmField
-val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
 
 @JvmField
 val IS_S390X = System.getProperty("os.arch") == "s390x"

@@ -2,9 +2,8 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * node project because the bintray plugin cannot publish two modules from one project.
  */
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda standalone node'
 
@@ -16,6 +15,8 @@ configurations {
 }
 
 dependencies {
+    testRuntimeOnly project(":node")
+
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
     compileOnly "com.typesafe:config:$typesafe_config_version"
@@ -24,7 +25,7 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
-    testCompile "co.paralleluniverse:capsule:$capsule_version"
+    testImplementation "co.paralleluniverse:capsule:$capsule_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -38,66 +39,71 @@ capsule {
 
 def nodeProject = project(':node')
 
-task buildCordaJAR(type: FatCapsule, dependsOn: [
-        nodeProject.tasks.named('jar'),
-    ]) {
+configurations.runtimeOnly.canBeResolved = true
+tasks.register('buildCordaJAR', FatCapsule) {
+    dependsOn(nodeProject.tasks.named('jar'))
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
+    archiveClassifier = ''
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        nodeProject.configurations.runtimeClasspath,
-        nodeProject.tasks.jar,
-        nodeProject.buildDir.toString() + '/resources/main/corda-reference.conf',
-        "$rootDir/config/dev/log4j2.xml",
-        'NOTICE' // Copy CDDL notice
+            nodeProject.configurations.runtimeClasspath,
+            nodeProject.tasks.jar,
+            nodeProject.buildDir.toString() + '/resources/main/corda-reference.conf',
+            "$rootDir/config/dev/log4j2.xml",
+            'NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
     with jar
 
     manifest {
-        if (JavaVersion.current() == JavaVersion.VERSION_11) {
-            attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
-        }
+        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver')
     }
 
     capsuleManifest {
         applicationVersion = corda_release_version
         applicationId = "net.corda.node.Corda"
         // See experimental/quasar-hook/README.md for how to generate.
-        def quasarExcludeExpression = "x(antlr**;bftsmart**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;io.opentelemetry**)"
+        def quasarExcludeExpression = "x(antlr**;bftsmart**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;org.mockito**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;kotlin**;net.bytebuddy**;org.apache**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;io.opentelemetry**)"
         def quasarClassLoaderExclusion = "l(net.corda.core.serialization.internal.**)"
-        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar=${quasarExcludeExpression}${quasarClassLoaderExclusion}"] : ["quasar-core-${quasar_version}.jar=${quasarExcludeExpression}${quasarClassLoaderExclusion}"]
+        def quasarOptions = "m"
+        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar=${quasarOptions}${quasarExcludeExpression}${quasarClassLoaderExclusion}"] : ["quasar-core-${quasar_version}.jar=${quasarExcludeExpression}${quasarClassLoaderExclusion}"]
         systemProperties['visualvm.display.name'] = 'Corda'
-        if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-            minJavaVersion = '1.8.0'
-            minUpdateVersion['1.8'] = java8_minUpdateVersion
-        }
         caplets = ['CordaCaplet']
 
         // JVM configuration:
         // - Constrain to small heap sizes to ease development on low end devices.
-        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         // NOTE: these can be overridden in node.conf.
         //
         // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
-        if (JavaVersion.current() == JavaVersion.VERSION_11) {
-            jvmArgs += ['-Djdk.attach.allowAttachSelf=true']
-        }
+        jvmArgs = ['-Xmx512m']
+        jvmArgs += ['-Djdk.attach.allowAttachSelf=true']
     }
 }
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("generateMetadataFileForCordaJARPublication")) {
+        task.enabled = false
+    }
+}
+
+javadoc.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+javadoc.dependsOn buildCordaJAR
+compileTestJava.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+compileTestJava.dependsOn buildCordaJAR
 
 artifacts {
-    archives buildCordaJAR
     runtimeArtifacts buildCordaJAR
-    publish buildCordaJAR {
-        classifier ''
-    }
 }
 
-publish {
-    disableDefaultJar = true
-    name  'corda'
+publishing {
+    publications {
+        cordaJAR(MavenPublication) {
+            artifactId 'corda'
+            artifact(buildCordaJAR)
+            artifact(javadocJar)
+            artifact(sourcesJar)
+        }
+    }
 }

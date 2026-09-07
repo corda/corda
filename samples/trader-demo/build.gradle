@@ -1,16 +1,11 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 cordapp {
-    info {
-        name "Trader Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
+    targetPlatformVersion corda_platform_version.toInteger()
 }
 
 sourceSets {
@@ -27,42 +22,44 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
-    cordaCompile project(':client:rpc')
 
-    // Cordformation needs a SLF4J implementation when executing the Network
-    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
-    // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaProvided project(':core')
+    cordaProvided project(':node')
+    cordaProvided project(':client:rpc')
+    cordaProvided project(':core-test-utils')
+    implementation project(':test-utils')
 
-    // We only need this for its DUMMY_BANK constants, and
-    // DO NOT want it added to Gradle's runtime classpath.
-    compileOnly project(':test-utils')
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
+
+    // Corda integration dependencies
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
     cordapp project(':samples:trader-demo:workflows-trader')
 
-    // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
-    testCompile "org.slf4j:slf4j-simple:$slf4j_version"
-    testCompile(project(':node-driver')) {
+    testImplementation "org.slf4j:slf4j-simple:$slf4j_version"
+    testImplementation(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
-        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j2-impl'
     }
-    
+
+    testImplementation "io.reactivex:rxjava:$rxjava_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -70,7 +67,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 task integrationTest(type: Test, dependsOn: []) {
@@ -78,9 +75,9 @@ task integrationTest(type: Test, dependsOn: []) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-def nodeTask = tasks.getByPath(':node:capsule:assemble')
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
+configurations.cordaCordapp.canBeResolved = true
+task deployNodes(type: net.corda.plugins.Cordform) {
+    def users = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
     nodeDefaults {
         projectCordapp {
             deploy = false // TODO This is a bug, project cordapp should be disabled if no cordapp plugin is applied.
@@ -105,7 +102,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        rpcUsers = ext.rpcUsers
+        rpcUsers = users
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -115,7 +112,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        rpcUsers = ext.rpcUsers
+        rpcUsers = users
         rpcSettings {
             address "localhost:10009"
             adminAddress "localhost:10010"
@@ -125,7 +122,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        rpcUsers = ext.rpcUsers
+        rpcUsers = users
         rpcSettings {
             address "localhost:10012"
             adminAddress "localhost:10013"
@@ -137,7 +134,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=NonLogging Bank,L=London,C=GB"
         p2pPort 10025
-        rpcUsers = ext.rpcUsers
+        rpcUsers = users
         rpcSettings {
             address "localhost:10026"
             adminAddress "localhost:10027"
@@ -145,6 +142,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         extraConfig = ['h2Settings.address' : 'localhost:10035']
         flowOverride("net.corda.traderdemo.flow.SellerFlow", "net.corda.traderdemo.flow.BuyerFlow")
     }
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 idea {

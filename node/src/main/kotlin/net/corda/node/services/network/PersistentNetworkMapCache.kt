@@ -152,7 +152,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         return database.transaction { queryByLegalName(session, name) }.sortedByDescending { it.serial }
     }
 
-    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
+    override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
             cacheFactory = cacheFactory,
@@ -171,7 +171,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun getPeerCertificateByLegalName(name: CordaX500Name): PartyAndCertificate? {
-        return identityByLegalNameCache.get(name)!!.orElse(null)
+        return identityByLegalNameCache.get(name).orElse(null)
     }
 
     private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(

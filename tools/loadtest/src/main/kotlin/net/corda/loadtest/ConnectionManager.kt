@@ -11,7 +11,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.PortAllocation
 import java.util.*
-import kotlin.streams.toList
 
 private val log = loggerFor<ConnectionManager>()
 
@@ -45,7 +44,7 @@ fun setupJSchWithSshAgent(): JSch {
                         override fun getName() = String(identity.comment)
                         override fun isEncrypted() = false
                         override fun getSignature(data: ByteArray?) = agentProxy.sign(identity.blob, data)
-                        @Suppress("OverridingDeprecatedMember")
+                        @Suppress("OVERRIDE_DEPRECATION")
                         override fun decrypt() = true
 
                         override fun getPublicKeyBlob() = identity.blob

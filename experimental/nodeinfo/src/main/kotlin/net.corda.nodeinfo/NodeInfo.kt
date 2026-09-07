@@ -4,8 +4,6 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.crypto.sign
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.div
-import net.corda.core.internal.readAll
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -26,6 +24,8 @@ import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 import java.security.cert.CertificateFactory
+import kotlin.io.path.div
+import kotlin.io.path.readBytes
 
 /**
  * NodeInfo signing tool for Corda
@@ -66,7 +66,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     private var displayPath: Path? = null
 
     @Option(names = ["--address"], paramLabel = "host:port", description = ["Public address of node"], converter = [NetworkHostAndPortConverter::class])
-    private var addressList: MutableList<NetworkHostAndPort> = mutableListOf<NetworkHostAndPort>()
+    private var addressList: MutableList<NetworkHostAndPort> = mutableListOf()
 
     @Option(names = ["--platform-version"], paramLabel = "int", description = ["Platform version that this node supports"])
     private var platformVersion: Int = 4
@@ -93,10 +93,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         print(prompt)
         System.out.flush()
         val console = System.console()
-        if(console != null)
-            return console.readPassword().toString()
-        else
-            return readLine()!!
+        return console?.readPassword()?.toString() ?: readln()
     }
 
     private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
@@ -147,7 +144,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
             println("address:         " + nodeInfo.addresses[0])
             println("platformVersion: " + nodeInfo.platformVersion)
             println("serial           " + nodeInfo.serial)
-            return 0;
+            return 0
         }
         else {
             require(addressList.size > 0){ "At least one --address must be specified" }
@@ -165,7 +162,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         val nodeInfoSigned = generateNodeInfo()
         val fileNameHash = nodeInfoSigned.nodeInfo.legalIdentities[0].name.serialize().hash
 
-        val outputFile = outputDirectory!!.toString() / "nodeinfo-${fileNameHash.toString()}"
+        val outputFile = outputDirectory!! / "nodeinfo-$fileNameHash"
 
         println(outputFile)
 
@@ -174,8 +171,8 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
     }
 
     fun nodeInfoFromFile(nodeInfoPath: File) : NodeInfo {
-        var serializedNodeInfo = SerializedBytes<SignedNodeInfo>(nodeInfoPath.toPath().readAll())
-        var signedNodeInfo = serializedNodeInfo.deserialize()
+        val serializedNodeInfo = SerializedBytes<SignedNodeInfo>(nodeInfoPath.toPath().readBytes())
+        val signedNodeInfo = serializedNodeInfo.deserialize()
         return signedNodeInfo.verified()
     }
 

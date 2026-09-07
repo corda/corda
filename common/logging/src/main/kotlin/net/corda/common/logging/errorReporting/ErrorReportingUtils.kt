@@ -1,6 +1,7 @@
 package net.corda.common.logging.errorReporting
 
 import org.slf4j.Logger
+import java.util.Locale
 
 /**
  * Report errors that have occurred.
@@ -12,7 +13,7 @@ import org.slf4j.Logger
 fun Logger.report(error: ErrorCode<*>) = ErrorReporting().getReporter().report(error, this)
 
 internal fun ErrorCode<*>.formatCode() : String {
-    val namespaceString = this.code.namespace.toLowerCase().replace("_", "-")
-    val codeString = this.code.toString().toLowerCase().replace("_", "-")
+    val namespaceString = this.code.namespace.lowercase(Locale.getDefault()).replace("_", "-")
+    val codeString = this.code.toString().lowercase(Locale.getDefault()).replace("_", "-")
     return "$namespaceString-$codeString"
 }

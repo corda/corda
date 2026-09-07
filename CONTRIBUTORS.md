@@ -100,6 +100,7 @@ see changes to this list.
 * Ivaylo Tonev (Industria)
 * James Brown (R3)
 * James Carlyle (R3)
+* Jan Buszka (Finteum)
 * Janis Olekss (Accenture)
 * Jared Harwayne-Gidansky (BNY Mellon)
 * Jayavaradhan Sambedu (Société Générale)

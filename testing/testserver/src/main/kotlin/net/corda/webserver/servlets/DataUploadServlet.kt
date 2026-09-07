@@ -1,13 +1,13 @@
 package net.corda.webserver.servlets
 
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
-import org.apache.commons.fileupload.servlet.ServletFileUpload
+import org.apache.commons.fileupload2.jakarta.JakartaServletFileUpload
 import java.io.IOException
 import java.util.*
-import javax.servlet.http.HttpServlet
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 
 /**
  * Uploads to the node via the [CordaRPCOps] uploadFile interface.
@@ -19,7 +19,7 @@ class DataUploadServlet : HttpServlet() {
 
     @Throws(IOException::class)
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
-        val isMultipart = ServletFileUpload.isMultipartContent(req)
+        val isMultipart = JakartaServletFileUpload.isMultipartContent(req)
         val rpc = servletContext.getAttribute("rpc") as CordaRPCOps
 
         if (!isMultipart) {
@@ -27,7 +27,7 @@ class DataUploadServlet : HttpServlet() {
             return
         }
 
-        val upload = ServletFileUpload()
+        val upload = JakartaServletFileUpload()
         val iterator = upload.getItemIterator(req)
         val messages = ArrayList<String>()
 
@@ -48,7 +48,7 @@ class DataUploadServlet : HttpServlet() {
                 continue
             }
             try {
-                messages += rpc.uploadAttachment(item.openStream()).toString()
+                messages += rpc.uploadAttachment(item.inputStream).toString()
             } catch (e: RuntimeException) {
                 reportError(e.toString())
                 continue

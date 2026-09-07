@@ -8,7 +8,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -56,7 +56,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception when recording transaction
-                INTERFACE ${ServiceHubInternal::class.java.name}
+                CLASS ${DBTransactionStorage::class.java.name}
                 METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")
@@ -117,7 +117,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception when recording transaction
-                INTERFACE ${ServiceHubInternal::class.java.name}
+                CLASS ${DBTransactionStorage::class.java.name}
                 METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")

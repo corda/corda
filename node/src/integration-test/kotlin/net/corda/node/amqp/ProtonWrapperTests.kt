@@ -1,13 +1,12 @@
 package net.corda.node.amqp
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -56,6 +55,7 @@ import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.thread
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -213,7 +213,6 @@ class ProtonWrapperTests {
         assertTrue(done)
     }
 
-    @Suppress("TooGenericExceptionCaught") // Too generic exception thrown!
     @Test(timeout=300_000)
     fun `AMPQClient that fails to handshake with a server will retry the server`() {
         /*
@@ -375,7 +374,7 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue")
+        artemis.session.createQueue(QueueConfiguration.of("queue")
                 .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
@@ -405,7 +404,7 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue")
+        artemis.session.createQueue(QueueConfiguration.of("queue")
                 .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
 

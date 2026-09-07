@@ -94,7 +94,7 @@ class ResolveTransactionsFlow private constructor(
     fun fetchMissingAttachments(transaction: SignedTransaction): Boolean {
         val tx = transaction.coreTransaction
         val attachmentIds = when (tx) {
-            is WireTransaction -> tx.attachments.toSet()
+            is WireTransaction -> tx.allAttachments
             is ContractUpgradeWireTransaction -> setOf(tx.legacyContractAttachmentId, tx.upgradedContractAttachmentId)
             else -> return false
         }

@@ -12,10 +12,12 @@ import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolu
 import net.corda.serialization.internal.amqp.testutils.testName
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Assert.assertNotSame
 import org.junit.Test
 import java.io.NotSerializableException
 import java.time.DayOfWeek
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -157,7 +159,7 @@ class EnumTests {
         assertEquals(c.c, obj.c)
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun changedEnum1() {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum1")
 
@@ -173,10 +175,12 @@ class EnumTests {
         val sc2 = url.readBytes()
 
         // we expect this to throw
-        DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+        }
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun changedEnum2() {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum2")
 
@@ -195,7 +199,9 @@ class EnumTests {
         val sc2 = url.readBytes()
 
         // we expect this to throw
-        DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
+        }
     }
 
     @Test(timeout=300_000)
@@ -303,7 +309,7 @@ class EnumTests {
         THREE;
 
         override fun toString(): String {
-            return "[${name.toLowerCase()}]"
+            return "[${name.lowercase(Locale.getDefault())}]"
         }
     }
 

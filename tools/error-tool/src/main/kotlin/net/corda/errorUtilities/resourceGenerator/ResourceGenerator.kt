@@ -49,8 +49,8 @@ class ResourceGenerator(private val locales: List<Locale>) {
                 throw ClassDoesNotExistException(it)
             }
             if (ErrorCodes::class.java.isAssignableFrom(clazz) && clazz != ErrorCodes::class.java) {
-                val namespace = (clazz.enumConstants.first() as ErrorCodes).namespace.toLowerCase()
-                clazz.enumConstants.map { code -> "${namespace}-${code.toString().toLowerCase().replace("_", "-")}"}
+                val namespace = (clazz.enumConstants.first() as ErrorCodes).namespace.lowercase(Locale.getDefault())
+                clazz.enumConstants.map { code -> "${namespace}-${code.toString().lowercase(Locale.getDefault()).replace("_", "-")}"}
             } else {
                 listOf()
             }

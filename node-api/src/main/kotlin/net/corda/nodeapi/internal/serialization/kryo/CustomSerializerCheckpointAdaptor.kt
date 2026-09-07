@@ -64,7 +64,7 @@ internal class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSer
     /**
      * Deserialize an object from the Kryo stream.
      */
-    override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
+    override fun read(kryo: Kryo, input: Input, type: Class<out OBJ>): OBJ {
 
         @Suppress("UNCHECKED_CAST")
         fun <T> readFromKryo() = kryo.readClassAndObject(input) as T

@@ -33,8 +33,8 @@ class MessagingExecutor(
         val resolver: AddressToArtemisQueueResolver,
         val ourSenderUUID: String
 ) {
-    private val cordaVendor = SimpleString(versionInfo.vendor)
-    private val releaseVersion = SimpleString(versionInfo.releaseVersion)
+    private val cordaVendor = SimpleString.of(versionInfo.vendor)
+    private val releaseVersion = SimpleString.of(versionInfo.releaseVersion)
     private val ourSenderSeqNo = AtomicLong()
 
     private companion object {
@@ -50,7 +50,7 @@ class MessagingExecutor(
             "Send to: $mqAddress topic: ${message.topic} " +
                     "sessionID: ${message.topic} id: ${message.uniqueMessageId}"
         }
-        producer.send(SimpleString(mqAddress), artemisMessage)
+        producer.send(SimpleString.of(mqAddress), artemisMessage)
     }
 
     @Synchronized
@@ -72,13 +72,13 @@ class MessagingExecutor(
             putStringProperty(P2PMessagingHeaders.cordaVendorProperty, cordaVendor)
             putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
             putIntProperty(P2PMessagingHeaders.platformVersionProperty, versionInfo.platformVersion)
-            putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
+            putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString.of(message.topic))
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too
-            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
+            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString.of(message.uniqueMessageId.toString))
             // If we are the sender (ie. we are not going through recovery of some sort), use sequence number short cut.
             if (ourSenderUUID == message.senderUUID) {
-                putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString(ourSenderUUID))
+                putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString.of(ourSenderUUID))
                 putLongProperty(P2PMessagingHeaders.senderSeqNo, ourSenderSeqNo.getAndIncrement())
             }
             // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended

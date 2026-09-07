@@ -54,7 +54,7 @@ import org.junit.Test
 import rx.subjects.PublishSubject
 import java.net.URLClassLoader
 import java.nio.file.Paths
-import java.util.*
+import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService

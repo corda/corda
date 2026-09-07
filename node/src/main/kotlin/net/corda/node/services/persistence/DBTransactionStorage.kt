@@ -50,7 +50,6 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
-import kotlin.streams.toList
 
 @Suppress("TooManyFunctions")
 open class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
@@ -183,7 +182,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
 
         private fun weighTx(actTx: TxCacheValue?): Int {
             if (actTx == null) return 0
-            return TXCACHEVALUE_OVERHEAD_BYTES + actTx.sigs.sumBy { it.size + TRANSACTION_SIGNATURE_OVERHEAD_BYTES } + actTx.txBits.size
+            return TXCACHEVALUE_OVERHEAD_BYTES + actTx.sigs.sumOf { it.size + TRANSACTION_SIGNATURE_OVERHEAD_BYTES } + actTx.txBits.size
         }
 
         private val log = contextLogger()

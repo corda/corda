@@ -43,14 +43,8 @@ class ByteBufferInputStream(val byteBuffer: ByteBuffer) : InputStream() {
 }
 
 class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
-    companion object {
-        private val ensureCapacity = ByteArrayOutputStream::class.java.getDeclaredMethod("ensureCapacity", Int::class.java).apply {
-            isAccessible = true
-        }
-    }
-
     fun <T> alsoAsByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {
-        ensureCapacity.invoke(this, count + remaining)
+        ensureCapacity(count + remaining)
         val buffer = ByteBuffer.wrap(buf, count, remaining)
         val result = task(buffer)
         count = buffer.position()
@@ -59,5 +53,11 @@ class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
 
     fun copyTo(stream: OutputStream) {
         stream.write(buf, 0, count)
+    }
+
+    private fun ensureCapacity(minCapacity: Int) {
+        if (minCapacity > buf.size) {
+            buf = buf.copyOf(minCapacity)
+        }
     }
 }

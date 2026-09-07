@@ -1,6 +1,8 @@
 package net.corda.cliutils
 
-import net.corda.core.internal.*
+import net.corda.common.logging.CordaVersion
+import net.corda.core.internal.location
+import net.corda.core.internal.toPath
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.SystemUtils
@@ -8,9 +10,14 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.util.*
-import net.corda.common.logging.CordaVersion
+import java.util.Collections
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.useLines
+import kotlin.io.path.writeLines
+import kotlin.io.path.writeText
 
 private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
     private companion object {
@@ -54,7 +61,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
             if (fileModified) {
                 val backupFilePath = filePath.parent / "${filePath.fileName}.backup"
                 println("Updating settings in ${filePath.fileName} - existing settings file has been backed up to $backupFilePath")
-                if (filePath.exists()) filePath.copyTo(backupFilePath, StandardCopyOption.REPLACE_EXISTING)
+                if (filePath.exists()) filePath.copyTo(backupFilePath, overwrite = true)
                 filePath.writeLines(lines)
             }
         }
@@ -166,9 +173,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         // If no autocomplete file, it hasn't been installed, so don't do anything
         if (!autoCompleteFile.exists()) return
 
-        var lastLine = ""
-        autoCompleteFile.toFile().forEachLine { lastLine = it }
-
+        val lastLine = autoCompleteFile.useLines { it.last() }
         if (lastLine != jarVersion(parent.alias)) {
             println("Old auto completion file detected... regenerating")
             generateAutoCompleteFile(parent.alias)
@@ -178,7 +183,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
 }
 
 @Command(helpCommand = true)
-class InstallShellExtensionsParser(private val cliWrapper: CordaCliWrapper) : CliWrapperBase("install-shell-extensions", "Install alias and autocompletion for bash and zsh") {
+class InstallShellExtensionsParser(cliWrapper: CordaCliWrapper) : CliWrapperBase("install-shell-extensions", "Install alias and autocompletion for bash and zsh") {
     private val generator = ShellExtensionsGenerator(cliWrapper)
     override fun runProgram(): Int {
         return generator.installShellExtensions()

@@ -11,6 +11,7 @@ import net.corda.networkbuilder.nodes.NodeAdder
 import net.corda.networkbuilder.nodes.NodeInstantiator
 import net.corda.networkbuilder.toSingleFuture
 import java.io.File
+import java.util.Locale
 
 class CommandLineInterface {
 
@@ -40,7 +41,7 @@ class CommandLineInterface {
             val (_, instantiator, _) = Backend.fromContext(context, cacheDir)
             val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
             parsedArgs.nodesToAdd.map {
-                nodeAdder.addNode(context, Constants.ALPHA_NUMERIC_ONLY_REGEX.replace(it.key.toLowerCase(), ""), CordaX500Name.parse(it.value))
+                nodeAdder.addNode(context, Constants.ALPHA_NUMERIC_ONLY_REGEX.replace(it.key.lowercase(Locale.getDefault()), ""), CordaX500Name.parse(it.value))
             }.toSingleFuture().getOrThrow()
             persistContext(contextFile, objectMapper, context)
         }

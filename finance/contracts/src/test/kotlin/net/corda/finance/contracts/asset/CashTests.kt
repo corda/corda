@@ -31,6 +31,9 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServ
 import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -300,7 +303,7 @@ class CashTests {
      * Test that the issuance builder rejects building into a transaction with existing
      * cash inputs.
      */
-    @Test(expected = IllegalStateException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `reject issuance with inputs`() {
         // Issue some cash
         var ptx = TransactionBuilder(dummyNotary.party)
@@ -311,7 +314,9 @@ class CashTests {
         // Include the previously issued cash in a new issuance command
         ptx = TransactionBuilder(dummyNotary.party)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = miniCorp.party, notary = dummyNotary.party)
+        assertThatIllegalStateException().isThrownBy {
+            Cash().generateIssue(ptx, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = miniCorp.party, notary = dummyNotary.party)
+        }
     }
 
     @Test(timeout=300_000)
@@ -762,13 +767,15 @@ class CashTests {
         assertEquals(6000.DOLLARS `issued by` defaultIssuer, states.sumCashBy(megaCorp.party))
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `summing by owner throws`() {
         val states = listOf(
                 Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
                 Cash.State(4000.DOLLARS `issued by` defaultIssuer, megaCorp.party)
         )
-        states.sumCashBy(miniCorp.party)
+        assertThatExceptionOfType(UnsupportedOperationException::class.java).isThrownBy {
+            states.sumCashBy(miniCorp.party)
+        }
     }
 
     @Test(timeout=300_000)
@@ -778,10 +785,12 @@ class CashTests {
         assertNull(states.sumCashOrNull())
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `summing no currencies throws`() {
         val states = emptyList<Cash.State>()
-        states.sumCash()
+        assertThatExceptionOfType(UnsupportedOperationException::class.java).isThrownBy {
+            states.sumCash()
+        }
     }
 
     @Test(timeout=300_000)
@@ -797,14 +806,16 @@ class CashTests {
         assertEquals(expected, actual)
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `summing multiple currencies`() {
         val states = listOf(
                 Cash.State(1000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
                 Cash.State(4000.POUNDS `issued by` defaultIssuer, megaCorp.party)
         )
         // Test that summing everything fails because we're mixing units
-        states.sumCash()
+        assertThatIllegalArgumentException().isThrownBy {
+            states.sumCash()
+        }
     }
 
     // Double spend.
@@ -907,5 +918,27 @@ class CashTests {
         assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
 
         assertEquals(2, wtx.commands.size)
+    }
+
+    @Test(timeout = 300_000)
+    fun performanceTest() {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
+            )
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+        val counts = 1000
+        val loops = 50
+        for (loop in 0 until loops) {
+            val start = System.nanoTime()
+            for (count in 0 until counts) {
+                tx.toWireTransaction(ourServices)
+            }
+            val end = System.nanoTime()
+            println("Time per transaction serialize on loop $loop = ${(end - start) / counts} nanoseconds")
+        }
     }
 }

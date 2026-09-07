@@ -2,8 +2,6 @@
 
 package net.corda.node.amqp
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -46,6 +44,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.io.Closeable
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -54,6 +54,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.IntStream
+import kotlin.io.path.div
 
 abstract class AbstractServerRevocationTest {
     @Rule
@@ -498,7 +499,7 @@ class ArtemisServerRevocationTest : AbstractServerRevocationTest() {
 
         val queueName = "${P2P_PREFIX}Test"
         artemisNode.client.started!!.session.createQueue(
-                QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
+                QueueConfiguration.of(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
         )
 
         val clientConnectionChangeStatus = client.waitForInitialConnectionAndCaptureChanges(expectedConnectedStatus)

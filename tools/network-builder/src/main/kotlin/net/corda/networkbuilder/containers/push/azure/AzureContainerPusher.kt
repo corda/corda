@@ -8,6 +8,7 @@ import net.corda.networkbuilder.containers.push.azure.RegistryLocator.Companion.
 import net.corda.networkbuilder.docker.DockerUtils
 import org.slf4j.LoggerFactory
 import java.io.Closeable
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 
 class AzureContainerPusher(private val azureRegistry: Registry) : ContainerPusher {
@@ -22,7 +23,7 @@ class AzureContainerPusher(private val azureRegistry: Registry) : ContainerPushe
                 registryUser,
                 registryPassword)
 
-        val privateRepoUrl = "${azureRegistry.loginServerUrl()}/$remoteImageName".toLowerCase()
+        val privateRepoUrl = "${azureRegistry.loginServerUrl()}/$remoteImageName".lowercase(Locale.getDefault())
         dockerClient.tagImageCmd(localImageId, privateRepoUrl, networkName).exec()
         val result = CompletableFuture<String>()
         dockerClient.pushImageCmd("$privateRepoUrl:$networkName")

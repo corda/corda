@@ -15,7 +15,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.RPC_UPLOADER
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -408,7 +407,8 @@ class CordaRPCOpsImplTest {
     @Test(timeout=300_000)
 	fun `non-ContractState class for the contractStateType param in vault queries`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
-        val nonContractStateClass: Class<out ContractState> = uncheckedCast(Cash::class.java)
+        @Suppress("UNCHECKED_CAST")
+        val nonContractStateClass = Cash::class.java as Class<ContractState>
         withPermissions(invokeRpc("vaultTrack"), invokeRpc("vaultQuery")) {
             assertThatThrownBy { rpc.vaultQuery(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
             assertThatThrownBy { rpc.vaultTrack(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)

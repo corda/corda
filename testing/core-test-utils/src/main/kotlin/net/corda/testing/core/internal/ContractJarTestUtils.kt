@@ -1,8 +1,6 @@
 package net.corda.testing.core.internal
 
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.delete
-import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.JarSignatureTestUtils.addManifest
@@ -24,6 +22,8 @@ import javax.tools.JavaFileObject
 import javax.tools.SimpleJavaFileObject
 import javax.tools.StandardLocation
 import javax.tools.ToolProvider
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
 
 object ContractJarTestUtils {
 
@@ -47,8 +47,8 @@ object ContractJarTestUtils {
         val pwd = "testPassword"
         this.generateKey(alias, pwd, ALICE_NAME.toString())
         val signer = this.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
-        (this / "_shredder").delete()
-        (this / "_teststore").delete()
+        (this / "_shredder").deleteExisting()
+        (this / "_teststore").deleteExisting()
         return signer
     }
 
@@ -133,8 +133,8 @@ object ContractJarTestUtils {
             } else keyStoreDir
 
         val signer = workingDir.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
-        (workingDir / "_shredder").delete()
-        (workingDir / "_teststore").delete()
+        (workingDir / "_shredder").deleteExisting()
+        (workingDir / "_teststore").deleteExisting()
         return workingDir.resolve(jarName) to signer
     }
 }

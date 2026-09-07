@@ -1,0 +1,34 @@
+apply plugin: "corda.kotlin-1.2"
+apply plugin: "corda.common-publishing"
+
+description 'Corda core built with Kotlin 1.2'
+
+sourceSets {
+    main {
+        java.srcDir("../core/src/main/java")
+        kotlin.srcDir("../core/src/main/kotlin")
+    }
+}
+
+dependencies {
+    // Use the same dependencies as core (minus Kotlin)
+    implementation(project(path: ":core", configuration: "resolvableImplementation")) {
+        exclude(group: "org.jetbrains.kotlin")
+    }
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_1_2_version"
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
+}
+
+jar {
+    archiveBaseName = 'corda-core-1.2'
+}
+
+// TODO Don't publish publicly as it's only needed by the `verifier` module which consumes this into a fat jar.
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-core-1.2'
+            from components.java
+        }
+    }
+}
