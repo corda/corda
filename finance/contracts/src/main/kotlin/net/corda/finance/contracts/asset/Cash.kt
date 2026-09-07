@@ -9,6 +9,7 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.sum
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -18,6 +19,7 @@ import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.contracts.utils.sumCashOrNull
 import net.corda.finance.contracts.utils.sumCashOrZero
 import net.corda.finance.schemas.CashSchemaV1
+import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
 
@@ -132,6 +134,20 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     override fun generateMoveCommand() = Commands.Move()
 
     override fun verify(tx: LedgerTransaction) {
+
+        val values: List<BigDecimal> = listOf(
+                "10", "20", "30", "40", "50",
+                "60", "70", "80", "90", "105"
+        ).map { BigDecimal(it) }
+
+        val sum: BigDecimal = values.sum()
+
+        println("**** sum of the bigdecimal values: $sum")
+
+        requireThat {
+            "Sum of BigDecimal values is 555" using (sum.compareTo(BigDecimal("555")) == 0)
+        }
+
         // Each group is a set of input/output states with distinct (reference, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
         val groups = tx.groupStates { it: Cash.State -> it.amount.token }
