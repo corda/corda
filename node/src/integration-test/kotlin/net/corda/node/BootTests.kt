@@ -6,6 +6,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
+import net.corda.core.serialization.internal._rpcClientSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.internal.NodeStartup
@@ -23,6 +24,7 @@ import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.After
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
@@ -31,13 +33,20 @@ import java.io.Serializable
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
 import kotlin.io.path.readLines
 import kotlin.io.path.useDirectoryEntries
 import kotlin.io.path.useLines
 import kotlin.test.assertEquals
 
 class BootTests {
+    @After
+    fun cleanup() {
+        // Clean up RPC client serialization environment to prevent interference with other tests
+        if (_rpcClientSerializationEnv.get() != null) {
+            _rpcClientSerializationEnv.set(null)
+        }
+    }
+
     @Test(timeout=300_000)
 	fun `java deserialization is disabled`() {
         val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))

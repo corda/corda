@@ -72,5 +72,6 @@ private class CompositeMessage(message: String?, private val formatArg: String?,
 
     override fun getParameters(): Array<out Any?>? = parameters
 
+    @Suppress("DEPRECATION")
     override fun getFormat(): String? = formatArg
 }
