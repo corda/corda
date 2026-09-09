@@ -137,7 +137,7 @@ buildscript {
             "unknown"
         }
     }()
-    ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/$baseVersion"
+    ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/${baseVersion.split('-')[0]}"
     repositories {
         mavenLocal()
         // Use system environment to activate caching with Artifactory,
