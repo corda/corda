@@ -48,6 +48,7 @@ pipeline {
 
     parameters {
         booleanParam defaultValue: true, description: 'Run tests during this build?', name: 'DO_TEST'
+        booleanParam defaultValue: false, description: 'Skip publishing to Docker Hub?', name: 'SKIP_PUBLISH_DOCKER_HUB'
     }
 
     /*
@@ -55,7 +56,7 @@ pipeline {
      */
     environment {
         ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
-        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials-2')
         BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
         BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
         BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
@@ -270,8 +271,8 @@ pipeline {
             steps {
                 rtServer(
                         id: 'R3-Artifactory',
-                        url: 'https://software.r3.com/artifactory',
-                        credentialsId: 'artifactory-credentials'
+                        url: 'https://software2.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials-2'
                 )
                 rtGradleDeployer(
                         id: 'deployer',
@@ -306,10 +307,10 @@ pipeline {
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
-                            '-Pdocker.image.repository=entdocker.software.r3.com/corda',
+                            '-Pdocker.image.repository=entdocker.software2.r3.com/corda',
                             'docker:pushDockerImage',
                             '--image OFFICIAL',
-                            '--registry-url=entdocker.software.r3.com'
+                            '--registry-url=entdocker.software2.r3.com'
                             ].join(' ')
                 }
             }
@@ -317,7 +318,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !params.SKIP_PUBLISH_DOCKER_HUB }
             }
             steps {
                 withCredentials([
