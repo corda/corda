@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 NODE_LIST=("dockerNode1" "dockerNode2" "dockerNode3")
 NETWORK_NAME=mininet
-CORDAPP_VERSION="4.12.12"
-DOCKER_IMAGE_VERSION="corda-zulu-4.12.12"
+CORDAPP_VERSION="4.12.12-1"
+DOCKER_IMAGE_VERSION="corda-zulu-4.12.12-1"
 
 mkdir cordapps
 rm -f cordapps/*
