@@ -5089,8 +5089,6 @@ public interface net.corda.core.node.services.IdentityService
   public abstract void registerKey(java.security.PublicKey, net.corda.core.identity.Party, java.util.UUID)
   @NotNull
   public net.corda.core.identity.Party requireWellKnownPartyFromAnonymous(net.corda.core.identity.AbstractParty)
-  @Suspendable
-  public void updateProofCacheFromTransaction(net.corda.core.transactions.SignedTransaction)
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate verifyAndRegisterIdentity(net.corda.core.identity.PartyAndCertificate)
   @Nullable
