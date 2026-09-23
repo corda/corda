@@ -156,6 +156,7 @@ see changes to this list.
 * Manish Kumar (ChainThat)
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
+* Nishant Mehta (R3)
 * Nitesh Solanki (Persistent Systems Limited)
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Scopus Soluções em TI)
