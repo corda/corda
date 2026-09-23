@@ -188,11 +188,6 @@ interface IdentityService {
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 
     @Suspendable
-    fun updateProofCacheFromTransaction(stx: SignedTransaction) {
-        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
-    }
-
-    @Suspendable
     fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
         throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
     }
