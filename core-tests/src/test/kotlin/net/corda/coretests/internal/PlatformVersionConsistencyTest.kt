@@ -1,5 +1,6 @@
-package net.corda.core.internal
+package net.corda.coretests.internal
 
+import net.corda.core.internal.PLATFORM_VERSION
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,8 +20,9 @@ import kotlin.test.assertEquals
  * written before the Quasar 0.9.3_r3 stack-frame-poisoning fix are rejected rather than resumed. If the two
  * constants drift, that rejection is silently lost.
  *
- * Note this only covers this repository; Corda Enterprise has its own constants.properties which can drift
- * from here independently.
+ * This test lives in core-tests, which exists in Corda Enterprise as well, so it is carried across by the
+ * usual merge up. There it compares Enterprise's own constants.properties against the [PLATFORM_VERSION]
+ * inherited from this repository's core artifact, which also catches the two repositories drifting apart.
  */
 class PlatformVersionConsistencyTest {
 
