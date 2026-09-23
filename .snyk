@@ -464,4 +464,97 @@ ignore:
           our shipped product.
         expires: 2029-08-01T01:00:00.000Z
         created: 2026-08-20T00:00:00.000Z
+  SNYK-JAVA-ORGECLIPSEJETTY-19644207:
+    - '*':
+        reason: >-
+          CVE-2026-19203: The vulnerable Jetty server classes are only pulled
+          in by test-only tooling and by the unsupported demo webserver
+          (testing/testserver). Specifically, the test-only tooling and the
+          demo webserver artifacts are not included in the released Corda
+          Enterprise node artifact, so production nodes do not ship embedded
+          Jetty server classes (for example, org.eclipse.jetty.server.*).
+          Production nodes use Artemis/AMQP for P2P and RPC, hence Corda is
+          safe from this vulnerability.
+          This issue is fixed in newer versions (12.0.38, 12.1.12), but those
+          versions are not compatible with the Corda 4.11 baseline (Java 8 and Kotlin
+          1.2.71). So best we could do is move to latest version we can, that is
+          org.eclipse.jetty:jetty-http@9.4.58.v20250814.
+          Fix : org.eclipse.jetty:jetty-http@12.0.38, @12.1.12
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T01:00:00.000Z
+        created: 2026-09-10T00:00:00.000Z
+  SNYK-JAVA-IOMICROMETER-19233327:
+    - '*':
+        reason: >-
+          CVE-2026-59296: CRLF injection via DatadogStatsdLineBuilder,
+          EtsyStatsdLineBuilder, and LoggingMeterRegistry's Printer. This
+          micrometer-core dependency is pulled in transitively by
+          artemis-server to support Artemis's optional
+          metrics plugin. Corda's embedded
+          broker configuration (SecureArtemisConfiguration) never registers a
+          MetricsPlugin, so none of the vulnerable Micrometer registry
+          implementations are ever instantiated or invoked. Corda is not
+          exposed to this issue.
+          This issue is fixed in newer versions (1.16.7, 1.17.1), but those
+          versions are not compatible with the Corda 4.11 baseline (Java 8 and Kotlin
+          1.2.71). So best we could do is move to latest version we can, that is
+          transitive via artemis-server (artemisVersion=2.19.2_r3).
+          Fix : upgrade io.micrometer:micrometer-core@1.16.7, @1.17.1
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-09-10T00:00:00.000Z
+  SNYK-JAVA-IOMICROMETER-19256585:
+    - '*':
+        reason: >-
+          CVE-2026-59295: This vulnerability affects Micrometer and is reported
+          through test-utils in this codebase. Production Corda node runtime
+          does not rely on this path as an externally exposed attack surface,
+          and Corda is not exposed to this issue in deployed node environments.
+          This issue is fixed in newer versions (1.16.7, 1.17.1), but those
+          versions are not compatible with the Corda 4.11 baseline (Java 8 and Kotlin
+          1.2.71). So best we could do is move to latest version we can, that is
+          transitive via artemis-server (artemisVersion=2.19.2_r3).
+          Fix : io.micrometer:micrometer-core@1.16.7, @1.17.1
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-09-11T00:00:00.000Z
+  SNYK-JAVA-ORGECLIPSEJETTY-18230908:
+    - '*':
+        reason: >-
+          CVE-2026-6790: (Jetty request-authority/Host-header mismatch) affects
+          Jetty HTTP server request handling, but in this codebase the relevant
+          Jetty server classes are pulled in through test/sample paths and are
+          not part of the released Corda Enterprise node artifact. Production
+          nodes use Artemis/AMQP for P2P and RPC and do not expose an embedded
+          Jetty HTTP server attack surface.
+          This issue is fixed in newer versions (9.4.61, 10.0.29, 11.0.29,
+          12.0.35, 12.1.9), but those versions are not compatible with the Corda
+          4.11 baseline (Java 8 and Kotlin 1.2.71). So best we could do is move
+          to latest version we can, that is org.eclipse.jetty:jetty-servlet@9.4.58.v20250814.
+          Fix : org.eclipse.jetty:jetty-server@9.4.61, @10.0.29, @11.0.29, @12.0.35, @12.1.9
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-09-15T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHESHIRO-17756769:
+    - '*':
+        reason: >-
+          CVE-2026-56130: This vulnerability affects Apache Shiro's RememberMe
+          cookie functionality, which is only present in the shiro-web module.
+          Corda does not use shiro-web, and RPCSecurityManagerImpl uses Shiro
+          only for RPC authentication and authorisation (not browser/web
+          sessions), with RememberMe never enabled. Corda is not exposed to
+          this issue.
+          This issue is fixed in newer version (3.0.0), but this version is not
+          compatible with Java 8 and Kotlin 1.2.71. So best we could do is move
+          to latest version we can, that is
+          org.apache.shiro:shiro-lang@1.10.0.
+          Fix : org.apache.shiro:shiro-lang@3.0.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-09-15T00:00:00.000Z
 patch: {}

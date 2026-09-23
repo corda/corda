@@ -580,6 +580,12 @@ allprojects {
                     if (details.requested.group == 'io.projectreactor.netty' && details.requested.name == "reactor-netty-http") {
                         details.useVersion reactor_netty_version
                     }
+
+                    // Force all transitive junit:junit references to the same pinned version,
+                    // so a dependency can't silently pull in an older, unpatched junit:junit.
+                    if (details.requested.group == 'junit' && details.requested.name == 'junit') {
+                        details.useVersion junit_version
+                    }
                 }
 
                 dependencySubstitution {
