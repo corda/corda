@@ -40,23 +40,22 @@ class MinimalPoisonedFrameTest {
         assertEquals(16 * safe, run(safe))
     }
 
+    /**
+     * See the comments associated with StalePrimitiveSlotTest in https://github.com/corda/quasar/pull/187
+     * for full details behind the magic values in this test.
+     */
     @Test
-    fun valueAbove2Pow50_flowNeverCompletes() {
+    fun valueAbove2Pow50_flowCompletes() {
         val poison = 1L shl 50              // top 14 bits = 1
         assertEquals(16 * poison, run(poison))
-        // Before quasar fix in 0.9.3_r3
+        // Before quasar fix in 0.9.3_r3 / ENT-15078, this test would fail as per below commented out code
         //assertFailsWith<TimeoutException> { run(poison) }
     }
 
     private fun run(value: Long): Long {
-        //Debug.getGlobalFlightRecorder().clear()
         val future = node.startFlow(MinimalParentFlow(value))
         mockNet.runNetwork()
-        try {
-            return future.getOrThrow(Duration.ofSeconds(30))
-        } finally {
-            //Debug.getGlobalFlightRecorder().dump(System.out)
-        }
+        return future.getOrThrow(Duration.ofSeconds(30))
     }
 
     class MinimalParentFlow(private val value: Long) : FlowLogic<Long>() {
