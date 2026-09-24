@@ -329,7 +329,7 @@ data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
         val distributionList: ByteArray,
         val isFinality: Boolean,
-        // ENT-14904: when true, this transaction reached the peer over a duplicate session to the same
+        // When true, this transaction reached the peer over a duplicate session to the same
         // counterparty; the receiver must skip writing its distribution record to avoid a PK violation.
         val ignoreDistributionRecord: Boolean
 ) {
