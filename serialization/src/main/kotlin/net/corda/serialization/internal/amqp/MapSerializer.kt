@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.contracts.PublicKeyComparator
+import net.corda.core.contracts.newKeyRotationProofChainMap
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
@@ -37,7 +37,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },
                 TreeMap::class.java to { map ->
                     if(map.keys.all { it is PublicKey } && map.values.all { it is KeyRotationProofChain } ) {
-                        TreeMap<PublicKey, KeyRotationProofChain>(PublicKeyComparator).apply { putAll(uncheckedCast<Map<*, *>, Map<PublicKey, KeyRotationProofChain>>(map)) }
+                        newKeyRotationProofChainMap().apply { putAll(uncheckedCast<Map<*, *>, Map<PublicKey, KeyRotationProofChain>>(map)) }
                     } else {
                         TreeMap(map)
                     }
