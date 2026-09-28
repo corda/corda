@@ -3,10 +3,13 @@ package net.corda.core.crypto.keyrotation.crossprovider
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.services.IdentityService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.Mockito.CALLS_REAL_METHODS
+import org.mockito.kotlin.mock
 import java.security.KeyPair
 import java.security.PublicKey
 
@@ -158,6 +161,40 @@ class PartyIdentityResolverTest {
         assertFalse(resolver.isRequiredSigner(signers, originalParty))
         assertFalse(resolver.isRequiredSigner(signers, tamperedProofParty))
     }
+
+    // An IdentityService that does not override the proof-chain methods behaves as a Corda OS node: it has never rotated a
+    // key across providers, so every party must resolve to itself and the resolver must keep working without any proof.
+    @Test(timeout=300_000)
+    fun `an identity service without cross-provider key rotation resolves every party to itself`() {
+
+        val originalParty = newParty("Alice", newKeyPair().public)
+        val resolver = PartyIdentityResolver(identityServiceWithoutKeyRotation())
+        val resolvedParty = resolver.resolve(originalParty)
+
+        assertFalse(resolvedParty.containsProof())
+        assertEquals(null, resolvedParty.proofChain)
+        assertEquals(originalParty, resolvedParty.originalOrCurrentParty)
+        assertEquals(originalParty.owningKey, resolvedParty.getOriginalKey())
+        assertEquals(originalParty.owningKey, resolvedParty.getOwningKey())
+        assertEquals(null, PartyIdentityResolver.generateProofChainMap(resolvedParty))
+    }
+
+    @Test(timeout=300_000)
+    fun `an identity service without cross-provider key rotation compares keys by equality only`() {
+
+        val originalParty = newParty("Alice", newKeyPair().public)
+        val sameNameOtherKey = newParty("Alice", newKeyPair().public)
+        val resolver = PartyIdentityResolver(identityServiceWithoutKeyRotation())
+
+        assertTrue(resolver.isSameParty(originalParty, originalParty))
+        assertFalse(resolver.isSameParty(originalParty, sameNameOtherKey))
+        assertTrue(resolver.isRequiredSigner(listOf(originalParty.owningKey), originalParty))
+        assertFalse(resolver.isRequiredSigner(listOf(sameNameOtherKey.owningKey), originalParty))
+    }
+
+    // Keeps the interface's default implementations of getProofChain and containsProofChain, which is exactly what a
+    // Corda OS node exposes.
+    private fun identityServiceWithoutKeyRotation(): IdentityService = mock(defaultAnswer = CALLS_REAL_METHODS)
 
     private fun newParty(commonName: String, publicKey: PublicKey): Party {
         return Party(CordaX500Name(commonName, "London", "GB"), publicKey)

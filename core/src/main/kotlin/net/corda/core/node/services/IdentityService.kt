@@ -14,7 +14,6 @@ import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
 import java.util.*
-import javax.transaction.NotSupportedException
 
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
@@ -34,6 +33,7 @@ interface IdentityService {
 
     companion object {
         private val log = contextLogger()
+        private val EMPTY_PROOF_CHAIN = KeyRotationProofChain(emptyList())
     }
 
     /**
@@ -187,15 +187,23 @@ interface IdentityService {
      */
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 
+    /**
+     * Returns the cross-provider key rotation proof chain that links [publicKey] to the key that currently replaces it.
+     *
+     * Cross-provider key rotation is only performed by Corda Enterprise, which overrides this method. A Corda OS node never
+     * rotates a key across providers, so no key ever has a proof chain and the default returns an empty chain. This keeps
+     * CorDapps that resolve parties through [net.corda.core.crypto.keyrotation.crossprovider.PartyIdentityResolver] working
+     * on both editions: on Corda OS every party resolves to itself.
+     */
     @Suspendable
-    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
-        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
-    }
+    fun getProofChain(publicKey: PublicKey): KeyRotationProofChain = EMPTY_PROOF_CHAIN
 
+    /**
+     * Returns true if [publicKey] has been rotated across providers and therefore has a proof chain. Always false on Corda OS,
+     * see [getProofChain].
+     */
     @Suspendable
-    fun containsProofChain(publicKey: PublicKey): Boolean {
-        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
-    }
+    fun containsProofChain(publicKey: PublicKey): Boolean = false
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
