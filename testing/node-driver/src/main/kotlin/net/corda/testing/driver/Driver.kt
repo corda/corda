@@ -6,7 +6,6 @@ import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
@@ -31,6 +30,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.io.path.div
 
 /**
  * Object ecapsulating a notary started automatically by the driver.
@@ -98,7 +98,6 @@ interface InProcess : NodeHandle {
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
-     * @param context indicates who started the flow, see: [InvocationContext].
      */
     fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, internalServices.newContext())
             .getOrThrow().resultFuture
@@ -628,7 +627,7 @@ data class DriverParameters(
              waitForAllNodesToFinish: Boolean,
              notarySpecs: List<NotarySpec>,
              extraCordappPackagesToScan: List<String>,
-             @Suppress("DEPRECATION") jmxPolicy: JmxPolicy,
+             jmxPolicy: JmxPolicy,
              networkParameters: NetworkParameters,
              notaryCustomOverrides: Map<String, Any?>,
              inMemoryDB: Boolean,

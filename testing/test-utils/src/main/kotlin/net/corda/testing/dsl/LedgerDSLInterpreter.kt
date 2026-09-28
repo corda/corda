@@ -10,6 +10,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import java.io.InputStream
+import java.util.Locale
 
 /**
  * This interface defines output state lookup by label. It is split from the interpreter interfaces so that outputs may
@@ -52,7 +53,7 @@ interface Verifies {
                             "Expected exception containing '$expectedMessage' but raised exception had no message",
                             exception
                     )
-                } else if (!exceptionMessage.toLowerCase().contains(expectedMessage.toLowerCase())) {
+                } else if (!exceptionMessage.lowercase(Locale.getDefault()).contains(expectedMessage.lowercase(Locale.getDefault()))) {
                     throw AssertionError(
                             "Expected exception containing '$expectedMessage' but raised exception was '$exception'",
                             exception

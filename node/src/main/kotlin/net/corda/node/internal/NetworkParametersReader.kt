@@ -2,9 +2,6 @@ package net.corda.node.internal
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.moveTo
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
@@ -15,8 +12,10 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.moveTo
 
 class NetworkParametersReader(private val trustRoots: Set<X509Certificate>,
                               private val networkMapClient: NetworkMapClient?,
@@ -80,7 +79,7 @@ class NetworkParametersReader(private val trustRoots: Set<X509Certificate>,
         if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
             throw Error.OldParamsAndUpdate()
         }
-        parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
+        parametersUpdateFile.moveTo(networkParamsFile, overwrite = true)
         logger.info("Scheduled update to network parameters has occurred - node now updated to these new parameters.")
         return signedUpdatedParameters
     }

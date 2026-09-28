@@ -13,10 +13,6 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.createDirectory
-import net.corda.core.internal.delete
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -55,12 +51,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.atLeast
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.never
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
@@ -69,13 +65,18 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.createDirectory
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.hamcrest.MatcherAssert
+import org.hamcrest.MatcherAssert.assertThat
+
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -161,7 +162,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
+        assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
 
         assertThat(nodeReadyFuture).isDone()
 
@@ -173,7 +174,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         //4 node info from network map, and 1 from file.
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
@@ -204,7 +205,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
 
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash,
                 signedNodeInfo3.raw.hash,
@@ -225,7 +226,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).removeNode(nodeInfo4)
 
         //Node info from file should not be deleted
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
 
     @Test(timeout=300_000)
@@ -248,7 +249,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
                 signedNodeInfo1.raw.hash,
                 signedNodeInfo2.raw.hash
         ))
@@ -265,7 +266,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(0)).removeNode(nodeInfo2)
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo2_2))
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo3))
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+        assertThat(networkMapCache.allNodeHashes).hasSameElementsAs(listOf(
                 signedNodeInfo2_2.raw.hash,
                 signedNodeInfo3.raw.hash
         ))
@@ -289,7 +290,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
         assertThat(nodeReadyFuture).isDone()
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
 
     @Test(timeout=300_000)
@@ -300,7 +301,7 @@ class NetworkMapUpdaterTest {
         // Not subscribed yet
         verify(networkMapCache, times(0)).addOrUpdateNode(any())
 
-        nodeInfoDir.delete()
+        nodeInfoDir.deleteExisting()
         assertFalse(nodeInfoDir.exists())
 
         // Observable will get a NoSuchFileException and log it
@@ -323,7 +324,7 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
         assertThat(nodeReadyFuture).isDone
 
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned.nodeInfo.serialize().hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
 
     @Test(timeout=300_000)
@@ -513,14 +514,14 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(2)).addOrUpdateNode(any())
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned1.nodeInfo)
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned2.nodeInfo)
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned1.signed.raw.hash, fileNodeInfoAndSigned2.signed.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(fileNodeInfoAndSigned1.signed.raw.hash, fileNodeInfoAndSigned2.signed.raw.hash)
         //Remove one of the nodes
         val fileName1 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${fileNodeInfoAndSigned1.nodeInfo.legalIdentities[0].name.serialize().hash}"
-        (nodeInfoDir / fileName1).delete()
+        (nodeInfoDir / fileName1).deleteExisting()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache, times(1)).removeNode(fileNodeInfoAndSigned1.nodeInfo)
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(fileNodeInfoAndSigned2.signed.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned2.signed.raw.hash)
     }
 
     @Test(timeout=300_000)
@@ -543,15 +544,15 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         //Node from file has higher serial than the one from NetworkMapServer
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(localSignedNodeInfo.signed.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash)
         val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
-        (nodeInfoDir / fileName).delete()
+        (nodeInfoDir / fileName).deleteExisting()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache).removeNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         //Instead of node from file we should have now the one from NetworkMapServer
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(serverSignedNodeInfo.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsOnly(serverSignedNodeInfo.raw.hash)
     }
 
     //Test fix for ENT-1882
@@ -568,7 +569,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
-        MatcherAssert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash)
     }
 
     @Test(timeout=300_000)

@@ -11,6 +11,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import java.security.MessageDigest
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.function.Supplier
@@ -182,7 +183,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          */
         @JvmStatic
         fun parse(str: String?): SHA256 {
-            return str?.toUpperCase()?.parseAsHex()?.let {
+            return str?.uppercase(Locale.getDefault())?.parseAsHex()?.let {
                 when (it.size) {
                     32 -> interner.intern(SHA256(it))
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")

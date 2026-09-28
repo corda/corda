@@ -178,7 +178,6 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     inline fun <R> span(name: String, attributes: Map<String, String> = emptyMap(), flowLogic: FlowLogic<*>? = null, block: () -> R): R {
         val telemetryId = startSpan(name, attributes, flowLogic)
         try {
@@ -195,7 +194,7 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
     }
 
     @CordaInternal
-    @Suppress("LongParameterList", "TooGenericExceptionCaught")
+    @Suppress("LongParameterList")
     inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
         val telemetryId = startSpanForFlow(name, attributes, flowLogic, remoteSerializedTelemetry)
         try {

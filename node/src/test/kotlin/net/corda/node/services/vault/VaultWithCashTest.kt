@@ -1,6 +1,6 @@
 package net.corda.node.services.vault
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.LinearState
@@ -83,7 +83,7 @@ class VaultWithCashTest {
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
                 networkParameters,
-                moreKeys = *arrayOf(dummyNotary.keyPair))
+                moreKeys = arrayOf(dummyNotary.keyPair))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)

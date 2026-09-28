@@ -1,5 +1,6 @@
 package net.corda.testing.driver.internal
 
+import jakarta.validation.constraints.NotNull
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
@@ -14,7 +15,6 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.node.User
 import rx.Observable
 import java.nio.file.Path
-import javax.validation.constraints.NotNull
 
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration

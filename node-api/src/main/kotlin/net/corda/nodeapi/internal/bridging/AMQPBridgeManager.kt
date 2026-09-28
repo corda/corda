@@ -1,6 +1,6 @@
-@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions in many places
 package net.corda.nodeapi.internal.bridging
 
+import co.paralleluniverse.fibers.instrument.DontInstrument
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.netty.channel.EventLoop
 import io.netty.channel.EventLoopGroup
@@ -155,7 +155,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("bridge-connection-reset-%d").build())
 
         private fun artemis(inProgress: ArtemisState, block: (precedingState: ArtemisState) -> ArtemisState) {
-            val runnable = {
+            val runnable = @DontInstrument {
                 synchronized(artemis!!) {
                     try {
                         val precedingState = artemisState
@@ -276,7 +276,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                     closeConsumer()
                     consumer = null
                     val closingSession = session
-                    eventLoop.execute {
+                    eventLoop.execute @DontInstrument {
                         synchronized(artemis!!) {
                             if (session == closingSession) {
                                 artemis(ArtemisState.STOPPING) {

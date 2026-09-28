@@ -1,12 +1,12 @@
 package net.corda.webserver.internal
 
+import jakarta.ws.rs.core.Response
 import net.corda.core.contracts.ContractState
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.webserver.api.APIServer
 import java.time.LocalDateTime
 import java.time.ZoneId
-import javax.ws.rs.core.Response
 
 class APIServerImpl(val rpcOps: CordaRPCOps) : APIServer {
     override fun serverTime(): LocalDateTime {

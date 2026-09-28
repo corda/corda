@@ -17,6 +17,7 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
+import net.corda.node.services.config.CustomConfiguration
 import net.corda.node.services.config.DevModeOptions
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
@@ -225,14 +226,6 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
     }
 }
 
-internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
-    private val rotatedKeys by string().listOrEmpty()
-    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
-        val config = configuration.withOptions(options)
-        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
-    }
-}
-
 internal object TelemetryConfigurationSpec : Configuration.Specification<TelemetryConfiguration>("TelemetryConfiguration") {
     private val openTelemetryEnabled by boolean()
     private val simpleLogTelemetryEnabled by boolean()
@@ -242,6 +235,23 @@ internal object TelemetryConfigurationSpec : Configuration.Specification<Telemet
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<TelemetryConfiguration> {
         val config = configuration.withOptions(options)
         return valid(TelemetryConfiguration(config[openTelemetryEnabled], config[simpleLogTelemetryEnabled], config[spanStartEndEventsEnabled], config[copyBaggageToTags]))
+    }
+}
+
+internal object CustomConfigurationSpec : Configuration.Specification<CustomConfiguration>("CustomConfiguration") {
+    private val jvmArgs by string().listOrEmpty()
+    private val externalVerifierJvmArgs by string().listOrEmpty()
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CustomConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(CustomConfiguration(config[jvmArgs], config[externalVerifierJvmArgs]))
+    }
+}
+
+internal object RotatedSignerKeySpec : Configuration.Specification<RotatedCorDappSignerKeyConfiguration>("RotatedCorDappSignerKeyConfiguration") {
+    private val rotatedKeys by string().listOrEmpty()
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RotatedCorDappSignerKeyConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(RotatedCorDappSignerKeyConfiguration(config[rotatedKeys]))
     }
 }
 

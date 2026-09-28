@@ -133,7 +133,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
 
         assertTrue(deserializedObj is I)
-        assertEquals(testVal, (deserializedObj as I).getName())
+        assertEquals(testVal, deserializedObj.getName())
     }
 
     @Test(timeout=300_000)
@@ -270,7 +270,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
         val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
         assertTrue(deserializedObj is I)
-        assertEquals("timmy", (deserializedObj as I).getName())
+        assertEquals("timmy", deserializedObj.getName())
         assertEquals("timmy", deserializedObj::class.java.getMethod("getName").invoke(deserializedObj))
         assertEquals(12, deserializedObj::class.java.getMethod("getAge").invoke(deserializedObj))
     }

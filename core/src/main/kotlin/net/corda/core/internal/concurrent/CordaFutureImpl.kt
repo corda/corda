@@ -84,7 +84,6 @@ fun <ELEMENT> CordaFuture<out ELEMENT>.mapError(transform: (Throwable) -> Throwa
  * But if this future or the transform fails, the returned future's outcome is the same throwable.
  * In the case where this future fails, the transform is not invoked.
  */
-@Suppress("TooGenericExceptionCaught")
 fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
     thenMatch(success@ {
         result.captureLater(try {
@@ -146,7 +145,6 @@ interface ValueOrException<in V> {
     fun captureLater(f: CordaFuture<out V>) = f.then { capture { f.getOrThrow() } }
 
     /** Run the given block (in the foreground) and set this future to its outcome. */
-    @Suppress("TooGenericExceptionCaught")
     fun capture(block: () -> V): Boolean {
         return set(try {
             block()
@@ -164,18 +162,17 @@ interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 
 /** Unless you really want this particular implementation, use [openFuture] to make one. */
 @VisibleForTesting
-internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
+class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
     companion object {
         private val defaultLog = contextLogger()
-        internal const val listenerFailedMessage = "Future listener failed:"
+        const val listenerFailedMessage = "Future listener failed:"
     }
 
     override fun set(value: V) = impl.complete(value)
     override fun setException(t: Throwable) = impl.completeExceptionally(t)
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)
     /** For testing only. */
-    @Suppress("TooGenericExceptionCaught")
-    internal fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
+    fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
         impl.whenComplete { _, _ ->
             try {
                 callback(this)
@@ -198,4 +195,4 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
     }
 }
 
-internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
+fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)

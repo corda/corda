@@ -1,5 +1,13 @@
 package net.corda.node.utilities.registration
 
+import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.readFully
@@ -40,9 +48,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.ws.rs.*
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
 
 class NodeRegistrationTest {
     companion object {
@@ -65,7 +70,7 @@ class NodeRegistrationTest {
                 pollInterval = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
-                additionalServices = *arrayOf(registrationHandler))
+                additionalServices = arrayOf(registrationHandler))
         serverHostAndPort = server.start()
     }
 

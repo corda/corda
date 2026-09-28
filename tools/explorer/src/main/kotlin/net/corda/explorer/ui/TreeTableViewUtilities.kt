@@ -12,13 +12,14 @@ import org.fxmisc.easybind.EasyBind
 fun <S> TreeTableView<S>.setColumnPrefWidthPolicy(
         getColumnWidth: (tableWidthWithoutPaddingAndBorder: Number, column: TreeTableColumn<S, *>) -> Number
 ) {
+    @Suppress("SpreadOperator")
     val tableWidthWithoutPaddingAndBorder = Bindings.createDoubleBinding({
         val padding = padding
         val borderInsets = border?.insets
         width -
                 (if (padding != null) padding.left + padding.right else 0.0) -
                 (if (borderInsets != null) borderInsets.left + borderInsets.right else 0.0)
-    }, arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
+    }, *arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
 
     columns.forEach {
         it.setPrefWidthPolicy(tableWidthWithoutPaddingAndBorder, getColumnWidth)
@@ -47,6 +48,7 @@ fun <S, T> Formatter<T>.toTreeTableCellFactory() = Callback<TreeTableColumn<S, T
     }
 }
 
+@Suppress("SpreadOperator")
 fun <S> TreeTableView<S>.singleRowSelection(): ObservableValue<out SingleRowSelection<S>> =
         Bindings.createObjectBinding({
             if (selectionModel.selectedItems.size == 0) {
@@ -54,4 +56,4 @@ fun <S> TreeTableView<S>.singleRowSelection(): ObservableValue<out SingleRowSele
             } else {
                 SingleRowSelection.Selected(selectionModel.selectedItems[0].value)
             }
-        }, arrayOf(selectionModel.selectedItems))
+        }, *arrayOf(selectionModel.selectedItems))

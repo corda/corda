@@ -62,7 +62,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         val connection = url.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoots)
-        val timeout = connection.cacheControl.maxAgeSeconds().seconds
+        val timeout = connection.cacheControl.maxAgeSeconds.seconds
         val version = connection.cordaServerVersion
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout, version)

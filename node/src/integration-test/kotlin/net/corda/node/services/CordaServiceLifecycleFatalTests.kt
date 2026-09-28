@@ -18,7 +18,7 @@ import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-
+import kotlin.io.path.createTempFile
 class CordaServiceLifecycleFatalTests {
 
     companion object {
@@ -34,7 +34,7 @@ class CordaServiceLifecycleFatalTests {
 
         // Temporaty file used as a latch between two processes
         private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
-        private val tmpFile = createTempFile(prefix = tempFilePropertyName)
+        private val tmpFile = createTempFile(prefix = tempFilePropertyName).toFile()
         private const val readyToThrowMarker = "ReadyToThrow"
         private const val goodToThrowMarker = "GoodToThrow"
 

@@ -8,11 +8,11 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class NamedCacheTest : NamedCacheFactory {
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         throw IllegalStateException("Should not be called")
     }
 
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         throw IllegalStateException("Should not be called")
     }
 

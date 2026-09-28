@@ -37,7 +37,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     /**
      * {@inheritDoc}
      */
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         return this
     }

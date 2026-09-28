@@ -4,12 +4,12 @@ import javafx.collections.FXCollections
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.jfx.utils.ChosenList
-import net.corda.client.jfx.utils.map
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.internal.CashConfigDataFlow
 import tornadofx.*
 import java.util.*
+import net.corda.client.jfx.utils.map
 
 class IssuerModel {
 

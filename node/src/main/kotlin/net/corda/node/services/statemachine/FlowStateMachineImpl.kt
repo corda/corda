@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.fibers.Fiber.parkAndSerialize
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
@@ -32,13 +31,12 @@ import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.isIdempotentFlow
-import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.location
-import net.corda.core.internal.toPath
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.telemetry.ComponentTelemetryIds
 import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.internal.telemetry.telemetryServiceInternal
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -48,7 +46,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
-import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
@@ -66,6 +63,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.isRegularFile
 
 class FlowPermissionException(message: String) : FlowException(message)
 
@@ -322,7 +320,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun openThreadLocalWormhole() {
         // This sets the Cordapp classloader on the contextClassLoader of the current thread.
         // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
-        Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
+        Thread.currentThread().contextClassLoader = serviceHub.cordappProvider.appClassLoader
         val threadLocal = transientValues.database.hikariPoolThreadLocal
         if (threadLocal != null) {
             val valueFromThread = swappedOutThreadLocalValue(threadLocal)
@@ -351,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
             // This sets the Cordapp classloader on the contextClassLoader of the current thread.
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
-            Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
+            Thread.currentThread().contextClassLoader = serviceHub.cordappProvider.appClassLoader
 
             // context.serializedTelemetry is from an rpc client, serializedTelemetry is from a peer, otherwise nothing
             val serializedTelemetrySrc = context.serializedTelemetry ?: serializedTelemetry

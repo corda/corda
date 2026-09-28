@@ -18,7 +18,7 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
                 ?: throw KryoException("Attempt to write a ${SerializeAsToken::class.simpleName} instance of ${obj.javaClass.name} without initialising a context")))
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
+    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
         val token = (kryo.readClassAndObject(input) as? SerializationToken)
                 ?: throw KryoException("Non-token read for tokenized type: ${type.name}")
         val fromToken = token.fromToken(kryo.serializationContext()

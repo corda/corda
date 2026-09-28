@@ -1,4 +1,3 @@
-@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions
 package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name
@@ -27,6 +26,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Duration
 import java.util.*
+import kotlin.system.exitProcess
 
 class BridgeControlListener(private val keyStore: CertificateStore,
                             trustStore: CertificateStore,
@@ -88,7 +88,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
             registerBridgeControlListener(artemisSession)
             registerBridgeDuplicateChecker(artemisSession)
             // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
-            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
+            validInboundQueues.addAll(artemisSession.addressQuery(SimpleString.of("$P2P_PREFIX#")).queueNames.map { it.toString() })
             log.info("Found inboxes: $validInboundQueues")
             if (active) {
                 _activeChange.onNext(true)
@@ -107,7 +107,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     private fun registerBridgeControlListener(artemisSession: ClientSession) {
         try {
             artemisSession.createQueue(
-                    QueueConfiguration(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
+                    QueueConfiguration.of(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
                             .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
@@ -129,7 +129,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     private fun registerBridgeDuplicateChecker(artemisSession: ClientSession) {
         try {
             artemisSession.createQueue(
-                    QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
+                    QueueConfiguration.of(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
                             .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
@@ -142,7 +142,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                 val notifyMessage = data.deserialize<BridgeControl.BridgeToNodeSnapshotRequest>(context = SerializationDefaults.P2P_CONTEXT)
                 if (notifyMessage.bridgeIdentity != bridgeId) {
                     log.error("Fatal Error! Two bridges have been configured simultaneously! Check the enterpriseConfiguration.externalBridge status")
-                    System.exit(1)
+                    exitProcess(1)
                 }
             } catch (ex: Exception) {
                 log.error("Unable to process bridge notification message", ex)
@@ -189,11 +189,11 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     }
 
     private fun validateInboxQueueName(queueName: String): Boolean {
-        return queueName.startsWith(P2P_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString(queueName)).isExists
+        return queueName.startsWith(P2P_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString.of(queueName)).isExists
     }
 
     private fun validateBridgingQueueName(queueName: String): Boolean {
-        return queueName.startsWith(PEERS_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString(queueName)).isExists
+        return queueName.startsWith(PEERS_PREFIX) && artemis!!.started!!.session.queueQuery(SimpleString.of(queueName)).isExists
     }
 
     private fun processControlMessage(msg: ClientMessage) {
@@ -204,7 +204,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
             is BridgeControl.NodeToBridgeSnapshot -> {
                 if (!isConfigured(controlMessage.nodeIdentity)) {
                     log.error("Fatal error! Bridge not configured with keystore for node with legal name ${controlMessage.nodeIdentity}.")
-                    System.exit(1)
+                    exitProcess(1)
                 }
                 if (!controlMessage.inboxQueues.all { validateInboxQueueName(it) }) {
                     log.error("Invalid queue names in control message $controlMessage")

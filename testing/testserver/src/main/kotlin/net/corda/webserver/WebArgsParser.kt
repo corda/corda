@@ -6,12 +6,12 @@ import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
-import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.div
 
 // NOTE: Do not use any logger in this class as args parsing is done before the logger is setup.
 class ArgsParser {

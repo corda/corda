@@ -1,13 +1,17 @@
 package net.corda.nodeapi.internal.persistence
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.node.ServiceHub
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import javax.persistence.EntityManager
 import javax.persistence.EntityTransaction
 import javax.persistence.LockModeType
@@ -23,19 +27,39 @@ class RestrictedEntityManagerTest {
     }
     private val restrictedEntityManager = RestrictedEntityManager(entitymanager, serviceHub)
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Rule
+    @JvmField
+    val assertUnsupportedExceptionBasedOnTestName = TestRule { base, description ->
+        object : Statement() {
+            override fun evaluate() {
+                val exception = try {
+                    base.evaluate()
+                    null
+                } catch (e: UnsupportedOperationException) {
+                    e
+                }
+                if (description.methodName.endsWith(" throws unsupported exception")) {
+                    assertThat(exception).isNotNull()
+                } else {
+                    assertThat(exception).isNull()
+                }
+            }
+        }
+    }
+    
+    @Test(timeout = 300_000)
     fun `close with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.close()
     }
 
     @Test(timeout = 300_000)
-    fun `clear with target platform version of current corda version throws unsupported exception`() {
+    fun `clear with target platform version of current corda version`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.clear()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `getMetaModel with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.metamodel
@@ -48,32 +72,32 @@ class RestrictedEntityManagerTest {
         assertTrue(restrictedEntityManager.transaction is RestrictedEntityTransaction)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `joinTransaction with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.joinTransaction()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `lock with two parameters with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `lock with three parameters with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         val map: MutableMap<String, Any> = mutableMapOf()
         restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC, map)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setProperty with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.setProperty("number", 12)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `close with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedEntityManager.close()
@@ -85,39 +109,39 @@ class RestrictedEntityManagerTest {
         restrictedEntityManager.clear()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `getMetaModel with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedEntityManager.metamodel
     }
 
     @Test(timeout = 300_000)
-    fun `getTransaction with target platform version of 7 throws unsupported exception`() {
+    fun `getTransaction with target platform version of 7`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         whenever(entitymanager.transaction).doReturn(transaction)
         assertTrue(restrictedEntityManager.transaction is RestrictedEntityTransaction)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `joinTransaction with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedEntityManager.joinTransaction()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `lock with two parameters with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `lock with three parameters with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         val map: MutableMap<String, Any> = mutableMapOf()
         restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC, map)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setProperty with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedEntityManager.setProperty("number", 12)

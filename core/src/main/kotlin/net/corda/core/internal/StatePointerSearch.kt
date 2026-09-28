@@ -13,7 +13,7 @@ import java.util.*
 class StatePointerSearch(val state: ContractState) {
     private companion object {
         // Classes in these packages should not be part of a search.
-        private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle.", "net.i2p.crypto.")
+        private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle.")
     }
 
     // Type required for traversal.

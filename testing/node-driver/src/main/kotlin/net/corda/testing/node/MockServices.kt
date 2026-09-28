@@ -1,23 +1,32 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import net.corda.core.CordaInternal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.CordaRotatedKeys
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.RotatedKeys
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.cordapp.CordappProviderInternal
+import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
+import net.corda.core.internal.verification.ExternalVerifierHandle
+import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -36,33 +45,34 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.TransactionStorage
-import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.VersionInfo
-import net.corda.node.internal.ServicesForResolutionImpl
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
+import net.corda.node.services.persistence.toInternal
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.cordappSchemas
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -71,7 +81,6 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockNetworkParametersStorage
@@ -80,6 +89,7 @@ import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.getCallerPackage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.ByteArrayOutputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
@@ -118,10 +128,9 @@ open class MockServices private constructor(
                 *arrayOf(initialIdentity.keyPair) + moreKeys
         )
 ) : ServiceHub {
-
     companion object {
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, rotatedKeys: RotatedKeys = RotatedKeys()): CordappLoader {
-            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo, rotatedKeys = rotatedKeys)
+            return JarScanningCordappLoader(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo = versionInfo, rotatedKeys = rotatedKeys)
         }
 
         /**
@@ -137,8 +146,8 @@ open class MockServices private constructor(
             val dbPath = dbDir.resolve("persistence")
             try {
                 DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
-            } catch (ex: java.nio.file.FileAlreadyExistsException) {
-                DriverDSLImpl.log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+            } catch (e: FileAlreadyExistsException) {
+                loggerFor<MockServices>().warn("Database already exists on disk, not attempting to pre-migrate database.")
             }
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
@@ -297,22 +306,19 @@ open class MockServices private constructor(
         // Because Kotlin is dumb and makes not publicly visible objects public, thus changing the public API.
         private val mockStateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
 
-        private val dummyAttachment by lazy {
-            val inputStream = ByteArrayOutputStream().apply {
-                ZipOutputStream(this).use {
-                    with(it) {
-                        putNextEntry(ZipEntry(JarFile.MANIFEST_NAME))
-                    }
-                }
-            }.toByteArray().inputStream()
-            val attachment = object : Attachment {
-                override val id get() = throw UnsupportedOperationException()
-                override fun open() = inputStream
-                override val signerKeys get() = throw UnsupportedOperationException()
-                override val signers: List<Party> get() = throw UnsupportedOperationException()
-                override val size: Int = 512
+        private val dummyAttachment: Attachment by lazy {
+            object : AbstractAttachment(
+                    {
+                        val baos = ByteArrayOutputStream()
+                        ZipOutputStream(baos).use { zip ->
+                            zip.putNextEntry(ZipEntry(JarFile.MANIFEST_NAME))
+                        }
+                        baos.toByteArray()
+                    },
+                    null
+            ) {
+                override val id: SecureHash by lazy(attachmentData::sha256)
             }
-            attachment
         }
     }
 
@@ -484,28 +490,24 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
-    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
+    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments.toInternal()).also {
         it.start()
     }
-    override val transactionVerifierService: TransactionVerifierService
-        get() = InMemoryTransactionVerifierService(
-                numberOfWorkers = 2,
-                cordappProvider = mockCordappProvider,
-                attachments = attachments
-        )
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
-    var rotatedKeys: RotatedKeys = CordaRotatedKeys.keys
 
-    protected val servicesForResolution: ServicesForResolution
-        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+    // This is kept here for backwards compatibility, otherwise this has no extra utility.
+    protected val servicesForResolution: ServicesForResolution get() = verifyingView
+
+    private val verifyingView: VerifyingServiceHub by lazy { VerifyingView(this) }
+    val rotatedKeys: RotatedKeys = RotatedKeys()
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(
                 clock,
                 keyManagementService,
-                servicesForResolution as NodeServicesForResolution,
+                verifyingView,
                 database,
                 schemaService,
                 cordappLoader.appClassLoader
@@ -514,9 +516,9 @@ open class MockServices private constructor(
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API
     /** A map of available [CordaService] implementations */
-    internal val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
+    internal val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create()
 
-    internal val cordappTelemetryComponents: MutableClassToInstanceMap<TelemetryComponent> = MutableClassToInstanceMap.create<TelemetryComponent>()
+    private val cordappTelemetryComponents: MutableClassToInstanceMap<TelemetryComponent> = MutableClassToInstanceMap.create()
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
@@ -546,19 +548,48 @@ open class MockServices private constructor(
         mockCordappProvider.addMockCordapp(contractClassName, attachments)
     }
 
-    override fun loadState(stateRef: StateRef) = servicesForResolution.loadState(stateRef)
-    override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
+    override fun loadState(stateRef: StateRef): TransactionState<ContractState> {
+        return getRequiredTransaction(stateRef.txhash).resolveBaseTransaction(this).outputs[stateRef.index]
+    }
+
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = stateRefs.mapToSet(::toStateAndRef)
 
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
-}
 
-/**
- * Function which can be used to create a mock [CordaService] for use within testing, such as an Oracle.
- */
-fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T): T {
-    class MockAppServiceHubImpl<out T : SerializeAsToken>(val serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T) : AppServiceHub, ServiceHub by serviceHub {
-        val serviceInstance: T = serviceConstructor(this)
+
+    /**
+     * All [ServiceHub]s must also implement [VerifyingServiceHub]. However, since [MockServices] is part of the public API, making it
+     * extend [VerifyingServiceHub] would leak internal APIs. Instead we have this private view class and have the `toVerifyingServiceHub`
+     * extension method return it.
+     */
+    private class VerifyingView(private val mockServices: MockServices) : VerifyingServiceHub, ServiceHub by mockServices {
+        override val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
+                attachmentStorage = mockServices.attachments.toInternal(),
+                cacheFactory = TestingNamedCacheFactory(), rotatedKeys = mockServices.rotatedKeys
+        )
+
+        override val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory(), mockServices.rotatedKeys)
+
+        override val cordappProvider: CordappProviderInternal get() = mockServices.mockCordappProvider
+
+        override fun loadContractAttachment(stateRef: StateRef): Attachment = mockServices.loadContractAttachment(stateRef)
+
+        override fun loadState(stateRef: StateRef): TransactionState<*> = mockServices.loadState(stateRef)
+
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = mockServices.loadStates(stateRefs)
+
+        override val externalVerifierHandle: ExternalVerifierHandle
+            get() = throw UnsupportedOperationException("`Verification of legacy transactions is not supported by MockServices. Use MockNode instead.")
+
+        override val rotatedKeys: RotatedKeys = mockServices.rotatedKeys
+    }
+
+
+    @CordaInternal
+    internal class MockAppServiceHubImpl<out T : SerializeAsToken>(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T) :
+            AppServiceHub, VerifyingServiceHub by serviceHub.verifyingView {
+        internal val serviceInstance: T = serviceConstructor(this)
 
         init {
             serviceHub.cordappServices.putInstance(serviceInstance.javaClass, serviceInstance)
@@ -579,5 +610,11 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
             throw UnsupportedOperationException()
         }
     }
-    return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
+}
+
+/**
+ * Function which can be used to create a mock [CordaService] for use within testing, such as an Oracle.
+ */
+fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -> T): T {
+    return MockServices.MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
 }

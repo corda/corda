@@ -11,6 +11,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.mapToSet
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -160,10 +161,10 @@ class FlowParallelMessagingTests {
     class SenderFlow(private val parties: Map<out Destination, MessageType>): FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
-            val messagesPerSession = parties.toList().map { (party, messageType) ->
+            val messagesPerSession = parties.toList().associate { (party, messageType) ->
                 val session = initiateFlow(party)
                 Pair(session, messageType)
-            }.toMap()
+            }
 
             sendAllMap(messagesPerSession)
             val messages = receiveAll(String::class.java, messagesPerSession.keys.toList())
@@ -199,7 +200,7 @@ class FlowParallelMessagingTests {
                 throw IllegalArgumentException("at least two parties required for staged execution")
             }
 
-            val sessions = parties.map { initiateFlow(it) }.toSet()
+            val sessions = parties.mapToSet(::initiateFlow)
 
             sessions.first().send(StagedMessageType.INITIAL_RECIPIENT)
             sessions.first().receive<String>().unwrap{ payload -> assertEquals("pong", payload) }

@@ -5,6 +5,7 @@ import net.corda.common.configuration.parsing.internal.versioned.VersionExtracto
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import java.time.Duration
+import java.util.Locale
 import kotlin.reflect.KClass
 
 /**
@@ -468,7 +469,7 @@ object Configuration {
 
                     fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
 
-                    fun forKey(keyName: String, expectedTypeName: String, actualTypeName: String): WrongType = of("$keyName has type ${actualTypeName.toUpperCase()} rather than ${expectedTypeName.toUpperCase()}")
+                    fun forKey(keyName: String, expectedTypeName: String, actualTypeName: String): WrongType = of("$keyName has type ${actualTypeName.uppercase(Locale.getDefault())} rather than ${expectedTypeName.uppercase(Locale.getDefault())}")
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList())

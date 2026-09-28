@@ -14,12 +14,12 @@ import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
 import net.corda.webserver.servlets.*
+import org.eclipse.jetty.ee10.servlet.DefaultServlet
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler
+import org.eclipse.jetty.ee10.servlet.ServletHolder
 import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.eclipse.jetty.server.handler.ErrorHandler
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.DefaultServlet
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
@@ -30,7 +30,6 @@ import java.io.Writer
 import java.lang.reflect.InvocationTargetException
 import java.net.BindException
 import java.util.*
-import javax.servlet.http.HttpServletRequest
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
@@ -60,7 +59,7 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private fun initWebServer(localRpc: CordaRPCOps): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val handlerCollection = HandlerCollection()
+        val handlerCollection = ContextHandlerCollection()
 
         // API, data upload and download to services (attachments, rates oracles etc)
         handlerCollection.addHandler(buildServletContextHandler(localRpc))
@@ -72,7 +71,7 @@ class NodeWebServer(val config: WebServerConfig) {
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             @Suppress("DEPRECATION")
-            val sslContextFactory = SslContextFactory()
+            val sslContextFactory = SslContextFactory.Server()
             sslContextFactory.keyStorePath = config.keyStorePath
             sslContextFactory.setKeyStorePassword(config.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(config.keyStorePassword)
@@ -118,15 +117,15 @@ class NodeWebServer(val config: WebServerConfig) {
             contextPath = "/"
             errorHandler = object : ErrorHandler() {
                 @Throws(IOException::class)
-                override fun writeErrorPageHead(request: HttpServletRequest, writer: Writer, code: Int, message: String) {
-                    writer.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n")
-                    writer.write("<title>Corda $safeLegalName : Error $code</title>\n")
+                override fun writeErrorHtmlHead(request: Request?, writer: Writer?, code: Int, message: String?) {
+                    writer?.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n")
+                    writer?.write("<title>Corda $safeLegalName : Error $code</title>\n")
                 }
 
                 @Throws(IOException::class)
-                override fun writeErrorPageMessage(request: HttpServletRequest, writer: Writer, code: Int, message: String, uri: String) {
-                    writer.write("<h1>Corda $safeLegalName</h1>\n")
-                    super.writeErrorPageMessage(request, writer, code, message, uri)
+                override fun writeErrorHtmlMessage(request: Request?, writer: Writer?, code: Int, message: String?, cause: Throwable?, uri: String?) {
+                    writer?.write("<h1>Corda $safeLegalName</h1>\n")
+                    super.writeErrorHtmlMessage(request, writer, code, message, cause, uri)
                 }
             }
             setAttribute("rpc", localRpc)

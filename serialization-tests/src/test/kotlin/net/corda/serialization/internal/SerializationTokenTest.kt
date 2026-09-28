@@ -3,18 +3,24 @@ package net.corda.serialization.internal
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.SingletonSerializationToken
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -70,30 +76,35 @@ class SerializationTokenTest {
         assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `new token encountered after context init`() {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(emptyList<Any>())
         val testContext = this.context.withTokenContext(context)
-        tokenizableBefore.checkpointSerialize(testContext)
+        assertThatExceptionOfType(UnsupportedOperationException::class.java).isThrownBy {
+            tokenizableBefore.checkpointSerialize(testContext)
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `deserialize unregistered token`() {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(emptyList<Any>())
         val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).checkpointSerialize(testContext)
-        serializedBytes.checkpointDeserialize(testContext)
+        assertThatExceptionOfType(UnsupportedOperationException::class.java).isThrownBy {
+            tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).checkpointSerialize(testContext)
+        }
     }
 
-    @Test(expected = KryoException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `no context set`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        tokenizableBefore.checkpointSerialize(context)
+        assertThatExceptionOfType(KryoException::class.java).isThrownBy {
+            tokenizableBefore.checkpointSerialize(context)
+        }
     }
 
-    @Test(expected = KryoException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `deserialize non-token`() {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(tokenizableBefore)
@@ -108,7 +119,9 @@ class SerializationTokenTest {
             kryo.writeObject(it, emptyList<Any>())
         }
         val serializedBytes = SerializedBytes<Any>(stream.toByteArray())
-        serializedBytes.checkpointDeserialize(testContext)
+        assertThatExceptionOfType(KryoException::class.java).isThrownBy {
+            serializedBytes.checkpointDeserialize(testContext)
+        }
     }
 
     private class WrongTypeSerializeAsToken : SerializeAsToken {
@@ -119,12 +132,14 @@ class SerializationTokenTest {
         override fun toToken(context: SerializeAsTokenContext): SerializationToken = UnitSerializationToken
     }
 
-    @Test(expected = KryoException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `token returns unexpected type`() {
         val tokenizableBefore = WrongTypeSerializeAsToken()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
         val serializedBytes = tokenizableBefore.checkpointSerialize(testContext)
-        serializedBytes.checkpointDeserialize(testContext)
+        assertThatExceptionOfType(KryoException::class.java).isThrownBy {
+            serializedBytes.checkpointDeserialize(testContext)
+        }
     }
 }

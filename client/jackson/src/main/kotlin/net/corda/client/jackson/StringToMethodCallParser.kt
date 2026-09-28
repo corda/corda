@@ -120,7 +120,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     }
 
     /**
-     * Uses either Kotlin or Java 8 reflection to learn the names of the parameters to a method.
+     * Uses either Kotlin or Java reflection to learn the names of the parameters to a method.
      */
     open fun paramNamesFromMethod(method: Method): List<String> {
         val kf: KFunction<*>? = method.kotlinFunction
@@ -135,7 +135,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     }
 
     /**
-     * Uses either Kotlin or Java 8 reflection to learn the names of the parameters to a constructor.
+     * Uses either Kotlin or Java reflection to learn the names of the parameters to a constructor.
      */
     open fun paramNamesFromConstructor(ctor: Constructor<*>): List<String> {
         val kf: KFunction<*>? = ctor.kotlinFunction

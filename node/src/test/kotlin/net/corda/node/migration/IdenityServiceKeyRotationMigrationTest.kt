@@ -1,7 +1,7 @@
 package net.corda.node.migration
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import liquibase.Contexts
 import liquibase.Liquibase
 import liquibase.database.Database

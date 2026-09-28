@@ -1,9 +1,9 @@
 package net.corda.nodeapi.internal.protonwrapper.engine
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.DefaultEventLoop

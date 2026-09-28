@@ -412,7 +412,7 @@ class FlowMetadataRecordingTest {
             metadata!!.let {
                 assertNull(it.finishInstant)
                 assertNotNull(finishTime)
-                assertTrue(finishTime!! >= it.startInstant)
+                assertTrue(finishTime >= it.startInstant)
             }
         }
     }

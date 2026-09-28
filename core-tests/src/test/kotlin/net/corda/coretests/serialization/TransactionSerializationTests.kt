@@ -1,6 +1,6 @@
 package net.corda.coretests.serialization
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata

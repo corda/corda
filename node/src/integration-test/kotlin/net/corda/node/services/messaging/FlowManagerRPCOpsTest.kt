@@ -2,10 +2,6 @@
 package net.corda.node.services.messaging
 
 import net.corda.client.rpc.ext.MultiRPCClient
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
 import net.corda.core.messaging.flows.FlowManagerRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -16,6 +12,10 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Test
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertNotNull
 import net.corda.core.internal.messaging.FlowManagerRPCOps as InternalFlowManagerRPCOps
 
@@ -39,7 +39,7 @@ class FlowManagerRPCOpsTest {
                 it.stop()
             }
 
-            assertNotNull(logDirPath.list().singleOrNull { it.isRegularFile() })
+            assertNotNull(logDirPath.listDirectoryEntries().singleOrNull { it.isRegularFile() })
         }
     }
 
@@ -61,7 +61,7 @@ class FlowManagerRPCOpsTest {
                 it.stop()
             }
 
-            assertNotNull(logDirPath.list().singleOrNull { it.isRegularFile() })
+            assertNotNull(logDirPath.listDirectoryEntries().singleOrNull { it.isRegularFile() })
         }
     }
 }

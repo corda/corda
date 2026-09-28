@@ -4,7 +4,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.core.TestIdentity
 import org.junit.Test
-import java.util.*
+import java.util.Currency
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -118,8 +118,6 @@ class ContractDefinition {
 
         assertTrue(arr is Actions)
 
-        if (arr is Actions) {
-            assertEquals(1, arr.actions.size)
-        }
+        assertEquals(1, arr.actions.size)
     }
 }

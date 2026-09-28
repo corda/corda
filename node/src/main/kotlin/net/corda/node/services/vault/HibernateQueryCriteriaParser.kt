@@ -82,9 +82,9 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
             column as Path<String?>
             when (columnPredicate.operator) {
                 EQUAL -> criteriaBuilder.equal(column, literal)
-                EQUAL_IGNORE_CASE -> criteriaBuilder.equal(criteriaBuilder.upper(column), literal.toUpperCase())
+                EQUAL_IGNORE_CASE -> criteriaBuilder.equal(criteriaBuilder.upper(column), literal.uppercase(Locale.getDefault()))
                 NOT_EQUAL -> criteriaBuilder.notEqual(column, literal)
-                NOT_EQUAL_IGNORE_CASE -> criteriaBuilder.notEqual(criteriaBuilder.upper(column), literal.toUpperCase())
+                NOT_EQUAL_IGNORE_CASE -> criteriaBuilder.notEqual(criteriaBuilder.upper(column), literal.uppercase(Locale.getDefault()))
             }
         } else {
             when (columnPredicate.operator) {
@@ -111,9 +111,9 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
         column as Path<String?>
         return when (columnPredicate.operator) {
             LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
-            LIKE_IGNORE_CASE -> criteriaBuilder.like(criteriaBuilder.upper(column), columnPredicate.rightLiteral.toUpperCase())
+            LIKE_IGNORE_CASE -> criteriaBuilder.like(criteriaBuilder.upper(column), columnPredicate.rightLiteral.uppercase(Locale.getDefault()))
             NOT_LIKE -> criteriaBuilder.notLike(column, columnPredicate.rightLiteral)
-            NOT_LIKE_IGNORE_CASE -> criteriaBuilder.notLike(criteriaBuilder.upper(column), columnPredicate.rightLiteral.toUpperCase())
+            NOT_LIKE_IGNORE_CASE -> criteriaBuilder.notLike(criteriaBuilder.upper(column), columnPredicate.rightLiteral.uppercase(Locale.getDefault()))
         }
     }
 
@@ -126,9 +126,9 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
             literal as Collection<String>
             when (columnPredicate.operator) {
                 IN -> column.`in`(literal)
-                IN_IGNORE_CASE -> criteriaBuilder.upper(column).`in`(literal.map { it.toUpperCase() })
+                IN_IGNORE_CASE -> criteriaBuilder.upper(column).`in`(literal.map { it.uppercase(Locale.getDefault()) })
                 NOT_IN -> criteriaBuilder.not(column.`in`(literal))
-                NOT_IN_IGNORE_CASE -> criteriaBuilder.not(criteriaBuilder.upper(column).`in`(literal.map { it.toUpperCase() }))
+                NOT_IN_IGNORE_CASE -> criteriaBuilder.not(criteriaBuilder.upper(column).`in`(literal.map { it.uppercase(Locale.getDefault()) }))
             }
         } else {
             when (columnPredicate.operator) {

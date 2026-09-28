@@ -54,7 +54,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCordappFlowFactory
-import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
@@ -76,7 +75,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import rx.Notification
@@ -91,7 +89,6 @@ import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
-import kotlin.streams.toList
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -388,7 +385,6 @@ class FlowFrameworkTests {
 
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
-        Assume.assumeTrue(!IS_OPENJ9)
         val terminationSignal = Semaphore(0)
         val clientId = UUID.randomUUID().toString()
         val flow = aliceNode.services.startFlowWithClientId(clientId, NoOpFlow(terminateUponSignal = terminationSignal))
@@ -779,7 +775,7 @@ class FlowFrameworkTests {
         assertFailsWith<TimeoutException> {
             val fiber = aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("Overnight observation") })
             flowId = fiber.id
-            fiber.resultFuture.getOrThrow(10.seconds)
+            fiber.resultFuture.getOrThrow<Nothing>(10.seconds)
         }
 
         aliceNode.database.transaction {
@@ -824,8 +820,9 @@ class FlowFrameworkTests {
     }
 
     // When ported to ENT use the existing API there to properly retry the flow
+    @Suppress("FunctionNaming")  // For some reason this test produces invalid class names if the function name contains spaces
     @Test(timeout=300_000)
-    fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
+    fun Hospitalized_flow_resets_to_RUNNABLE_and_clears_exception_when_retried() {
         var firstRun = true
         var counter = 0
         val waitUntilHospitalizedTwice = Semaphore(-1)

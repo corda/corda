@@ -112,7 +112,6 @@ internal class ActionExecutorImpl(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
     @Suspendable
     private fun executeAcknowledgeMessages(action: Action.AcknowledgeMessages) {
         action.deduplicationHandlers.forEach {
@@ -231,7 +230,6 @@ internal class ActionExecutorImpl(
         action.currentState.run { numberOfCommits = checkpoint.checkpointState.numberOfCommits }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {

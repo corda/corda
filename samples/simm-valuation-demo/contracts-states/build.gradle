@@ -1,10 +1,15 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.cordapp'
 
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
 
-import java.security.NoSuchAlgorithmException
+
+import net.corda.plugins.SignJar
+import proguard.gradle.ProGuardTask
+
 import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 
 static String sha256(File jarFile) throws FileNotFoundException, NoSuchAlgorithmException {
     InputStream input = new FileInputStream(jarFile)
@@ -45,24 +50,23 @@ configurations {
 }
 
 dependencies {
-    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
 
     // Corda integration dependencies
-    cordaCompile project(':core')
+    cordaProvided project(':core')
 
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
 }
 
-def cordappDependencies = file("${sourceSets['main'].output.resourcesDir}/META-INF/Cordapp-Dependencies")
-task generateDependencies {
+configurations.cordapp.canBeResolved = true
+tasks.register('generateDependencies') {
     dependsOn project(':finance:contracts').tasks.jar
+    def cordappDependencies = file("${sourceSets.main.output.resourcesDir}/META-INF/Cordapp-Dependencies")
     inputs.files(configurations.cordapp)
     outputs.files(cordappDependencies)
     doLast {
@@ -74,22 +78,18 @@ task generateDependencies {
     }
 }
 processResources.finalizedBy generateDependencies
+jar.dependsOn generateDependencies
 
 jar {
-    classifier = 'fat'
+    // Test CorDapp filters out *-tests.jar. We only want the shrinked jar not this one.
+    archiveClassifier = 'tests'
 }
 
-import proguard.gradle.ProGuardTask
-task shrink(type: ProGuardTask) {
+tasks.register('shrink', ProGuardTask) {
     injars jar
     outjars shrinkJar
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars "$javaHome/lib/rt.jar"
-        libraryjars "$javaHome/lib/jce.jar"
-    }
+    libraryjars "$javaHome/jmods"
     configurations.runtimeClasspath.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
     }
@@ -109,18 +109,18 @@ task shrink(type: ProGuardTask) {
     verbose
 
     // These are our CorDapp classes, so don't change these.
-    keep 'class net.corda.vega.** { *; }', includedescriptorclasses:true
+    keep 'class net.corda.vega.** { *; }', includedescriptorclasses: true
 
     // Until CorDapps are isolated from each other, we need to ensure that the
     // versions of the classes that this CorDapp needs are still usable by other
     // CorDapps. Unfortunately, this means that we cannot shrink them as much as
     // we'd like to.
-    keepclassmembers 'class com.opengamma.strata.** { *; }', includedescriptorclasses:true
-    keepclassmembers 'class com.google.** { *; }', includedescriptorclasses:true
-    keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses:true
+    keepclassmembers 'class com.opengamma.strata.** { *; }', includedescriptorclasses: true
+    keepclassmembers 'class com.google.** { *; }', includedescriptorclasses: true
+    keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses: true
 }
 
-task sign(type: net.corda.plugins.SignJar) {
+tasks.register('sign', SignJar) {
     inputJars shrink
 }
 
@@ -128,5 +128,5 @@ jar.finalizedBy shrink
 shrink.finalizedBy sign
 
 artifacts {
-    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
+    shrinkArtifacts shrinkJar
 }

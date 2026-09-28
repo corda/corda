@@ -1,15 +1,14 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
+description 'Corda common-configuration-parsing module'
 
 dependencies {
-    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
-    compile group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
+    implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 
-    compile group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
 
-    compile project(":common-validation")
+    implementation project(":common-validation")
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -18,14 +17,20 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
-    testCompile group: "org.assertj", name: "assertj-core", version: assertj_version
+    testImplementation group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
+    testImplementation group: "org.assertj", name: "assertj-core", version: assertj_version
 }
 
 jar {
     baseName 'corda-common-configuration-parsing'
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
 }
+

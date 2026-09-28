@@ -9,25 +9,18 @@ import javax.net.ssl.ManagerFactoryParameters
 import javax.net.ssl.X509ExtendedKeyManager
 import javax.net.ssl.X509KeyManager
 
-class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerFactorySpi, private val amqpConfig: AMQPConfiguration) : KeyManagerFactorySpi() {
+private class CertHoldingKeyManagerFactorySpiWrapper(private val keyManagerFactory: KeyManagerFactory,
+                                                     private val amqpConfig: AMQPConfiguration) : KeyManagerFactorySpi() {
     override fun engineInit(keyStore: KeyStore?, password: CharArray?) {
-        val engineInitMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineInit", KeyStore::class.java, CharArray::class.java)
-        engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, keyStore, password)
+        keyManagerFactory.init(keyStore, password)
     }
 
     override fun engineInit(spec: ManagerFactoryParameters?) {
-        val engineInitMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineInit", ManagerFactoryParameters::class.java)
-        engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, spec)
+        keyManagerFactory.init(spec)
     }
 
     private fun getKeyManagersImpl(): Array<KeyManager> {
-        val engineGetKeyManagersMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineGetKeyManagers")
-        engineGetKeyManagersMethod.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        val keyManagers = engineGetKeyManagersMethod.invoke(factorySpi) as Array<KeyManager>
-        return if (factorySpi is CertHoldingKeyManagerFactorySpiWrapper) keyManagers else keyManagers.map {
+        return keyManagerFactory.keyManagers.map {
             val aliasProvidingKeyManager = getDefaultKeyManager(it)
             // Use the SNIKeyManager if keystore has several entries and only for clients and non-openSSL servers.
             // Condition of using SNIKeyManager: if its client, or JDKSsl server.
@@ -62,15 +55,11 @@ class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerF
  * the wrapper is not thread safe as in it will return the last used alias/cert chain and has itself no notion
  * of belonging to a certain channel.
  */
-class CertHoldingKeyManagerFactoryWrapper(factory: KeyManagerFactory, amqpConfig: AMQPConfiguration) : KeyManagerFactory(getFactorySpi(factory, amqpConfig), factory.provider, factory.algorithm) {
-    companion object {
-        private fun getFactorySpi(factory: KeyManagerFactory, amqpConfig: AMQPConfiguration): KeyManagerFactorySpi {
-            val spiField = KeyManagerFactory::class.java.getDeclaredField("factorySpi")
-            spiField.isAccessible = true
-            return CertHoldingKeyManagerFactorySpiWrapper(spiField.get(factory) as KeyManagerFactorySpi, amqpConfig)
-        }
-    }
-
+class CertHoldingKeyManagerFactoryWrapper(factory: KeyManagerFactory, amqpConfig: AMQPConfiguration) : KeyManagerFactory(
+        CertHoldingKeyManagerFactorySpiWrapper(factory, amqpConfig),
+        factory.provider,
+        factory.algorithm
+) {
     fun getCurrentCertChain(): Array<out X509Certificate>? {
         val keyManager = keyManagers.firstOrNull()
         val alias = if (keyManager is AliasProvidingKeyMangerWrapper) keyManager.lastAlias else null

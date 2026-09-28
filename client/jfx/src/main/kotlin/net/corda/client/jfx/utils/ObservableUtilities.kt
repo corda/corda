@@ -120,7 +120,7 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  */
 fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
-    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered { t -> t != null })
+    return uncheckedCast(uncheckedCast<Any, ObservableList<A>>(this).filtered { t -> t != null })
 }
 
 /**
@@ -128,6 +128,7 @@ fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
  * val concatenatedNames = people.foldObservable("", { names, person -> names + person.name })
  * val concatenatedNames2 = people.map(Person::name).fold("", String::plus)
  */
+@Suppress("SpreadOperator")
 fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, A) -> B): ObservableValue<B> {
     return Bindings.createObjectBinding({
         var current = initial
@@ -135,7 +136,7 @@ fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, 
             current = folderFunction(current, it)
         }
         current
-    }, arrayOf(this))
+    }, *arrayOf(this))
 }
 
 /**
@@ -285,6 +286,7 @@ fun <A> ObservableList<A>.first(): ObservableValue<A?> {
     return getValueAt(0)
 }
 
+@Suppress("SpreadOperator")
 fun <A> ObservableList<A>.last(): ObservableValue<A?> {
     return Bindings.createObjectBinding({
         if (size > 0) {
@@ -292,7 +294,7 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
         } else {
             null
         }
-    }, arrayOf(this))
+    }, *arrayOf(this))
 }
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
@@ -303,24 +305,27 @@ fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): Observable
     return AggregatedList(this, toKey, { _, entryList -> entryList[0] })
 }
 
+@Suppress("SpreadOperator")
 fun ObservableValue<*>.isNotNull(): BooleanBinding {
-    return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
+    return Bindings.createBooleanBinding({ this.value != null }, *arrayOf(this))
 }
 
 /**
  * Return first element of the observable list as observable value.
  * Return provided default value if the list is empty.
  */
+@Suppress("SpreadOperator")
 fun <A> ObservableList<A>.firstOrDefault(default: ObservableValue<A?>, predicate: (A) -> Boolean): ObservableValue<A?> {
-    return Bindings.createObjectBinding({ this.firstOrNull(predicate) ?: default.value }, arrayOf(this, default))
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) ?: default.value }, *arrayOf(this, default))
 }
 
 /**
  * Return first element of the observable list as observable value.
  * Return ObservableValue(null) if the list is empty.
  */
+@Suppress("SpreadOperator")
 fun <A> ObservableList<A>.firstOrNullObservable(predicate: (A) -> Boolean): ObservableValue<A?> {
-    return Bindings.createObjectBinding({ this.firstOrNull(predicate) }, arrayOf(this))
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) }, *arrayOf(this))
 }
 
 /**

@@ -8,7 +8,6 @@ import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.core.internal.div
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
@@ -18,6 +17,7 @@ import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.div
 
 open class SharedNodeCmdLineOptions {
     private companion object {
@@ -34,7 +34,7 @@ open class SharedNodeCmdLineOptions {
             description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
     private var _configFile: Path? = null
-    val configFile: Path get() = if (_configFile != null) baseDirectory.resolve(_configFile) else (baseDirectory / "node.conf")
+    val configFile: Path get() = _configFile?.let(baseDirectory::resolve) ?: (baseDirectory / "node.conf")
 
     @Option(
             names = ["--on-unknown-config-keys"],

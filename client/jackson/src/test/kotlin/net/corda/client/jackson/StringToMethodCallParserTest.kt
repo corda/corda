@@ -26,7 +26,7 @@ class StringToMethodCallParserTest {
             "simple" to "simple",
             "string noteTextWord: A test of barewords" to "A test of barewords",
             "twoStrings a: Some words, b: ' and some words, like, Kirk, would, speak'" to "Some words and some words, like, Kirk, would, speak",
-            "simpleObject hash: $randomHash" to randomHash.toUpperCase(),
+            "simpleObject hash: $randomHash" to randomHash.uppercase(Locale.getDefault()),
             "complexObject pair: { first: 12, second: Word up brother }" to Pair(12, "Word up brother"),
             "overload a: A" to "A",
             "overload a: A, b: B" to "AB"
@@ -51,7 +51,6 @@ class StringToMethodCallParserTest {
         val result = parser.parse(Target(), "complexNestedObject pairs: { first: 101, second: [ A, B, C ] }").invoke()
 
         assertTrue(result is Pair<*,*>)
-        result as Pair<*,*>
 
         assertEquals(101, result.first)
 

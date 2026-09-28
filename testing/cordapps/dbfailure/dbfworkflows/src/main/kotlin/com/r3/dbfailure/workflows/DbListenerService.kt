@@ -44,7 +44,6 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
 
                 produced.forEach {
                     val contractState = it.state.data as? DbFailureContract.TestState
-                    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, to allow twiddling with exceptions
                     try {
                         when (CreateStateFlow.getServiceTarget(contractState?.errorTarget)) {
                             CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError -> {
@@ -161,7 +160,7 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
             }
 
         if (onError != null) {
-            val onErrorWrapper: ((Throwable) -> Unit)? = {
+            val onErrorWrapper: (Throwable) -> Unit = {
                 onErrorVisited?.let {
                     it(services.myInfo.legalIdentities.first())
                 }

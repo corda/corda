@@ -60,6 +60,9 @@ data class RotatedKeys(val rotatedSigningKeys: List<List<SecureHash>> = emptyLis
     }
 
     fun canBeTransitioned(inputKeys: List<PublicKey>, outputKeys: List<PublicKey>): Boolean {
+        if (inputKeys.isEmpty() && outputKeys.isEmpty()) {
+            return true
+        }
         return canBeTransitioned(CompositeKey.Builder().addKeys(inputKeys).build(), CompositeKey.Builder().addKeys(outputKeys).build())
     }
 

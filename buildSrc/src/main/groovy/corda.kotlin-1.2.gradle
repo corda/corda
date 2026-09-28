@@ -1,0 +1,91 @@
+import org.gradle.api.internal.file.DefaultSourceDirectorySet
+
+import static org.joor.Reflect.onClass
+
+pluginManager.apply(Kotlin12Plugin.class)
+
+// We cannot use the 1.2 Kotlin plugin as it only works with a very old version of Gradle, which itself will only work on Java 8. So we need
+// our own plugin which calls the 1.2 compiler directly.
+class Kotlin12Plugin implements Plugin<Project> {
+    private static final KOTLIN_VERSION = "1.2.71"
+
+    @Override
+    void apply(Project project) {
+        project.pluginManager.apply(JavaPlugin.class)
+
+        project.extensions.add("kotlin_1_2_version", KOTLIN_VERSION)
+        project.dependencies.add("implementation", "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$KOTLIN_VERSION")
+
+        def kotlinCompilerConfiguration = project.configurations.create("kotlinCompiler")
+        project.dependencies.add("kotlinCompiler", "org.jetbrains.kotlin:kotlin-compiler:$KOTLIN_VERSION")
+
+        project.extensions.getByType(JavaPluginExtension.class).sourceSets.configureEach { sourceSet ->
+            // Create the "src/*/kotlin" SourceDirectorySet, alongside the "java" one
+            def kotlinSourceDirectorySet = new DefaultSourceDirectorySet(project.objects.sourceDirectorySet("kotlin", "${sourceSet.displayName} Kotlin source"))
+            sourceSet.extensions.add(SourceDirectorySet.class, "kotlin", kotlinSourceDirectorySet)
+            kotlinSourceDirectorySet.filter.include("**/*.java", "**/*.kt")
+            kotlinSourceDirectorySet.srcDir(project.file("src/${sourceSet.name}/kotlin"))
+
+            def allKotlin = project.objects.sourceDirectorySet("allkotlin", "${sourceSet.displayName} Kotlin source")
+            allKotlin.filter.include("**/*.kt")
+            allKotlin.source(kotlinSourceDirectorySet)
+
+            sourceSet.allJava.source(kotlinSourceDirectorySet)
+            sourceSet.allSource.source(kotlinSourceDirectorySet)
+
+            def kotlinBuildDir = project.layout.buildDirectory.dir("classes/kotlin/${sourceSet.name}")
+            sourceSet.output.dir(kotlinBuildDir)
+
+            def taskSourceSetName = isMain(sourceSet) ? "" : sourceSet.name.capitalize()
+
+            def compileKotlin = project.tasks.register("compile${taskSourceSetName}Kotlin", KotlinCompile.class) { task ->
+                // The 1.2 compiler needs to be laoded in a separate class loader, as the build classpath already contains its own version
+                // of Kotlin.
+                task.compilerClasspath.from(kotlinCompilerConfiguration)
+                task.source(allKotlin)
+                // Paradoxically, the Java sources are also required by the Kotlin compiler. This is actually so that it can correctly
+                // resolve any references the Kotlin code makes to Java code.
+                task.source(sourceSet.allJava)
+                task.classpath = sourceSet.compileClasspath
+                task.destinationDirectory = kotlinBuildDir
+            }
+
+            // Compiling the Java code needs the compiled Kotlin code first
+            project.tasks.named("compile${taskSourceSetName}Java", JavaCompile.class) { task ->
+                task.classpath += project.files(compileKotlin.map { it.destinationDirectory })
+            }
+        }
+    }
+}
+
+abstract class KotlinCompile extends AbstractCompile {
+    @Classpath
+    abstract ConfigurableFileCollection getCompilerClasspath()
+
+    @TaskAction
+    void compile() {
+        def args = [
+                "-jvm-target", "1.8",
+                "-language-version", "1.2",
+                "-api-version", "1.2",
+                "-java-parameters",
+                "-Xjvm-default=compatibility",
+                "-no-stdlib",
+                "-Xallow-kotlin-package",  // We may have copies of stdlib APIs (see `core-1.2`)
+                "-cp", classpath.asPath,
+                "-d", destinationDirectory.get().asFile.absolutePath
+        ]
+        args.addAll(source.collect { it.absolutePath })
+
+        logger.info("args: {}", args)
+
+        def compilerClassLoader = new URLClassLoader(compilerClasspath.collect { it.toURI().toURL() } as URL[])
+        def exitCode = onClass("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler", compilerClassLoader)
+                .create()
+                .call("exec", System.err, args as String[])
+                .get()
+        if (exitCode.toString() != "OK") {
+            throw new GradleException("Compilation error. See log for more details")
+        }
+    }
+}

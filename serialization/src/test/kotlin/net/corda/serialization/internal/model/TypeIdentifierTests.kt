@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.model
 
 import com.google.common.reflect.TypeToken
-import net.corda.serialization.internal.model.TypeIdentifier.*
 import org.junit.Test
 import java.lang.reflect.Type
 import kotlin.test.assertEquals

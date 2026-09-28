@@ -4,24 +4,29 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.randomHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.*
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.P2P_UPLOADER
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.TRUSTED_UPLOADERS
+import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.hash
+import net.corda.core.internal.read
+import net.corda.core.internal.readFully
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -36,16 +41,20 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -54,13 +63,19 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import java.util.*
+import java.util.Random
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
-import kotlin.streams.toList
-import kotlin.test.*
+import kotlin.io.path.div
+import kotlin.io.path.outputStream
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeLines
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 
 class NodeAttachmentServiceTest {
 
@@ -69,7 +84,7 @@ class NodeAttachmentServiceTest {
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
     private lateinit var devModeStorage: NodeAttachmentService
-    private val services = rigorousMock<ServicesForResolution>().also {
+    private val nodeVerificationSupport = rigorousMock<NodeVerificationSupport>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
 
@@ -90,13 +105,13 @@ class NodeAttachmentServiceTest {
                 it.start()
             }
         }
-        storage.servicesForResolution = services
+        storage.nodeVerificationSupport = nodeVerificationSupport
         devModeStorage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database, true).also {
             database.transaction {
                 it.start()
             }
         }
-        devModeStorage.servicesForResolution = services
+        devModeStorage.nodeVerificationSupport = nodeVerificationSupport
     }
 
     @After
@@ -110,7 +125,7 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val jarAndSigner = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val signedJar = jarAndSigner.first
-            signedJar.inputStream().use { jarStream ->
+            signedJar.read { jarStream ->
                 val attachmentId = storage.importAttachment(jarStream, "test", null)
                 assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signerKeys.map { it.hash })
             }
@@ -121,7 +136,7 @@ class NodeAttachmentServiceTest {
 	fun `importing a non-signed jar will save no signers`() {
         SelfCleaningDir().use {
             val jarName = makeTestContractJar(it.path, "com.example.MyContract")
-            it.path.resolve(jarName).inputStream().use { jarStream ->
+            (it.path / jarName).read { jarStream ->
                 val attachmentId = storage.importAttachment(jarStream, "test", null)
                 assertEquals(0, storage.openAttachment(attachmentId)!!.signerKeys.size)
             }
@@ -157,7 +172,7 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val attachment = file.path.resolve(contractJarName)
-            val expectedAttachmentId = attachment.readAll().sha256()
+            val expectedAttachmentId = attachment.hash
 
             val initialUploader = "test"
             val attachmentId = attachment.read { storage.privilegedImportAttachment(it, initialUploader, null) }
@@ -177,7 +192,7 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val attachment = file.path.resolve(contractJarName)
-            val expectedAttachmentId = attachment.readAll().sha256()
+            val expectedAttachmentId = attachment.hash
 
             val trustedUploader = TRUSTED_UPLOADERS.randomOrNull()!!
             val attachmentId = attachment.read { storage.privilegedImportAttachment(it, trustedUploader, null) }
@@ -194,7 +209,7 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val testJar = file.path.resolve(contractJarName)
-            val expectedHash = testJar.readAll().sha256()
+            val expectedHash = testJar.hash
 
             // PRIVILEGED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, P2P_UPLOADER, UNKNOWN_UPLOADER)
             // TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
@@ -560,7 +575,7 @@ class NodeAttachmentServiceTest {
             val id = testJar.read { storage.importAttachment(it, "test", null) }
 
             // Corrupt the file in the store.
-            val bytes = testJar.readAll()
+            val bytes = testJar.readBytes()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
             val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = DEFAULT_CORDAPP_VERSION)
@@ -751,16 +766,16 @@ class NodeAttachmentServiceTest {
 	fun `The strict JAR verification function fails signed JARs with removed or extra files that are valid according to the usual jarsigner`() {
 
         // Signed jar that has a modified file.
-        val changedFileJAR = this::class.java.getResource("/changed-file-signed-jar.jar")
+        val changedFileJAR = this::class.java.getResource("/changed-file-signed-jar.jar")!!
 
         // Signed jar with removed files.
-        val removedFilesJAR = this::class.java.getResource("/removed-files-signed-jar.jar")
+        val removedFilesJAR = this::class.java.getResource("/removed-files-signed-jar.jar")!!
 
         // Signed jar with extra files.
-        val extraFilesJAR = this::class.java.getResource("/extra-files-signed-jar.jar")
+        val extraFilesJAR = this::class.java.getResource("/extra-files-signed-jar.jar")!!
 
         // Valid signed jar with all files.
-        val legalJAR = this::class.java.getResource("/legal-signed-jar.jar")
+        val legalJAR = this::class.java.getResource("/legal-signed-jar.jar")!!
 
         fun URL.standardVerifyJar() = JarInputStream(this.openStream(), true).use { jar ->
             while (true) {
@@ -1060,6 +1075,6 @@ class NodeAttachmentServiceTest {
         counter++
         val file = fs.getPath("$counter.jar")
         makeTestJar(file.outputStream(), entries)
-        return Pair(file, file.readAll().sha256())
+        return Pair(file, file.hash)
     }
 }

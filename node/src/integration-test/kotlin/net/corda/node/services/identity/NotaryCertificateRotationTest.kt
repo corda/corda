@@ -1,8 +1,6 @@
 package net.corda.node.services.identity
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -12,7 +10,6 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.internal.createDirectories
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -50,7 +47,10 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.util.*
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
+import java.util.Currency
+import kotlin.io.path.createDirectories
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull

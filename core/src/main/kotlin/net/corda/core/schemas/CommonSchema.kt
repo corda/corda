@@ -26,7 +26,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @Transient
-            open var participants: MutableSet<AbstractParty>? = null,
+            var participants: MutableSet<AbstractParty>? = null,
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
@@ -51,7 +51,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
 
             /** X500Name of participant parties **/
             @Transient
-            open var participants: MutableSet<AbstractParty?>? = null,
+            var participants: MutableSet<AbstractParty?>? = null,
 
             /** [OwnableState] attributes */
 

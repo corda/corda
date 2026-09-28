@@ -7,7 +7,7 @@ import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.nodeapi.internal.serialization.CustomSerializationSchemeAdapter
+import net.corda.serialization.internal.verifier.CustomSerializationSchemeAdapter
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer

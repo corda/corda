@@ -11,6 +11,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.ByteBufferInputStream
 import net.corda.serialization.internal.CordaSerializationEncoding
+import net.corda.serialization.internal.NotSerializableException
 import net.corda.serialization.internal.NullEncodingWhitelist
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.encodingNotPermittedFormat
@@ -120,11 +121,11 @@ class DeserializationInput constructor(
             return generator()
         } catch (amqp : AMQPNotSerializableException) {
             amqp.log("Deserialize", logger)
-            throw NotSerializableException(amqp.mitigation)
+            throw NotSerializableException(amqp.mitigation, amqp)
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (e: Exception) {
-            throw NotSerializableException("Internal deserialization failure: ${e.javaClass.name}: ${e.message}").apply { initCause(e) }
+            throw NotSerializableException("Internal deserialization failure: ${e.javaClass.name}: ${e.message}", e)
         } finally {
             objectHistory.clear()
         }

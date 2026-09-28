@@ -57,8 +57,8 @@ object JarSignatureCollector {
         return firstSignerSet
     }
 
-    private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
-            entries.thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
+    private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>>
+        get() = entries().thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
 
     private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry> get() = filterNot { isNotSignable(it) }
 
@@ -85,8 +85,6 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
        it.signerCertPath.certificates[0] as X509Certificate
     }.sortedBy { it.toString() } // Sorted for determinism.
-
-    private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }
 
 class InvalidJarSignersException(msg: String) : Exception(msg)

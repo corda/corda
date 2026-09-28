@@ -1,5 +1,6 @@
 package net.corda.node.internal.artemis
 
+import net.corda.core.internal.isEquivalentTo
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -8,6 +9,7 @@ import org.apache.activemq.artemis.core.server.ServerSession
 import org.apache.activemq.artemis.core.server.plugin.ActiveMQServerPlugin
 import org.apache.activemq.artemis.core.transaction.Transaction
 import org.apache.activemq.artemis.protocol.amqp.broker.AMQPMessage
+import javax.security.auth.x500.X500Principal
 
 /**
  * Plugin to verify the user in the AMQP message header against the user in the authenticated session.
@@ -32,7 +34,7 @@ class UserValidationPlugin : ActiveMQServerPlugin {
                     throw ActiveMQSecurityException("Invalid message type: expected [${AMQPMessage::class.java.name}], got [${message.javaClass.name}]")
                 }
                 val user = message.getStringProperty(Message.HDR_VALIDATED_USER)
-                if (user != null && user != session.validatedUser) {
+                if (user != null && !X500Principal(user).isEquivalentTo(X500Principal(session.validatedUser))) {
                     throw ActiveMQSecurityException("_AMQ_VALIDATED_USER mismatch: expected [${session.validatedUser}], got [${user}]")
                 }
             }

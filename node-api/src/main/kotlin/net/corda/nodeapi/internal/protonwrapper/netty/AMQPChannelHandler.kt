@@ -67,8 +67,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         try {
             MDC.put("serverMode", serverMode.toString())
             MDC.put("remoteAddress", if (::remoteAddress.isInitialized) remoteAddress.toString() else null)
-            MDC.put("localCert", localCert?.subjectDN?.toString())
-            MDC.put("remoteCert", remoteCert?.subjectDN?.toString())
+            MDC.put("localCert", localCert?.getSubjectX500Principal()?.toString())
+            MDC.put("remoteCert", remoteCert?.getSubjectX500Principal()?.toString())
             MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames?.joinToString(separator = ";") { it.toString() })
             block()
         } finally {

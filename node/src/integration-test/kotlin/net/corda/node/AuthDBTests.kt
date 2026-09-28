@@ -7,6 +7,7 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.mapToSet
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
@@ -20,6 +21,7 @@ import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
@@ -28,7 +30,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.sql.Connection
 import java.sql.Statement
-import java.util.*
+import java.util.Properties
 import kotlin.test.assertFailsWith
 
 /*
@@ -94,6 +96,11 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
                                         "cache" to mapOf(
                                                 "expireAfterSecs" to cacheExpireAfterSecs,
                                                 "maxEntries" to 50
+                                        ),
+                                        "rateLimit" to mapOf(
+                                                "backoffBaseSeconds" to 2,
+                                                "backoffMaxSeconds" to 60,
+                                                "attemptExpireMinutes" to 15
                                         )
                                 )
                         )
@@ -215,6 +222,53 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `user+ip is suspended after repeated failures`() {
+        // first 3 failures – free attempts, no backoff
+        repeat(3) {
+            assertThatThrownBy {
+                client.start("user", "wrong").close()
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 4th failure – backoff starts
+        assertThatThrownBy {
+            client.start("user", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // retry immediately with correct password - should fail as the user is blocked
+        assertThatThrownBy {
+            client.start("user", "foo").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        Thread.sleep(2100) // wait 2s for the backoff to expire
+        client.start("user", "foo").close()
+    }
+
+    @Test(timeout=300_000)
+    fun `ip is suspended after repeated failures`() {
+        // first 10 failures – free attempts, no backoff
+        repeat(10) { attempt ->
+            assertThatThrownBy {
+                client.start("user$attempt", "wrong").close()
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+        }
+
+        // 11th failure from the same IP - backoff starts - failure due to suspension
+        assertThatThrownBy {
+            client.start("user11", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        // Wait for IP backoff to expire
+        Thread.sleep(2100)
+        // 12th failure from the same IP - backoff expired - so the failure is due to login not suspension
+        assertThatThrownBy {
+            client.start("user12", "wrong").close()
+        }.isInstanceOf(ActiveMQSecurityException::class.java)
+
+        client.start("user", "foo").close()
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class DummyFlow : FlowLogic<Unit>() {
@@ -286,7 +340,7 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
     }
 
     init {
-        require(users.map { it.username }.toSet().size == users.size) {
+        require(users.mapToSet { it.username }.size == users.size) {
             "Duplicate username in input"
         }
         connection = DataSourceFactory.createDataSource(Properties().apply {

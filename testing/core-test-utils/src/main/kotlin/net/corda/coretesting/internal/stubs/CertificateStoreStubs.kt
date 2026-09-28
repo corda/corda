@@ -1,6 +1,5 @@
 package net.corda.coretesting.internal.stubs
 
-import net.corda.core.internal.div
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS
@@ -9,6 +8,7 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import java.nio.file.Path
 import java.time.Duration
+import kotlin.io.path.div
 
 class CertificateStoreStubs {
 

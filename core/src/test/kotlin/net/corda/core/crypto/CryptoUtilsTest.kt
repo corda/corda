@@ -5,36 +5,31 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
-import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.internal.PlatformSecureRandomService
 import net.corda.core.utilities.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
-import org.bouncycastle.operator.ContentSigner
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
-import org.junit.Assume
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.Security
-import java.util.*
-import kotlin.test.*
+import java.security.interfaces.EdECPrivateKey
+import java.security.interfaces.EdECPublicKey
+import java.security.spec.NamedParameterSpec
+import java.util.Random
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * Run tests for cryptographic algorithms.
@@ -54,21 +49,18 @@ class CryptoUtilsTest {
         val ecdsaKKeyPair = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val ecdsaRKeyPair = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val eddsaKeyPair = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
-        val sphincsKeyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
 
         // not null private keys
         assertNotNull(rsaKeyPair.private)
         assertNotNull(ecdsaKKeyPair.private)
         assertNotNull(ecdsaRKeyPair.private)
         assertNotNull(eddsaKeyPair.private)
-        assertNotNull(sphincsKeyPair.private)
 
         // not null public keys
         assertNotNull(rsaKeyPair.public)
         assertNotNull(ecdsaKKeyPair.public)
         assertNotNull(ecdsaRKeyPair.public)
         assertNotNull(eddsaKeyPair.public)
-        assertNotNull(sphincsKeyPair.public)
 
         // fail on unsupported algorithm
         try {
@@ -128,11 +120,8 @@ class CryptoUtilsTest {
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
-        try {
+        assertThatThrownBy {
             Crypto.doVerify(pubKey, signedData, testBytes)
-            fail()
-        } catch (e: Exception) {
-            // expected
         }
     }
 
@@ -301,66 +290,11 @@ class CryptoUtilsTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `SPHINCS-256 full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
-        val (privKey, pubKey) = keyPair
-        // test for some data
-        val signedData = Crypto.doSign(privKey, testBytes)
-        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
-        assertTrue(verification)
-
-        // test for empty data signing
-        try {
-            Crypto.doSign(privKey, EMPTY_BYTE_ARRAY)
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for empty source data when verifying
-        try {
-            Crypto.doVerify(pubKey, testBytes, EMPTY_BYTE_ARRAY)
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for empty signed data when verifying
-        try {
-            Crypto.doVerify(pubKey, EMPTY_BYTE_ARRAY, testBytes)
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
-        assertTrue(verificationZeros)
-
-        // test for 1MB of data (I successfully tested it locally for 1GB as well)
-        val MBbyte = ByteArray(1000000) // 1.000.000
-        Random().nextBytes(MBbyte)
-        val signedDataBig = Crypto.doSign(privKey, MBbyte)
-        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
-        assertTrue(verificationBig)
-
-        // test on malformed signatures (even if they change for 1 bit)
-        signedData[0] = signedData[0].inc()
-        try {
-            Crypto.doVerify(pubKey, signedData, testBytes)
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-    }
-
     // test list of supported algorithms
     @Test(timeout=300_000)
 	fun `Check supported algorithms`() {
         val algList: List<String> = Crypto.supportedSignatureSchemes().map { it.schemeCodeName }
-        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512", "COMPOSITE")
+        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "COMPOSITE")
         assertTrue { Sets.symmetricDifference(expectedAlgSet, algList.toSet()).isEmpty(); }
     }
 
@@ -426,36 +360,6 @@ class CryptoUtilsTest {
     }
 
     @Test(timeout=300_000)
-	fun `SPHINCS-256 encode decode keys - required for serialization`() {
-        // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
-        val privKey: BCSphincs256PrivateKey = keyPair.private as BCSphincs256PrivateKey
-        val pubKey: BCSphincs256PublicKey = keyPair.public as BCSphincs256PublicKey
-
-        //1st method for encoding/decoding
-        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
-        assertEquals(privKey2, privKey)
-
-        // Encode and decode public key.
-        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
-        assertEquals(pubKey2, pubKey)
-
-        //2nd method for encoding/decoding
-
-        // Encode and decode private key.
-        val privKeyInfo: PrivateKeyInfo = PrivateKeyInfo.getInstance(privKey.encoded)
-        val decodedPrivKey = BCSphincs256PrivateKey(privKeyInfo)
-        // Check that decoded private key is equal to the initial one.
-        assertEquals(decodedPrivKey, privKey)
-
-        // Encode and decode public key.
-        val pubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKey.encoded)
-        val decodedPubKey = BCSphincs256PublicKey(pubKeyInfo)
-        // Check that decoded private key is equal to the initial one.
-        assertEquals(decodedPubKey, pubKey)
-    }
-
-    @Test(timeout=300_000)
 	fun `RSA scheme finder by key type`() {
         val keyPairRSA = Crypto.generateKeyPair(RSA_SHA256)
         val (privRSA, pubRSA) = keyPairRSA
@@ -493,18 +397,10 @@ class CryptoUtilsTest {
         val keyPairEd = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (privEd, pubEd) = keyPairEd
 
-        assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-        assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-    }
-
-    @Test(timeout=300_000)
-	fun `SPHINCS-256 scheme finder by key type`() {
-        val keyPairSP = Crypto.generateKeyPair(SPHINCS256_SHA256)
-        val (privSP, pubSP) = keyPairSP
-        assertEquals(privSP.algorithm, "SPHINCS-256")
-        assertEquals(pubSP.algorithm, "SPHINCS-256")
+        assertEquals(privEd.algorithm, "Ed25519")
+        assertEquals((privEd as EdECPrivateKey).params.name, NamedParameterSpec.ED25519.name)
+        assertEquals(pubEd.algorithm, "Ed25519")
+        assertEquals((pubEd as EdECPublicKey).params.name, NamedParameterSpec.ED25519.name)
     }
 
     @Test(timeout=300_000)
@@ -515,11 +411,11 @@ class CryptoUtilsTest {
         val encodedPubEd = pubEd.encoded
 
         val decodedPrivEd = Crypto.decodePrivateKey(encodedPrivEd)
-        assertEquals(decodedPrivEd.algorithm, "EdDSA")
+        assertEquals(decodedPrivEd.algorithm, "Ed25519")
         assertEquals(decodedPrivEd, privEd)
 
         val decodedPubEd = Crypto.decodePublicKey(encodedPubEd)
-        assertEquals(decodedPubEd.algorithm, "EdDSA")
+        assertEquals(decodedPubEd.algorithm, "Ed25519")
         assertEquals(decodedPubEd, pubEd)
     }
 
@@ -572,22 +468,6 @@ class CryptoUtilsTest {
     }
 
     @Test(timeout=300_000)
-	fun `Automatic SPHINCS-256 key-type detection and decoding`() {
-        val keyPairSP = Crypto.generateKeyPair(SPHINCS256_SHA256)
-        val (privSP, pubSP) = keyPairSP
-        val encodedPrivSP = privSP.encoded
-        val encodedPubSP = pubSP.encoded
-
-        val decodedPrivSP = Crypto.decodePrivateKey(encodedPrivSP)
-        assertEquals(decodedPrivSP.algorithm, "SPHINCS-256")
-        assertEquals(decodedPrivSP, privSP)
-
-        val decodedPubSP = Crypto.decodePublicKey(encodedPubSP)
-        assertEquals(decodedPubSP.algorithm, "SPHINCS-256")
-        assertEquals(decodedPubSP, pubSP)
-    }
-
-    @Test(timeout=300_000)
 	fun `Failure test between K1 and R1 keys`() {
         val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
@@ -629,7 +509,7 @@ class CryptoUtilsTest {
         val encodedPrivK1 = privK1.encoded
 
         // fail on malformed key.
-        for (i in 0 until encodedPrivK1.size) {
+        for (i in encodedPrivK1.indices) {
             val b = encodedPrivK1[i]
             encodedPrivK1[i] = b.inc()
             try {
@@ -655,24 +535,25 @@ class CryptoUtilsTest {
 
     @Test(timeout=300_000)
 	fun `Check EdDSA public key on curve`() {
-        val keyPairEdDSA = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
-        val pubEdDSA = keyPairEdDSA.public
-        assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubEdDSA))
-        // Use R1 curve for check.
-        assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
-        // Check for point at infinity.
-        val pubKeySpec = EdDSAPublicKeySpec((EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
-        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
+        repeat(100) {
+            val keyPairEdDSA = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
+            val pubEdDSA = keyPairEdDSA.public
+            assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubEdDSA))
+            // Use R1 curve for check.
+            assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `Unsupported EC public key type on curve`() {
         val keyGen = KeyPairGenerator.getInstance("EC") // sun.security.ec.ECPublicKeyImpl
         keyGen.initialize(256, newSecureRandom())
         val pairSun = keyGen.generateKeyPair()
         val pubSun = pairSun.public
         // Should fail as pubSun is not a BCECPublicKey.
-        Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubSun)
+        assertThatIllegalArgumentException().isThrownBy {
+            Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubSun)
+        }
     }
 
     @Test(timeout=300_000)
@@ -765,10 +646,8 @@ class CryptoUtilsTest {
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
         assertEquals(pub.algorithm, dpub.algorithm)
-        assertTrue(dpriv is EdDSAPrivateKey)
-        assertTrue(dpub is EdDSAPublicKey)
-        assertEquals((dpriv as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-        assertEquals((dpub as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((dpriv as EdECPrivateKey).params.name, NamedParameterSpec.ED25519.name)
+        assertEquals((dpub as EdECPublicKey).params.name, NamedParameterSpec.ED25519.name)
         assertEquals(Crypto.findSignatureScheme(dpriv), EDDSA_ED25519_SHA512)
         assertEquals(Crypto.findSignatureScheme(dpub), EDDSA_ED25519_SHA512)
 
@@ -908,8 +787,8 @@ class CryptoUtilsTest {
     }
 
     @Test(timeout=300_000)
-	fun `Ensure deterministic signatures of EdDSA, SPHINCS-256 and RSA PKCS1`() {
-        listOf(EDDSA_ED25519_SHA512, SPHINCS256_SHA256, RSA_SHA256)
+	fun `Ensure deterministic signatures of EdDSA and RSA PKCS1`() {
+        listOf(EDDSA_ED25519_SHA512, RSA_SHA256)
                 .forEach { testDeterministicSignatures(it) }
     }
 
@@ -928,32 +807,25 @@ class CryptoUtilsTest {
         assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
     }
 
-    fun ContentSigner.write(message: ByteArray)  {
-        this.outputStream.write(message)
-        this.outputStream.close()
-    }
-
     @Test(timeout=300_000)
 	fun `test default SecureRandom uses platformSecureRandom`() {
-        Assume.assumeFalse(IS_OPENJ9) // See CORDA-4055
         // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
 
         // Remove [CordaSecurityProvider] in case it is already registered.
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         // Try after removing CordaSecurityProvider.
         val secureRandomNotRegisteredCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomNotRegisteredCordaProvider.algorithm)
 
         // Now register CordaSecurityProvider as last Provider.
         Security.addProvider(CordaSecurityProvider())
         val secureRandomRegisteredLastCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredLastCordaProvider.algorithm)
 
         // Remove Corda Provider again and add it as the first Provider entry.
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
         val secureRandomRegisteredFirstCordaProvider = SecureRandom()
-        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
+        assertEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
-    private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
 }

@@ -11,6 +11,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
 import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.CordaSerializable
@@ -81,7 +82,6 @@ interface ServicesForResolution {
     /**
      * Provides a callback for the Node to customise the [LedgerTransaction].
      */
-    @JvmDefault
     fun specialise(ltx: LedgerTransaction): LedgerTransaction = ltx
 }
 
@@ -170,12 +170,6 @@ interface ServiceHub : ServicesForResolution {
      * Provides operations to support telemetry and telemetry data between nodes.
      */
     val telemetryService: TelemetryService
-
-    /**
-     * INTERNAL. DO NOT USE.
-     * @suppress
-     */
-    val transactionVerifierService: TransactionVerifierService
 
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
@@ -284,8 +278,7 @@ interface ServiceHub : ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outRef(stateRef.index)
+        return StateAndRef(uncheckedCast(loadState(stateRef)), stateRef)
     }
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
@@ -425,8 +418,8 @@ interface ServiceHub : ServicesForResolution {
      * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
-     * We want to make sure users have a restricted access to administrative functions, this function will return a [RestrictedConnection] instance.
-     * The following methods are blocked:
+     * We want to make sure users have a restricted access to administrative functions, this function will return a [Connection] instance
+     * with the following methods blocked:
      * - abort(executor: Executor?)
      * - clearWarnings()
      * - close()

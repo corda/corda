@@ -7,7 +7,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
-import net.corda.core.internal.InputStreamAndHash
+import net.corda.core.internal.hash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -16,9 +16,14 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.jar.JarInputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletResponse.SC_OK
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
 import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
+import kotlin.io.path.createTempFile
+import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
 import kotlin.system.exitProcess
 
 internal enum class Role {
@@ -57,11 +62,16 @@ fun main(args: Array<String>) {
     }
 }
 
-/** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+/** A temp zip file attachment of at least numOfClearBytes size, will be used. */
 // DOCSTART 2
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
-    val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
-    sender(rpc, inputStream, hash)
+    val attachmentFile = createTempFile("attachment-demo").apply { toFile().deleteOnExit() }
+    ZipOutputStream(attachmentFile.outputStream()).use { zip ->
+        zip.putNextEntry(ZipEntry("test"))
+        zip.write(ByteArray(numOfClearBytes))
+        zip.closeEntry()
+    }
+    sender(rpc, attachmentFile.inputStream(), attachmentFile.hash)
 }
 
 private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {

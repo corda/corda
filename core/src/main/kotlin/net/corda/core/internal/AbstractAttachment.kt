@@ -11,6 +11,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
+import java.util.Locale
 import java.util.jar.JarInputStream
 
 const val DEPLOYED_CORDAPP_UPLOADER = "app"
@@ -32,6 +33,21 @@ fun Attachment.isUploaderTrusted(): Boolean = when (this) {
     is ContractAttachment -> isUploaderTrusted(uploader)
     is AbstractAttachment -> isUploaderTrusted(uploader)
     else -> false
+}
+
+/**
+ * Sorts a list of [Attachment]s deterministically.
+ * The sorting logic is as follows:
+ * - Primary sort: by [Attachment.contractVersion] in **descending** order (higher versions come first).
+ * - Secondary sort: by [Attachment.id] in **ascending** (alphabetical) order to ensure deterministic ordering
+ *   when versions are equal or missing.
+ * @return a new list of attachments sorted first by version (descending) and then by ID (ascending).
+ */
+fun List<Attachment>.sortAttachments(): List<Attachment> {
+    return this.sortedWith(
+            compareByDescending<Attachment> { (it.contractVersion) }
+                    .thenBy { it.id.toString() }
+    )
 }
 
 abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: String?) : Attachment {
@@ -60,18 +76,19 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: Str
         openAsJAR().use(JarSignatureCollector::collectSigners)
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override val signers: List<Party> by lazy {
         openAsJAR().use(JarSignatureCollector::collectSigningParties)
     }
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
     override fun hashCode() = id.hashCode()
-    override fun toString() = "${javaClass.simpleName}(id=$id)"
+    override fun toString() = toSimpleString()
 }
 
 @Throws(IOException::class)
 fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
-    fun String.norm() = toLowerCase().split('\\', '/') // XXX: Should this really be locale-sensitive?
+    fun String.norm() = lowercase(Locale.getDefault()).split('\\', '/') // XXX: Should this really be locale-sensitive?
     val p = path.norm()
     while (true) {
         val e = nextJarEntry ?: break

@@ -1,6 +1,15 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
+import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.PUT
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
@@ -24,9 +33,6 @@ import net.corda.vega.portfolio.toStateAndRef
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import javax.ws.rs.*
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
 
 //TODO: Change import namespaces vega -> ....
 
@@ -135,7 +141,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
                 it.toView(ownParty,
                         latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(rpc)?.toPortfolio(),
                         PVs?.get(it.id.second) ?: MultiCurrencyAmount.empty(),
-                        IMs?.get(it.id.second) ?: InitialMarginTriple.zero()
+                        IMs?.get(it.id.second) ?: InitialMarginTriple(0.0, 0.0, 0.0)
                 )
             }).build()
         }

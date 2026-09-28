@@ -1,0 +1,6 @@
+// Apply artifactory r3ArtifactoryPublish plugin
+if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
+    project.pluginManager.apply('com.r3.internal.gradle.plugins.r3ArtifactoryPublish')
+}
+
+project.pluginManager.apply('maven-publish')

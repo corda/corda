@@ -1,8 +1,8 @@
 package net.corda.demobench.pty
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import net.corda.coretesting.internal.rigorousMock
 import org.junit.Assert.assertEquals
 import org.junit.Before

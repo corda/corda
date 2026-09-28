@@ -14,11 +14,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.enclosedCordapp
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
-import java.util.*
+import java.util.Random
 
 class CustomNotaryTest {
     private lateinit var mockNet: MockNetwork
@@ -50,13 +51,15 @@ class CustomNotaryTest {
         mockNet.stopNodes()
     }
 
-    @Test(expected = CustomNotaryException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `custom notary service is active`() {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
         val stx = aliceNode.services.signInitialTransaction(tx)
         val future = aliceNode.startFlow(NotaryFlow.Client(stx))
         mockNet.runNetwork()
-        future.getOrThrow()
+        assertThatExceptionOfType(CustomNotaryException::class.java).isThrownBy {
+            future.getOrThrow()
+        }
     }
 
     class CustomNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : NotaryService() {

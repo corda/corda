@@ -5,7 +5,6 @@ import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -33,6 +32,7 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
+import kotlin.io.path.div
 
 class CordappConstraintsTests {
 
@@ -285,7 +285,7 @@ class CordappConstraintsTests {
                     packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)
             )
             listOf(alice, bob, notary).forEach { node ->
-                println("Shutting down the node for ${node} ... ")
+                println("Shutting down the node for $node ... ")
                 (node as OutOfProcess).process.destroyForcibly()
                 node.stop()
                 NetworkParametersCopier(newParams, overwriteFile = true).install(node.baseDirectory)

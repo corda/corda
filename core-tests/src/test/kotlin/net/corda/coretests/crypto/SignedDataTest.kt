@@ -6,6 +6,7 @@ import net.corda.core.crypto.sign
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -35,12 +36,14 @@ class SignedDataTest {
         assertEquals(data, unwrappedData)
     }
 
-    @Test(expected = SignatureException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `make sure incorrectly signed data raises an exception`() {
         val keyPairA = generateKeyPair()
         val keyPairB = generateKeyPair()
         val sig = keyPairA.private.sign(serialized.bytes, keyPairB.public)
         val wrappedData = SignedData(serialized, sig)
-        wrappedData.verified()
+        assertThatExceptionOfType(SignatureException::class.java).isThrownBy {
+            wrappedData.verified()
+        }
     }
 }

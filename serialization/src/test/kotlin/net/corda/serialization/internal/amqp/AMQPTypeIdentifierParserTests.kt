@@ -1,16 +1,18 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeToken
+import net.corda.serialization.internal.MAX_TYPE_PARAM_DEPTH
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.UnsignedShort
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Date
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import net.corda.serialization.internal.MAX_TYPE_PARAM_DEPTH
 
 class AMQPTypeIdentifierParserTests {
 
@@ -100,49 +102,49 @@ class AMQPTypeIdentifierParserTests {
         verify("java.util.List<net.corda.core.contracts.Command<net.corda.core.contracts.Command<net.corda.core.contracts.CommandData>>>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test trailing text`() {
-        verify("java.util.Map<java.lang.String, java.lang.Integer>foo")
+        verifyInvalid("java.util.Map<java.lang.String, java.lang.Integer>foo")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test trailing comma`() {
-        verify("java.util.Map<java.lang.String, java.lang.Integer,>")
+        verifyInvalid("java.util.Map<java.lang.String, java.lang.Integer,>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test leading comma`() {
-        verify("java.util.Map<,java.lang.String, java.lang.Integer>")
+        verifyInvalid("java.util.Map<,java.lang.String, java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test middle comma`() {
-        verify("java.util.Map<,java.lang.String,, java.lang.Integer>")
+        verifyInvalid("java.util.Map<,java.lang.String,, java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test trailing close`() {
-        verify("java.util.Map<java.lang.String, java.lang.Integer>>")
+        verifyInvalid("java.util.Map<java.lang.String, java.lang.Integer>>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test empty params`() {
-        verify("java.util.Map<>")
+        verifyInvalid("java.util.Map<>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test mid whitespace`() {
-        verify("java.u til.List<java.lang.String>")
+        verifyInvalid("java.u til.List<java.lang.String>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test mid whitespace2`() {
-        verify("java.util.List<java.l ng.String>")
+        verifyInvalid("java.util.List<java.l ng.String>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test wrong number of parameters`() {
-        verify("java.util.List<java.lang.String, java.lang.Integer>")
+        verifyInvalid("java.util.List<java.lang.String, java.lang.Integer>")
     }
 
     @Test(timeout=300_000)
@@ -150,18 +152,18 @@ class AMQPTypeIdentifierParserTests {
         verify("java.lang.String")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test parameters on non-generic type`() {
-        verify("java.lang.String<java.lang.Integer>")
+        verifyInvalid("java.lang.String<java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `test excessive nesting`() {
         var nested = "java.lang.Integer"
         for (i in 1..MAX_TYPE_PARAM_DEPTH) {
             nested = "java.util.List<$nested>"
         }
-        verify(nested)
+        verifyInvalid(nested)
     }
 
     private inline fun <reified T> assertParseResult(typeString: String) {
@@ -194,5 +196,11 @@ class AMQPTypeIdentifierParserTests {
     private fun verify(typeName: String) {
         val type = AMQPTypeIdentifierParser.parse(typeName).getLocalType()
         assertEquals(normalise(typeName), normalise(type.typeName))
+    }
+
+    private fun verifyInvalid(typeName: String) {
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            AMQPTypeIdentifierParser.parse(typeName).getLocalType()
+        }
     }
 }

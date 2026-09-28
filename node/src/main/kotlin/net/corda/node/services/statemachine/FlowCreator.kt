@@ -174,7 +174,6 @@ class FlowCreator(
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun Checkpoint.getFiberFromCheckpoint(runId: StateMachineRunId, firstRestore: Boolean): FlowStateMachineImpl<*>? {
         try {
             return when(flowState) {
@@ -214,7 +213,7 @@ class FlowCreator(
     }
 
     private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
-        // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
+        // Quasar requires that at least the call method be annotated suspendable. Unfortunately, it's
         // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
         //
         // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which

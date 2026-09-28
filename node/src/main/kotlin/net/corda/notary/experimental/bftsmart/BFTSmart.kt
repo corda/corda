@@ -26,6 +26,7 @@ import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -215,7 +216,7 @@ object BFTSmart {
         }
 
         override fun appExecuteBatch(command: Array<ByteArray>, mcs: Array<MessageContext>): Array<ByteArray?> {
-            return Arrays.stream(command).map(this::executeCommand).toTypedArray()
+            return uncheckedCast(Arrays.stream(command).map(this::executeCommand).toTypedArray())
         }
 
         /**

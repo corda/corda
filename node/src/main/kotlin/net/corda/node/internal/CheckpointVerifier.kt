@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import com.esotericsoftware.kryo.KryoException
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -42,13 +43,14 @@ object CheckpointVerifier {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
                     serializedCheckpoint.deserialize(checkpointSerializationContext)
-                } catch (e: ClassNotFoundException) {
-                    val message = e.message
-                    if (message != null) {
-                        throw CheckpointIncompatibleException.CordappNotInstalledException(message)
-                    } else {
-                        throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
+                } catch (e: KryoException) {
+                    if (e.cause is ClassNotFoundException) {
+                        val message = (e.cause as ClassNotFoundException).message
+                        if (message != null) {
+                            throw CheckpointIncompatibleException.CordappNotInstalledException(message)
+                        }
                     }
+                    throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
                 } catch (e: Exception) {
                     throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
                 }

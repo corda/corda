@@ -173,10 +173,11 @@ class DBTransactionStorageLedgerRecoveryTests {
 
     @Test(timeout = 300_000)
     fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
+
         val hashedDistList = HashedDistributionList(
                 ALL_VISIBLE,
                 mapOf(SecureHash.sha256(BOB.name.toString()) to NONE, SecureHash.sha256(CHARLIE_NAME.toString()) to ONLY_RELEVANT),
-                HashedDistributionList.PublicHeader(now(), 1)
+                HashedDistributionList.PublicHeader(Instant.ofEpochMilli(now().toEpochMilli()), 1)
         )
         val roundtrip = HashedDistributionList.decrypt(hashedDistList.encrypt(encryptionService), encryptionService)
         assertThat(roundtrip).isEqualTo(hashedDistList)
