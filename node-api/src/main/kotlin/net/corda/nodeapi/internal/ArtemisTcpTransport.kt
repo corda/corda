@@ -85,6 +85,7 @@ class ArtemisTcpTransport {
 
         fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                     config: MutualSslConfiguration?,
+                                    maxMessageSize: Int,
                                     trustManagerFactory: TrustManagerFactory? = config?.trustStore?.get()?.let(::trustManagerFactory),
                                     enableSSL: Boolean = true,
                                     threadPoolName: String = "P2PServer",
@@ -98,6 +99,7 @@ class ArtemisTcpTransport {
                     hostAndPort,
                     P2P_PROTOCOLS,
                     options,
+                    maxMessageSize,
                     trustManagerFactory,
                     enableSSL,
                     threadPoolName,
@@ -121,6 +123,7 @@ class ArtemisTcpTransport {
 
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                     config: BrokerRpcSslOptions?,
+                                    maxMessageSize: Int,
                                     enableSSL: Boolean = true,
                                     threadPoolName: String = "RPCServer",
                                     trace: Boolean = false,
@@ -130,7 +133,7 @@ class ArtemisTcpTransport {
                 config.keyStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
             }
-            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, null, enableSSL, threadPoolName, trace, remotingThreads)
+            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, maxMessageSize, null, enableSSL, threadPoolName, trace, remotingThreads)
         }
 
         fun rpcConnectorTcpTransport(hostAndPort: NetworkHostAndPort,
@@ -157,6 +160,7 @@ class ArtemisTcpTransport {
 
         fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                             config: SslConfiguration,
+                                            maxMessageSize: Int,
                                             threadPoolName: String = "Internal-RPCServer",
                                             trace: Boolean = false,
                                             remotingThreads: Int? = null): TransportConfiguration {
@@ -166,6 +170,7 @@ class ArtemisTcpTransport {
                     hostAndPort,
                     RPC_PROTOCOLS,
                     options,
+                    maxMessageSize,
                     trustManagerFactory(requireNotNull(config.trustStore).get()),
                     true,
                     threadPoolName,
@@ -177,6 +182,7 @@ class ArtemisTcpTransport {
         private fun createAcceptorTransport(hostAndPort: NetworkHostAndPort,
                                             protocols: String,
                                             options: MutableMap<String, Any>,
+                                            maxMessageSize: Int,
                                             trustManagerFactory: TrustManagerFactory?,
                                             enableSSL: Boolean,
                                             threadPoolName: String,
@@ -184,6 +190,15 @@ class ArtemisTcpTransport {
                                             remotingThreads: Int?): TransportConfiguration {
             // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
             options[TransportConstants.HANDSHAKE_TIMEOUT] = 0
+            // ENT-16772: Artemis 2.57.0 introduced a hard limit (CoreFrameWithSizeLimitDecoder) on the size of a
+            // single CORE protocol frame accepted on a connection once it has authenticated, defaulting to 128KiB.
+            // This is a separate, new mechanism from Corda's own large-message threshold (maxMessageSize), which
+            // decides whether a message is streamed as a "large message" or sent directly as a single frame. A
+            // message under maxMessageSize that Corda sends directly (e.g. an RPC attachment upload) must also fit
+            // under Artemis's own frame limit, or the connection is forcibly closed with "Frame size exceeded".
+            // Tie the acceptor's limit directly to the same maxMessageSize Corda already uses, rather than a
+            // separate hardcoded number, so the two can never drift out of sync again.
+            options["coreMaxFrameSize"] = maxMessageSize
             if (trustManagerFactory != null) {
                 // NettyAcceptor only creates default TrustManagerFactorys with the provided trust store details. However, we need to use
                 // more customised instances which use our revocation checkers, so we pass them in, to be picked up by Node(Open)SSLContextFactory.

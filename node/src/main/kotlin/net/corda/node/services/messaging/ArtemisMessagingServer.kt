@@ -154,6 +154,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         addAcceptorConfiguration(p2pAcceptorTcpTransport(
                 NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
                 config.p2pSslOptions,
+                maxMessageSize,
                 trustManagerFactory,
                 threadPoolName = threadPoolName,
                 trace = trace,
