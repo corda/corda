@@ -29,6 +29,7 @@ import java.io.InputStream
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
+import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
@@ -206,6 +207,9 @@ inline fun <reified T : Any> InputStream.readObject(): T = readFully().deseriali
 fun JarInputStream.entries(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else "${take(maxWidth - 1)}…"
+
+/** Return the sum of an Iterable of [BigDecimal]s. */
+fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
 
 /**
  * Returns an Observable that buffers events until subscribed.
