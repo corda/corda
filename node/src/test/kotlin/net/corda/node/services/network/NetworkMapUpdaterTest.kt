@@ -360,7 +360,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertThat(updateFile).describedAs("network parameters should not be auto accepted").doesNotExist()
         updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         verify(networkParametersStorage, times(1)).saveParameters(any())
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
@@ -398,7 +398,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertThat(updateFile).describedAs("network parameters should not be auto accepted").doesNotExist()
     }
 
     @Test(timeout=300_000)
@@ -412,7 +412,7 @@ class NetworkMapUpdaterTest {
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
+        assertThat(updateFile).describedAs("network parameters should not be auto accepted").doesNotExist()
     }
 
     @Test(timeout=300_000)
@@ -592,16 +592,16 @@ class NetworkMapUpdaterTest {
 
         //TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
-        assert(networkMapCache.allNodeHashes.size == 1)
-        assert(networkMapCache.allNodeHashes.first() == signedNodeInfo1.raw.hash)
+        assertThat(networkMapCache.allNodeHashes).hasSize(1)
+        assertThat(networkMapCache.allNodeHashes.first()).isEqualTo(signedNodeInfo1.raw.hash)
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(signedNodeInfo1.verified()))
         networkMapClient.publish(signedNodeInfo2)
         Thread.sleep(2L * cacheExpiryMs)
         advanceTime()
 
         verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(signedNodeInfo1.verified()))
-        assert(networkMapCache.allNodeHashes.size == 1)
-        assert(networkMapCache.allNodeHashes.first() == signedNodeInfo2.raw.hash)
+        assertThat(networkMapCache.allNodeHashes).hasSize(1)
+        assertThat(networkMapCache.allNodeHashes.first()).isEqualTo(signedNodeInfo2.raw.hash)
     }
 
     @Test(timeout=300_000)

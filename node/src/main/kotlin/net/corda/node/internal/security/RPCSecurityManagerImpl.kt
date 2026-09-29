@@ -10,6 +10,7 @@ import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
+import org.apache.activemq.artemis.spi.core.security.jaas.NoCacheLoginException
 import org.apache.shiro.authc.AuthenticationException
 import org.apache.shiro.authc.AuthenticationInfo
 import org.apache.shiro.authc.AuthenticationToken
@@ -27,7 +28,6 @@ import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.ImmutablePrincipalCollection
 import java.util.concurrent.ConcurrentHashMap
-import javax.security.auth.login.FailedLoginException
 
 private typealias AuthServiceConfig = SecurityConfiguration.AuthService
 
@@ -46,7 +46,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
             try {
                 manager.authenticate(authToken)
             } catch (authcException: AuthenticationException) {
-                throw FailedLoginException(authcException.toString())
+                throw NoCacheLoginException(authcException.toString())
             }
             return ShiroAuthorizingSubject(
                     subjectId = ImmutablePrincipalCollection.ofSinglePrincipal(principal, id.value),

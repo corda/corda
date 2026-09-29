@@ -13,9 +13,9 @@ import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
+import org.apache.activemq.artemis.spi.core.security.jaas.NoCacheLoginException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import javax.security.auth.login.FailedLoginException
 import kotlin.reflect.KFunction
 import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
@@ -106,7 +106,7 @@ class RPCSecurityManagerTest {
                 users = listOf(User("user", "xxxx", emptySet())),
                 id = AuthServiceId("TEST"))
         userRealm.authenticate("user", Password("xxxx"))
-        assertFailsWith(FailedLoginException::class, "Login with wrong password should fail") {
+        assertFailsWith(NoCacheLoginException::class, "Login with wrong password should fail") {
             userRealm.authenticate("foo", Password("xxxx"))
         }
         assertNull(userRealm.tryAuthenticate("foo", Password("wrong")),
@@ -119,7 +119,7 @@ class RPCSecurityManagerTest {
                 users = listOf(User("user", "password", emptySet())),
                 id = AuthServiceId("TEST"))
         userRealm.authenticate("user", Password("password"))
-        assertFailsWith(FailedLoginException::class, "Login with wrong password should fail") {
+        assertFailsWith(NoCacheLoginException::class, "Login with wrong password should fail") {
             userRealm.authenticate("user", Password("wrong"))
         }
         assertNull(userRealm.tryAuthenticate("user", Password("wrong")),

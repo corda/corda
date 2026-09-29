@@ -18,6 +18,7 @@ import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
@@ -47,7 +48,9 @@ import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
+import org.junit.Assert
 import java.io.ByteArrayOutputStream
+import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509CRL
@@ -246,6 +249,18 @@ fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
     } else {
         createTestSerializationEnv().asTestContextEnv { block() }
     }
+}
+
+fun isQuasarAgentSpecified(): Boolean {
+    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
+    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
+}
+inline fun <reified T> assertNotCordaSerializable() {
+    assertNotCordaSerializable(T::class.java)
+}
+fun assertNotCordaSerializable(clazz: Class<*>) {
+    Assert.assertNull("$clazz must NOT be annotated as @CordaSerializable!",
+            clazz.getAnnotation(CordaSerializable::class.java))
 }
 
 @JvmField

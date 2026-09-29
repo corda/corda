@@ -9,13 +9,38 @@
  * unfinished builds are not required.
  * This feature doesn't play well with disableConcurrentBuilds() option
  */
-@Library('corda-shared-build-pipeline-steps')
+@Library('corda-shared-build-pipeline-steps@5.3')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.enums.BuildEnvironment
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+KubernetesAgent k8s = new KubernetesAgent(
+        BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
+        KubernetesCluster.JenkinsAgents,
+        1
+).withDocker(
+        1,
+        false,
+        true
+)
+
 pipeline {
-    agent { label 'standard' }
+    agent {
+        kubernetes {
+            cloud k8s.buildCluster.cloudName
+            yaml k8s.JSON
+            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+            idleMinutes 15
+            podRetention always()
+            nodeSelector k8s.nodeSelector
+            label k8s.jenkinsLabel
+            showRawYaml true
+            defaultContainer k8s.defaultContainer.name
+        }
+    }
 
     options {
         timestamps()
@@ -39,7 +64,8 @@ pipeline {
         BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         USE_CACHE = 'corda-remotes'
         DOCKER_URL = "https://index.docker.io/v1/"
-        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
+        JAVA_8_HOME = "/usr/lib/jvm/zulu8"
     }
 
     stages {

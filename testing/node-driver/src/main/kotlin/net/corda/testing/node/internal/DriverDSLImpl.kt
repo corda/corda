@@ -504,7 +504,7 @@ class DriverDSLImpl(
         val stackTrace = Throwable().stackTrace
         val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
         return if (index == -1) {
-            // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
+            // In this case we're dealing with the RPCDriver or one of it's cousins which are internal and we don't care about them
             emptyList()
         } else {
             listOf(Class.forName(stackTrace[index + 1].className).packageName_)

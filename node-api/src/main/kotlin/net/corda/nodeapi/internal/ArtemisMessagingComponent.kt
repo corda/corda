@@ -34,8 +34,12 @@ class ArtemisMessagingComponent {
         // TODO: we might want to make this value configurable.
         const val JOURNAL_HEADER_SIZE = 1024
         // Time interval after which every connected client is re-authenticated using BrokerJaasLoginModule.
-        // Setting it to 1 hour (instead of default value of 10 seconds) to avoid frequent expensive checks, e.g. CRL check.
-        const val SECURITY_INVALIDATION_INTERVAL = 3600 * 1000L
+        // Setting it to the default value of 10 seconds to balance responsiveness of RPC and P2P requirements
+        // Previously, this was 1 hour, to avoid frequent expensive checks, e.g. CRL check, but the CRL check has already been removed
+        // in earlier refactoring
+        // Made configurable while we are here in case a need to diagnose support issue
+        val SECURITY_INVALIDATION_INTERVAL: Long
+            get() = System.getProperty("net.corda.node.services.messaging.securityInvalidationInterval")?.toLong() ?: 10 * 1000L
 
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".

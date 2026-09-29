@@ -25,6 +25,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.internal.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
@@ -144,14 +145,14 @@ class NotaryWhitelistTests(
         val ex = assertFailsWith(NotaryException::class) {
             future.getOrThrow()
         }
-        assert(ex.error is NotaryError.TransactionInvalid)
+        assertThat(ex.error).isInstanceOf(NotaryError.TransactionInvalid::class.java)
         assertEquals(validStx.id, ex.txId)
     }
 
     private fun removeOldNotary(parameters: NetworkParameters): NetworkParameters {
         val newParameters = parameters.copy(notaries = parameters.notaries.drop(1))
-        assert(newParameters.notaries.none { it.identity == oldNotary })
-        assert(newParameters.notaries.any { it.identity == newNotary })
+        assertThat(newParameters.notaries).noneMatch { it.identity == oldNotary }
+        assertThat(newParameters.notaries).anyMatch { it.identity == newNotary }
         return newParameters
     }
 
@@ -202,7 +203,7 @@ class NotaryWhitelistTests(
         val ex = assertFailsWith(NotaryException::class) {
             future.getOrThrow()
         }
-        assert(ex.error is NotaryError.TransactionInvalid)
+        assertThat(ex.error).isInstanceOf(NotaryError.TransactionInvalid::class.java)
         assertEquals(validStx.id, ex.txId)
     }
 
@@ -216,7 +217,7 @@ class NotaryWhitelistTests(
         return fakeStx.tx.outRef(0)
     }
 
-    /** Changes the notary service to [notary]. Does not actually communicate with a notary. */
+    /** Changes the notary service to [fakeNotaryParty]. Does not actually communicate with a notary. */
     private fun changeNotary(inputState: StateAndRef<DummyContract.State>, fakeNotaryParty: Party, fakeNotaryKeyPair: KeyPair): NotaryChangeLedgerTransaction {
         val notaryChangeTx = NotaryChangeTransactionBuilder(
                 listOf(inputState.ref),

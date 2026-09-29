@@ -6,11 +6,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.node.services.Permissions
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.isQuasarAgentSpecified
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.h2.jdbc.JdbcSQLNonTransientException
