@@ -6,6 +6,7 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.config.DEFAULT_SSL_HANDSHAKE_TIMEOUT
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
@@ -197,8 +198,13 @@ class ArtemisTcpTransport {
             // message under maxMessageSize that Corda sends directly (e.g. an RPC attachment upload) must also fit
             // under Artemis's own frame limit, or the connection is forcibly closed with "Frame size exceeded".
             // Tie the acceptor's limit directly to the same maxMessageSize Corda already uses, rather than a
-            // separate hardcoded number, so the two can never drift out of sync again.
-            options["coreMaxFrameSize"] = maxMessageSize
+            // separate hardcoded number, so the two can never drift out of sync again. A message Corda decides to
+            // send directly (i.e. one under minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE, see
+            // P2PMessagingClient) is encoded on the wire as its payload plus Artemis's own CORE packet
+            // header/metadata overhead, so the raw frame is always somewhat larger than the message body size.
+            // Add the same JOURNAL_HEADER_SIZE margin already used for minLargeMessageSize/journal sizing here too,
+            // so a message that is allowed to go out as a single frame is never rejected by this limit.
+            options["coreMaxFrameSize"] = maxMessageSize + JOURNAL_HEADER_SIZE
             if (trustManagerFactory != null) {
                 // NettyAcceptor only creates default TrustManagerFactorys with the provided trust store details. However, we need to use
                 // more customised instances which use our revocation checkers, so we pass them in, to be picked up by Node(Open)SSLContextFactory.
