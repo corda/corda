@@ -1,5 +1,6 @@
 package net.corda.core.crypto.keyrotation.crossprovider
 
+import net.corda.core.contracts.newKeyRotationProofChainMap
 import net.corda.core.crypto.internal.keyrotation.crossprovider.IdentityServiceProofProvider
 import net.corda.core.crypto.internal.keyrotation.crossprovider.InMemoryProofProvider
 import net.corda.core.crypto.internal.keyrotation.crossprovider.ProofProvider
@@ -7,7 +8,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
 import java.security.PublicKey
-import java.util.Collections
+import java.util.SortedMap
 
 /**
  * Resolves whether two Party instances represent the same legal entity even if their keys have been rotated.
@@ -22,8 +23,8 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
 
     companion object {
 
-        fun generateProofChainMap(vararg resolvedParties: PartyIdentityResolved): Map<PublicKey, KeyRotationProofChain>? {
-            val keyRotationProofs: MutableMap<PublicKey, KeyRotationProofChain> = LinkedHashMap<PublicKey, KeyRotationProofChain>()
+        fun generateProofChainMap(vararg resolvedParties: PartyIdentityResolved): SortedMap<PublicKey, KeyRotationProofChain>? {
+            val keyRotationProofs = newKeyRotationProofChainMap()
 
             for (resolved in resolvedParties) {
                 if (resolved.containsProof()) {
@@ -31,11 +32,11 @@ class PartyIdentityResolver private constructor(private val proofProvider: Proof
                 }
             }
 
-            if(keyRotationProofs.isEmpty()) {
+            if (keyRotationProofs.isEmpty()) {
                 return null
             }
 
-            return Collections.unmodifiableMap(keyRotationProofs)
+            return keyRotationProofs
         }
 
         // Resolves the given Party to its current legal identity (Party with the latest key) using the provided IdentityService.

@@ -236,8 +236,10 @@ object PublicKeyComparator : Comparator<PublicKey> {
     }
 }
 
+fun newKeyRotationProofChainMap(): TreeMap<PublicKey, KeyRotationProofChain> = TreeMap(PublicKeyComparator)
+
 fun Map<PublicKey, KeyRotationProofChain>.toSortedMap(): TreeMap<PublicKey, KeyRotationProofChain> {
-    return TreeMap<PublicKey, KeyRotationProofChain> (PublicKeyComparator).apply {
+    return newKeyRotationProofChainMap().apply {
         putAll(this@toSortedMap)
     }
 }
