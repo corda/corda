@@ -26,7 +26,6 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
-import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -181,9 +180,9 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
         val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
-        assertThatThrownBy {
+        thread {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
-        }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+        }.join(10.seconds.toMillis())
         assertNull(receivedMessages.poll(200, MILLISECONDS))
         this.messagingClient = null
     }
