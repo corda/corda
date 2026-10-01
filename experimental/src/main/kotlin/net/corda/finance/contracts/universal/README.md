@@ -13,8 +13,8 @@ At the highest level in order to support a new kind of contract, a novel new con
 
 What is proposed here is an intermediate layer in between by creating a highly customizable smart contract covering a large family of OTC contracts by having a simple yet expressive representation of contract semantics in the contract state. The objectives are:
 
- - writing a new contract requires only lines of codee rather than pages of code.
- - non-developers should be able able of reading and possibly writing smart contracts.
+ - writing a new contract requires only lines of code rather than pages of code.
+ - non-developers should be able to read and possibly writing smart contracts.
  - the contract format should be suitable for automatic transformation and inspection.
 
 The last point is important because banks will need to integrate smart contract into their existing systems. Most banks already have _script_ representation of trades in order to have somewhat generic pricing and risk infrastructure.
