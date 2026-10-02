@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
+import java.security.PublicKey
 
 /**
  * A transaction with the minimal amount of information required to compute the unique transaction [id], and
@@ -24,6 +25,9 @@ abstract class CoreTransaction : BaseTransaction() {
      * was created on older version of Corda (before 4), resolution will default to initial parameters.
      */
     abstract val networkParametersHash: SecureHash?
+
+    /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
+    abstract val requiredSigningKeys: Set<PublicKey>
 }
 
 /** A transaction with fully resolved components, such as input states. */

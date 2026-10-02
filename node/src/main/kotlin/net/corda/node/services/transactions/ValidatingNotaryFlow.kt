@@ -1,6 +1,7 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
@@ -20,11 +21,20 @@ import java.time.Duration
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
+open class ValidatingNotaryFlow(
+        otherSideSession: FlowSession,
+        service: SinglePartyNotaryService,
+        etaThreshold: Duration = defaultEstimatedWaitTime
+) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val stx = requestPayload.signedTransaction
-        val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
-        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references, stx.networkParametersHash)
+        var timeWindow: TimeWindow? = null
+        var notaryInstructions: List<NotaryInstruction> = emptyList()
+        if (stx.coreTransaction is WireTransaction) {
+            timeWindow = stx.tx.timeWindow
+            notaryInstructions = stx.tx.notaryInstructions
+        }
+        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references, notaryInstructions, stx.networkParametersHash)
     }
 
     /**

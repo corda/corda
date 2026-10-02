@@ -6,10 +6,12 @@ import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -41,6 +43,7 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.dummyCommand
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -60,9 +63,12 @@ class CompatibleTransactionTests {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
 
+    private data class DummyNotaryInstruction(val id: Int) : NotaryInstruction
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     private val dummyOutState = TransactionState(DummyState(0), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
     private val stateRef1 = StateRef(SecureHash.randomSHA256(), 0)
     private val stateRef2 = StateRef(SecureHash.randomSHA256(), 1)
@@ -76,6 +82,7 @@ class CompatibleTransactionTests {
     private val timeWindow = TimeWindow.fromOnly(Instant.now())
     private val privacySalt: PrivacySalt = PrivacySalt()
     private val paramsHash = SecureHash.randomSHA256()
+    private val notaryInstructions = listOf(DummyNotaryInstruction(1), DummyNotaryInstruction(2))
 
     private val inputGroup by lazy { ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }) }
     private val outputGroup by lazy { ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }) }
@@ -85,6 +92,7 @@ class CompatibleTransactionTests {
     private val timeWindowGroup by lazy { ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow.serialize())) }
     private val signersGroup by lazy { ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }) }
     private val networkParamsGroup by lazy { ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(paramsHash.serialize())) }
+    private val notaryInstructionsGroup by lazy { ComponentGroup(NOTARY_INSTRUCTIONS_GROUP.ordinal, notaryInstructions.map { it.serialize() }) }
 
     private val newUnknownComponentGroup = ComponentGroup(100, listOf(OpaqueBytes(secureRandomBytes(4)), OpaqueBytes(secureRandomBytes(8))))
     private val newUnknownComponentEmptyGroup = ComponentGroup(101, emptyList())
@@ -164,7 +172,7 @@ class CompatibleTransactionTests {
 
     @Test(timeout=300_000)
 	fun `WireTransaction constructors and compatibility`() {
-        val groups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
+        val groups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null, emptyList(), emptyList())
         val wireTransactionOldConstructor = WireTransaction(groups, privacySalt)
         assertEquals(wireTransactionA, wireTransactionOldConstructor)
 
@@ -246,14 +254,9 @@ class CompatibleTransactionTests {
         ComponentGroupEnum.entries.forEach(ftxAll::checkAllComponentsVisible)
 
         // Filter inputs only.
-        fun filtering(elem: Any): Boolean {
-            return when (elem) {
-                is StateRef -> true
-                else -> false
-            }
-        }
+        val inputsOnly = Predicate<Any> { it is StateRef }
 
-        val ftxInputs = wireTransactionA.buildFilteredTransaction(Predicate(::filtering)) // Inputs only filtered.
+        val ftxInputs = wireTransactionA.buildFilteredTransaction(inputsOnly) // Inputs only filtered.
         ftxInputs.verify()
         ftxInputs.checkAllComponentsVisible(INPUTS_GROUP)
 
@@ -282,13 +285,15 @@ class CompatibleTransactionTests {
                 notaryGroup,
                 timeWindowGroup,
                 signersGroup,
+                notaryInstructionsGroup,
                 newUnknownComponentGroup // A new unknown component with ordinal 100 that we cannot process.
         )
         val wireTransactionCompatibleA = WireTransaction(componentGroupsCompatibleA, privacySalt)
-        val ftxCompatible = wireTransactionCompatibleA.buildFilteredTransaction(Predicate(::filtering))
+        val ftxCompatible = wireTransactionCompatibleA.buildFilteredTransaction(inputsOnly)
         ftxCompatible.verify()
         assertEquals(ftxInputs.inputs, ftxCompatible.inputs)
         assertEquals(wireTransactionCompatibleA.id, ftxCompatible.id)
+        assertThat(wireTransactionCompatibleA.notaryInstructions).isEqualTo(notaryInstructions)
 
         assertEquals(1, ftxCompatible.filteredComponentGroups.size)
         assertEquals(3, ftxCompatible.filteredComponentGroups.getRequiredGroup(INPUTS_GROUP).components.size)
@@ -296,6 +301,7 @@ class CompatibleTransactionTests {
         assertNotNull(ftxCompatible.filteredComponentGroups.getRequiredGroup(INPUTS_GROUP).partialMerkleTree)
         assertNull(wireTransactionCompatibleA.networkParametersHash)
         assertNull(ftxCompatible.networkParametersHash)
+        assertThat(ftxCompatible.notaryInstructions).isEmpty()
 
         // Now, let's allow everything, including the new component type that we cannot process.
         val ftxCompatibleAll = wireTransactionCompatibleA.buildFilteredTransaction { true } // All filtered, including the unknown component.
@@ -306,25 +312,27 @@ class CompatibleTransactionTests {
         assertEquals(wireTransactionCompatibleA.componentGroups.size, ftxCompatibleAll.filteredComponentGroups.size)
 
         // Hide one component group only.
-        // Filter inputs only.
-        fun filterOutInputs(elem: Any): Boolean {
-            return when (elem) {
-                is StateRef -> false
-                else -> true
-            }
-        }
+        val filterOutInputs = Predicate<Any> { it !is StateRef }
 
-        val ftxCompatibleNoInputs = wireTransactionCompatibleA.buildFilteredTransaction(Predicate(::filterOutInputs))
+        val ftxCompatibleNoInputs = wireTransactionCompatibleA.buildFilteredTransaction(filterOutInputs)
         ftxCompatibleNoInputs.verify()
         assertFailsWith<ComponentVisibilityException> { ftxCompatibleNoInputs.checkAllComponentsVisible(INPUTS_GROUP) }
         assertEquals(wireTransactionCompatibleA.componentGroups.size - 1, ftxCompatibleNoInputs.filteredComponentGroups.size)
         assertEquals(wireTransactionCompatibleA.componentGroups.maxOfOrNull { it.groupIndex }, ftxCompatibleNoInputs.groupHashes.size - 1)
+
+        val ftxCompatibleNotaryInstructions = wireTransactionCompatibleA.buildFilteredTransaction { it is NotaryInstruction }
+        ftxCompatibleNotaryInstructions.verify()
+        assertThat(ftxCompatibleNotaryInstructions.notaryInstructions).isEqualTo(notaryInstructions)
     }
 
     @Test(timeout=300_000)
 	fun `Command visibility tests`() {
         // 1st and 3rd commands require a signature from KEY_1.
-        val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
+        val twoCommandsforKey1 = listOf(
+                dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public),
+                dummyCommand(DUMMY_KEY_2.public),
+                dummyCommand(DUMMY_KEY_1.public)
+        )
         val componentGroups = listOf(
                 inputGroup,
                 outputGroup,
@@ -553,7 +561,8 @@ class CompatibleTransactionTests {
         // Modify last signer (we have a pointer from commandData).
         // Update partial Merkle tree for signers.
         val alterSignerComponents = signerComponents.subList(0, 2) + signerComponents[1] // Third one is removed and the 2nd command is added twice.
-        val alterSignersHashes = wtx.accessAvailableComponentHashes()[SIGNERS_GROUP.ordinal]!!.subList(0, 2) + wtx.digestService.componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
+        val alterSignersHashes = wtx.accessAvailableComponentHashes()[SIGNERS_GROUP.ordinal]!!.subList(0, 2) +
+                wtx.digestService.componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
         val alterMTree = MerkleTree.getMerkleTree(alterSignersHashes, wtx.digestService)
         val alterSignerPMTK = PartialMerkleTree.build(
                 alterMTree,
@@ -612,4 +621,3 @@ class CompatibleTransactionTests {
         assertFailsWith<ComponentVisibilityException> { ftx2.checkAllComponentsVisible(PARAMETERS_GROUP) }
     }
 }
-

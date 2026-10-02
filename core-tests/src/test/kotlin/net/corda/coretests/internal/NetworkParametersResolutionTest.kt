@@ -78,7 +78,10 @@ class NetworkParametersResolutionTest {
                         wtx.notary,
                         wtx.timeWindow,
                         wtx.references,
-                        parameters?.serialize()?.hash),
+                        parameters?.serialize()?.hash,
+                        emptyList(),
+                        emptyList()
+                ),
                 wtx.privacySalt
         )
         val publicKey = services.myInfo.singleIdentity().owningKey

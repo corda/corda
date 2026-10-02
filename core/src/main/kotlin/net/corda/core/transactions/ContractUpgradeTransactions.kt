@@ -105,6 +105,8 @@ data class ContractUpgradeWireTransaction(
             serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
         } else null
     }
+    override val requiredSigningKeys: Set<PublicKey>
+        get() = throw NotImplementedError("Not implemented - contract upgrade is no longer supported as of Corda 4.12")
 
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
@@ -224,6 +226,10 @@ data class ContractUpgradeFilteredTransaction(
     override val networkParametersHash: SecureHash? by lazy {
         visibleComponents[PARAMETERS_HASH.ordinal]?.component?.deserialize<SecureHash>()
     }
+
+    override val requiredSigningKeys: Set<PublicKey>
+        get() = throw NotImplementedError("Not implemented - contract upgrade is no longer supported as of Corda 4.12")
+
     override val id: SecureHash by lazy {
         val totalComponents = visibleComponents.size + hiddenComponents.size
         val hashList = (0 until totalComponents).map { i ->

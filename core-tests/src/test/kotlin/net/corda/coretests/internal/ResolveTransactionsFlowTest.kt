@@ -321,7 +321,12 @@ class ResolveTransactionsFlowTest {
     }
 
     private fun createNotaryChangeTransaction(inputs: List<StateRef>): SignedTransaction {
-        val notaryTx = NotaryChangeTransactionBuilder(inputs, notary, newNotary, notaryNode.services.networkParametersService.defaultHash).build()
+        val notaryTx = NotaryChangeTransactionBuilder(
+                inputs,
+                notary,
+                newNotary,
+                notaryNode.services.networkParametersService.defaultHash,
+                setOf(megaCorp.owningKey)).build()
         val notaryKey = notary.owningKey
         val signableData = SignableData(notaryTx.id, SignatureMetadata(4, Crypto.findSignatureScheme(notaryKey).schemeNumberID))
         val signature = notaryNode.services.keyManagementService.sign(signableData, notaryKey)

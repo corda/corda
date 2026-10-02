@@ -13,6 +13,7 @@ import net.corda.client.jackson.internal.valueAs
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -193,7 +194,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         // The contents of the file were written out as follows:
 //        ClassNotOnClasspath(BOB_NAME, 54321).serialize().open().copyTo("build" / "class-not-on-classpath-data")
 
-        val serializedBytes = SerializedBytes<Any>(javaClass.getResource("class-not-on-classpath-data").readBytes())
+        val serializedBytes = SerializedBytes<Any>(javaClass.getResource("class-not-on-classpath-data")!!.readBytes())
         val json = mapper.valueToTree<ObjectNode>(serializedBytes)
         println(mapper.writeValueAsString(json))
         assertThat(json["class"].textValue()).isEqualTo("net.corda.client.jackson.JacksonSupportTest\$ClassNotOnClasspath")
@@ -280,6 +281,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `SignedTransaction (WireTransaction)`() {
+        data class FakeNotaryInstruction(val instr: String) : NotaryInstruction
+
         val attachmentId = SecureHash.randomSHA256()
 
         val wtx = TransactionBuilder(
@@ -291,14 +294,27 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
                 window = TimeWindow.fromStartAndDuration(Instant.now(), 1.hours),
                 references = mutableListOf(StateRef(SecureHash.randomSHA256(), 0)),
                 privacySalt = net.corda.core.contracts.PrivacySalt()
-        ).toWireTransaction(services)
+        ).addNotaryInstruction(FakeNotaryInstruction("notary-instruct")).toWireTransaction(services)
         val stx = sign(wtx)
         partyObjectMapper.identities += listOf(MINI_CORP.party, DUMMY_NOTARY)
         val json = mapper.valueToTree<ObjectNode>(stx)
         println(mapper.writeValueAsString(json))
         val (wtxJson, signaturesJson) = json.assertHasOnlyFields("wire", "signatures")
         assertThat(signaturesJson.childrenAs<TransactionSignature>(mapper)).isEqualTo(stx.sigs)
-        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "references", "privacySalt", "networkParametersHash", "digestService")
+        val wtxFields = wtxJson.assertHasOnlyFields(
+                "id",
+                "notary",
+                "inputs",
+                "attachments",
+                "outputs",
+                "commands",
+                "timeWindow",
+                "references",
+                "privacySalt",
+                "networkParametersHash",
+                "notaryInstructions",
+                "digestService"
+        )
         assertThat(wtxFields[0].valueAs<SecureHash>(mapper)).isEqualTo(wtx.id)
         assertThat(wtxFields[1].valueAs<Party>(mapper)).isEqualTo(wtx.notary)
         assertThat(wtxFields[2].childrenAs<StateRef>(mapper)).isEqualTo(wtx.inputs)
@@ -308,7 +324,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[6].valueAs<TimeWindow>(mapper)).isEqualTo(wtx.timeWindow)
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
-        assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
+        assertThat(wtxFields[10].childrenAs<NotaryInstruction>(mapper)).isEqualTo(wtx.notaryInstructions)
+        assertThat(wtxFields[11].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
