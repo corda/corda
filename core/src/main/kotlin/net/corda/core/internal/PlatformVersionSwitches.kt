@@ -21,4 +21,5 @@ object PlatformVersionSwitches {
     const val TWO_PHASE_FINALITY = 13
     const val LEGACY_ATTACHMENTS = 140
     const val NOTARY_INSTRUCTIONS = 160
+    const val CROSS_PROVIDER_KEY_ROTATION = 170
 }

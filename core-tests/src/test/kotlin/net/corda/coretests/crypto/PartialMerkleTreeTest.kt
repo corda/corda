@@ -5,14 +5,18 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.toSortedMap
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProof
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.randomHash
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -90,6 +94,17 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
+    private val dummyKeyRotationProofChain = KeyRotationProofChain(
+            listOf(
+                    KeyRotationProof(
+                            TestIdentity(MEGA_CORP.name).party.owningKey,
+                            TestIdentity(MEGA_CORP.name).party.owningKey, secureRandomBytes(32)
+                    )
+            )
+    )
+    private val dummyKeyRotationProofChainMap = mapOf(TestIdentity(MEGA_CORP.name).party.owningKey to dummyKeyRotationProofChain).toSortedMap()
+
+
     private val nodes = "abcdef"
     private lateinit var hashed: List<SecureHash>
     private lateinit var expectedRoot: SecureHash
@@ -97,6 +112,7 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
+    private lateinit var testTxWithKeyRotationProof: WireTransaction
 
     @Before
     fun init() {
@@ -104,7 +120,6 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         hashed = nodes.map { digestService.hash(it.serialize().bytes) }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash), digestService).hash
         merkleTree = MerkleTree.getMerkleTree(hashed, digestService)
-
         testLedger = MockServices(
                 cordappPackages = emptyList(),
                 initialIdentity = TestIdentity(MEGA_CORP.name),
@@ -134,8 +149,21 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
                 this.verifies()
             }
         }
+
         txs = testLedger.interpreter.transactionsToVerify
         testTx = txs[0]
+
+        // Build a transaction with a key rotation proof chain directly, since the DSL does not support it.
+        testTxWithKeyRotationProof = createWireTransaction(
+                inputs = testTx.inputs,
+                attachments = testTx.attachments,
+                outputs = testTx.outputs,
+                commands = listOf(Command(Cash.Commands.Move(), listOf(MEGA_CORP_PUBKEY), dummyKeyRotationProofChainMap.toSortedMap())),
+                notary = testTx.notary,
+                timeWindow = testTx.timeWindow,
+                privacySalt = testTx.privacySalt,
+                digestService = digestService
+        )
     }
 
     // Building full Merkle Tree tests.
@@ -204,6 +232,41 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         assertEquals(0, ftx.attachments.size)
         assertEquals(1, ftx.outputs.size)
         assertEquals(1, ftx.commands.size)
+        assertNull(ftx.commands.first().keyRotationProofChainMap)
+        assertNull(ftx.notary)
+        assertNotNull(ftx.timeWindow)
+        assertNull(ftx.networkParametersHash)
+        ftx.verify()
+    }
+
+    @Test(timeout=300_000)
+	fun `building Merkle tree for a tx with key rotation proof and for nonce test`() {
+        fun filtering(elem: Any): Boolean {
+            return when (elem) {
+                is StateRef -> true
+                is TransactionState<*> -> elem.data.participants[0].owningKey.keys == MINI_CORP_PUBKEY.keys
+                is Command<*> -> MEGA_CORP_PUBKEY in elem.signers
+                is TimeWindow -> true
+                is PublicKey -> elem == MEGA_CORP_PUBKEY
+                else -> false
+            }
+        }
+
+        val d = testTxWithKeyRotationProof.serialize().deserialize()
+        assertEquals(testTxWithKeyRotationProof.id, d.id)
+
+        val ftx = testTxWithKeyRotationProof.buildFilteredTransaction(Predicate(::filtering))
+
+        // We expect 6 and not 5 component groups, because there is at least one command in the ftx and thus,
+        // the signers and key rotation components are also sent (required for visibility purposes).
+        assertEquals(6, ftx.filteredComponentGroups.size)
+        assertEquals(1, ftx.inputs.size)
+        assertEquals(0, ftx.references.size)
+        assertEquals(0, ftx.attachments.size)
+        assertEquals(1, ftx.outputs.size)
+        assertEquals(1, ftx.commands.size)
+        assertNotNull(ftx.commands.first().keyRotationProofChainMap)
+        assertEquals(dummyKeyRotationProofChainMap, ftx.commands.first().keyRotationProofChainMap)
         assertNull(ftx.notary)
         assertNotNull(ftx.timeWindow)
         assertNull(ftx.networkParametersHash)

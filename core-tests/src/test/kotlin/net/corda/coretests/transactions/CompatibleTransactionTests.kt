@@ -5,6 +5,7 @@ import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
@@ -156,7 +157,9 @@ class CompatibleTransactionTests {
         assertEquals(wireTransactionA.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[OUTPUTS_GROUP.ordinal])
         assertEquals(wireTransactionA.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal], wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[NOTARY_GROUP.ordinal])
         assertNull(wireTransactionA.accessGroupMerkleRoots()[ATTACHMENTS_V2_GROUP.ordinal])
+        assertNull(wireTransactionA.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
         assertNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[ATTACHMENTS_V2_GROUP.ordinal])
+        assertNull(wireTransaction1ShuffledInputs.accessGroupMerkleRoots()[KEY_ROTATION_PROOF_GROUP.ordinal])
 
         // Group leaves (components) ordering does not affect the id. In this case, we added outputs group before inputs.
         val shuffledComponentGroupsA = listOf(

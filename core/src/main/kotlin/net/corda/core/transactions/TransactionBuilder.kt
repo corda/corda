@@ -192,6 +192,11 @@ open class TransactionBuilder(
         if (referenceStates.isNotEmpty()) {
             serviceHub.ensureMinimumPlatformVersion(4, "Reference states")
         }
+
+        if(commands.any { it.keyRotationProofChainMap != null }) {
+            serviceHub.ensureMinimumPlatformVersion(PlatformVersionSwitches.CROSS_PROVIDER_KEY_ROTATION, "Cross-Provider Key Rotation")
+        }
+
         resolveNotary(serviceHub)
 
         val (allContractAttachments, resolvedOutputs) = selectContractAttachmentsAndOutputStateConstraints(serviceHub)

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect.Value
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -65,6 +66,7 @@ import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -319,9 +321,33 @@ private interface TransactionStateMixin {
     val constraint: AttachmentConstraint
 }
 
+// Corda OS does not support cross-provider key rotation, therefore `keyRotationProofChainMap` is always null
+// and can safely be ignored during JSON serialization and deserialization.
+//
+// A custom deserializer is still required to allow deserialization to succeed. Without it, Jackson attempts
+// to resolve a deserializer for the `PublicKey` map keys which does not exist and it will not be implemented
+// because the map is always null, so the deserializer will never actually be called.
+@JsonDeserialize(using = CommandDeserializer::class)
 private interface CommandMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
     val value: CommandData
+    @get:JsonIgnore
+    val keyRotationProofChainMap: Map<PublicKey, KeyRotationProofChain>?
+}
+
+private data class CommandJson(
+        @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+        val value: CommandData,
+        val signers: List<PublicKey>
+)
+
+private class CommandDeserializer : JsonDeserializer<Command<*>>() {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): Command<*> {
+        val wrapper = parser.readValueAs(CommandJson::class.java)
+        val value = wrapper.value
+        val signers = wrapper.signers
+        return Command(value, signers)
+    }
 }
 
 @JsonDeserialize(using = TimeWindowDeserializer::class)

@@ -1,6 +1,8 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.CordaThrowable
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
@@ -181,8 +183,8 @@ class CachingCustomSerializerRegistry(
         AMQPTypeIdentifiers.isPrimitive(this) -> true
         isSubClassOf(CordaThrowable::class.java) -> false
         allowedFor.any { it.isAssignableFrom(this) } -> false
+        this == SignatureMetadata::class.java || this == SignableData::class.java -> false
         isAnnotationPresent(CordaSerializable::class.java) -> true
         else -> false
     }
 }
-
