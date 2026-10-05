@@ -228,7 +228,7 @@ data class RPCDriverDSL(
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
                 pagingDirectory = "$artemisDir/paging"
-                acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
+                acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null, maxFileSize))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
