@@ -185,15 +185,16 @@ class ArtemisMessagingServer(
             addAcceptorConfiguration(p2pAcceptorTcpTransport(
                     NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
                     config.p2pSslOptions,
+                    maxMessageSize,
                     trustManagerFactory,
                     threadPoolName = threadPoolName,
                     trace = trace,
                     remotingThreads = remotingThreads
             ))
             if (rpcAddresses != null) {
-                addAcceptorConfiguration(rpcAcceptorTcpTransport(rpcAddresses.primary, config.rpcOptions.sslConfig, enableSSL = config.rpcOptions.useSsl, threadPoolName = "RPCServer"))
+                addAcceptorConfiguration(rpcAcceptorTcpTransport(rpcAddresses.primary, config.rpcOptions.sslConfig, maxMessageSize, enableSSL = config.rpcOptions.useSsl, threadPoolName = "RPCServer"))
                 if (rpcAddresses.admin != rpcAddresses.primary) {
-                    addAcceptorConfiguration(rpcInternalAcceptorTcpTransport(rpcAddresses.admin, rpcSslOptions!!, threadPoolName = "RPCServerAdmin"))
+                    addAcceptorConfiguration(rpcInternalAcceptorTcpTransport(rpcAddresses.admin, rpcSslOptions!!, maxMessageSize, threadPoolName = "RPCServerAdmin"))
                 }
                 queueConfigs = queueConfigurations()
             }
