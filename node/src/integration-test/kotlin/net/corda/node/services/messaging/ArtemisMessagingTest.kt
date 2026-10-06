@@ -27,6 +27,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
+import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -170,6 +171,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
+    // A message just over maxMessageSize still fits inside the transport frame limit (maxMessageSize + JOURNAL_HEADER_SIZE), so it is
+    // the server's MessageSizeChecksInterceptor which drops it. The interceptor sends no reply, so the blocking send times out.
     @Test(timeout=300_000)
 	fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
@@ -180,10 +183,30 @@ class ArtemisMessagingTest {
         assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
-        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        val tooLargeByOneByte = messagingClient.createMessage(TOPIC, data = ByteArray(50_001))
         assertThatThrownBy {
-            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+            messagingClient.send(tooLargeByOneByte, messagingClient.myAddress)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+        this.messagingClient = null
+    }
+
+    // A message well above maxMessageSize + JOURNAL_HEADER_SIZE exceeds the Artemis acceptor's coreMaxFrameSize, so the server closes
+    // the connection before the interceptor sees it. The blocked send is then unblocked straight away rather than timing out.
+    @Test(timeout=300_000)
+	fun `server should close the connection if incoming frame exceeds the maximum frame size`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLargeMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        assertThatThrownBy {
+            messagingClient.send(tooLargeMessage, messagingClient.myAddress)
+        }.isInstanceOf(ActiveMQUnBlockedException::class.java)
         assertNull(receivedMessages.poll(200, MILLISECONDS))
         this.messagingClient = null
     }
