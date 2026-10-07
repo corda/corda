@@ -71,12 +71,12 @@ abstract class P2PMQSecurityTest : MQSecurityTest() {
 
     @Test(timeout=300_000)
 	fun `consume message from RPC requests queue`() {
-        assertConsumeAttackFailsNonexistent(RPCApi.RPC_SERVER_QUEUE_NAME)
+        assertConsumeAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
     @Test(timeout=300_000)
 	fun `consume message from logged in user's RPC queue`() {
         val user1Queue = loginToRPCAndGetClientQueue()
-        assertConsumeAttackFailsNonexistent(user1Queue)
+        assertConsumeAttackFails(user1Queue)
     }
 }

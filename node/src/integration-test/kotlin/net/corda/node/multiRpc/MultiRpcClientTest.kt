@@ -5,6 +5,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import net.corda.client.rpc.ConnectionFailureException
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.ext.MultiRPCClient
 import net.corda.client.rpc.ext.RPCConnectionListener
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
@@ -22,13 +23,19 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observer
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.ThreadPoolExecutor
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlin.use
 
 class MultiRpcClientTest {
 
@@ -95,6 +102,110 @@ class MultiRpcClientTest {
                 assertSame(connFuture, client.start())
             }
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `client with useGlobalThreadPools set to true should start global thread pools`() {
+        // Allocate named port to be used for RPC interaction
+        val rpcAddress = incrementalPortAllocation().nextHostAndPort()
+        val rpcUser = User("MultiRpcClient1", "MultiRpcClient1Pwd", setOf(all()))
+
+        val globalClient = MultiRPCClient(
+                rpcAddress,
+                AttachmentTrustInfoRPCOps::class.java,
+                rpcUser.username,
+                rpcUser.password,
+                customSerializers = null,
+                configuration = CordaRPCClientConfiguration.DEFAULT,
+                sslConfiguration = null,
+                classLoader = null,
+                externalTrace = null,
+                impersonatedActor = null,
+                targetLegalIdentity = null,
+                useGlobalThreadPools = true
+        )
+
+        // Right from the start attach a listener such that it will be informed of all the activity happening for this RPC client
+        val globalListener = mock<RPCConnectionListener<AttachmentTrustInfoRPCOps>>()
+        globalClient.addConnectionListener(globalListener)
+
+        globalClient.use {
+            // Starting node out-of-process to ensure it is completely independent from RPC client
+            driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
+                startNode(providedName = ALICE_NAME,
+                        defaultParameters = NodeParameters(rpcAddress = rpcAddress, rpcUsers = listOf(rpcUser))).getOrThrow()
+
+                val connFuture = globalClient.start()
+                eventually(duration = 60.seconds) {
+                    verify(globalListener, times(1)).onConnect(argThat { connectionOpt === connFuture.get() })
+                }
+            }
+        }
+
+        val globalPool = ActiveMQClient.getGlobalThreadPool() as? ThreadPoolExecutor
+                ?: error("Expected global thread pool to be a ThreadPoolExecutor")
+        val schedPool = ActiveMQClient.getGlobalScheduledThreadPool() as? ScheduledThreadPoolExecutor
+                ?: error("Expected global scheduled pool to be a ScheduledThreadPoolExecutor")
+
+        assertTrue(globalPool.poolSize > 0, "Global thread pool should be initialised and should have non-zero pool size")
+        assertTrue(globalPool.completedTaskCount > 0, "Global thread pool should be initialised and should have some completed tasks")
+        assertTrue(schedPool.poolSize > 0, "Scheduled thread pool should be initialised and should have non-zero pool size")
+        assertTrue(schedPool.completedTaskCount > 0, "Scheduled thread pool should be initialised and should have some completed tasks")
+    }
+
+    @Test(timeout = 300_000)
+    fun `client with useGlobalThreadPools set to false should not start global thread pools`() {
+        // Reset global thread pools before the test
+        val emptyThreadPool = Executors.newCachedThreadPool()
+        val emptyScheduledPool = Executors.newScheduledThreadPool(0)
+        val emptyFlowControlPool = Executors.newCachedThreadPool()
+        ActiveMQClient.injectPools(emptyThreadPool, emptyScheduledPool, emptyFlowControlPool)
+
+        // Allocate named port to be used for RPC interaction
+        val rpcAddress = incrementalPortAllocation().nextHostAndPort()
+        val rpcUser = User("MultiRpcClient1", "MultiRpcClient1Pwd", setOf(all()))
+
+        val localClient = MultiRPCClient(
+                rpcAddress,
+                AttachmentTrustInfoRPCOps::class.java,
+                rpcUser.username,
+                rpcUser.password,
+                customSerializers = null,
+                configuration = CordaRPCClientConfiguration.DEFAULT,
+                sslConfiguration = null,
+                classLoader = null,
+                externalTrace = null,
+                impersonatedActor = null,
+                targetLegalIdentity = null,
+                useGlobalThreadPools = false
+        )
+
+        // Right from the start attach a listener such that it will be informed of all the activity happening for this RPC client
+        val localListener = mock<RPCConnectionListener<AttachmentTrustInfoRPCOps>>()
+        localClient.addConnectionListener(localListener)
+
+        localClient.use {
+            // Starting node out-of-process to ensure it is completely independent from RPC client
+            driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
+                startNode(providedName = ALICE_NAME,
+                        defaultParameters = NodeParameters(rpcAddress = rpcAddress, rpcUsers = listOf(rpcUser))).getOrThrow()
+
+                val connFuture = localClient.start()
+                eventually(duration = 60.seconds) {
+                    verify(localListener, times(1)).onConnect(argThat { connectionOpt === connFuture.get() })
+                }
+            }
+        }
+
+        val globalPool = ActiveMQClient.getGlobalThreadPool() as? ThreadPoolExecutor
+                ?: error("Expected global thread pool to be a ThreadPoolExecutor")
+        val schedPool = ActiveMQClient.getGlobalScheduledThreadPool() as? ScheduledThreadPoolExecutor
+                ?: error("Expected global scheduled pool to be a ScheduledThreadPoolExecutor")
+
+        assertEquals(0, globalPool.poolSize, "Global thread pool should not be initialised and should have zero pool size")
+        assertEquals(0, globalPool.completedTaskCount, "Global thread pool should not be initialised and should have zero completed tasks")
+        assertEquals(0, schedPool.poolSize, "Scheduled thread pool should not be initialised and should have zero pool size")
+        assertEquals(0, schedPool.completedTaskCount, "Scheduled thread pool should not be initialised and should have zero completed tasks")
     }
 
     @Test(timeout = 300_000)
