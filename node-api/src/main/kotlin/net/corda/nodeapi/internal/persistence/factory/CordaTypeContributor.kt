@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence.factory
 
+import net.corda.core.identity.AbstractParty
 import net.corda.core.utilities.toHexString
 import org.hibernate.boot.model.TypeContributions
 import org.hibernate.boot.model.TypeContributor
@@ -7,6 +8,8 @@ import org.hibernate.dialect.PostgreSQLDialect
 import org.hibernate.engine.jdbc.spi.JdbcServices
 import org.hibernate.service.ServiceRegistry
 import org.hibernate.type.SqlTypes
+import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.type.descriptor.java.AbstractClassJavaType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayJavaType
 import org.hibernate.type.descriptor.jdbc.VarbinaryJdbcType
 
@@ -37,6 +40,39 @@ class CordaTypeContributor : TypeContributor {
         jdbcTypeRegistry.addDescriptor(CordaSqlTypes.CORDA_BLOB, blobType)
         // Truncate logged byte arrays to avoid OOM when large blobs might get logged.
         typeContributions.contributeJavaType(CordaPrimitiveByteArrayJavaType)
+        typeContributions.contributeJavaType(AbstractPartyJavaType)
+    }
+
+    /**
+     * Makes [AbstractParty] an immutable type for Hibernate.
+     *
+     * An [AbstractParty] attribute is mapped using an attribute converter, which has to look the party up (in the identity service) when
+     * it converts the database value. Hibernate treats a converted attribute as mutable unless its Java type is immutable, and it copies
+     * the value of a mutable one by passing it through the converter in both directions. That happens every time an entity is loaded
+     * (to take a snapshot for dirty checking) and when an entity is merged, which would cost an extra identity lookup each time, and
+     * could even cause the database to be accessed in the middle of a flush.
+     *
+     * The conversion itself is still done by the attribute converter, so this only needs to provide the Java type.
+     */
+    object AbstractPartyJavaType : AbstractClassJavaType<AbstractParty>(AbstractParty::class.java) {
+        override fun fromString(string: CharSequence?): AbstractParty? {
+            throw UnsupportedOperationException("An AbstractParty is converted by its attribute converter")
+        }
+
+        override fun <X : Any?> wrap(value: X?, options: WrapperOptions?): AbstractParty? {
+            if (value == null) {
+                return null
+            }
+            return value as? AbstractParty ?: throw unknownWrap(value.javaClass)
+        }
+
+        override fun <X : Any?> unwrap(value: AbstractParty?, type: Class<X>?, options: WrapperOptions?): X? {
+            return when {
+                value == null -> null
+                type != null && type.isAssignableFrom(AbstractParty::class.java) -> type.cast(value)
+                else -> throw unknownUnwrap(type)
+            }
+        }
     }
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayJavaType` that truncates logged messages. Also logs in hex.
