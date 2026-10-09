@@ -21,7 +21,7 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
-import javax.persistence.*
+import jakarta.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -126,7 +126,7 @@ class NodeSchemaServiceTest {
             @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
             @OrderColumn
             @Cascade(CascadeType.PERSIST)
-            var children: MutableSet<Child> = mutableSetOf()
+            var children: MutableList<Child> = mutableListOf()
         }
 
         @Suppress("unused")

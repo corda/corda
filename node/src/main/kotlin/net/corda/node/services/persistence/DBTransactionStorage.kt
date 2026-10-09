@@ -37,19 +37,21 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
-import org.hibernate.annotations.Type
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
 import java.util.Collections
-import javax.persistence.AttributeConverter
-import javax.persistence.Column
-import javax.persistence.Convert
-import javax.persistence.Converter
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import jakarta.persistence.AttributeConverter
+import jakarta.persistence.Column
+import jakarta.persistence.Convert
+import jakarta.persistence.Converter
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 @Suppress("TooManyFunctions")
 open class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
@@ -78,7 +80,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             val signatures: ByteArray?
     )
 

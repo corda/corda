@@ -41,12 +41,12 @@ import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.NamedQuery
+import jakarta.persistence.Column
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.NamedQuery
 import kotlin.concurrent.thread
 
 /** A JPA backed Uniqueness provider */
@@ -65,7 +65,7 @@ class JPAUniquenessProvider(
     private val instanceId = UUID.randomUUID()
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
     @CordaSerializable
     class Request(
             @Id
@@ -101,7 +101,7 @@ class JPAUniquenessProvider(
             val committedStatesEntities: List<CommittedState>)
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     @NamedQuery(name = "CommittedState.select", query = "SELECT c from JPAUniquenessProvider\$CommittedState c WHERE c.id in :ids")
     class CommittedState(
             @EmbeddedId
@@ -110,7 +110,7 @@ class JPAUniquenessProvider(
             val consumingTxHash: String)
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
             @Column(name = "transaction_id", nullable = false, length = 144)

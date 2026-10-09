@@ -74,9 +74,9 @@ import java.time.Instant
 import java.util.Currency
 import java.util.Random
 import java.util.UUID
-import javax.persistence.EntityManager
-import javax.persistence.Tuple
-import javax.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.EntityManager
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.CriteriaBuilder
 
 class HibernateConfigurationTest {
     private companion object {
@@ -230,11 +230,10 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
+        // The query has no explicit ordering, so the order of the results is not defined.
         assertThat(queryResults).hasSize(2)
-        assertThat(queryResults.first().stateRef?.txId).isEqualTo(issuedStates.states.first().ref.txhash.toString())
-        assertThat(queryResults.first().stateRef?.index).isEqualTo(issuedStates.states.first().ref.index)
-        assertThat(queryResults.last().stateRef?.txId).isEqualTo(issuedStates.states.last().ref.txhash.toString())
-        assertThat(queryResults.last().stateRef?.index).isEqualTo(issuedStates.states.last().ref.index)
+        assertThat(queryResults.map { it.stateRef?.txId to it.stateRef?.index })
+                .containsExactlyInAnyOrderElementsOf(issuedStates.states.map { it.ref.txhash.toString() to it.ref.index })
     }
 
     @Test(timeout=300_000)

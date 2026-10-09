@@ -4,11 +4,12 @@ import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import org.hibernate.annotations.Type
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Entity
-import javax.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import jakarta.persistence.Column
+import jakarta.persistence.ElementCollection
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 
 /**
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
@@ -40,7 +41,7 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             var issuer: AbstractParty?,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuerRef: ByteArray
     ) : PersistentState()
 }

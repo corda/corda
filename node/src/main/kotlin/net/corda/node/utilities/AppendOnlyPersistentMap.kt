@@ -133,7 +133,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
      */
     operator fun set(key: K, value: V) =
             set(key, value, logWarning = false) { k, v ->
-                currentDBSession().save(toPersistentEntity(k, v))
+                currentDBSession().persist(toPersistentEntity(k, v))
                 null
             }
 
@@ -151,7 +151,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
             val session = currentDBSession()
             val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
             if (existingEntry == null) {
-                session.save(toPersistentEntity(k, v))
+                session.persist(toPersistentEntity(k, v))
                 null
             }
             else if (!forceUpdate(key, value, existingEntry)) {
@@ -183,7 +183,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
                 val session = currentDBSession()
                 val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
                 if (existingEntry == null) {
-                    session.save(toPersistentEntity(k, v))
+                    session.persist(toPersistentEntity(k, v))
                     null
                 } else {
                     fromPersistentEntity(existingEntry).second

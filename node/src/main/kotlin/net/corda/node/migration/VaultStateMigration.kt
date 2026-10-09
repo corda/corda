@@ -16,8 +16,8 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.query.Query
-import javax.persistence.criteria.Root
-import javax.persistence.criteria.Selection
+import jakarta.persistence.criteria.Root
+import jakarta.persistence.criteria.Selection
 
 class VaultStateMigration : CordaMigration() {
     override fun execute(database: Database) {

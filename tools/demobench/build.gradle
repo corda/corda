@@ -42,7 +42,7 @@ applicationDefaultJvmArgs = [
 configurations {
     implementation {
         // We don't need Hibernate just for its @Type annotation.
-        exclude group: 'org.hibernate', module: 'hibernate-core'
+        exclude group: 'org.hibernate.orm', module: 'hibernate-core'
     }
 }
 

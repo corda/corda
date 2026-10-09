@@ -11,9 +11,9 @@ import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 
 class AppendOnlyPersistentMapNonConcurrentTest {
 
@@ -23,7 +23,7 @@ class AppendOnlyPersistentMapNonConcurrentTest {
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(AppendOnlyPersistentMapNonConcurrentTest.PersistentMapEntry::class.java)))))
 
     @Entity
-    @javax.persistence.Table(name = "persist_map_test")
+    @jakarta.persistence.Table(name = "persist_map_test")
     class PersistentMapEntry(
             @Id
             @Column(name = "key")

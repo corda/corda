@@ -62,17 +62,17 @@ import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.CollectionTable
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Entity
-import javax.persistence.FetchType
-import javax.persistence.ForeignKey
-import javax.persistence.Id
-import javax.persistence.Index
-import javax.persistence.JoinColumn
-import javax.persistence.Lob
-import javax.persistence.Table
+import jakarta.persistence.CollectionTable
+import jakarta.persistence.Column
+import jakarta.persistence.ElementCollection
+import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
+import jakarta.persistence.ForeignKey
+import jakarta.persistence.Id
+import jakarta.persistence.Index
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 /**
  * Stores attachments using Hibernate to database.
@@ -407,7 +407,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                             signers = jarSigners,
                             version = contractVersion
                     )
-                    session.save(attachment)
+                    session.persist(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment: id=$id uploader=$uploader filename=$filename")
                     contractClassNames.forEach { contractsCache.invalidate(it) }

@@ -60,7 +60,7 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
     attachment?.let {
         attachment.content = data
-        session.save(attachment)
+        session.persist(attachment)
     }
 }
 

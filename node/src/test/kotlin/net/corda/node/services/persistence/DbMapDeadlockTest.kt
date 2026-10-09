@@ -20,9 +20,9 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.atomic.AtomicReference
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -41,7 +41,7 @@ class TestKey(val value: Int) {
 }
 
 @Entity
-@javax.persistence.Table(name = "locktestobjects")
+@jakarta.persistence.Table(name = "locktestobjects")
 class MyPersistenceClass(
         @Id
         @Column(name = "lKey", nullable = false)
@@ -51,7 +51,7 @@ class MyPersistenceClass(
         val value: Int)
 
 @Entity
-@javax.persistence.Table(name = "otherlockobjects")
+@jakarta.persistence.Table(name = "otherlockobjects")
 class SecondPersistenceClass(
         @Id
         @Column(name = "lKey", nullable = false)
@@ -225,10 +225,12 @@ class DbMapDeadlockTest {
         if (exception == null) {
             return
         }
-        val persistenceException = exception as? javax.persistence.PersistenceException
+        val persistenceException = exception as? jakarta.persistence.PersistenceException
         if (persistenceException != null) {
-            val hibernateException = persistenceException.cause as? org.hibernate.exception.ConstraintViolationException
-            if (hibernateException != null) {
+            // Hibernate 5 wrapped the constraint violation in a PersistenceException, Hibernate 7 throws it directly.
+            val isConstraintViolation = generateSequence<Throwable>(persistenceException) { it.cause }
+                    .any { it is org.hibernate.exception.ConstraintViolationException }
+            if (isConstraintViolation) {
                 log.info("Primary key violation exception is fine")
                 return
             }

@@ -16,7 +16,7 @@ import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import javax.persistence.criteria.Predicate
+import jakarta.persistence.criteria.Predicate
 
 interface GenericQueryCriteria<Q : GenericQueryCriteria<Q, *>, in P : BaseQueryCriteriaParser<Q, *, *>> {
     fun visit(parser: P): Collection<Predicate>

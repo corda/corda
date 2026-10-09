@@ -32,12 +32,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.lang.IllegalArgumentException
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.OneToMany
-import javax.persistence.Table
-import javax.persistence.GeneratedValue
-import javax.persistence.GenerationType
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
+import jakarta.persistence.Table
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
 import kotlin.test.assertEquals
 
 /**
