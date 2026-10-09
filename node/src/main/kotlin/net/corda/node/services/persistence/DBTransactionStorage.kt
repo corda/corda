@@ -203,7 +203,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(setOf(TransactionStatus.UNVERIFIED, TransactionStatus.IN_FLIGHT))
         )))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-        val update = session.createQuery(criteriaUpdate)
+        val update = session.createMutationQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
     }
@@ -239,7 +239,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     criteriaBuilder.equal(root.get<String>(DBTransaction::txId.name), id.toString()),
                     criteriaBuilder.equal(root.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.IN_FLIGHT)
             ))
-            if (session.createQuery(delete).executeUpdate() != 0) {
+            if (session.createMutationQuery(delete).executeUpdate() != 0) {
                 txStorage.locked {
                     txStorage.content.clear(id)
                     txStorage.content[id]
@@ -288,7 +288,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.IN_FLIGHT)
             ))
             criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-            val update = session.createQuery(criteriaUpdate)
+            val update = session.createMutationQuery(criteriaUpdate)
             val rowsUpdated = update.executeUpdate()
             if (rowsUpdated == 0) {
                 val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
@@ -300,7 +300,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                         criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
                 ))
                 criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-                val updateUnverified = session.createQuery(criteriaUpdateUnverified)
+                val updateUnverified = session.createMutationQuery(criteriaUpdateUnverified)
                 val rowsUpdatedUnverified = updateUnverified.executeUpdate()
                 rowsUpdatedUnverified != 0
             } else true

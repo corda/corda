@@ -17,8 +17,6 @@ import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.enclosedCordapp
-import org.hibernate.annotations.Cascade
-import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
 import jakarta.persistence.*
@@ -77,7 +75,7 @@ class NodeSchemaServiceTest {
         val expected = setOf("PARENTS", "CHILDREN")
         val tables = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             (defaultNotaryNode.getOrThrow() as InProcessImpl).database.transaction {
-                session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
+                session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES", String::class.java).list()
             }
         }
         assertEquals<Set<*>>(expected, tables.toMutableSet().apply { retainAll(expected) })
@@ -122,10 +120,9 @@ class NodeSchemaServiceTest {
         @Entity
         @Table(name = "Parents")
         class Parent : PersistentState() {
-            @OneToMany(fetch = FetchType.LAZY)
+            @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
             @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
             @OrderColumn
-            @Cascade(CascadeType.PERSIST)
             var children: MutableList<Child> = mutableListOf()
         }
 

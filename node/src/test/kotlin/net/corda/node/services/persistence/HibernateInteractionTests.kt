@@ -26,12 +26,11 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
-import org.hibernate.annotations.Cascade
-import org.hibernate.annotations.CascadeType
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.lang.IllegalArgumentException
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
@@ -116,8 +115,7 @@ class HibernateInteractionTests {
         @Table
         class Parent: PersistentState() {
 
-            @Cascade(CascadeType.ALL)
-            @OneToMany(targetEntity = Child::class)
+            @OneToMany(targetEntity = Child::class, cascade = [CascadeType.ALL])
             val children: MutableCollection<Child> = mutableSetOf()
 
             fun addChild(child: Child) {

@@ -197,8 +197,9 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.sessionOpenCount
     }
 
+    @Deprecated("Deprecated in Java")
     override fun getStartTime(): Long {
-        return delegate.startTime
+        return delegate.start.toEpochMilli()
     }
 
     override fun getSuccessfulTransactionCount(): Long {

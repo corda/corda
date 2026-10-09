@@ -57,7 +57,7 @@ private fun TestStartedNode.hackAttachment(attachmentId: SecureHash, content: St
  */
 private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     val session = currentDBSession()
-    val attachment = session.get<NodeAttachmentService.DBAttachment>(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
+    val attachment = session.find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString())
     attachment?.let {
         attachment.content = data
         session.persist(attachment)

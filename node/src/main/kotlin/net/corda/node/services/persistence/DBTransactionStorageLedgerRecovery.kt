@@ -199,12 +199,12 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val rootSender = deleteSenderDistributionRecords.from(DBSenderDistributionRecord::class.java)
             val compositeKeySender = rootSender.get<PersistentKey>("compositeKey")
             deleteSenderDistributionRecords.where(criteriaBuilder.equal(compositeKeySender.get<String>(PersistentKey::txId.name), id.toString()))
-            val deletedSenderDistributionRecords = session.createQuery(deleteSenderDistributionRecords).executeUpdate() != 0
+            val deletedSenderDistributionRecords = session.createMutationQuery(deleteSenderDistributionRecords).executeUpdate() != 0
             val deleteReceiverDistributionRecords = criteriaBuilder.createCriteriaDelete(DBReceiverDistributionRecord::class.java)
             val rootReceiver = deleteReceiverDistributionRecords.from(DBReceiverDistributionRecord::class.java)
             val compositeKeyReceiver = rootReceiver.get<PersistentKey>("compositeKey")
             deleteReceiverDistributionRecords.where(criteriaBuilder.equal(compositeKeyReceiver.get<String>(PersistentKey::txId.name), id.toString()))
-            val deletedReceiverDistributionRecords = session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
+            val deletedReceiverDistributionRecords = session.createMutationQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
             deletedSenderDistributionRecords || deletedReceiverDistributionRecords
         }
     }

@@ -297,7 +297,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun loadAttachmentContent(id: AttachmentId): Pair<Attachment, ByteArray>? {
         return database.transaction {
-            val attachment = currentDBSession().get(DBAttachment::class.java, id.toString())
+            val attachment = currentDBSession().find(DBAttachment::class.java, id.toString())
                     ?: return@transaction null
             Pair(createAttachmentFromDatabase(attachment), attachment.content)
         }
@@ -415,7 +415,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                 }
                 if (isUploaderTrusted(uploader)) {
                     val session = currentDBSession()
-                    val attachment = session.get(DBAttachment::class.java, id.toString())
+                    val attachment = session.find(DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
                         attachment.uploader = uploader

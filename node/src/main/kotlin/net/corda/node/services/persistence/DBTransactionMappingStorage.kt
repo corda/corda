@@ -35,7 +35,7 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
         val cb = session.criteriaBuilder
         val cq = cb.createTupleQuery()
         val from = cq.from(DBTransactionStorage.DBTransaction::class.java)
-        cq.multiselect(from.get<String>(DBTransactionStorage.DBTransaction::stateMachineRunId.name), from.get<String>(DBTransactionStorage.DBTransaction::txId.name))
+        cq.select(cb.tuple(from.get<String>(DBTransactionStorage.DBTransaction::stateMachineRunId.name), from.get<String>(DBTransactionStorage.DBTransaction::txId.name)))
         cq.where(cb.isNotNull(from.get<String>(DBTransactionStorage.DBTransaction::stateMachineRunId.name)))
         val flowIds = session.createQuery(cq).resultList.map { StateMachineTransactionMapping(StateMachineRunId(UUID.fromString(it[0] as String)), SecureHash.create(it[1] as String)) }
         DataFeed(flowIds, updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())

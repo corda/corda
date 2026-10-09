@@ -74,7 +74,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             allowOutOfTransactionUpdateOperations(true)
             applySecondLevelCacheSupport(false)
             applyQueryCacheSupport(false)
-            enableReleaseResourcesOnCloseEnabled(true)
             build()
         }
     }

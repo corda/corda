@@ -73,7 +73,7 @@ class NetworkMapCacheTest {
             val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
             val queryRoot = deleteQuery.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
             deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("publicKeyHash"), publicKeyHashToRemove))
-            session.createQuery(deleteQuery).executeUpdate()
+            session.createMutationQuery(deleteQuery).executeUpdate()
         }
     }
 

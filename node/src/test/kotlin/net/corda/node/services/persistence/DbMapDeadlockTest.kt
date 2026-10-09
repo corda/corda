@@ -103,8 +103,8 @@ class DbMapDeadlockTest {
 
             // First clean up any remains from previous test runs
             persistence.transaction {
-                session.createNativeQuery("delete from locktestobjects").executeUpdate()
-                session.createNativeQuery("delete from otherlockobjects").executeUpdate()
+                session.createNativeMutationQuery("delete from locktestobjects").executeUpdate()
+                session.createNativeMutationQuery("delete from otherlockobjects").executeUpdate()
             }
 
             // Prepare a few rows for reading in table 1

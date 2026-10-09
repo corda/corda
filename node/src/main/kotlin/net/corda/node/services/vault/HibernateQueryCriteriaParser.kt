@@ -654,7 +654,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     rootEntities.map { it.value }
                 else
                     aggregateExpressions
-        criteriaQuery.multiselect(selections)
+        // Only a query that returns Tuples needs its selection to be set here. (The count query sets its own selection afterwards.)
+        if (criteriaQuery.resultType == Tuple::class.java) {
+            @Suppress("UNCHECKED_CAST")
+            (criteriaQuery as CriteriaQuery<Tuple>).select(criteriaBuilder.tuple(selections))
+        }
         val combinedPredicates = commonPredicates.values.plus(predicateSet)
                 .plus(constraintPredicates)
                 .plus(joinPredicates)

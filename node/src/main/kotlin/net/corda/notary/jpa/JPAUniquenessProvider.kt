@@ -210,11 +210,10 @@ class JPAUniquenessProvider(
         val committedStates = mutableListOf<CommittedState>()
 
         for (idsBatch in persistentStateRefs.chunked(config.maxInputStates)) {
-            @Suppress("UNCHECKED_CAST")
             val existing = session
-                    .createNamedQuery("CommittedState.select")
+                    .createNamedQuery("CommittedState.select", CommittedState::class.java)
                     .setParameter("ids", idsBatch)
-                    .resultList as List<CommittedState>
+                    .resultList
             committedStates.addAll(existing)
         }
 

@@ -440,8 +440,8 @@ class HibernateConfigurationTest {
         val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
 
         // aggregate function
-        criteriaQuery.multiselect(cashStates.get<String>("currency"),
-                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+        criteriaQuery.select(criteriaBuilder.tuple(cashStates.get<String>("currency"),
+                criteriaBuilder.sum(cashStates.get<Long>("pennies"))))
         // group by
         criteriaQuery.groupBy(cashStates.get<String>("currency"))
 
@@ -470,8 +470,8 @@ class HibernateConfigurationTest {
         val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
 
         // aggregate function
-        criteriaQuery.multiselect(cashStates.get<String>("currency"),
-                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+        criteriaQuery.select(criteriaBuilder.tuple(cashStates.get<String>("currency"),
+                criteriaBuilder.sum(cashStates.get<Long>("pennies"))))
 
         // where
         criteriaQuery.where(criteriaBuilder.equal(cashStates.get<String>("currency"), "GBP"))
@@ -502,8 +502,8 @@ class HibernateConfigurationTest {
         val cashStates = criteriaQuery.from(CashSchemaV1.PersistentCashState::class.java)
 
         // aggregate function
-        criteriaQuery.multiselect(cashStates.get<String>("currency"),
-                criteriaBuilder.sum(cashStates.get<Long>("pennies")))
+        criteriaQuery.select(criteriaBuilder.tuple(cashStates.get<String>("currency"),
+                criteriaBuilder.sum(cashStates.get<Long>("pennies"))))
 
         // group by
         criteriaQuery.groupBy(cashStates.get<String>("issuerPartyHash"), cashStates.get<String>("currency"))
@@ -874,7 +874,7 @@ class HibernateConfigurationTest {
         val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
 
         // join
-        criteriaQuery.multiselect(vaultStates, vaultLinearStates)
+        criteriaQuery.select(criteriaBuilder.tuple(vaultStates, vaultLinearStates))
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         criteriaQuery.where(joinPredicate)
 
@@ -927,7 +927,7 @@ class HibernateConfigurationTest {
         val dummyLinearStates = criteriaQuery.from(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java)
 
         // join
-        criteriaQuery.multiselect(vaultStates, vaultLinearStates, dummyLinearStates)
+        criteriaQuery.select(criteriaBuilder.tuple(vaultStates, vaultLinearStates, dummyLinearStates))
         val joinPredicate1 = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         val joinPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), dummyLinearStates.get<PersistentStateRef>("stateRef")))
         criteriaQuery.where(joinPredicate1, joinPredicate2)

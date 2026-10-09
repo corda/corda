@@ -243,7 +243,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
         val session = currentDBSession()
         val deleteQuery = session.criteriaBuilder.createCriteriaDelete(persistentEntityClass)
         deleteQuery.from(persistentEntityClass)
-        session.createQuery(deleteQuery).executeUpdate()
+        session.createMutationQuery(deleteQuery).executeUpdate()
         cache.invalidateAll()
     }
 

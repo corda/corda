@@ -81,7 +81,7 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         val queryRoot = criteriaUpdate.from(PersistentMapEntry::class.java)
         criteriaUpdate.set(PersistentMapEntry::value.name, value)
         criteriaUpdate.where(criteriaBuilder.equal(queryRoot.get<Long>("key"), key))
-        val update = session.createQuery(criteriaUpdate)
+        val update = session.createMutationQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
     }

@@ -387,7 +387,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
                 val queryRoot = deleteQuery.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
                 deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("name"), name))
-                session.createQuery(deleteQuery).executeUpdate()
+                session.createMutationQuery(deleteQuery).executeUpdate()
                 session.persist(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash(name, publicKeyHash))
             }
         }.get()

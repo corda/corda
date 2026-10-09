@@ -230,7 +230,7 @@ class NodeVaultService(
 
             // Persist the consumed inputs.
             consumedStateRefs.forEach { stateRef ->
-                val state = session.get(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
+                val state = session.find(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     // Only update the state if it has not previously been consumed (this could have happened if the transaction is being
                     // re-recorded.
@@ -949,7 +949,7 @@ private fun CriteriaBuilder.executeUpdate(
     fun doUpdate(persistentStateRefs: List<PersistentStateRef>?): Int {
         createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
             update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
-            return session.createQuery(update).executeUpdate()
+            return session.createMutationQuery(update).executeUpdate()
         }
     }
     return stateRefs?.let {
