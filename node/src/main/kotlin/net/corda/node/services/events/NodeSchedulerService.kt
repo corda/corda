@@ -38,9 +38,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
+import jakarta.persistence.Column
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.Entity
 import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
@@ -130,7 +130,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
     class PersistentScheduledState(
             @EmbeddedId
             var output: PersistentStateRef,

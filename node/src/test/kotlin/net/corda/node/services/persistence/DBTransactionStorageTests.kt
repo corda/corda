@@ -330,7 +330,7 @@ class DBTransactionStorageTests {
     private fun readTransactionTimestampFromDB(id: SecureHash): Instant {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
@@ -341,7 +341,7 @@ class DBTransactionStorageTests {
     private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }

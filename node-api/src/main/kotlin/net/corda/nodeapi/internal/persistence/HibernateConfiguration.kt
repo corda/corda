@@ -14,7 +14,7 @@ import java.lang.management.ManagementFactory
 import java.sql.Connection
 import java.util.ServiceLoader
 import javax.management.ObjectName
-import javax.persistence.AttributeConverter
+import jakarta.persistence.AttributeConverter
 
 class HibernateConfiguration(
         schemas: Set<MappedSchema>,
@@ -110,7 +110,7 @@ class HibernateConfiguration(
             return unwrapType.castIfPossible(this) ?: throw UnknownUnwrapTypeException(unwrapType)
         }
 
-        override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
+        override fun isUnwrappableAs(unwrapType: Class<*>): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
     }
 
     fun getExtraConfiguration(key: String ) = sessionFactoryFactory.getExtraConfiguration(key)

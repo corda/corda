@@ -3,8 +3,8 @@ package net.corda.coretests.schemas;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.schemas.PersistentState;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import java.util.Arrays;
 
 public class TrickySchemaJavaV1 extends MappedSchema {

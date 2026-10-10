@@ -6,7 +6,7 @@ dependencies {
     cordaProvided project(":core")
     cordapp project(":testing:cordapps:dbfailure:dbfcontracts")
 
-    cordaProvided "org.hibernate:hibernate-core:$hibernate_version"
+    cordaProvided "org.hibernate.orm:hibernate-core:$hibernate_version"
     cordaProvided "io.reactivex:rxjava:$rxjava_version"
     cordaProvided "org.slf4j:slf4j-api:$slf4j_version"
     cordaProvided "co.paralleluniverse:quasar-core:$quasar_version"

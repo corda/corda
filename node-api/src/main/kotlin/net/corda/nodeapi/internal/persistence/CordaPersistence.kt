@@ -22,8 +22,8 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
-import javax.persistence.AttributeConverter
-import javax.persistence.PersistenceException
+import jakarta.persistence.AttributeConverter
+import jakarta.persistence.PersistenceException
 import javax.sql.DataSource
 
 /**

@@ -9,9 +9,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 
 /**
  * Encapsulate the de-duplication logic.
@@ -92,7 +92,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
 
     @Entity
     @Suppress("MagicNumber") // database column width
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
     class ProcessedMessage(
             @Id
             @Column(name = "message_id", length = 64, nullable = false)

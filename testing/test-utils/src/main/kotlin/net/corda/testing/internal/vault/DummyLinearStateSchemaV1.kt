@@ -4,10 +4,11 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.*
-import javax.persistence.*
+import jakarta.persistence.*
 
 /**
  * An object used to fully qualify the [DummyLinearStateSchema] family name (i.e. independent of version).
@@ -35,7 +36,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            @Type(type = "uuid-char")
+            @JdbcTypeCode(SqlTypes.VARCHAR)
             var uuid: UUID,
 
             /**

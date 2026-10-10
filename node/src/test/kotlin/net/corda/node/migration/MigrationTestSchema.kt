@@ -3,12 +3,14 @@ package net.corda.node.migration
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import org.apache.commons.lang3.ArrayUtils
-import org.hibernate.annotations.Type
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 object MigrationTestSchema
 
@@ -37,7 +39,7 @@ object IdentityTestSchemaV1 : MappedSchema(
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             @Column(name = "identity_value", nullable = false)
             var identity: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
     )
@@ -72,7 +74,7 @@ object IdentityTestSchemaV1 : MappedSchema(
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
     )

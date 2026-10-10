@@ -37,19 +37,21 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
-import org.hibernate.annotations.Type
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
 import java.util.Collections
-import javax.persistence.AttributeConverter
-import javax.persistence.Column
-import javax.persistence.Convert
-import javax.persistence.Converter
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import jakarta.persistence.AttributeConverter
+import jakarta.persistence.Column
+import jakarta.persistence.Convert
+import jakarta.persistence.Converter
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 @Suppress("TooManyFunctions")
 open class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
@@ -78,7 +80,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             val signatures: ByteArray?
     )
 
@@ -201,7 +203,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(setOf(TransactionStatus.UNVERIFIED, TransactionStatus.IN_FLIGHT))
         )))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-        val update = session.createQuery(criteriaUpdate)
+        val update = session.createMutationQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
     }
@@ -237,7 +239,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     criteriaBuilder.equal(root.get<String>(DBTransaction::txId.name), id.toString()),
                     criteriaBuilder.equal(root.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.IN_FLIGHT)
             ))
-            if (session.createQuery(delete).executeUpdate() != 0) {
+            if (session.createMutationQuery(delete).executeUpdate() != 0) {
                 txStorage.locked {
                     txStorage.content.clear(id)
                     txStorage.content[id]
@@ -286,7 +288,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.IN_FLIGHT)
             ))
             criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-            val update = session.createQuery(criteriaUpdate)
+            val update = session.createMutationQuery(criteriaUpdate)
             val rowsUpdated = update.executeUpdate()
             if (rowsUpdated == 0) {
                 val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
@@ -298,7 +300,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                         criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
                 ))
                 criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-                val updateUnverified = session.createQuery(criteriaUpdateUnverified)
+                val updateUnverified = session.createMutationQuery(criteriaUpdateUnverified)
                 val rowsUpdatedUnverified = updateUnverified.executeUpdate()
                 rowsUpdatedUnverified != 0
             } else true

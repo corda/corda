@@ -36,7 +36,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.Session
-import org.hibernate.annotations.Type
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -54,9 +56,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
@@ -148,19 +150,19 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     val archiveIdentityExecutor: ExecutorService = Executors.newCachedThreadPool(ThreadFactoryBuilder().setNameFormat("archive-named-identity-thread-%d").build())
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentPublicKeyHashToCertificate(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             @Column(name = "identity_value", nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities_no_cert")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities_no_cert")
     class PersistentPublicKeyHashToParty(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -174,13 +176,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}hash_to_key")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}hash_to_key")
     class PersistentHashToPublicKey(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
-            @Type(type = "corda-blob")
+            @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
             @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = EMPTY_BYTE_ARRAY
     )
@@ -385,8 +387,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                 val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
                 val queryRoot = deleteQuery.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
                 deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("name"), name))
-                session.createQuery(deleteQuery).executeUpdate()
-                session.save(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash(name, publicKeyHash))
+                session.createMutationQuery(deleteQuery).executeUpdate()
+                session.persist(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash(name, publicKeyHash))
             }
         }.get()
     }

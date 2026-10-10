@@ -121,7 +121,7 @@ dependencies {
     testImplementation "com.google.guava:guava:$guava_version"
     testImplementation "com.esotericsoftware:kryo:$kryo_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
-    testImplementation "org.hibernate:hibernate-core:$hibernate_version"
+    testImplementation "org.hibernate.orm:hibernate-core:$hibernate_version"
     testImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     testImplementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
     testImplementation "io.netty:netty-common:$netty_version"

@@ -24,16 +24,12 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.persistence.NodeAttachmentService
-import org.hibernate.query.criteria.internal.expression.LiteralExpression
-import org.hibernate.query.criteria.internal.path.SingularAttributePath
-import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
-import org.hibernate.query.criteria.internal.predicate.CompoundPredicate
-import org.hibernate.query.criteria.internal.predicate.InPredicate
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import javax.persistence.Tuple
-import javax.persistence.criteria.*
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.*
+import jakarta.persistence.metamodel.SingularAttribute
 
 abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: BaseQueryCriteriaParser<Q, P, S>, in S: BaseSort> : BaseQueryCriteriaParser<Q, P, S> {
 
@@ -157,6 +153,11 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
      * Returns the given predicate if the provided `args` list is not empty
      * If the list is empty it returns an always false predicate (1=0)
      */
+    /** Returns the underlying java member of the singular attribute that [expression] is a path to, or null if it isn't one. */
+    protected fun singularAttributeMember(expression: Expression<*>): java.lang.reflect.Member? {
+        return ((expression as? Path<*>)?.model as? SingularAttribute<*, *>)?.javaMember
+    }
+
     protected fun checkIfListIsEmpty(args: List<Any>, criteriaBuilder: CriteriaBuilder, predicate: Predicate): Predicate {
         return if (args.isEmpty()) {
             criteriaBuilder.and(criteriaBuilder.equal(criteriaBuilder.literal(1), 0))
@@ -285,6 +286,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     private val rootEntities = mutableMapOf<Class<out StatePersistable>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
     private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
+    // schema attribute Name, operator -> the values the corresponding entry in [commonPredicates] was built from.
+    // The values are tracked here as the (JPA) predicates built by Hibernate are opaque and can't be inspected.
+    private val commonPredicateValues = mutableMapOf<Pair<String, Operator>, List<Any>>()
     private val constraintPredicates = mutableSetOf<Predicate>()
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
@@ -419,9 +423,10 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                             columns.map { _column ->
                                 val path = root.get<Any?>(getColumnName(_column))
                                 val columnNumberBeforeRemoval = aggregateExpressions.size
-                                if (path is SingularAttributePath) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
+                                val pathMember = singularAttributeMember(path)
+                                if (pathMember != null) //remove the same columns from different joins to match the single column in 'group by' only (from the last join)
                                     aggregateExpressions.removeAll {
-                                        elem -> if (elem is SingularAttributePath) elem.attribute.javaMember == path.attribute.javaMember else false
+                                        elem -> singularAttributeMember(elem) == pathMember
                                     }
                                 shiftLeft += columnNumberBeforeRemoval - aggregateExpressions.size //record how many times a duplicated column was removed (from the previous 'parseAggregateFunction' run)
                                 aggregateExpressions.add(path)
@@ -649,7 +654,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     rootEntities.map { it.value }
                 else
                     aggregateExpressions
-        criteriaQuery.multiselect(selections)
+        // Only a query that returns Tuples needs its selection to be set here. (The count query sets its own selection afterwards.)
+        if (criteriaQuery.resultType == Tuple::class.java) {
+            @Suppress("UNCHECKED_CAST")
+            (criteriaQuery as CriteriaQuery<Tuple>).select(criteriaBuilder.tuple(selections))
+        }
         val combinedPredicates = commonPredicates.values.plus(predicateSet)
                 .plus(constraintPredicates)
                 .plus(joinPredicates)
@@ -689,13 +698,15 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         if (criteria.status != Vault.StateStatus.ALL) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::stateStatus.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
-                val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
+                val existingStatus = commonPredicateValues.getValue(predicateID).single()
                 if (existingStatus != criteria.status) {
                     log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::stateStatus.name}] value $existingStatus with ${criteria.status}")
                     commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
+                    commonPredicateValues[predicateID] = listOf(criteria.status)
                 }
             } else {
                 commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status)
+                commonPredicateValues[predicateID] = listOf(criteria.status)
             }
         }
 
@@ -703,13 +714,15 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         if (criteria.relevancyStatus != Vault.RelevancyStatus.ALL) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::relevancyStatus.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
-                val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
+                val existingStatus = commonPredicateValues.getValue(predicateID).single()
                 if (existingStatus != criteria.relevancyStatus) {
                     log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::relevancyStatus.name}] value $existingStatus with ${criteria.status}")
                     commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::relevancyStatus.name), criteria.relevancyStatus))
+                    commonPredicateValues[predicateID] = listOf(criteria.relevancyStatus)
                 }
             } else {
                 commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::relevancyStatus.name), criteria.relevancyStatus)
+                commonPredicateValues[predicateID] = listOf(criteria.relevancyStatus)
             }
         }
 
@@ -718,13 +731,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         if (contractStateTypes.isNotEmpty()) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, IN)
             if (commonPredicates.containsKey(predicateID)) {
-                val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
+                val existingTypes = commonPredicateValues.getValue(predicateID).toSet()
                 if (existingTypes != contractStateTypes) {
                     log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractStateTypes]")
-                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes.plus(existingTypes))))
+                    val allTypes = contractStateTypes.plus(existingTypes)
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(allTypes)))
+                    commonPredicateValues[predicateID] = allTypes.toList()
                 }
             } else {
                 commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes))
+                commonPredicateValues[predicateID] = contractStateTypes.toList()
             }
         }
 
@@ -732,13 +748,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         if (criteria.constraintTypes.isNotEmpty()) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::constraintType.name, IN)
             if (commonPredicates.containsKey(predicateID)) {
-                val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
+                val existingTypes = commonPredicateValues.getValue(predicateID).toSet()
                 if (existingTypes != criteria.constraintTypes) {
                     log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::constraintType.name}] values [$existingTypes] with [${criteria.constraintTypes}]")
-                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::constraintType.name).`in`(criteria.constraintTypes.plus(existingTypes))))
+                    val allTypes = criteria.constraintTypes.plus(existingTypes)
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::constraintType.name).`in`(allTypes)))
+                    commonPredicateValues[predicateID] = allTypes.toList()
                 }
             } else {
                 commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::constraintType.name).`in`(criteria.constraintTypes))
+                commonPredicateValues[predicateID] = criteria.constraintTypes.toList()
             }
         }
 
@@ -786,9 +805,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             // use a single predicate for querying the persistent party table (incrementally add additional parties)
             val predicateID = Pair(VaultSchemaV1.PersistentParty::x500Name.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
-                val existingParticipants = ((((commonPredicates[predicateID]) as CompoundPredicate).expressions[0]) as InPredicate<*>)
-                        .values.map { participant -> (participant as LiteralExpression<*>).literal }
+                val existingParticipants = commonPredicateValues.getValue(predicateID)
                 log.warn("Adding new participants: $participants to existing participants: $existingParticipants")
+                commonPredicateValues[predicateID] = existingParticipants + participants
                 commonPredicates.replace(
                         predicateID,
                         checkIfListIsEmpty(
@@ -800,6 +819,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
             else {
                 // Get the persistent party entity.
+                commonPredicateValues[predicateID] = participants
                 commonPredicates[predicateID] = checkIfListIsEmpty(
                         args = participants,
                         criteriaBuilder = criteriaBuilder,
