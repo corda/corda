@@ -15,6 +15,7 @@ dependencies {
 
     implementation "com.jcraft:jsch:$jsch_version"
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     implementation group: 'com.jcraft', name: 'jsch.agentproxy.core', version: '0.0.9'
     implementation group: 'com.jcraft', name: 'jsch.agentproxy.sshagent', version: '0.0.9'
     implementation group: 'com.jcraft', name: 'jsch.agentproxy.usocket-jna', version: '0.0.9'

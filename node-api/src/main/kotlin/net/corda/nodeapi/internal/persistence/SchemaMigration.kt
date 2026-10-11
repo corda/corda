@@ -1,3 +1,6 @@
+// Liquibase deprecated ThreadLocalScopeManager. It is still needed to keep the scope of concurrent in-process migrations separate.
+@file:Suppress("DEPRECATION")
+
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
