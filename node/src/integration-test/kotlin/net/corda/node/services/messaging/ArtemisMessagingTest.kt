@@ -1,14 +1,14 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.services.config.CustomConfiguration
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -27,6 +27,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
+import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -40,6 +41,7 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -88,6 +90,7 @@ class ArtemisMessagingTest {
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(true).whenever(it).crlCheckArtemisServer
+            doReturn(CustomConfiguration()).whenever(it).custom
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
@@ -168,6 +171,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
+    // A message just over maxMessageSize still fits inside the transport frame limit (maxMessageSize + JOURNAL_HEADER_SIZE), so it is
+    // the server's MessageSizeChecksInterceptor which drops it. The interceptor sends no reply, so the blocking send times out.
     @Test(timeout=300_000)
 	fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
@@ -178,10 +183,30 @@ class ArtemisMessagingTest {
         assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
-        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        val tooLargeByOneByte = messagingClient.createMessage(TOPIC, data = ByteArray(50_001))
         assertThatThrownBy {
-            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+            messagingClient.send(tooLargeByOneByte, messagingClient.myAddress)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+        this.messagingClient = null
+    }
+
+    // A message well above maxMessageSize + JOURNAL_HEADER_SIZE exceeds the Artemis acceptor's coreMaxFrameSize, so the server closes
+    // the connection before the interceptor sees it. The blocked send is then unblocked straight away rather than timing out.
+    @Test(timeout=300_000)
+	fun `server should close the connection if incoming frame exceeds the maximum frame size`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLargeMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        assertThatThrownBy {
+            messagingClient.send(tooLargeMessage, messagingClient.myAddress)
+        }.isInstanceOf(ActiveMQUnBlockedException::class.java)
         assertNull(receivedMessages.poll(200, MILLISECONDS))
         this.messagingClient = null
     }
@@ -233,7 +258,7 @@ class ArtemisMessagingTest {
                     MetricRegistry(),
                     TestingNamedCacheFactory(),
                     isDrainingModeOn = { false },
-                    drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>(),
+                    drainingModeWasChangedEvents = PublishSubject.create(),
                     terminateOnConnectionError = false,
                     timeoutConfig = P2PMessagingClient.TimeoutConfig(10.seconds, 10.seconds, 10.seconds)).apply {
                 config.configureWithDevSSLCertificate()

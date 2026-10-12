@@ -3,7 +3,8 @@
 package net.corda.core.crypto
 
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.internal.platformSecureRandomFactory
+import net.corda.core.crypto.internal.PlatformSecureRandomService
+import net.corda.core.crypto.internal.cordaSecurityProvider
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
@@ -19,6 +20,7 @@ import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
 import java.security.SignatureException
+import kotlin.math.abs
 
 /**
  * Utility to simplify the act of signing a byte array.
@@ -231,7 +233,12 @@ object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
+fun newSecureRandom(): SecureRandom = sharedSecureRandom
+
+// This is safe to share because of the underlying implementation of SecureRandomSpi
+private val sharedSecureRandom: SecureRandom by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    SecureRandom.getInstance(PlatformSecureRandomService.ALGORITHM, cordaSecurityProvider)
+}
 
 /**
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
@@ -239,7 +246,7 @@ fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
  */
 fun random63BitValue(): Long {
     while (true) {
-        val candidate = Math.abs(newSecureRandom().nextLong())
+        val candidate = abs(newSecureRandom().nextLong())
         // No need to check for -0L
         if (candidate != 0L && candidate != Long.MIN_VALUE) {
             return candidate

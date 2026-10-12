@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.Path
 
 object TestResourceWriter {
 
@@ -18,13 +19,13 @@ object TestResourceWriter {
     @JvmStatic
     @Suppress("NestedBlockDepth", "MagicNumber")
     fun main(vararg args : String) {
-        for(arg in args) {
+        for (arg in args) {
             /**
              * Download zip bombs
              */
             for(url in externalZipBombUrls) {
                 url.openStream().use { inputStream ->
-                    val destination = Paths.get(arg).resolve(Paths.get(url.path +  ".xor").fileName)
+                    val destination = Path(arg).resolve(Paths.get("${url.path}.xor").fileName)
                     Files.newOutputStream(destination).buffered().let(::XorOutputStream).use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }

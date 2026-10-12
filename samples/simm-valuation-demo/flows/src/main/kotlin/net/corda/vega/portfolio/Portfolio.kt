@@ -1,8 +1,9 @@
 package net.corda.vega.portfolio
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.identity.Party
-import net.corda.core.internal.sum
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.vault.QueryCriteria
@@ -23,7 +24,7 @@ data class Portfolio(private val tradeStateAndRefs: List<StateAndRef<IRSState>>,
     val swaps: List<SwapData> by lazy { trades.map { it.swap } }
     val refs: List<StateRef> by lazy { tradeStateAndRefs.map { it.ref } }
 
-    fun getNotionalForParty(party: Party): BigDecimal = trades.map { it.swap.getLegForParty(party).notional }.sum()
+    fun getNotionalForParty(party: Party): BigDecimal = trades.sumOf { it.swap.getLegForParty(party).notional }
 
     fun update(curTrades: List<StateAndRef<IRSState>>): Portfolio {
         return copy(tradeStateAndRefs = curTrades)

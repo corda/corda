@@ -1,9 +1,11 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 //apply plugin: 'net.corda.plugins.cordapp'
 //apply plugin: 'net.corda.plugins.quasar-utils'
 
 dependencies {
-    compile project(":core")
+    implementation project(":core")
+    implementation "javax.persistence:javax.persistence-api:2.2"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {

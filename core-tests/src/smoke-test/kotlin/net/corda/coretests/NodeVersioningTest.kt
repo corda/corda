@@ -4,20 +4,20 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.config.User
-import net.corda.smoketesting.NodeConfig
+import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarFile
-import kotlin.streams.toList
+import kotlin.io.path.Path
+import kotlin.io.path.listDirectoryEntries
 
 class NodeVersioningTest {
     private companion object {
@@ -27,58 +27,39 @@ class NodeVersioningTest {
 
     private val factory = NodeProcess.Factory()
 
-    private val notaryConfig = NodeConfig(
-            legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
-            p2pPort = port.andIncrement,
-            rpcPort = port.andIncrement,
-            rpcAdminPort = port.andIncrement,
-            isNotary = true,
-            users = listOf(superUser)
-    )
-
-    private val aliceConfig = NodeConfig(
-            legalName = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"),
-            p2pPort = port.andIncrement,
-            rpcPort = port.andIncrement,
-            rpcAdminPort = port.andIncrement,
-            isNotary = false,
-            users = listOf(superUser)
-    )
-
     private lateinit var notary: NodeProcess
 
     @Before
-    fun setUp() {
-        notary = factory.create(notaryConfig)
+    fun startNotary() {
+        notary = factory.createNotaries(NodeParams(
+                legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
+                p2pPort = port.andIncrement,
+                rpcPort = port.andIncrement,
+                rpcAdminPort = port.andIncrement,
+                users = listOf(superUser),
+                // Find the jar file for the smoke tests of this module
+                cordappJars = Path("build", "libs").listDirectoryEntries("*-smokeTests*")
+        ))[0]
     }
 
     @After
     fun done() {
-        notary.close()
+        factory.close()
     }
 
     @Test(timeout=300_000)
 	fun `platform version in manifest file`() {
-        val manifest = JarFile(factory.cordaJar.toFile()).manifest
+        val manifest = JarFile(NodeProcess.Factory.getCordaJar().toFile()).manifest
         assertThat(manifest.mainAttributes.getValue("Corda-Platform-Version").toInt()).isEqualTo(PLATFORM_VERSION)
     }
 
     @Test(timeout=300_000)
 	fun `platform version from RPC`() {
-        val cordappsDir = (factory.baseDirectory(aliceConfig) / NodeProcess.CORDAPPS_DIR_NAME).createDirectories()
-        // Find the jar file for the smoke tests of this module
-        val selfCordapp = Paths.get("build", "libs").list {
-            it.filter { "-smokeTests" in it.toString() }.toList().single()
-        }
-        selfCordapp.copyToDirectory(cordappsDir)
-
-        factory.create(aliceConfig).use { alice ->
-            alice.connect(superUser).use {
-                val rpc = it.proxy
-                assertThat(rpc.protocolVersion).isEqualTo(PLATFORM_VERSION)
-                assertThat(rpc.nodeInfo().platformVersion).isEqualTo(PLATFORM_VERSION)
-                assertThat(rpc.startFlow(NodeVersioningTest::GetPlatformVersionFlow).returnValue.getOrThrow()).isEqualTo(PLATFORM_VERSION)
-            }
+        notary.connect(superUser).use {
+            val rpc = it.proxy
+            assertThat(rpc.protocolVersion).isEqualTo(PLATFORM_VERSION)
+            assertThat(rpc.nodeInfo().platformVersion).isEqualTo(PLATFORM_VERSION)
+            assertThat(rpc.startFlow(NodeVersioningTest::GetPlatformVersionFlow).returnValue.getOrThrow()).isEqualTo(PLATFORM_VERSION)
         }
     }
 

@@ -111,7 +111,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
 
         /**
-         * Convert a Guava [ListenableFuture] or JDK8 [CompletableFuture] to Quasar implementation and set to true when a result
+         * Convert a Guava [ListenableFuture] or JDK [CompletableFuture] to Quasar implementation and set to true when a result
          * or [Throwable] is available in the original.
          *
          * We need this so that we do not block the actual thread when calling get(), but instead allow a Quasar context

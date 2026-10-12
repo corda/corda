@@ -5,6 +5,7 @@ import net.corda.networkbuilder.context.Context
 import net.corda.networkbuilder.nodes.*
 import net.corda.networkbuilder.notaries.NotaryCopier
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 
 interface NetworkBuilder {
@@ -142,7 +143,7 @@ private class NetworkBuilderImpl : NetworkBuilder {
 
         val nodeDiscoveryFuture = CompletableFuture.supplyAsync {
             val foundNodes = nodeFinder.findNodes()
-                    .map { it to nodeCounts.getOrDefault(it.name.toLowerCase(), 1) }
+                    .map { it to nodeCounts.getOrDefault(it.name.lowercase(Locale.getDefault()), 1) }
                     .toMap()
             foundNodes
         }

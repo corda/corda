@@ -9,12 +9,13 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import kotlin.io.path.div
+import kotlin.io.path.isDirectory
 
 /**
  * For tests that want to see inside the serializer registry
@@ -61,19 +62,6 @@ class TestSerializationOutput(
         serializerFactory: SerializerFactory = testDefaultFactory())
     : SerializationOutput(serializerFactory) {
 
-    override fun writeSchema(schema: Schema, data: Data) {
-        if (verbose) println(schema)
-        super.writeSchema(schema, data)
-    }
-
-    override fun writeTransformSchema(transformsSchema: TransformsSchema, data: Data) {
-        if(verbose) {
-            println ("Writing Transform Schema")
-            println (transformsSchema)
-        }
-        super.writeTransformSchema(transformsSchema, data)
-    }
-
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
@@ -99,7 +87,7 @@ fun Any.testResourceName(): String = "${javaClass.simpleName}.${testName()}"
 
 internal object ProjectStructure {
     val projectRootDir: Path = run {
-        var dir = javaClass.getResource("/").toPath()
+        var dir = javaClass.getResource("/")!!.toPath()
         while (!(dir / ".git").isDirectory()) {
             dir = dir.parent
         }
@@ -112,7 +100,7 @@ fun Any.writeTestResource(bytes: OpaqueBytes) {
     bytes.open().copyTo(dir / testResourceName(), REPLACE_EXISTING)
 }
 
-fun Any.readTestResource(): ByteArray = javaClass.getResourceAsStream(testResourceName()).readBytes()
+fun Any.readTestResource(): ByteArray = javaClass.getResourceAsStream(testResourceName())!!.readFully()
 
 @Throws(NotSerializableException::class)
 inline fun <reified T : Any> DeserializationInput.deserializeAndReturnEnvelope(

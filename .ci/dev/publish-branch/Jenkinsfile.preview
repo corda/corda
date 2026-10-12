@@ -24,6 +24,7 @@ pipeline {
         // in the name
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Preview to Artifactory"
                 .replaceAll("/", " :: ")
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {

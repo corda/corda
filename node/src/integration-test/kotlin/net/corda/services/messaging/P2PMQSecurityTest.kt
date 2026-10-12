@@ -37,7 +37,7 @@ abstract class P2PMQSecurityTest : MQSecurityTest() {
         val queue = session.createQueue(address)
         assertThatExceptionOfType(JMSException::class.java).isThrownBy {
             session.createProducer(queue)
-        }.withMessageContaining(address).withMessageContaining("CREATE_DURABLE_QUEUE")
+        }.withMessageContaining(address).withMessageContaining("CREATE_ADDRESS")
     }
 
     @Test(timeout=300_000)

@@ -1,8 +1,8 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.internal.exists
 import org.junit.Test
 import java.nio.file.Files
+import kotlin.io.path.exists
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

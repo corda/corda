@@ -107,6 +107,7 @@ class PropertyValidationTest {
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
 
@@ -125,6 +126,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to false).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -143,6 +145,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to 1.2).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -173,6 +176,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -191,6 +195,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -209,6 +214,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to 1).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -230,6 +236,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
@@ -251,6 +258,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to configObject()).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
@@ -272,6 +280,7 @@ class PropertyValidationTest {
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
         val errors = property.validate(configuration, Configuration.Options.defaults).errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
@@ -327,6 +336,7 @@ class PropertyValidationTest {
         val result = property.validate(configuration, Configuration.Options.defaults)
 
         val errors = result.errors
+
         assertThat(errors).hasSize(1)
         assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
 

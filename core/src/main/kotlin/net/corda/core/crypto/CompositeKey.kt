@@ -14,7 +14,7 @@ import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.PublicKey
-import java.util.*
+import java.util.IdentityHashMap
 
 /**
  * A tree data structure that enables the representation of composite public keys, which are used to represent
@@ -50,8 +50,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             val builder = Builder()
             val listOfChildren = sequenceOfChildren.objects.toList()
             listOfChildren.forEach { childAsn1 ->
-                require(childAsn1 is ASN1Sequence) { "Child key is not in ASN1 format" }
-                val childSeq = childAsn1 as ASN1Sequence
+                val childSeq = requireNotNull(childAsn1 as? ASN1Sequence) { "Child key is not in ASN1 format" }
                 val key = Crypto.decodePublicKey((childSeq.getObjectAt(0) as DERBitString).bytes)
                 val weight = ASN1Integer.getInstance(childSeq.getObjectAt(1))
                 builder.addKey(key, weight.positiveValue.toInt())
@@ -278,7 +277,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
             require(threshold == null || threshold > 0) { "Threshold must not be specified or its value must be greater than zero" }
             val n = children.size
             return when {
-                n > 1 -> CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
+                n > 1 -> CompositeKey(threshold ?: children.sumOf { (_, weight) -> weight }, children)
                 n == 1 -> {
                     require(threshold == null || threshold == children.first().weight)
                     { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }

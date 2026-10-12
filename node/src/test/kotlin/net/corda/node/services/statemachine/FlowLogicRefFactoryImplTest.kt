@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.core.flows.SchedulableFlow
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.time.Duration
 import kotlin.reflect.jvm.jvmName
@@ -77,8 +78,10 @@ class FlowLogicRefFactoryImplTest {
         flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
-    @Test(expected = IllegalFlowLogicException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `create for non-schedulable flow logic`() {
-        flowLogicRefFactory.create(NonSchedulableFlow::class.jvmName)
+        assertThatExceptionOfType(IllegalFlowLogicException::class.java).isThrownBy {
+            flowLogicRefFactory.create(NonSchedulableFlow::class.jvmName)
+        }
     }
 }

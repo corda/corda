@@ -9,8 +9,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.list
-import net.corda.core.internal.readAllLines
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
@@ -37,6 +35,8 @@ import org.jboss.byteman.agent.submit.Submit
 import org.junit.Before
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.readLines
 import kotlin.test.assertEquals
 
 abstract class StateMachineErrorHandlingTest {
@@ -116,9 +116,9 @@ abstract class StateMachineErrorHandlingTest {
     }
 
     private fun NodeHandle.getBytemanOutput(): List<String> {
-        return baseDirectory.list()
+        return baseDirectory.listDirectoryEntries()
             .filter { "net.corda.node.Corda" in it.toString() && "stdout.log" in it.toString() }
-            .flatMap { it.readAllLines() }
+            .flatMap { it.readLines() }
     }
 
     internal fun OutOfProcessImpl.stop(timeout: Duration): Boolean {

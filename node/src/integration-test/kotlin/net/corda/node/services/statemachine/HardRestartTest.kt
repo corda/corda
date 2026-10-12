@@ -6,7 +6,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -27,6 +26,7 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 
 class HardRestartTest {
@@ -184,17 +184,17 @@ class HardRestartTest {
     @StartableByRPC
     @InitiatingFlow
     @InitiatedBy(RecursiveB::class)
-    class RecursiveA(val mode: RecursiveMode) : FlowLogic<String>() {
+    class RecursiveA(private val mode: RecursiveMode) : FlowLogic<String>() {
         constructor(otherSession: FlowSession) : this(RecursiveMode.Recursive(otherSession))
         constructor(otherParty: Party, initialDepth: Int) : this(RecursiveMode.Top(otherParty, initialDepth))
         @Suspendable
         override fun call(): String {
             return when (mode) {
-                is HardRestartTest.RecursiveMode.Top -> {
+                is RecursiveMode.Top -> {
                     val session = initiateFlow(mode.otherParty)
                     session.sendAndReceive<String>(mode.initialDepth).unwrap { it }
                 }
-                is HardRestartTest.RecursiveMode.Recursive -> {
+                is RecursiveMode.Recursive -> {
                     val depth = mode.otherSession.receive<Int>().unwrap { it }
                     val string = if (depth > 0) {
                         val newSession = initiateFlow(mode.otherSession.counterparty)

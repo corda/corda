@@ -6,7 +6,6 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
-import net.corda.core.internal.isRegularFile
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
@@ -22,11 +21,14 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic
-import picocli.CommandLine.*
+import picocli.CommandLine.ITypeConverter
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import java.io.PrintStream
 import java.net.MalformedURLException
 import java.net.URL
 import java.nio.file.Paths
+import kotlin.io.path.isRegularFile
 
 fun main(args: Array<String>) {
     BlobInspector().start(args)

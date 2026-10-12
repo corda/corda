@@ -242,7 +242,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
             val (consistentVaults, diffQueues) = if (previousState == null) {
                 Pair(currentNodeVaults, mapOf<AbstractParty, Map<AbstractParty, List<Pair<AbstractParty, Long>>>>())
             } else {
-                log.info("${previousState.diffQueues.values.sumBy { it.values.sumBy { it.size } }} txs in limbo")
+                log.info("${previousState.diffQueues.values.sumOf { it.values.sumOf { it.size } }} txs in limbo")
                 val newDiffQueues = previousState.copyQueues()
                 val newConsistentVault = previousState.copyVaults()
                 previousState.diffQueues.forEach { entry ->

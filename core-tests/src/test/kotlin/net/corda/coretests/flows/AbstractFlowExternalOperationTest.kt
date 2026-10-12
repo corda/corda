@@ -1,6 +1,7 @@
 package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaException
 import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowExternalOperation
@@ -133,7 +134,7 @@ abstract class AbstractFlowExternalOperationTest {
         fun createFuture(): CompletableFuture<Any> {
             return CompletableFuture.supplyAsync(Supplier<Any> {
                 log.info("Starting sleep inside of future")
-                Thread.sleep(1000)
+                Strand.sleep(1000)
                 log.info("Finished sleep inside of future")
                 "Here is your return value"
             }, executorService)

@@ -7,7 +7,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.TransactionVerificationException.BrokenTransactionException
 import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.core.internal.hash
-import net.corda.core.internal.inputStream
+import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.flows.serialization.missing.MissingSerializerBuilderFlow
@@ -77,7 +77,7 @@ class ContractWithMissingCustomSerializerTest(private val runInProcess: Boolean)
                     .start(user.username, user.password)
                     .use { client ->
                         with(client.proxy) {
-                            uploadAttachment(flowCorDapp.jarFile.inputStream())
+                            flowCorDapp.jarFile.read { uploadAttachment(it) }
                             startFlow(::MissingSerializerFlow, BOBBINS).returnValue.getOrThrow()
                         }
                     }

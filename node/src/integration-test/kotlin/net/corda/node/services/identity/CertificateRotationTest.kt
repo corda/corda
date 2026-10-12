@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.div
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.finance.DOLLARS
@@ -28,6 +27,7 @@ import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
 import java.security.PublicKey
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull

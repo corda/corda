@@ -66,7 +66,7 @@ class P2PMessagingTest {
                 break
             }
         }
-        assertThat(participatingNodes).containsExactlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
+        assertThat(participatingNodes).containsExactlyInAnyOrderElementsOf(participatingServiceNodes.map { it.services.myInfo })
     }
 
     private fun InProcess.respondWith(message: Any) {

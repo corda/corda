@@ -1,9 +1,9 @@
 package net.corda.node.utilities.registration
 
-import com.nhaarman.mockito_kotlin.anyOrNull
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.coretesting.internal.rigorousMock

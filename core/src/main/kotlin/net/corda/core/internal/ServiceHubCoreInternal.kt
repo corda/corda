@@ -1,24 +1,19 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.RotatedKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryService
-import net.corda.core.node.ServiceHub
+import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.node.StatesToRecord
-import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.transactions.SignedTransaction
 import java.util.concurrent.ExecutorService
 
 // TODO: This should really be called ServiceHubInternal but that name is already taken by net.corda.node.services.api.ServiceHubInternal.
-interface ServiceHubCoreInternal : ServiceHub {
-
+interface ServiceHubCoreInternal : VerifyingServiceHub {
     val externalOperationExecutor: ExecutorService
-
-    val attachmentTrustCalculator: AttachmentTrustCalculator
 
     /**
      * Optional `NotaryService` which will be `null` for all non-Notary nodes.
@@ -26,10 +21,6 @@ interface ServiceHubCoreInternal : ServiceHub {
     val notaryService: NotaryService?
 
     fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
-
-    val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
-
-    val rotatedKeys: RotatedKeys
 
     /**
      * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage,

@@ -136,7 +136,7 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             logDebugWithMDC { "Loopback Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty(MESSAGE_ID_KEY)}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
-            producer?.send(SimpleString(peerInbox), artemisMessage) { artemisMessage.individualAcknowledge() }
+            producer?.send(SimpleString.of(peerInbox), artemisMessage) { artemisMessage.individualAcknowledge() }
             bridgeMetricsService?.let { metricsService ->
                 val properties = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.mapNotNull { key ->
                     if (artemisMessage.containsProperty(key)) {

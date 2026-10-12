@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeToken
+import net.corda.core.internal.decapitalize
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.amqp.MethodClassifier.*
@@ -20,9 +21,9 @@ import java.util.*
  */
 data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter: Method?) {
     override fun toString() = StringBuilder("").apply {
-        appendln("Property - ${field?.name ?: "null field"}\n")
-        appendln("  getter - ${getter?.name ?: "no getter"}")
-        appendln("  setter - ${setter?.name ?: "no setter"}")
+        appendLine("Property - ${field?.name ?: "null field"}\n")
+        appendLine("  getter - ${getter?.name ?: "no getter"}")
+        appendLine("  setter - ${setter?.name ?: "no setter"}")
     }.toString()
 
     /**
@@ -159,7 +160,7 @@ private fun getPropertyNamedMethod(method: Method): PropertyNamedMethod? {
     return propertyMethodRegex.find(method.name)?.let { result ->
         PropertyNamedMethod(
                 result.groups[2]!!.value,
-                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()),
+                MethodClassifier.valueOf(result.groups[1]!!.value.uppercase(Locale.getDefault())),
                 method)
     }
 }

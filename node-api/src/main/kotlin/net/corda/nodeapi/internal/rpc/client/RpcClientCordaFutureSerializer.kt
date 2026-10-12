@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.rpc.client
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.toFuture
+import net.corda.serialization.internal.NotSerializableException
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import rx.Observable
@@ -20,9 +21,7 @@ class RpcClientCordaFutureSerializer (factory: SerializerFactory)
         try {
             return proxy.observable.toFuture()
         } catch (e: NotSerializableException) {
-            throw NotSerializableException("Failed to deserialize Future from proxy Observable - ${e.message}\n").apply {
-                initCause(e.cause)
-            }
+            throw NotSerializableException("Failed to deserialize Future from proxy Observable - ${e.message}\n", e.cause)
         }
     }
 

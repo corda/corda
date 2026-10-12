@@ -9,23 +9,22 @@ import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.hibernate.Session
 import rx.Observable
+import java.util.Optional
 
 class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMapCache,
                                cacheFactory: NamedCacheFactory,
                                private val database: CordaPersistence) {
 
     // probably better off using a BiMap here: https://www.baeldung.com/guava-bimap
-    private val cordaX500NameToPartyIdCache = NonInvalidatingCache<CordaX500Name, SecureHash?>(
-                cacheFactory = cacheFactory,
-                name = "RecoveryPartyInfoCache_byCordaX500Name") { key ->
-            database.transaction { queryByCordaX500Name(session, key) }
-        }
+    private val cordaX500NameToPartyIdCache = NonInvalidatingCache<CordaX500Name, Optional<SecureHash>>(
+            cacheFactory = cacheFactory,
+            name = "RecoveryPartyInfoCache_byCordaX500Name"
+    ) { key -> Optional.ofNullable(database.transaction { queryByCordaX500Name(session, key) }) }
 
-    private val partyIdToCordaX500NameCache = NonInvalidatingCache<SecureHash, CordaX500Name?>(
-                cacheFactory = cacheFactory,
-                name = "RecoveryPartyInfoCache_byPartyId") { key ->
-            database.transaction { queryByPartyId(session, key) }
-        }
+    private val partyIdToCordaX500NameCache = NonInvalidatingCache<SecureHash, Optional<CordaX500Name>>(
+            cacheFactory = cacheFactory,
+            name = "RecoveryPartyInfoCache_byPartyId"
+    ) { key ->  Optional.ofNullable(database.transaction { queryByPartyId(session, key) }) }
 
     private lateinit var trackNetworkMapUpdates: Observable<NetworkMapCache.MapChange>
 
@@ -44,13 +43,19 @@ class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMap
         }
     }
 
-    fun getPartyIdByCordaX500Name(name: CordaX500Name): SecureHash = cordaX500NameToPartyIdCache[name] ?: throw IllegalStateException("Missing cache entry for $name")
+    fun getPartyIdByCordaX500Name(name: CordaX500Name): SecureHash = cordaX500NameToPartyIdCache[name].orElseThrow {
+        cordaX500NameToPartyIdCache.invalidate(name)
+        IllegalStateException("Missing cache entry for $name")
+    }
 
-    fun getCordaX500NameByPartyId(partyId: SecureHash): CordaX500Name = partyIdToCordaX500NameCache[partyId] ?: throw IllegalStateException("Missing cache entry for $partyId")
+    fun getCordaX500NameByPartyId(partyId: SecureHash): CordaX500Name = partyIdToCordaX500NameCache[partyId].orElseThrow {
+        partyIdToCordaX500NameCache.invalidate(partyId)
+        IllegalStateException("Missing cache entry for $partyId")
+    }
 
     private fun add(partyHashCode: SecureHash, partyName: CordaX500Name) {
-        partyIdToCordaX500NameCache.cache.put(partyHashCode, partyName)
-        cordaX500NameToPartyIdCache.cache.put(partyName, partyHashCode)
+        partyIdToCordaX500NameCache.cache.put(partyHashCode, Optional.ofNullable(partyName))
+        cordaX500NameToPartyIdCache.cache.put(partyName, Optional.ofNullable(partyHashCode))
         updateInfoDB(partyHashCode, partyName)
     }
 

@@ -21,7 +21,7 @@ class AddressBindingFailureTests {
     }
 
     @Test(timeout=300_000)
-	fun `p2p address`() = assertBindExceptionForOverrides { address -> mapOf("p2pAddress" to address.toString()) }
+	fun `p2p address`() = assertBindExceptionForOverrides("localhost") { address -> mapOf("p2pAddress" to address.toString()) }
 
     @Test(timeout=300_000)
 	fun `rpc address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("address" to address.toString())) }
@@ -52,11 +52,12 @@ class AddressBindingFailureTests {
         }
     }
 
-    private fun assertBindExceptionForOverrides(overrides: (NetworkHostAndPort) -> Map<String, Any?>) {
+    private fun assertBindExceptionForOverrides(bindAddress: String? = null, overrides: (NetworkHostAndPort) -> Map<String, Any?>) {
 
         ServerSocket(0).use { socket ->
 
-            val address = InetSocketAddress("localhost", socket.localPort).toNetworkHostAndPort()
+            val address = bindAddress?.let { InetSocketAddress(it, socket.localPort).toNetworkHostAndPort() } ?:
+                InetSocketAddress(socket.inetAddress, socket.localPort).toNetworkHostAndPort()
             driver(DriverParameters(startNodesInProcess = true,
                                          notarySpecs = emptyList(),
                                          inMemoryDB = false,

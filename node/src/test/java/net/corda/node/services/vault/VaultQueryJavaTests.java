@@ -10,8 +10,8 @@ import net.corda.core.crypto.SecureHash;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
+import net.corda.core.internal.verification.NodeVerificationSupport;
 import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.ServicesForResolution;
 import net.corda.core.node.services.AttachmentStorage;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
@@ -97,9 +97,9 @@ public class VaultQueryJavaTests {
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
         vaultService = services.getVaultService();
         storage = new NodeAttachmentService(new MetricRegistry(), new TestingNamedCacheFactory(100), database);
-        ServicesForResolution serviceForResolution = mock(ServicesForResolution.class);
-        ((NodeAttachmentService) storage).servicesForResolution = serviceForResolution;
-        doReturn(testNetworkParameters()).when(serviceForResolution).getNetworkParameters();
+        NodeVerificationSupport nodeVerificationSupport = mock(NodeVerificationSupport.class);
+        ((NodeAttachmentService) storage).nodeVerificationSupport = nodeVerificationSupport;
+        doReturn(testNetworkParameters()).when(nodeVerificationSupport).getNetworkParameters();
     }
 
     @After

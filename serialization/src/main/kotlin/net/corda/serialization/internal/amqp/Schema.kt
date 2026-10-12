@@ -11,7 +11,11 @@ import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.amqp.UnsignedLong
+import org.apache.qpid.proton.codec.AMQPType
+import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
+import org.apache.qpid.proton.codec.EncoderImpl
+import org.apache.qpid.proton.codec.TypeEncoding
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 
@@ -50,7 +54,7 @@ private class RedescribedType(
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
  * [toString] representations generate the associated XML form.
  */
-data class Schema(val types: List<TypeNotation>) : DescribedType {
+data class Schema(val types: List<TypeNotation>) : CachingDescribedType, DescribedType {
     companion object : DescribedTypeConstructor<Schema> {
         val DESCRIPTOR = AMQPDescriptorRegistry.SCHEMA.amqpDescriptor
 
@@ -74,8 +78,78 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(types)
-
     override fun toString(): String = types.joinToString("\n")
+    override val bytes: ByteArray by lazy {
+        val data = Data.Factory.create()
+        data.putObject(this)
+        data.encode().array
+    }
+}
+
+interface CachingDescribedType  {
+    val bytes: ByteArray
+}
+
+class CachingWrapper(dataWriter: (Data) -> Unit) : CachingDescribedType {
+    override val bytes: ByteArray = let {
+        val data = Data.Factory.create()
+        dataWriter(data)
+        data.encode().array
+    }
+}
+
+class CachingDescribedAMQPType<T : CachingDescribedType>(private val type: Class<T>, private val encoder: EncoderImpl) : AMQPType<T> {
+    override fun getTypeClass(): Class<T> {
+        return type
+    }
+
+    override fun getCanonicalEncoding(): TypeEncoding<T> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getAllEncodings(): MutableCollection<out TypeEncoding<T>> {
+        throw UnsupportedOperationException()
+    }
+
+    override fun write(obj: T) {
+        val bytes = obj.bytes
+        encoder.buffer.put(bytes, 0, bytes.size)
+    }
+
+    override fun getEncoding(obj: T): TypeEncoding<T> {
+        return object : TypeEncoding<T> {
+            override fun getType(): AMQPType<T> {
+                return this@CachingDescribedAMQPType
+            }
+
+            override fun writeConstructor() {
+            }
+
+            override fun getConstructorSize(): Int {
+                return 0
+            }
+
+            override fun isFixedSizeVal(): Boolean {
+                return false
+            }
+
+            override fun encodesJavaPrimitive(): Boolean {
+                return false
+            }
+
+            override fun encodesSuperset(encoder: TypeEncoding<T>?): Boolean {
+                return false
+            }
+
+            override fun getValueSize(obj: T): Int {
+                return obj.bytes.size
+            }
+
+            override fun writeValue(obj: T) {
+                write(obj)
+            }
+        }
+    }
 }
 
 data class Descriptor(val name: Symbol?, val code: UnsignedLong? = null) : DescribedType {
@@ -215,6 +289,16 @@ data class CompositeType(
 
     override fun getDescribed(): Any = listOf(name, label, provides, descriptor, fields)
 
+    private val hashCode = descriptor.hashCode()
+    override fun hashCode(): Int {
+        return hashCode
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is TypeNotation) return false
+        return descriptor.equals(other.descriptor)
+    }
+
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"composite\" name=\"$name\"")
         if (!label.isNullOrBlank()) {
@@ -263,6 +347,16 @@ data class RestrictedType(override val name: String,
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, source, descriptor, choices)
+
+    private val hashCode = descriptor.hashCode()
+    override fun hashCode(): Int {
+        return hashCode
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is TypeNotation) return false
+        return descriptor.equals(other.descriptor)
+    }
 
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"restricted\" name=\"$name\"")

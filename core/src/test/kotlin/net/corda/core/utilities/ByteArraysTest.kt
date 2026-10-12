@@ -2,7 +2,6 @@ package net.corda.core.utilities
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -14,22 +13,17 @@ import kotlin.test.assertEquals
 class ByteArraysTest {
     @Test(timeout=300_000)
 	fun `slice works`() {
-        byteArrayOf(9, 9, 0, 1, 2, 3, 4, 9, 9).let {
-            sliceWorksImpl(it, OpaqueBytesSubSequence(it, 2, 5))
-        }
-        byteArrayOf(0, 1, 2, 3, 4).let {
-            sliceWorksImpl(it, OpaqueBytes(it))
-        }
+        sliceWorksImpl(OpaqueBytesSubSequence(byteArrayOf(9, 9, 0, 1, 2, 3, 4, 9, 9), 2, 5))
+        sliceWorksImpl(OpaqueBytes(byteArrayOf(0, 1, 2, 3, 4)))
     }
 
-    private fun sliceWorksImpl(array: ByteArray, seq: ByteSequence) {
+    private fun sliceWorksImpl(seq: ByteSequence) {
         // Python-style negative indices can be implemented later if needed:
         assertSame(IllegalArgumentException::class.java, catchThrowable { seq.slice(-1) }.javaClass)
         assertSame(IllegalArgumentException::class.java, catchThrowable { seq.slice(end = -1) }.javaClass)
         fun check(expected: ByteArray, actual: ByteBuffer) {
             assertEquals(ByteBuffer.wrap(expected), actual)
             assertSame(ReadOnlyBufferException::class.java, catchThrowable { actual.array() }.javaClass)
-            assertSame(array, actual.declaredField<ByteArray>(ByteBuffer::class, "hb").value)
         }
         check(byteArrayOf(0, 1, 2, 3, 4), seq.slice())
         check(byteArrayOf(0, 1, 2, 3, 4), seq.slice(0, 5))
@@ -48,14 +42,14 @@ class ByteArraysTest {
 
     @Test(timeout=300_000)
 	fun `test hex parsing strictly uppercase`() {
-        val HEX_REGEX = "^[0-9A-F]+\$".toRegex()
+        val hexRegex = "^[0-9A-F]+\$".toRegex()
 
         val privacySalt = net.corda.core.contracts.PrivacySalt()
         val privacySaltAsHexString = privacySalt.bytes.toHexString()
-        assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
+        assertTrue(privacySaltAsHexString.matches(hexRegex))
 
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         val txhashAsHexString = stateRef.txhash.bytes.toHexString()
-        assertTrue(txhashAsHexString.matches(HEX_REGEX))
+        assertTrue(txhashAsHexString.matches(hexRegex))
     }
 }

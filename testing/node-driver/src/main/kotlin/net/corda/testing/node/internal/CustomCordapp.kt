@@ -1,27 +1,29 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
-import net.corda.core.internal.*
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.internal.pooledScan
 import net.corda.core.node.services.AttachmentFixup
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.internal.JarSignatureTestUtils.containsKey
-import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.Attributes
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.outputStream
 
 /**
  * Represents a completely custom CorDapp comprising of resources taken from packages on the existing classpath, even including individual
@@ -43,6 +45,8 @@ data class CustomCordapp(
     override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
 
     override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes, fixups = fixups)
+
+    override fun asSigned(): CustomCordapp = signed()
 
     fun signed(keyStorePath: Path? = null, numberOfSignatures: Int = 1, keyAlgorithm: String = "RSA"): CustomCordapp =
             copy(signingInfo = SigningInfo(keyStorePath, numberOfSignatures, keyAlgorithm))
@@ -109,23 +113,6 @@ data class CustomCordapp(
         }
     }
 
-    private fun signJar(jarFile: Path) {
-        if (signingInfo != null) {
-            val keyStorePathToUse = signingInfo.keyStorePath ?: defaultJarSignerDirectory.createDirectories()
-            for (i in 1 .. signingInfo.numberOfSignatures) {
-                val alias = "alias$i"
-                val pwd = "secret!"
-                if (!keyStorePathToUse.containsKey(alias, pwd)) {
-                    keyStorePathToUse.generateKey(alias, pwd, "O=Test Company Ltd $i,OU=Test,L=London,C=GB", signingInfo.keyAlgorithm)
-                }
-                val pk = keyStorePathToUse.signJar(jarFile.toString(), alias, pwd)
-                logger.debug { "Signed Jar: $jarFile with public key $pk" }
-            }
-        } else {
-            logger.debug { "Unsigned Jar: $jarFile" }
-        }
-    }
-
     private fun createTestManifest(name: String, versionId: Int, targetPlatformVersion: Int): Manifest {
         val manifest = Manifest()
 
@@ -155,13 +142,12 @@ data class CustomCordapp(
         }
     }
 
-    data class SigningInfo(val keyStorePath: Path?, val numberOfSignatures: Int, val keyAlgorithm: String)
+    data class SigningInfo(val keyStorePath: Path?, val signatureCount: Int, val algorithm: String)
 
     companion object {
         private val logger = contextLogger()
         private val epochFileTime = FileTime.from(Instant.EPOCH)
         private val cordappsDirectory: Path
-        private val defaultJarSignerDirectory: Path
         private val whitespace = "\\s++".toRegex()
         private val cache = ConcurrentHashMap<CustomCordapp, Path>()
 
@@ -169,7 +155,6 @@ data class CustomCordapp(
             val buildDir = Paths.get("build").toAbsolutePath()
             val timeDirName = getTimestampAsDirectoryName()
             cordappsDirectory = buildDir / "generated-custom-cordapps" / timeDirName
-            defaultJarSignerDirectory = buildDir / "jar-signer" / timeDirName
         }
 
         fun getJarFile(cordapp: CustomCordapp): Path {
@@ -179,10 +164,12 @@ data class CustomCordapp(
                 val jarFile = cordappsDirectory.createDirectories() / filename
                 if (it.fixups.isNotEmpty()) {
                     it.createFixupJar(jarFile)
-                } else if(it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty()) {
-                        it.packageAsJar(jarFile)
+                } else if (it.packages.isNotEmpty() || it.classes.isNotEmpty()) {
+                    it.packageAsJar(jarFile)
                 }
-                it.signJar(jarFile)
+                if (it.signingInfo != null) {
+                    TestCordappSigner.signJar(jarFile, it.signingInfo.keyStorePath, it.signingInfo.signatureCount, it.signingInfo.algorithm)
+                }
                 logger.debug { "$it packaged into $jarFile" }
                 jarFile
             }

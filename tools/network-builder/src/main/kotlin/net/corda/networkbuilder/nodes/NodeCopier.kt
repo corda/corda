@@ -3,24 +3,24 @@ package net.corda.networkbuilder.nodes
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
-import net.corda.core.internal.div
-import org.slf4j.LoggerFactory
+import net.corda.core.utilities.contextLogger
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.div
 
 open class NodeCopier(private val cacheDir: File) {
 
     fun copyNode(foundNode: FoundNode): CopiedNode {
         val nodeCacheDir = File(cacheDir, foundNode.baseDirectory.name)
         nodeCacheDir.deleteRecursively()
-        LOG.info("copying: ${foundNode.baseDirectory} to $nodeCacheDir")
+        log.info("copying: ${foundNode.baseDirectory} to $nodeCacheDir")
         foundNode.baseDirectory.copyRecursively(nodeCacheDir, overwrite = true)
         //docker-java lib doesn't copy an empty folder, so if it's empty add a dummy file
         ensureDirectoryIsNonEmpty(nodeCacheDir.toPath() / ("cordapps"))
         copyBootstrapperFiles(nodeCacheDir)
         val configInCacheDir = File(nodeCacheDir, "node.conf")
-        LOG.info("Applying precanned config $configInCacheDir")
+        log.info("Applying precanned config $configInCacheDir")
         val rpcSettings = getDefaultRpcSettings()
         val sshSettings = getDefaultSshSettings()
         mergeConfigs(configInCacheDir, rpcSettings, sshSettings)
@@ -28,21 +28,21 @@ open class NodeCopier(private val cacheDir: File) {
     }
 
     fun copyBootstrapperFiles(nodeCacheDir: File) {
-        this.javaClass.classLoader.getResourceAsStream("node-Dockerfile").use { nodeDockerFileInStream ->
+        this.javaClass.classLoader.getResourceAsStream("node-Dockerfile")!!.use { nodeDockerFileInStream ->
             val nodeDockerFile = File(nodeCacheDir, "Dockerfile")
             nodeDockerFile.outputStream().use { nodeDockerFileOutStream ->
                 nodeDockerFileInStream.copyTo(nodeDockerFileOutStream)
             }
         }
 
-        this.javaClass.classLoader.getResourceAsStream("run-corda-node.sh").use { nodeRunScriptInStream ->
+        this.javaClass.classLoader.getResourceAsStream("run-corda-node.sh")!!.use { nodeRunScriptInStream ->
             val nodeRunScriptFile = File(nodeCacheDir, "run-corda.sh")
             nodeRunScriptFile.outputStream().use { nodeDockerFileOutStream ->
                 nodeRunScriptInStream.copyTo(nodeDockerFileOutStream)
             }
         }
 
-        this.javaClass.classLoader.getResourceAsStream("node_info_watcher.sh").use { nodeRunScriptInStream ->
+        this.javaClass.classLoader.getResourceAsStream("node_info_watcher.sh")!!.use { nodeRunScriptInStream ->
             val nodeInfoWatcherFile = File(nodeCacheDir, "node_info_watcher.sh")
             nodeInfoWatcherFile.outputStream().use { nodeDockerFileOutStream ->
                 nodeRunScriptInStream.copyTo(nodeDockerFileOutStream)
@@ -53,7 +53,7 @@ open class NodeCopier(private val cacheDir: File) {
     internal fun getDefaultRpcSettings(): ConfigValue {
         return javaClass
                 .classLoader
-                .getResourceAsStream("rpc-settings.conf")
+                .getResourceAsStream("rpc-settings.conf")!!
                 .reader().use {
                     ConfigFactory.parseReader(it)
                 }.getValue("rpcSettings")
@@ -62,7 +62,7 @@ open class NodeCopier(private val cacheDir: File) {
     internal fun getDefaultSshSettings(): ConfigValue {
         return javaClass
                 .classLoader
-                .getResourceAsStream("ssh.conf")
+                .getResourceAsStream("ssh.conf")!!
                 .reader().use {
                     ConfigFactory.parseReader(it)
                 }.getValue("sshd")
@@ -106,6 +106,6 @@ open class NodeCopier(private val cacheDir: File) {
     }
 
     companion object {
-        val LOG = LoggerFactory.getLogger(NodeCopier::class.java)
+        private val log = contextLogger()
     }
 }

@@ -15,8 +15,9 @@ import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
 import net.corda.nodeapi.internal.setThreadPoolName
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
-import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection
+import org.apache.activemq.artemis.core.server.metrics.MetricsManager
+import org.apache.activemq.artemis.core.server.routing.RoutingHandler
 import org.apache.activemq.artemis.spi.core.protocol.ProtocolManager
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor
 import org.apache.activemq.artemis.spi.core.remoting.AcceptorFactory
@@ -44,7 +45,9 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 listener: ServerConnectionLifeCycleListener?,
                                 threadPool: Executor,
                                 scheduledThreadPool: ScheduledExecutorService,
-                                protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?): Acceptor {
+                                protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?,
+                                threadFactoryGroupName: String?,
+                                metricsManager: MetricsManager?): Acceptor {
         val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "Acceptor", configuration)
         threadPool.setThreadPoolName("$threadPoolName-artemis")
         scheduledThreadPool.setThreadPoolName("$threadPoolName-artemis-scheduler")
@@ -58,6 +61,8 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                 scheduledThreadPool,
                 failureExecutor,
                 protocolMap,
+                threadFactoryGroupName,
+                metricsManager,
                 "$threadPoolName-netty"
         )
     }
@@ -70,9 +75,21 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     listener: ServerConnectionLifeCycleListener?,
                                     scheduledThreadPool: ScheduledExecutorService?,
                                     failureExecutor: Executor,
-                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?,
-                                    private val threadPoolName: String) :
-            NettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
+                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?,
+                                    threadFactoryGroupName: String?,
+                                    metricsManager: MetricsManager?,
+                                    private val threadPoolName: String
+                                    ) :
+            NettyAcceptor(name,
+                    clusterConnection,
+                    configuration,
+                    handler,
+                    listener,
+                    scheduledThreadPool,
+                    failureExecutor,
+                    protocolMap,
+                    threadFactoryGroupName,
+                    metricsManager)
     {
         companion object {
             private val defaultThreadPoolNamePattern = Pattern.compile("""Thread-(\d+) \(activemq-netty-threads\)""")

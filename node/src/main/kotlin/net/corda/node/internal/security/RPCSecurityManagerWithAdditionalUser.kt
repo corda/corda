@@ -2,7 +2,7 @@ package net.corda.node.internal.security
 
 import net.corda.nodeapi.internal.config.User
 import org.apache.shiro.mgt.DefaultSecurityManager
-import org.apache.shiro.subject.SimplePrincipalCollection
+import org.apache.shiro.subject.ImmutablePrincipalCollection
 import javax.security.auth.login.FailedLoginException
 
 /**
@@ -12,7 +12,7 @@ import javax.security.auth.login.FailedLoginException
 class RPCSecurityManagerWithAdditionalUser(private val delegate: RPCSecurityManager, private val user: User) : RPCSecurityManager by delegate {
 
     private val realmId = user.username + "Realm"
-    private val shellAuthorizingSubject = ShiroAuthorizingSubject(subjectId = SimplePrincipalCollection(user.username, id.value),
+    private val shellAuthorizingSubject = ShiroAuthorizingSubject(subjectId = ImmutablePrincipalCollection.ofSinglePrincipal(user.username, id.value),
             manager = DefaultSecurityManager(InMemoryRealm(listOf(user), realmId)))
 
     @Throws(FailedLoginException::class)

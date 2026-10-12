@@ -6,11 +6,6 @@ import com.natpryce.hamkrest.containsSubstring
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.inputStream
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -30,6 +25,11 @@ import org.junit.Test
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.zip.ZipInputStream
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.inputStream
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 
 class DumpCheckpointsTest {
@@ -88,10 +88,10 @@ class DumpCheckpointsTest {
 
     private fun checkDumpFile(dir: Path, containsClass: Class<out FlowLogic<*>>, flowStatus: Checkpoint.FlowStatus) {
         // The directory supposed to contain a single ZIP file
-        val file = dir.list().single { it.isRegularFile() }
+        val file = dir.listDirectoryEntries().single { it.isRegularFile() }
 
         ZipInputStream(file.inputStream()).use { zip ->
-            val entry = zip.nextEntry
+            val entry = zip.nextEntry!!
             assertThat(entry.name, containsSubstring("json"))
             val content = String(zip.readFully())
             assertThat(content, containsSubstring(containsClass.name))

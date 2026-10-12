@@ -4,6 +4,7 @@ import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
+import net.corda.serialization.internal.verifier.CustomSerializationSchemeAdapter
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.io.NotSerializableException

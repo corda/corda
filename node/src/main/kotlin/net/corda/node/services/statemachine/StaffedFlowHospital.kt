@@ -31,6 +31,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.PersistenceException
@@ -305,11 +306,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Error ${index + 1} of ${errors.size}:", error)
                     val diagnoses: Map<Diagnosis, List<Staff>> = staff.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
                     // We're only interested in the highest priority diagnosis for the error
-                    val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
+                    val (diagnosis, by) = diagnoses.entries.minBy { it.key }
                     ConsultationReport(error, diagnosis, by)
                 }
                 // And we're only interested in the error with the highest priority diagnosis
-                .minBy { it.diagnosis }!!
+                .minBy { it.diagnosis }
     }
 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)
@@ -726,7 +727,7 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>
         return false
     }
     val containsMessage = if (errorMessage != null) {
-        message?.toLowerCase()?.contains(errorMessage) ?: false
+        message?.lowercase(Locale.getDefault())?.contains(errorMessage) ?: false
     } else {
         true
     }

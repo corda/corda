@@ -4,11 +4,8 @@ import com.codahale.metrics.MetricRegistry
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.util.PropertyElf
-import net.corda.core.internal.declaredField
-import org.h2.engine.Database
 import org.h2.engine.Engine
 import org.slf4j.LoggerFactory
-import java.lang.reflect.Modifier
 import java.util.*
 import javax.sql.DataSource
 
@@ -27,10 +24,6 @@ object DataSourceFactory {
 
     init {
         LoggerFactory.getLogger(javaClass).debug("Applying H2 fix.") // See CORDA-924.
-        Engine::class.java.getDeclaredField("DATABASES").apply {
-            isAccessible = true
-            declaredField<Int>("modifiers").apply { value = value and Modifier.FINAL.inv() }
-        }.set(null, SynchronizedGetPutRemove<String, Database>())
     }
 
     fun createDataSource(hikariProperties: Properties, pool: Boolean = true, metricRegistry: MetricRegistry? = null): DataSource {

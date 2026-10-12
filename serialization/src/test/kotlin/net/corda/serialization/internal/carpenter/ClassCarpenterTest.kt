@@ -3,9 +3,11 @@ package net.corda.serialization.internal.carpenter
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.AllWhitelist
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Test
 import java.beans.Introspector
 import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
@@ -95,10 +97,12 @@ class ClassCarpenterTest {
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
 
-    @Test(expected = DuplicateNameException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun duplicates() {
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
-        cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
+        assertThatExceptionOfType(DuplicateNameException::class.java).isThrownBy {
+            cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
+        }
     }
 
     @Test(timeout=300_000)
@@ -301,7 +305,7 @@ class ClassCarpenterTest {
         assertEquals(testD, i["d"])
     }
 
-    @Test(expected = java.lang.IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `null parameter small int`() {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
@@ -310,17 +314,16 @@ class ClassCarpenterTest {
 
         val clazz = cc.build(schema)
         val a: Int? = null
-        clazz.constructors[0].newInstance(a)
+        assertThatIllegalArgumentException().isThrownBy {
+            clazz.constructors[0].newInstance(a)
+        }
     }
 
-    @Test(expected = NullablePrimitiveException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `nullable parameter small int`() {
-        val className = "iEnjoySwede"
-        val schema = ClassSchema(
-                "gen.$className",
-                mapOf("a" to NullableField(Int::class.java)))
-
-        cc.build(schema)
+        assertThatExceptionOfType(NullablePrimitiveException::class.java).isThrownBy {
+            NullableField(Int::class.java)
+        }
     }
 
     @Test(timeout=300_000)
@@ -351,7 +354,7 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `non nullable parameter integer with null`() {
         val className = "iEnjoyWibble"
         val schema = ClassSchema(
@@ -361,7 +364,9 @@ class ClassCarpenterTest {
         val clazz = cc.build(schema)
 
         val a: Int? = null
-        clazz.constructors[0].newInstance(a)
+        assertThatExceptionOfType(InvocationTargetException::class.java).isThrownBy {
+            clazz.constructors[0].newInstance(a)
+        }.withCauseInstanceOf(NullPointerException::class.java)
     }
 
     @Test(timeout=300_000)
@@ -383,7 +388,7 @@ class ClassCarpenterTest {
         assertEquals("$className{a=[1, 2, 3]}", i.toString())
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `nullable int array throws`() {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
@@ -393,7 +398,9 @@ class ClassCarpenterTest {
         val clazz = cc.build(schema)
 
         val a: IntArray? = null
-        clazz.constructors[0].newInstance(a)
+        assertThatExceptionOfType(InvocationTargetException::class.java).isThrownBy {
+            clazz.constructors[0].newInstance(a)
+        }.withCauseInstanceOf(NullPointerException::class.java)
     }
 
     @Test(timeout=300_000)

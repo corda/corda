@@ -1,7 +1,7 @@
 @file: Suppress("MatchingDeclarationName")
 package net.corda.coretesting.internal
 
-import com.nhaarman.mockito_kotlin.doAnswer
+import org.mockito.kotlin.doAnswer
 import net.corda.core.utilities.contextLogger
 import org.mockito.Mockito
 import org.mockito.exceptions.base.MockitoException
@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A method on a mock was called, but no behaviour was previously specified for that method.
- * You can use [com.nhaarman.mockito_kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
+ * You can use [org.mockito.kotlin.doReturn] or similar to specify behaviour, see Mockito documentation for details.
  */
 class UndefinedMockBehaviorException(message: String) : RuntimeException(message)
 
@@ -79,7 +79,7 @@ private class SpectatorDefaultAnswer : DefaultAnswer() {
                     ?: method.returnType!!
         }
 
-        private fun newSpectator(invocation: InvocationOnMock) = spectator(type)!!.also { log.info("New spectator {} for: {}", it, invocation.arguments) }
+        private fun newSpectator(invocation: InvocationOnMock) = spectator(type).also { log.info("New spectator {} for: {}", it, invocation.arguments) }
         private val spectators = try {
             val first = newSpectator(invocation)
             ConcurrentHashMap<InvocationOnMock, Any>().apply { put(invocation, first) }

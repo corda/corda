@@ -3,9 +3,13 @@ package net.corda.testing.node
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.flows.*
-import net.corda.core.internal.div
-import net.corda.core.internal.list
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowStackSnapshot
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
@@ -16,6 +20,8 @@ import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.time.LocalDate
+import kotlin.io.path.div
+import kotlin.io.path.useDirectoryEntries
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -29,11 +35,11 @@ data class StackSnapshotFrame(val method: String, val clazz: String, val dataTyp
  * an empty list the frame is considered to be full.
  */
 fun convertToStackSnapshotFrames(snapshot: FlowStackSnapshot): List<StackSnapshotFrame> {
-    return snapshot.stackFrames.map {
-        val dataTypes = it.stackObjects.map {
+    return snapshot.stackFrames.map { frame ->
+        val dataTypes = frame.stackObjects.map {
             if (it == null) null else it::class.qualifiedName
         }
-        val stackTraceElement = it.stackTraceElement
+        val stackTraceElement = frame.stackTraceElement
         StackSnapshotFrame(stackTraceElement.methodName, stackTraceElement.className, dataTypes)
     }
 }
@@ -48,7 +54,7 @@ fun convertToStackSnapshotFrames(snapshot: FlowStackSnapshot): List<StackSnapsho
  */
 @StartableByRPC
 class SideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
-    var sideEffectField = ""
+    private var sideEffectField = ""
 
     @Suspendable
     override fun call(): List<StackSnapshotFrame> {
@@ -155,7 +161,7 @@ class PersistingSideEffectFlow : FlowLogic<StateMachineRunId>() {
  * Similar to [PersistingSideEffectFlow] but aims to produce multiple snapshot files.
  */
 @StartableByRPC
-class MultiplePersistingSideEffectFlow(val persistCallCount: Int) : FlowLogic<StateMachineRunId>() {
+class MultiplePersistingSideEffectFlow(private val persistCallCount: Int) : FlowLogic<StateMachineRunId>() {
 
     @Suspendable
     override fun call(): StateMachineRunId {
@@ -212,7 +218,7 @@ private fun flowSnapshotDir(baseDir: Path, flowId: StateMachineRunId): Path {
 }
 
 fun countFilesInDir(baseDir: Path, flowId: StateMachineRunId): Int {
-    return flowSnapshotDir(baseDir, flowId).list { it.count().toInt() }
+    return flowSnapshotDir(baseDir, flowId).useDirectoryEntries { it.count() }
 }
 
 fun assertFrame(expectedMethod: String, expectedEmpty: Boolean, frame: StackSnapshotFrame) {
@@ -311,9 +317,9 @@ class FlowStackSnapshotTest {
                 val snapshotFromFile = readFlowStackSnapshotFromDir(a.baseDirectory, flowId)
                 var inCallCount = 0
                 var inPersistCount = 0
-                snapshotFromFile.stackFrames.forEach {
-                    val trace = it.stackTraceElement
-                    it.stackObjects.forEach {
+                snapshotFromFile.stackFrames.forEach { frame ->
+                    val trace = frame.stackTraceElement
+                    frame.stackObjects.forEach {
                         when (it) {
                             Constants.IN_CALL_VALUE -> {
                                 assertEquals(PersistingSideEffectFlow::call.name, trace.methodName)

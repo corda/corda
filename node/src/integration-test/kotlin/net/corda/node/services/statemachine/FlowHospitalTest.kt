@@ -139,7 +139,7 @@ class FlowHospitalTest {
 
     @Test(timeout = 300_000)
     fun `HospitalizeFlowException thrown`() {
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
@@ -161,7 +161,7 @@ class FlowHospitalTest {
 
     @Test(timeout = 300_000)
     fun `Custom exception wrapping HospitalizeFlowException thrown`() {
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
@@ -183,7 +183,7 @@ class FlowHospitalTest {
 
     @Test(timeout = 300_000)
     fun `Custom exception extending HospitalizeFlowException thrown`() {
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
@@ -470,7 +470,7 @@ class FlowHospitalTest {
 
         @Suspendable
         override fun call() {
-            val throwable = hospitalizeFlowExceptionClass.newInstance()
+            val throwable = hospitalizeFlowExceptionClass.getDeclaredConstructor().newInstance()
             (throwable as? Throwable)?.let {
                 throw it
             }
@@ -561,7 +561,6 @@ class FlowHospitalTest {
             var exceptionSeenInUserFlow = false
         }
 
-        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun call() {
             val consumeError = session.receive<Boolean>().unwrap { it }

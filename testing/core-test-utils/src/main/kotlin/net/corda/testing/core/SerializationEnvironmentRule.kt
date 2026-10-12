@@ -1,8 +1,8 @@
 package net.corda.testing.core
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.whenever
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
@@ -28,7 +28,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
-            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>()
+            InVMConnector::class.staticField<ExecutorService>("executorService").value = rigorousMock<ExecutorService>()
                     .also {
                 doAnswer {
                     inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {

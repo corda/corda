@@ -1,7 +1,6 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
@@ -27,7 +26,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
         val role = CertRole.extract(certificate)
-        require(role?.isIdentity ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
+        require(role?.isIdentity ?: false) { "Party certificate ${certificate.getSubjectX500Principal()} does not have a well known or confidential identity role. Found: $role" }
     }
 
     @Transient
@@ -47,12 +46,13 @@ class PartyAndCertificate(val certPath: CertPath) {
     fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult = verify(setOf(trustAnchor))
 
     /** Verify the certificate path is valid against one of the specified trust anchors. */
+    @Suppress("UNCHECKED_CAST")
     fun verify(trustAnchors: Set<TrustAnchor>): PKIXCertPathValidatorResult {
         val result = certPath.validate(trustAnchors)
         // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
         // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
-        val certChain: List<X509Certificate> = uncheckedCast(certPath.certificates)
+        val certChain = certPath.certificates as List<X509Certificate>
         for (certIdx in (0 until certChain.size).reversed()) {
             val certificate = certChain[certIdx]
             val role = CertRole.extract(certificate)
@@ -61,7 +61,7 @@ class PartyAndCertificate(val certPath: CertPath) {
                     throw CertPathValidatorException("Child certificate whose issuer includes a Corda role, must also specify Corda role")
                 }
                 if (!role.isValidParent(parentRole)) {
-                    val certificateString = certificate.subjectDN.toString()
+                    val certificateString = certificate.getSubjectX500Principal().toString()
                     throw CertPathValidatorException("The issuing certificate for $certificateString has role $parentRole, expected one of ${role.validParents}")
                 }
             }

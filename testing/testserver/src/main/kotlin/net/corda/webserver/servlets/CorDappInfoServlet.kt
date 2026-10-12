@@ -1,5 +1,8 @@
 package net.corda.webserver.servlets
 
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import kotlinx.html.*
 import kotlinx.html.stream.appendHTML
 import net.corda.core.messaging.CordaRPCOps
@@ -7,9 +10,6 @@ import net.corda.webserver.services.WebServerPluginRegistry
 import org.glassfish.jersey.server.model.Resource
 import org.glassfish.jersey.server.model.ResourceMethod
 import java.io.IOException
-import javax.servlet.http.HttpServlet
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 
 /**
  * Dumps some data about the installed CorDapps.

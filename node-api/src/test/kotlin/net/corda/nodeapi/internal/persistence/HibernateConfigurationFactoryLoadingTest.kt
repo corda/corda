@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.internal.NamedCacheFactory
 import org.junit.Assert
 import org.junit.Test

@@ -2,13 +2,13 @@ package net.corda.testing.node.internal
 
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.get
-import net.corda.core.internal.inputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
 import java.util.jar.JarInputStream
+import kotlin.io.path.inputStream
 
 class CustomCordappTest {
     @Rule

@@ -1,9 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
-import net.corda.core.internal.JavaVersion
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assume
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
 import java.lang.IllegalArgumentException
@@ -29,7 +27,6 @@ class SecureHashTest {
 
     @Test(timeout = 300_000)
     fun `test new sha3-256 secure hash`() {
-        Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
         val hash = SecureHash.hashAs("SHA3-256", byteArrayOf(0x64, -0x13, 0x42, 0x3a))
         assertEquals(SecureHash.create("SHA3-256:A243D53F7273F4C92ED901A14F11B372FDF6FF69583149AFD4AFA24BF17A8880"), hash)
         assertEquals("SHA3-256:A243D53F7273F4C92ED901A14F11B372FDF6FF69583149AFD4AFA24BF17A8880", hash.toString())

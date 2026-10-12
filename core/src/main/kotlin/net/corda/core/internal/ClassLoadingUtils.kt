@@ -21,8 +21,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                                   classVersionRange: IntRange? = null): Set<T> {
     return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
-        .map { Class.forName(it, false, classloader).asSubclass(clazz) }
-        .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
+        .mapToSet { loadClassOfType(clazz, it, false, classloader).kotlin.objectOrNewInstance() }
 }
 
 /**
@@ -34,24 +33,40 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  * @return names of the identified classes.
  * @throws UnsupportedClassVersionError if the class version is not within range.
  */
-fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                           classVersionRange: IntRange? = null): Set<String> {
-    return ClassGraph().overrideClassLoaders(classloader)
-        .enableURLScheme(attachmentScheme)
-        .ignoreParentClassLoaders()
-        .enableClassInfo()
-        .pooledScan()
-        .use { result ->
-            classVersionRange?.let {
-                result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
-                    throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
-                            "has an unsupported class version of ${it.classfileMajorVersion}")
+fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>, classVersionRange: IntRange? = null): Set<String> {
+    val classGraph = ClassGraph()
+    if (classloader !== ClassLoader.getSystemClassLoader()) {
+        classGraph.overrideClassLoaders(classloader)
+    }
+    return classGraph
+            .enableURLScheme(attachmentScheme)
+            .ignoreParentClassLoaders()
+            .enableClassInfo()
+            .pooledScan()
+            .use { result ->
+                classVersionRange?.let {
+                    result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
+                        throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
+                                "has an unsupported class version of ${it.classfileMajorVersion}")
+                    }
                 }
+                result.getClassesImplementing(clazz.name)
+                        .filterNot(ClassInfo::isAbstract)
+                        .mapToSet(ClassInfo::getName)
             }
-            result.getClassesImplementing(clazz.name)
-                .filterNot(ClassInfo::isAbstract)
-                .mapTo(LinkedHashSet(), ClassInfo::getName)
-        }
+}
+
+/**
+ * @throws ClassNotFoundException
+ * @throws ClassCastException
+ * @see Class.forName
+ */
+inline fun <reified T> loadClassOfType(className: String, initialize: Boolean = true, classLoader: ClassLoader? = null): Class<out T> {
+    return loadClassOfType(T::class.java, className, initialize, classLoader)
+}
+
+fun <T> loadClassOfType(type: Class<T>, className: String, initialize: Boolean = true, classLoader: ClassLoader? = null): Class<out T> {
+    return Class.forName(className, initialize, classLoader).asSubclass(type)
 }
 
 fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: () -> T): T {
@@ -62,5 +77,4 @@ fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: 
     } finally {
         Thread.currentThread().contextClassLoader = threadClassLoader
     }
-
 }

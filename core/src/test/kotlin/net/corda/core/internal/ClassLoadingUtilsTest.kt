@@ -1,6 +1,6 @@
 package net.corda.core.internal
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
@@ -9,6 +9,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -76,9 +77,11 @@ class ClassLoadingUtilsTest {
             .doesNotContain(AbstractClass::class.java.name)
     }
 
-    @Test(expected = IllegalArgumentException::class,timeout=300_000)
+    @Test(timeout=300_000)
     fun throwsExceptionWhenClassDoesNotContainProperConstructors() {
-        createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
+        assertThatIllegalArgumentException().isThrownBy {
+            createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
+        }
     }
 
     @Test(timeout=300_000)

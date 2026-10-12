@@ -4,11 +4,12 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.internal.div
-import net.corda.core.internal.writeText
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.nio.file.Paths
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 class CordappConfigFileProviderTests {
     private companion object {
@@ -45,10 +46,12 @@ class CordappConfigFileProviderTests {
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(alternateValidConfig)
     }
 
-    @Test(expected = ConfigException.Parse::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `an invalid config throws an exception`() {
         cordappConfFile.writeText(invalidConfig)
-        provider.getConfigByName(cordappName)
+        assertThatExceptionOfType(ConfigException::class.java).isThrownBy {
+            provider.getConfigByName(cordappName)
+        }
     }
 
     /**

@@ -19,4 +19,6 @@ object PlatformVersionSwitches {
     const val RESTRICTED_DATABASE_OPERATIONS = 7
     const val CERTIFICATE_ROTATION = 9
     const val TWO_PHASE_FINALITY = 13
+    const val LEGACY_ATTACHMENTS = 140
+
 }

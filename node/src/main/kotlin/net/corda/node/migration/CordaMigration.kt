@@ -7,17 +7,13 @@ import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.SimpleClock
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
-import java.time.Clock
 import java.util.logging.Logger
 import javax.sql.DataSource
 
@@ -39,11 +35,6 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _cordaDB: CordaPersistence
 
-    val servicesForResolution: MigrationServicesForResolution
-        get() = _servicesForResolution
-
-    private lateinit var _servicesForResolution: MigrationServicesForResolution
-
     /**
      * Initialise a subset of node services so that data from these can be used to perform migrations.
      *
@@ -60,12 +51,6 @@ abstract class CordaMigration : CustomTaskChange {
         _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
         cordaDB.start(dataSource)
         identityService.database = cordaDB
-
-        cordaDB.transaction {
-             val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
-             val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
-            _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
-        }
     }
 
     private fun createDatabase(jdbcUrl: String,

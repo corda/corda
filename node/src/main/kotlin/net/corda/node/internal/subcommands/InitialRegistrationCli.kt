@@ -1,13 +1,14 @@
 package net.corda.node.internal.subcommands
 
 import net.corda.cliutils.CliWrapperBase
-import net.corda.core.internal.createFile
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
-import net.corda.node.internal.*
+import net.corda.node.internal.Node
+import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.NodeStartupLogging
 import net.corda.node.internal.NodeStartupLogging.Companion.logger
+import net.corda.node.internal.RunAfterNodeInitialisation
+import net.corda.node.internal.initLogging
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
@@ -17,6 +18,9 @@ import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 import java.util.function.Consumer
+import kotlin.io.path.createFile
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
 class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
@@ -29,7 +33,8 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     var skipSchemaCreation: Boolean = false
 
     override fun runProgram() : Int {
-        val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
+        val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter
+                ?: (cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks")
         return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, skipSchemaCreation, startup))
     }
 

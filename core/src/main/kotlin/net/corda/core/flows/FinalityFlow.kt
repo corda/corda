@@ -11,12 +11,14 @@ import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -170,6 +172,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
+        require(transaction.coreTransaction is WireTransaction)  // Sanity check
         if (!newApi) {
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
                     "FinalityFlow with FlowSessions. (${serviceHub.getAppContext().cordapp.info})")
@@ -447,9 +450,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
-        val ltx = transaction.toLedgerTransaction(serviceHub, false)
-        ltx.verify()
-        return ltx
+        val ltx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false)
+        // verifyInternal returns null if the transaction was verified externally, which *could* happen on a very odd scenerio of a 4.11
+        // node creating the transaction but a 4.12 kicking off finality. In that case, we still want a LedgerTransaction object for
+        // recording to the vault, etc. Note that calling verify() on this will fail as it doesn't have the necessary non-legacy attachments
+        // for verification by the node.
+        return ltx ?: transaction.toLedgerTransaction(serviceHub, checkSufficientSignatures = false)
     }
 }
 

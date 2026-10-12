@@ -3,7 +3,6 @@ package net.corda.coretests.crypto
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
@@ -19,6 +18,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.PublicKey
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -295,21 +295,19 @@ class CompositeKeyTests {
         val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
         val RSASignature = keyPairRSA.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairRSA.public).schemeNumberID)))
         val K1Signature = keyPairK1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairK1.public).schemeNumberID)))
         val R1Signature = keyPairR1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairR1.public).schemeNumberID)))
         val EdSignature = keyPairEd.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairEd.public).schemeNumberID)))
-        val SPSignature = keyPairSP.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairSP.public).schemeNumberID)))
 
-        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public).build() as CompositeKey
 
-        val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
+        val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
 
         // One signature is missing.
-        val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature, SPSignature)
+        val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature)
         assertFalse { compositeKey.isFulfilledBy(signaturesWithoutRSA.byKeys()) }
     }
 
@@ -320,20 +318,18 @@ class CompositeKeyTests {
         val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
         val RSASignature = keyPairRSA.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairRSA.public).schemeNumberID)))
         val K1Signature = keyPairK1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairK1.public).schemeNumberID)))
         val R1Signature = keyPairR1.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairR1.public).schemeNumberID)))
         val EdSignature = keyPairEd.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairEd.public).schemeNumberID)))
-        val SPSignature = keyPairSP.sign(SignableData(secureHash, SignatureMetadata(1, Crypto.findSignatureScheme(keyPairSP.public).schemeNumberID)))
 
-        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public).build() as CompositeKey
 
-        val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
+        val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
         // One signature is missing.
-        val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature, SPSignature)
+        val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature)
         assertFalse { compositeKey.isFulfilledBy(signaturesWithoutRSA.byKeys()) }
 
         // Create self sign CA.
@@ -374,13 +370,12 @@ class CompositeKeyTests {
         val (_, pub3) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
         val (_, pub4) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
         val (_, pub5) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (_, pub6) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
-        val (_, pub7) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (_, pub6) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
 
         // Using default weight = 1, thus all weights are equal.
-        val composite1 = CompositeKey.Builder().addKeys(pub1, pub2, pub3, pub4, pub5, pub6, pub7).build() as CompositeKey
+        val composite1 = CompositeKey.Builder().addKeys(pub1, pub2, pub3, pub4, pub5, pub6).build() as CompositeKey
         // Store in reverse order.
-        val composite2 = CompositeKey.Builder().addKeys(pub7, pub6, pub5, pub4, pub3, pub2, pub1).build() as CompositeKey
+        val composite2 = CompositeKey.Builder().addKeys(pub6, pub5, pub4, pub3, pub2, pub1).build() as CompositeKey
         // There are 7! = 5040 permutations, but as sorting is deterministic the following should never fail.
         assertEquals(composite1.children, composite2.children)
     }

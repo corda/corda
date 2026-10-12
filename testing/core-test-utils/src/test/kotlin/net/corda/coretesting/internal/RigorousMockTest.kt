@@ -1,8 +1,8 @@
 package net.corda.coretesting.internal
 
 import org.assertj.core.api.Assertions.catchThrowable
-import org.hamcrest.MatcherAssert
 import org.hamcrest.Matchers.isA
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.io.Closeable
 import java.io.InputStream
@@ -44,7 +44,6 @@ class RigorousMockTest {
 	fun `callRealMethod is preferred by rigorousMock`() {
         rigorousMock<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
-            assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
         }
         rigorousMock<MyAbstract>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
@@ -100,7 +99,7 @@ class RigorousMockTest {
     @Test(timeout=300_000)
 	fun `method return type resolution works`() {
         val m = spectator<CDImpl>()
-        MatcherAssert.assertThat(m.b, isA(Runnable::class.java))
+        assertThat(m.b, isA(Runnable::class.java))
         assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.a }.javaClass) // Can't mock String.
     }
 

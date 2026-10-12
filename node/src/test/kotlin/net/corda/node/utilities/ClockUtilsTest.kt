@@ -1,6 +1,5 @@
 package net.corda.node.utilities
 
-
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
@@ -12,6 +11,7 @@ import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.testing.node.TestClock
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -22,13 +22,11 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 class ClockUtilsTest {
-
-    lateinit var realClock: Clock
-    lateinit var stoppedClock: CordaClock
-    lateinit var executor: ExecutorService
+    private lateinit var realClock: Clock
+    private lateinit var stoppedClock: CordaClock
+    private lateinit var executor: ExecutorService
 
     @Before
     fun setup() {
@@ -133,53 +131,51 @@ class ClockUtilsTest {
         val testClock = TestClock(stoppedClock)
         val advancedClock = Clock.offset(stoppedClock, 10.hours)
 
-        try {
+        assertThatExceptionOfType(InterruptedException::class.java).isThrownBy {
             NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), SettableFuture.create<Boolean>())
-            fail("Expected InterruptedException")
-        } catch (exception: InterruptedException) {
         }
     }
 
     @Test(timeout=300_000)
-@Suspendable
-    fun `test waiting for a deadline with multiple clock advance and incomplete JDK8 future on Fibers`() {
+    @Suspendable
+    fun `test waiting for a deadline with multiple clock advance and incomplete JDK future on Fibers`() {
         val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = CompletableFuture<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
-        val fiber = scheduler.newFiber(@Suspendable {
+        val fiber = scheduler.newFiber @Suspendable {
             future.complete(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future))
-        }).start()
+        }.start()
         for (advance in 1..6) {
-            scheduler.newFiber(@Suspendable {
+            scheduler.newFiber @Suspendable {
                 // Wait until fiber is waiting
                 while (fiber.state != Strand.State.TIMED_WAITING) {
                     Strand.sleep(1)
                 }
                 testClock.advanceBy(10.minutes)
-            }).start()
+            }.start()
         }
         assertFalse(future.getOrThrow(), "Should have reached deadline")
     }
 
     @Test(timeout=300_000)
-@Suspendable
+    @Suspendable
     fun `test waiting for a deadline with multiple clock advance and incomplete Guava future on Fibers`() {
         val advancedClock = Clock.offset(stoppedClock, 1.hours)
         val testClock = TestClock(stoppedClock)
         val future = SettableFuture.create<Boolean>()
         val scheduler = FiberExecutorScheduler("test", executor)
-        val fiber = scheduler.newFiber(@Suspendable {
+        val fiber = scheduler.newFiber @Suspendable {
             future.set(NodeSchedulerService.awaitWithDeadline(testClock, advancedClock.instant(), future))
-        }).start()
+        }.start()
         for (advance in 1..6) {
-            scheduler.newFiber(@Suspendable {
+            scheduler.newFiber @Suspendable {
                 // Wait until fiber is waiting
                 while (fiber.state != Strand.State.TIMED_WAITING) {
                     Strand.sleep(1)
                 }
                 testClock.advanceBy(10.minutes)
-            }).start()
+            }.start()
         }
         assertFalse(future.getOrThrow(), "Should have reached deadline")
     }
