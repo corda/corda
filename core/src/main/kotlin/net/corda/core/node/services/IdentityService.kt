@@ -34,6 +34,7 @@ interface IdentityService {
 
     companion object {
         private val log = contextLogger()
+        val EMPTY_PROOF_CHAIN = KeyRotationProofChain(emptyList())
     }
 
     /**
@@ -188,14 +189,10 @@ interface IdentityService {
     fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey>
 
     @Suspendable
-    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain {
-        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
-    }
+    fun getProofChain(publicKey: PublicKey) : KeyRotationProofChain = EMPTY_PROOF_CHAIN
 
     @Suspendable
-    fun containsProofChain(publicKey: PublicKey): Boolean {
-        throw NotSupportedException("Cross-Provider key rotation is not supported in Corda OS")
-    }
+    fun containsProofChain(publicKey: PublicKey): Boolean = false
 }
 
 class UnknownAnonymousPartyException(message: String) : CordaException(message)
