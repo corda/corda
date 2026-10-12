@@ -47,25 +47,22 @@ class ArtemisTcpTransport {
                 TransportConstants.DIRECT_DELIVER to false)
 
         private fun SslConfiguration.addToTransportOptions(options: MutableMap<String, Any>) {
-            if (keyStore != null || trustStore != null) {
-                options[TransportConstants.SSL_ENABLED_PROP_NAME] = true
-                options[TransportConstants.NEED_CLIENT_AUTH_PROP_NAME] = true
+            // A configuration which is missing either store must never silently produce a plain-text transport.
+            val keyStoreSupplier = requireNotNull(keyStore) { "A key store is required to create a TLS transport" }
+            val trustStoreSupplier = requireNotNull(trustStore) { "A trust store is required to create a TLS transport" }
+            options[TransportConstants.SSL_ENABLED_PROP_NAME] = true
+            options[TransportConstants.NEED_CLIENT_AUTH_PROP_NAME] = true
+            with(keyStoreSupplier) {
+                path.requireOnDefaultFileSystem()
+                options[TransportConstants.KEYSTORE_TYPE_PROP_NAME] = "JKS"
+                options[TransportConstants.KEYSTORE_PATH_PROP_NAME] = path
+                options[TransportConstants.KEYSTORE_PASSWORD_PROP_NAME] = get().password
             }
-            keyStore?.let {
-                with (it) {
-                    path.requireOnDefaultFileSystem()
-                    options[TransportConstants.KEYSTORE_TYPE_PROP_NAME] = "JKS"
-                    options[TransportConstants.KEYSTORE_PATH_PROP_NAME] = path
-                    options[TransportConstants.KEYSTORE_PASSWORD_PROP_NAME] = get().password
-                }
-            }
-            trustStore?.let {
-                with (it) {
-                    path.requireOnDefaultFileSystem()
-                    options[TransportConstants.TRUSTSTORE_TYPE_PROP_NAME] = "JKS"
-                    options[TransportConstants.TRUSTSTORE_PATH_PROP_NAME] = path
-                    options[TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME] = get().password
-                }
+            with(trustStoreSupplier) {
+                path.requireOnDefaultFileSystem()
+                options[TransportConstants.TRUSTSTORE_TYPE_PROP_NAME] = "JKS"
+                options[TransportConstants.TRUSTSTORE_PATH_PROP_NAME] = path
+                options[TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME] = get().password
             }
             options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
             options[SSL_HANDSHAKE_TIMEOUT_NAME] = handshakeTimeout ?: DEFAULT_SSL_HANDSHAKE_TIMEOUT
@@ -84,70 +81,81 @@ class ArtemisTcpTransport {
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to keyStorePassword,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to false)
 
+        /**
+         * P2P connections always use mutual TLS, there is no way to create a plain-text P2P acceptor.
+         */
         fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
-                                    config: MutualSslConfiguration?,
+                                    config: MutualSslConfiguration,
                                     maxMessageSize: Int,
-                                    trustManagerFactory: TrustManagerFactory? = config?.trustStore?.get()?.let(::trustManagerFactory),
-                                    enableSSL: Boolean = true,
+                                    trustManagerFactory: TrustManagerFactory? = config.trustStore.get().let(::trustManagerFactory),
                                     threadPoolName: String = "P2PServer",
                                     trace: Boolean = false,
                                     remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
-            if (enableSSL) {
-                config?.addToTransportOptions(options)
-            }
+            config.addToTransportOptions(options)
             return createAcceptorTransport(
                     hostAndPort,
                     P2P_PROTOCOLS,
                     options,
                     maxMessageSize,
                     trustManagerFactory,
-                    enableSSL,
+                    true,
                     threadPoolName,
                     trace,
                     remotingThreads
             )
         }
 
+        /**
+         * P2P connections always use mutual TLS, there is no way to create a plain-text P2P connector.
+         */
         fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort,
-                                     config: MutualSslConfiguration?,
-                                     enableSSL: Boolean = true,
+                                     config: MutualSslConfiguration,
                                      threadPoolName: String = "P2PClient",
                                      trace: Boolean = false,
                                      remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
-            if (enableSSL) {
-                config?.addToTransportOptions(options)
-            }
-            return createConnectorTransport(hostAndPort, P2P_PROTOCOLS, options, enableSSL, threadPoolName, trace, remotingThreads)
+            config.addToTransportOptions(options)
+            return createConnectorTransport(hostAndPort, P2P_PROTOCOLS, options, true, threadPoolName, trace, remotingThreads)
         }
 
+        /**
+         * Creates the acceptor which RPC clients connect to. This is server-side TLS only; clients are authenticated with a username
+         * and password rather than a client certificate.
+         *
+         * @param config The key store to use for TLS. A `null` value explicitly selects a **plain-text** transport, over which RPC
+         * usernames, passwords and data are sent unencrypted. Callers must not pass `null` unless TLS has been deliberately disabled.
+         */
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                     config: BrokerRpcSslOptions?,
                                     maxMessageSize: Int,
-                                    enableSSL: Boolean = true,
                                     threadPoolName: String = "RPCServer",
                                     trace: Boolean = false,
                                     remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
-            if (config != null && enableSSL) {
+            if (config != null) {
                 config.keyStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
             }
-            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, maxMessageSize, null, enableSSL, threadPoolName, trace, remotingThreads)
+            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, maxMessageSize, null, config != null, threadPoolName, trace, remotingThreads)
         }
 
+        /**
+         * Creates the connector used by RPC clients.
+         *
+         * @param config The trust store to use for TLS. A `null` value explicitly selects a **plain-text** transport, which is only
+         * suitable for connecting to a node which has not enabled RPC TLS.
+         */
         fun rpcConnectorTcpTransport(hostAndPort: NetworkHostAndPort,
                                      config: ClientRpcSslOptions?,
-                                     enableSSL: Boolean = true,
                                      trace: Boolean = false,
                                      remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
-            if (config != null && enableSSL) {
+            if (config != null) {
                 config.trustStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
             }
-            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, enableSSL, "RPCClient", trace, remotingThreads)
+            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, config != null, "RPCClient", trace, remotingThreads)
         }
 
         fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort,
