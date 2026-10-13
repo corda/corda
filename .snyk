@@ -557,4 +557,47 @@ ignore:
           Recommended : Upgrade to Corda 4.12
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-09-15T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20186821:
+    - '*':
+        reason: >-
+          CVE-2026-57822: This is a deserialization issue in Artemis
+          message-based management requests, exploitable only by an
+          authenticated client holding the MANAGE permission on the management
+          address. Corda's embedded P2P and RPC brokers grant no role or any
+          permission on the management address, so such requests are rejected
+          before any parameters are processed. Broker logins are also limited
+          to the node itself, peers with network-issued certificates and
+          operator-configured RPC users. In addition, the node installs a
+          JVM-wide deserialization filter that rejects all non-primitive
+          classes. As the vulnerable functionality is never reachable, Corda
+          is not impacted by this vulnerability.
+          This issue is fixed in newer versions (2.50.0, 2.57.0), but those
+          versions are not compatible with Java 8 and Kotlin 1.2.71.
+          Fix : org.apache.activemq:artemis-core-client@2.57.0,
+          org.apache.activemq:artemis-amqp-protocol@2.50.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-13T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20159147:
+    - '*':
+        reason: >-
+          CVE-2026-57967: This is a missing-authentication issue in the
+          Artemis CORE protocol SESSION_REATTACH handling, allowing an attacker
+          who can reach a broker port to take over an existing session. The
+          Corda P2P broker and RPC admin acceptors require mutual TLS with
+          certificates issued by the network root CA or the node itself, so an
+          unauthenticated attacker cannot establish a connection to them. The
+          RPC acceptor is intended to be reachable only from trusted internal
+          networks, and exploitation additionally requires identifying a live
+          session; operators can further reduce exposure by enabling RPC TLS
+          (rpcSettings.useSsl) and restricting network access to the RPC port.
+          This issue is fixed in newer versions (2.50.0, 2.57.0), but those
+          versions are not compatible with Java 8 and Kotlin 1.2.71
+          Fix : org.apache.activemq:artemis-server@2.57.0,
+          org.apache.activemq:artemis-amqp-protocol@2.50.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-13T00:00:00.000Z
 patch: {}
