@@ -12,7 +12,7 @@ repositories {
 dependencies {
     implementation project(":core")
 
-    api "javax.persistence:javax.persistence-api:2.2"
+    api "jakarta.persistence:jakarta.persistence-api:3.2.0"
 }
 
 jar {

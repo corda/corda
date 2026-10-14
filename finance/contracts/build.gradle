@@ -11,8 +11,8 @@ description 'Corda finance module - contracts'
 dependencies {
     cordaProvided project(':core')
 
-    implementation "javax.persistence:javax.persistence-api:2.2"
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "jakarta.persistence:jakarta.persistence-api:3.2.0"
+    implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     testImplementation project(path: ':core', configuration: 'testArtifacts')

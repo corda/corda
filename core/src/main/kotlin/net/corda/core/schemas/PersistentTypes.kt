@@ -5,10 +5,10 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
 import org.hibernate.annotations.Immutable
 import java.io.Serializable
-import javax.persistence.Column
-import javax.persistence.Embeddable
-import javax.persistence.EmbeddedId
-import javax.persistence.MappedSuperclass
+import jakarta.persistence.Column
+import jakarta.persistence.Embeddable
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.MappedSuperclass
 
 //DOCSTART QueryableState
 /**
@@ -141,9 +141,9 @@ object MappedSchemaValidator {
     fun crossReferencesToOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
          fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
 
-    /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
+    /** Returns true if [jakarta.persistence] annotation expect [jakarta.persistence.Transient] is found. */
     private fun hasJpaAnnotation(annotations: Array<Annotation>) =
-            annotations.any { annotation -> annotation.toString().startsWith("@javax.persistence.") && annotation !is javax.persistence.Transient }
+            annotations.any { annotation -> annotation.toString().startsWith("@jakarta.persistence.") && annotation !is jakarta.persistence.Transient }
 
     class SchemaCrossReferenceReport(private val schema: String, private val entity: String, private val referencedSchema: String,
                                      private val fieldOrMethod: String, private val fieldOrMethodType: String) {

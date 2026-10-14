@@ -1,10 +1,10 @@
 package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.node.ServiceHub
-import javax.persistence.EntityManager
-import javax.persistence.EntityTransaction
-import javax.persistence.LockModeType
-import javax.persistence.metamodel.Metamodel
+import jakarta.persistence.EntityManager
+import jakarta.persistence.EntityTransaction
+import jakarta.persistence.LockModeType
+import jakarta.persistence.metamodel.Metamodel
 
 /**
  * A delegate of [EntityManager] which disallows some operations.

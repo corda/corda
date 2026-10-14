@@ -39,7 +39,9 @@ dependencies {
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     // required to use @Type annotation
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
+    implementation "net.bytebuddy:byte-buddy:1.18.8"
+    implementation "javax.transaction:javax.transaction-api:1.3"
     // FastThreadLocal
     implementation "io.netty:netty-common:$netty_version"
     implementation "io.github.classgraph:classgraph:$class_graph_version"

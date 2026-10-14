@@ -22,7 +22,7 @@ dependencies {
     // Guava: Google test library (collections test suite)
     implementation "com.google.guava:guava-testlib:$guava_version"
 
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // OkHTTP: Simple HTTP library.

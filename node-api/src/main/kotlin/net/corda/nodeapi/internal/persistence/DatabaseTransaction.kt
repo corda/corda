@@ -8,7 +8,7 @@ import rx.subjects.PublishSubject
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.UUID
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 fun currentDBSession(): Session = contextTransaction.session
 

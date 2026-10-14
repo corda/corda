@@ -117,7 +117,6 @@ import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.PersistentPartyInfoCache
-import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.AesDbEncryptionService
 import net.corda.node.services.persistence.AttachmentStorageInternal
@@ -186,7 +185,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 import javax.sql.DataSource
 import kotlin.io.path.div
 import kotlin.io.path.exists
@@ -1387,12 +1386,6 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            cacheFactory: NamedCacheFactory,
                            customClassLoader: ClassLoader?,
                            allowHibernateToManageAppSchema: Boolean = false): CordaPersistence {
-    // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
-    // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
-    // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
-    // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
-    @Suppress("DEPRECATION")
-    org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")

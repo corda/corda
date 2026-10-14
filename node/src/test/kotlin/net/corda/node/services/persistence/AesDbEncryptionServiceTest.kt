@@ -89,7 +89,7 @@ class AesDbEncryptionServiceTest {
         val ciphertext = encryptionService.encrypt("Hello World".toByteArray())
         val keyId = ByteBuffer.wrap(ciphertext).getKeyId()
         val deletedCount = database.transaction {
-            session.createQuery("DELETE FROM ${EncryptionKeyRecord::class.java.name} k WHERE k.keyId = :keyId")
+            session.createMutationQuery("DELETE FROM ${EncryptionKeyRecord::class.java.name} k WHERE k.keyId = :keyId")
                     .setParameter("keyId", keyId)
                     .executeUpdate()
         }

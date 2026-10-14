@@ -24,7 +24,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils
 import java.security.cert.X509Certificate
-import javax.persistence.*
+import jakarta.persistence.*
 
 class DBNetworkParametersStorage(
         cacheFactory: NamedCacheFactory,

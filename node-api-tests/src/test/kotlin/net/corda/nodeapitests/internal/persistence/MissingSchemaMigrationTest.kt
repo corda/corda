@@ -15,8 +15,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
 import javax.sql.DataSource
 
 class MissingSchemaMigrationTest {

@@ -4,8 +4,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.toHex
 import java.security.PublicKey
-import javax.persistence.AttributeConverter
-import javax.persistence.Converter
+import jakarta.persistence.AttributeConverter
+import jakarta.persistence.Converter
 
 /**
  * Converts to and from a Public key into a hex encoded string.

@@ -23,7 +23,7 @@ import net.corda.core.node.services.vault.CriteriaExpression.ColumnPredicateExpr
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.ObjectAssert
 import org.junit.Test
-import javax.persistence.Entity
+import jakarta.persistence.Entity
 
 class QueryCriteriaUtilsBuilderTest {
 

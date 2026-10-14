@@ -4,11 +4,12 @@ import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import org.hibernate.annotations.Type
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Index
+import jakarta.persistence.Table
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
@@ -36,7 +37,7 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             var issuerPartyHash: String,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuerRef: ByteArray
     ) : PersistentState()
 }

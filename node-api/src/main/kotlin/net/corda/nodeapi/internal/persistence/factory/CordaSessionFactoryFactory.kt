@@ -4,7 +4,7 @@ import net.corda.core.schemas.MappedSchema
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
-import javax.persistence.AttributeConverter
+import jakarta.persistence.AttributeConverter
 
 interface CordaSessionFactoryFactory {
     val databaseType: String

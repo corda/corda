@@ -34,7 +34,7 @@ import java.time.Instant
 import java.util.Locale
 import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
-import javax.persistence.PersistenceException
+import jakarta.persistence.PersistenceException
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
 

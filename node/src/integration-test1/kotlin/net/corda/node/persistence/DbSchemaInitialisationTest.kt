@@ -34,7 +34,7 @@ class DbSchemaInitialisationTest {
                     .isThrownBy {
                         startNode(NodeParameters(additionalCordapps = listOf(TestCordapp.findCordapp("net.corda.failtesting.missingmigrationcordapp")))).getOrThrow()
                     }
-                    .withMessage("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: Schema-validation: missing table [test_table]")
+                    .withMessage("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: Schema validation: missing table [test_table]")
 
             // without devMode, it doesn't even get this far as it complains about the schema migration missing.
             assertThatExceptionOfType(CouldNotCreateDataSourceException::class.java)

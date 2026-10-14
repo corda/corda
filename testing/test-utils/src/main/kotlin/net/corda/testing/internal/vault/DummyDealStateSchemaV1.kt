@@ -4,7 +4,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import javax.persistence.*
+import jakarta.persistence.*
 
 /**
  * An object used to fully qualify the [DummyDealStateSchema] family name (i.e. independent of version).

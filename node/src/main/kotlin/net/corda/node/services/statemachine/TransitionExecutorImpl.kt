@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
 import java.sql.SQLException
-import javax.persistence.OptimisticLockException
+import jakarta.persistence.OptimisticLockException
 
 /**
  * This [TransitionExecutor] runs the transition actions using the passed in [ActionExecutor] and manually dirties the

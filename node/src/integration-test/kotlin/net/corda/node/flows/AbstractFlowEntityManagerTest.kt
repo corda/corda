@@ -12,10 +12,10 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import org.junit.Before
 import java.util.concurrent.Semaphore
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 import kotlin.test.assertEquals
 
 abstract class AbstractFlowEntityManagerTest {

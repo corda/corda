@@ -8,9 +8,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 
 const val UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID = "net.corda.testing.internal.vault.UniqueDummyLinearContract"
 

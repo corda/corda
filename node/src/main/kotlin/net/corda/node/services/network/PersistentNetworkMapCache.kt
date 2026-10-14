@@ -35,10 +35,10 @@ import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.PersistenceException
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
@@ -66,7 +66,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private lateinit var rotatedNotaries: Set<CordaX500Name>
 
     @Entity
-    @javax.persistence.Table(name = "node_named_identities")
+    @jakarta.persistence.Table(name = "node_named_identities")
     data class PersistentPartyToPublicKeyHash(
             @Id
             @Suppress("MagicNumber") // database column width

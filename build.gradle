@@ -245,9 +245,9 @@ allprojects {
 
     allOpen {
         annotations(
-                "javax.persistence.Entity",
-                "javax.persistence.Embeddable",
-                "javax.persistence.MappedSuperclass"
+                "jakarta.persistence.Entity",
+                "jakarta.persistence.Embeddable",
+                "jakarta.persistence.MappedSuperclass"
         )
     }
 

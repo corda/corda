@@ -12,9 +12,9 @@ import org.junit.runners.model.Statement
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import javax.persistence.EntityManager
-import javax.persistence.EntityTransaction
-import javax.persistence.LockModeType
+import jakarta.persistence.EntityManager
+import jakarta.persistence.EntityTransaction
+import jakarta.persistence.LockModeType
 import kotlin.test.assertTrue
 
 class RestrictedEntityManagerTest {

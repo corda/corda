@@ -1,10 +1,11 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.crypto.toStringShort
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.security.PublicKey
 import java.util.*
-import javax.persistence.*
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "pk_hash_to_ext_id_map", indexes = [
@@ -12,7 +13,7 @@ import javax.persistence.*
 ])
 class PublicKeyHashToExternalId(
         @Column(name = "external_id", nullable = false)
-        @Type(type = "uuid-char")
+        @JdbcTypeCode(SqlTypes.VARCHAR)
         val externalId: UUID,
 
         @Id

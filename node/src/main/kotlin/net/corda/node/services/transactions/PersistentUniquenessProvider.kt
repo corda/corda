@@ -40,13 +40,13 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.MappedSuperclass
+import jakarta.persistence.Column
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.MappedSuperclass
 import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
@@ -63,7 +63,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
     @CordaSerializable
     class Request(
             @Id
@@ -87,7 +87,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     @Suppress("MagicNumber") // database column length
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
             @Column(name = "transaction_id", nullable = false, length = 144)
@@ -104,7 +104,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             val future: OpenFuture<UniquenessProvider.Result>)
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash)
 
     private val commitLog = createMap(cacheFactory)

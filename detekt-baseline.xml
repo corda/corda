@@ -1498,7 +1498,7 @@
     <ID>WildcardImport:CashExitFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:CashPaymentFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:CashPaymentFlowTests.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:CashSchemaV1.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:CashSchemaV1.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:CashTests.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:CashTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:CashTests.kt$import net.corda.finance.*</ID>
@@ -1554,7 +1554,7 @@
     <ID>WildcardImport:CordappController.kt$import tornadofx.*</ID>
     <ID>WildcardImport:CordappScanningDriverTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:CoreFlowHandlers.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:DBNetworkParametersStorage.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:DBNetworkParametersStorage.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:DBRunnerExtension.kt$import org.junit.jupiter.api.extension.*</ID>
     <ID>WildcardImport:DemoBench.kt$import tornadofx.*</ID>
     <ID>WildcardImport:DemoBenchNodeInfoFilesCopier.kt$import tornadofx.*</ID>
@@ -1574,10 +1574,10 @@
     <ID>WildcardImport:DummyContract.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:DummyContractV2.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:DummyContractV3.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:DummyDealStateSchemaV1.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:DummyDealStateSchemaV1.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:DummyFungibleContract.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:DummyLinearStateSchemaV1.kt$import javax.persistence.*</ID>
-    <ID>WildcardImport:DummyLinearStateSchemaV2.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:DummyLinearStateSchemaV1.kt$import jakarta.persistence.*</ID>
+    <ID>WildcardImport:DummyLinearStateSchemaV2.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:EnumEvolvabilityTests.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:EnumEvolvabilityTests.kt$import net.corda.serialization.internal.amqp.testutils.*</ID>
     <ID>WildcardImport:ErrorFlowTransition.kt$import net.corda.node.services.statemachine.*</ID>
@@ -1604,7 +1604,7 @@
     <ID>WildcardImport:GuiUtilities.kt$import tornadofx.*</ID>
     <ID>WildcardImport:HTTPNetworkRegistrationService.kt$import java.net.HttpURLConnection.*</ID>
     <ID>WildcardImport:HardRestartTest.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import javax.persistence.criteria.*</ID>
+    <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import jakarta.persistence.criteria.*</ID>
     <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import net.corda.core.node.services.vault.*</ID>
     <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import net.corda.core.node.services.vault.BinaryComparisonOperator.*</ID>
     <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import net.corda.core.node.services.vault.CollectionOperator.*</ID>
@@ -1647,7 +1647,7 @@
     <ID>WildcardImport:MainView.kt$import javafx.scene.control.*</ID>
     <ID>WildcardImport:MainView.kt$import net.corda.client.jfx.model.*</ID>
     <ID>WildcardImport:MainView.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:MappedSchemasCrossReferenceDetectionTests.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:MappedSchemasCrossReferenceDetectionTests.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:Matchers.kt$import com.natpryce.hamkrest.*</ID>
     <ID>WildcardImport:MaxTransactionSizeTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:MerkleTransaction.kt$import net.corda.core.contracts.*</ID>
@@ -1674,7 +1674,7 @@
     <ID>WildcardImport:NodeController.kt$import tornadofx.*</ID>
     <ID>WildcardImport:NodeControllerTest.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:NodeData.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:NodeInfoSchema.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:NodeInfoSchema.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:NodeInterestRates.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:NodeInterestRatesTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:NodeInterestRatesTest.kt$import org.junit.Assert.*</ID>
@@ -1683,7 +1683,7 @@
     <ID>WildcardImport:NodeSchedulerServiceTest.kt$import org.junit.*</ID>
     <ID>WildcardImport:NodeSchedulerServiceTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:NodeSchemaService.kt$import net.corda.core.schemas.*</ID>
-    <ID>WildcardImport:NodeSchemaServiceTest.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:NodeSchemaServiceTest.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:NodeTabView.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NodeTabView.kt$import net.corda.demobench.model.*</ID>
     <ID>WildcardImport:NodeTabView.kt$import tornadofx.*</ID>
@@ -1728,7 +1728,7 @@
     <ID>WildcardImport:ProfileController.kt$import tornadofx.*</ID>
     <ID>WildcardImport:Properties.kt$import com.typesafe.config.*</ID>
     <ID>WildcardImport:PropertyDescriptor.kt$import net.corda.serialization.internal.amqp.MethodClassifier.*</ID>
-    <ID>WildcardImport:PublicKeyHashToExternalId.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:PublicKeyHashToExternalId.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.CollectionOperator.*</ID>
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.ColumnPredicate.*</ID>
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.EqualityComparisonOperator.*</ID>
@@ -1751,7 +1751,7 @@
     <ID>WildcardImport:RpcExceptionHandlingTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:RpcExceptionHandlingTest.kt$import net.corda.testing.driver.*</ID>
     <ID>WildcardImport:RpcServerObservableSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
-    <ID>WildcardImport:SampleCashSchemaV2.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:SampleCashSchemaV2.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:ScheduledFlowIntegrationTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:ScheduledFlowTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ScheduledFlowTests.kt$import net.corda.core.flows.*</ID>
@@ -1844,7 +1844,7 @@
     <ID>WildcardImport:VaultQueryTests.kt$import net.corda.finance.*</ID>
     <ID>WildcardImport:VaultQueryTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:VaultQueryTests.kt$import net.corda.testing.internal.vault.*</ID>
-    <ID>WildcardImport:VaultSchema.kt$import javax.persistence.*</ID>
+    <ID>WildcardImport:VaultSchema.kt$import jakarta.persistence.*</ID>
     <ID>WildcardImport:VaultSchema.kt$import net.corda.core.schemas.*</ID>
     <ID>WildcardImport:VaultSoftLockManagerTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:VaultSoftLockManagerTest.kt$import org.mockito.kotlin.*</ID>

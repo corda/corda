@@ -6,8 +6,9 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
-import org.hibernate.annotations.Type
-import javax.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import jakarta.persistence.*
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
@@ -41,7 +42,7 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             var issuerPartyHash: String,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuerRef: ByteArray
     ) : PersistentState()
 }

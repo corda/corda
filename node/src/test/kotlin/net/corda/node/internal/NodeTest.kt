@@ -99,7 +99,7 @@ class NodeTest {
                         serial = nodeInfo.serial
                 )
                 // Save some NodeInfo
-                session.save(persistentNodeInfo)
+                session.persist(persistentNodeInfo)
             }
             val versionInfo = VersionInfo(10, "3.0", "SNAPSHOT", "R3")
             val node = Node(configuration, versionInfo, initialiseSerialization = false)
@@ -140,10 +140,11 @@ class NodeTest {
 
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { persistence ->
             persistence.transaction {
-                session.save(persistentNodeInfo1)
+                session.persist(persistentNodeInfo1)
             }
             persistence.transaction {
-                session.save(persistentNodeInfo2)
+                // Both node infos have the same legal identity, so the second must upsert it (persist would try to insert it again).
+                session.merge(persistentNodeInfo2)
             }
 
             val node = Node(configuration, rigorousMock<VersionInfo>().also {

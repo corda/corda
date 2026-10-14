@@ -84,7 +84,7 @@ class PersistentIdentityMigrationNewTableTest {
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.forEach {
-                session.save(IdentityTestSchemaV1.NodeIdentities(it.owningKey.toStringShort(), it.certPath.encoded))
+                session.persist(IdentityTestSchemaV1.NodeIdentities(it.owningKey.toStringShort(), it.certPath.encoded))
             }
         }
     }

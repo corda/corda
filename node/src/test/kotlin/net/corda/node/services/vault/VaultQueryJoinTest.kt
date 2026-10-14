@@ -30,10 +30,10 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.jupiter.api.condition.DisabledOnJre
 import org.junit.jupiter.api.condition.JRE
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Index
+import jakarta.persistence.Table
 import kotlin.test.assertEquals
 
 @DisabledOnJre(JRE.JAVA_11)

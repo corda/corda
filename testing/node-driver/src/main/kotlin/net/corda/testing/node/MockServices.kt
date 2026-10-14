@@ -101,7 +101,7 @@ import java.util.function.Consumer
 import java.util.jar.JarFile
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 /** Returns a simple [IdentityService] containing the supplied [identities]. */
 fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentityService {

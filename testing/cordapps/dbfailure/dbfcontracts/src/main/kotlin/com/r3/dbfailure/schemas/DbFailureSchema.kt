@@ -3,9 +3,9 @@ package com.r3.dbfailure.schemas
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 
 object DbFailureSchema
 

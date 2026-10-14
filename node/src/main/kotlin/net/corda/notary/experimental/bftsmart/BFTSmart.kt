@@ -351,7 +351,7 @@ object BFTSmart {
                 commitLog.putAll(committedStates)
                 val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentUniquenessProvider.Request::class.java)
                 deleteQuery.from(PersistentUniquenessProvider.Request::class.java)
-                session.createQuery(deleteQuery).executeUpdate()
+                session.createMutationQuery(deleteQuery).executeUpdate()
                 requests.forEach { session.persist(it) }
             }
         }

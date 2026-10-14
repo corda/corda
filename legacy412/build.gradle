@@ -13,6 +13,9 @@ description 'Legacy CorDapp for testing'
 dependencies {
     cordaProvided("net.corda:corda-core:4.11") {
         exclude group: quasar_group, module: 'quasar-core'
+        // 4.11 depends on Hibernate 5 under its old coordinate, which clashes with org.hibernate.orm:hibernate-core (same capability).
+        // The test CorDapps do not use Hibernate themselves, and the platform provides it at runtime.
+        exclude group: 'org.hibernate', module: 'hibernate-core'
     }
     cordaProvided configurations['quasar']
     cordaProvided "com.fasterxml.jackson.core:jackson-databind:$jackson_version"

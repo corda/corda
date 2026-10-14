@@ -7,7 +7,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.finance.schemas.CashSchema
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import javax.persistence.*
+import jakarta.persistence.*
 
 class MappedSchemasCrossReferenceDetectionTests {
 

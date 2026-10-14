@@ -49,7 +49,7 @@ import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import javax.persistence.PersistenceException
+import jakarta.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
