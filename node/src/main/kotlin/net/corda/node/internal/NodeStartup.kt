@@ -42,6 +42,7 @@ import net.corda.node.internal.subcommands.ValidateConfigurationCli
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
@@ -249,6 +250,8 @@ open class NodeStartup : NodeStartupLogging {
         if (HashAttachmentConstraint.disableHashConstraints) {
             Node.printWarning("Hash constraints checking has been disabled by the node operator.")
         }
+
+        rpcTlsDisabledWarning(node.configuration.rpcOptions)?.let(Node::printWarning)
 
         val nodeInfo = node.start()
         val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
@@ -466,6 +469,21 @@ open class NodeStartup : NodeStartupLogging {
 }
 
 /** Provide some common logging methods for node startup commands. */
+/**
+ * Returns a warning message if this node will accept RPC connections without TLS, or `null` if no warning is needed. With TLS disabled
+ * RPC usernames, passwords and data are sent over the network unencrypted.
+ *
+ * A node using a stand alone RPC broker does not host the RPC acceptor itself, so TLS is configured on the broker instead.
+ */
+internal fun rpcTlsDisabledWarning(rpcOptions: NodeRpcOptions): String? {
+    if (rpcOptions.useSsl || rpcOptions.standAloneBroker) return null
+    return "RPC is running without TLS ('rpcSettings.useSsl' is false), so RPC usernames, passwords and data are sent over the network " +
+            "unencrypted. This is not recommended for production deployments. To enable TLS for RPC: (1) run the " +
+            "'generate-rpc-ssl-settings' node command to create an RPC key store and trust store; (2) in the 'rpcSettings' section of " +
+            "node.conf set 'useSsl = true' and add an 'ssl { keyStorePath = ..., keyStorePassword = ... }' block pointing at the " +
+            "generated key store; (3) give each RPC client the generated trust store and connect with ClientRpcSslOptions."
+}
+
 interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
