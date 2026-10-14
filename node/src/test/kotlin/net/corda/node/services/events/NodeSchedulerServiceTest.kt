@@ -33,6 +33,7 @@ import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.*
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.ConcurrentHashMap
@@ -50,7 +51,10 @@ open class NodeSchedulerServiceTestBase {
         val ssr = ScheduledStateRef(stateRef, time)
     }
 
-    protected val mark = Instant.now()!!
+    // The clock is frozen at this instant, so it must survive a round trip through the database unchanged. Instant.now() has
+    // nanosecond precision on Linux but the database stores less (H2 rounds to microseconds), and a stored time rounded up
+    // past the frozen clock would never be reached.
+    protected val mark: Instant = Instant.now().truncatedTo(ChronoUnit.MILLIS)
     protected val testClock = TestClock(rigorousMock<Clock>().also {
         doReturn(mark).whenever(it).instant()
     })
