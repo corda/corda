@@ -62,8 +62,10 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
         }
     }
 
-    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<T>()
+    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<Any>()
 
-    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!)))
+    // Guava's interners now carry nullability annotations, so this holds Any rather than T (which may be nullable).
+    @Suppress("UNCHECKED_CAST")
+    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!) as T))
 }
 
