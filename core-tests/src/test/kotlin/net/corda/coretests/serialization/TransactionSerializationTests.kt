@@ -6,6 +6,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.flows.SignedTransactionWithDistributionList
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
@@ -109,6 +110,27 @@ class TransactionSerializationTests {
         assertFailsWith(SignatureException::class) {
             stx.verifyRequiredSignatures()
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `SignedTransactionWithDistributionList round-trips the ignoreDistributionRecord flag (ENT-14904)`() {
+        val stx = notaryServices.addSignature(megaCorpServices.signInitialTransaction(tx))
+        val distributionList = byteArrayOf(1, 2, 3)
+
+        // 4-arg form: the flag survives an AMQP round-trip. The class holds a ByteArray, so its data-class
+        // equals() is reference-based - assert the meaningful fields rather than whole-object equality.
+        val flagged = SignedTransactionWithDistributionList(stx, distributionList, isFinality = true, ignoreDistributionRecord = true)
+                .serialize().deserialize()
+        assertEquals(stx.id, flagged.stx.id)
+        assertEquals(true, flagged.isFinality)
+        assertEquals(true, flagged.ignoreDistributionRecord)
+
+        // The @DeprecatedConstructorForDeserialization 3-arg constructor - the shape an un-upgraded node uses -
+        // defaults the flag to false, and that survives a round-trip. (The generic old-blob -> new-class
+        // evolution mechanism is covered by EvolvabilityTests.addAdditionalParam; this asserts our class uses it.)
+        val legacy = SignedTransactionWithDistributionList(stx, distributionList, isFinality = true)
+                .serialize().deserialize()
+        assertEquals(false, legacy.ignoreDistributionRecord)
     }
 
     @Test(timeout=300_000)
