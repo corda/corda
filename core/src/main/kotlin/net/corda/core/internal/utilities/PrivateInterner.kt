@@ -1,6 +1,5 @@
 package net.corda.core.internal.utilities
 
-import com.google.common.collect.Interner
 import com.google.common.collect.Interners
 import net.corda.core.CordaInternal
 import net.corda.core.internal.packageNameOrNull
@@ -63,8 +62,10 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
         }
     }
 
-    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<Any>() as Interner<T>
-    
+    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<Any>()
+
+    // Guava's interners now carry nullability annotations, so this holds Any rather than T (which may be nullable).
+    @Suppress("UNCHECKED_CAST")
     fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!) as T))
 }
 
