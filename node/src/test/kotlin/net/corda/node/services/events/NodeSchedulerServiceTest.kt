@@ -12,6 +12,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.utilities.days
+import net.corda.core.utilities.minutes
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
@@ -32,11 +33,16 @@ import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.*
+import java.sql.SQLTransientConnectionException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.fail
+
+private const val ASSERT_TIMEOUT_MS = 30_000L
 
 open class NodeSchedulerServiceTestBase {
     protected class Event(time: Instant) {
@@ -45,7 +51,10 @@ open class NodeSchedulerServiceTestBase {
         val ssr = ScheduledStateRef(stateRef, time)
     }
 
-    protected val mark = Instant.now()!!
+    // The clock is frozen at this instant, so it must survive a round trip through the database unchanged. Instant.now() has
+    // nanosecond precision on Linux but the database stores less (H2 rounds to microseconds), and a stored time rounded up
+    // past the frozen clock would never be reached.
+    protected val mark: Instant = Instant.now().truncatedTo(ChronoUnit.MILLIS)
     protected val testClock = TestClock(rigorousMock<Clock>().also {
         doReturn(mark).whenever(it).instant()
     })
@@ -63,12 +72,12 @@ open class NodeSchedulerServiceTestBase {
     protected val nodeProperties = rigorousMock<NodePropertiesStore>().also {
         doReturn(flowsDraingMode).whenever(it).flowsDrainingMode
     }
-    protected val flows = mutableMapOf<FlowLogicRef, FlowLogic<*>>()
+    protected val flows = ConcurrentHashMap<FlowLogicRef, FlowLogic<*>>()
     protected val flowLogicRefFactory = rigorousMock<FlowLogicRefFactory>().also {
         doLookup(flows).whenever(it).toFlowLogic(any())
     }
 
-    protected val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
+    protected val transactionStates = ConcurrentHashMap<StateRef, TransactionState<*>>()
     protected val servicesForResolution = rigorousMock<ServicesForResolution>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
@@ -88,9 +97,10 @@ open class NodeSchedulerServiceTestBase {
     }
 
     protected fun assertWaitingFor(ssr: ScheduledStateRef) {
-        val endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(5)
+        val endTime = System.currentTimeMillis() + ASSERT_TIMEOUT_MS
         while (System.currentTimeMillis() < endTime) {
             if (traces.lastOrNull() == ssr) return
+            Thread.sleep(10)
         }
         fail("Was expecting to by waiting for $ssr")
     }
@@ -99,19 +109,22 @@ open class NodeSchedulerServiceTestBase {
 
     protected fun assertStarted(flowLogic: FlowLogic<*>) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
-        verify(flowStarter, timeout(5000)).startFlow(argForWhich<ExternalEvent.ExternalStartFlowEvent<*>> { this.flowLogic == flowLogic })
+        verify(flowStarter, timeout(ASSERT_TIMEOUT_MS)).startFlow(argForWhich<ExternalEvent.ExternalStartFlowEvent<*>> { this.flowLogic == flowLogic })
     }
 
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
 }
 
 class MockScheduledFlowRepository : ScheduledFlowRepository {
-    private val map = ConcurrentHashMap<StateRef, ScheduledStateRef>()
+    // Insertion ordered so that entries with the same scheduledAt are returned in a deterministic order (sortedBy is stable).
+    private val map = LinkedHashMap<StateRef, ScheduledStateRef>()
 
+    @Synchronized
     override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
         return map.values.sortedBy { it.scheduledAt }.map { Pair(it.ref, it) }
     }
 
+    @Synchronized
     override fun merge(value: ScheduledStateRef): Boolean {
         var result = false
         if (map.containsKey(value.ref)) {
@@ -121,22 +134,14 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
         return result
     }
 
+    @Synchronized
     override fun delete(key: StateRef): Boolean {
-        if (map.containsKey(key)) {
-            map.remove(key)
-            return true
-        }
-        return false
+        return map.remove(key) != null
     }
 }
 
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-
-    @After
-    fun closeDatabase() {
-        database.close()
-    }
 
     private val scheduler = NodeSchedulerService(
             testClock,
@@ -150,11 +155,20 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             schedulerRepo = MockScheduledFlowRepository()
     ).apply { start() }
 
+    // Runs before the rule below, and always, so that the scheduler never outlives the database it uses.
+    @After
+    fun tearDown() {
+        try {
+            scheduler.close()
+        } finally {
+            database.close()
+        }
+    }
+
     @Rule
     @JvmField
-    val tearDown = object : TestWatcher() {
+    val noMoreInteractions = object : TestWatcher() {
         override fun succeeded(description: Description) {
-            scheduler.close()
             verifyNoMoreInteractions(flowStarter)
         }
     }
@@ -256,7 +270,78 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     }
 }
 
-@Ignore("TODO JDK17: Flaky test")
+class NodeSchedulerServiceDatabaseFailureTest : NodeSchedulerServiceTestBase() {
+    /** Fails the first [failures] calls to [getLatest] the way a database connection timeout would. */
+    private class FailingScheduledFlowRepository(private var failures: Int) : ScheduledFlowRepository {
+        private val delegate = MockScheduledFlowRepository()
+        val failureCount = AtomicInteger()
+
+        override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
+            if (failures-- > 0) {
+                failureCount.incrementAndGet()
+                throw SQLTransientConnectionException("Connection is not available, request timed out")
+            }
+            return delegate.getLatest(lookahead)
+        }
+
+        override fun merge(value: ScheduledStateRef) = delegate.merge(value)
+        override fun delete(key: StateRef) = delegate.delete(key)
+    }
+
+    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+
+    @After
+    fun closeDatabase() {
+        database.close()
+    }
+
+    @Test(timeout=300_000)
+    fun `scheduler keeps running and logs recovery after repeatedly failing to load scheduled states from the database`() {
+        val repo = FailingScheduledFlowRepository(failures = 3)
+        val event = Event(mark)
+        val logicRef = rigorousMock<FlowLogicRef>()
+        transactionStates[event.stateRef] = rigorousMock<TransactionState<SchedulableState>>().also {
+            doReturn(rigorousMock<SchedulableState>().also {
+                doReturn(ScheduledActivity(logicRef, mark)).whenever(it).nextScheduledActivity(same(event.stateRef), any())
+            }).whenever(it).data
+        }
+        flows[logicRef] = event.flowLogic
+        repo.merge(event.ssr)
+
+        val scheduler = NodeSchedulerService(
+                testClock,
+                database,
+                flowStarter,
+                servicesForResolution,
+                flowLogicRefFactory,
+                nodeProperties,
+                Duration.ofSeconds(5),
+                log,
+                schedulerRepo = repo
+        )
+        try {
+            scheduler.start()
+            // The first load fails, so nothing is started until the scheduler retries once its error back-off elapses.
+            // The clock is advanced repeatedly as the scheduler may not yet be waiting on it the first time it is advanced.
+            val deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30)
+            while (!mockingDetails(flowStarter).invocations.any { it.method.name == "startFlow" } && System.currentTimeMillis() < deadline) {
+                testClock.advanceBy(1.minutes)
+                Thread.sleep(50)
+            }
+            assertEquals(3, repo.failureCount.get())
+            assertStarted(event)
+            // Each failure is logged as an error with the running count of consecutive failures...
+            (1..3).forEach { count ->
+                verify(log).error(argThat<String> { contains("consecutive failures: $count)") }, any<Throwable>())
+            }
+            // ...and the recovery is logged once, reporting how many failures preceded it.
+            verify(log, times(1)).info(argThat<String> { contains("recovered after 3 consecutive failure(s)") })
+        } finally {
+            scheduler.close()
+        }
+    }
+}
+
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     private val databaseConfig: DatabaseConfig = DatabaseConfig()
 
@@ -312,8 +397,6 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
             database.transaction {
                 scheduler.scheduleStateActivity(ssr1)
             }
-            // XXX: For some reason without the commit the db closes without writing the transactions
-            database.dataSource.connection.commit()
 
             // Force the thread to shut down with operations waiting
             scheduler.cancelAndWait()
@@ -335,7 +418,6 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         }
     }
 
-    @Ignore("Temporarily")
     @Test(timeout=300_000)
 	fun `test that if schedule is updated then the flow is invoked on the correct schedule`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
@@ -360,7 +442,8 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
                 session.flush()
                 scheduler.scheduleStateActivity(ssr2)
             }
-            assertWaitingFor(ssr1)
+            // Both schedules are committed together, so the scheduler only ever sees the updated one.
+            assertWaitingFor(ssr2)
             testClock.advanceBy(1.days)
             assertStarted(flowLogic)
 
