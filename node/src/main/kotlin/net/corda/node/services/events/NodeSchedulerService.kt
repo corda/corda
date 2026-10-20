@@ -156,6 +156,9 @@ class NodeSchedulerService(private val clock: CordaClock,
     // this to usually trigger anything.
     private val idleWaitSeconds = 60.seconds
 
+    // how long to wait before retrying if the next scheduled state could not be loaded from the database.
+    private val errorRetrySeconds = 10.seconds
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         schedulerTimerExecutor.execute { runLoopFunction() }
@@ -194,12 +197,32 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     private fun runLoopFunction() {
+        var consecutiveLoadFailures = 0
         while (mutex.locked { running }) {
+            var failedToLoad = false
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
                 rescheduled = GuavaSettableFuture.create()
                 //get the next scheduled action that isn't currently running
                 val deduplicate = HashSet(startingStateRefs) // Take an immutable copy to remove races with afterDatabaseCommit.
-                nextScheduledAction = schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
+                nextScheduledAction = try {
+                    schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
+                } catch (e: Exception) {
+                    // Never swallow an interrupt (e.g. from cancelAndWait), otherwise the thread would not shut down.
+                    if (Thread.currentThread().isInterrupted || generateSequence<Throwable>(e) { it.cause }.any { it is InterruptedException }) {
+                        throw e
+                    }
+                    // A failure here (e.g. a transient database connection error) must not kill the scheduler thread, as nothing
+                    // would ever restart it. Instead wait for a short while and try again.
+                    consecutiveLoadFailures++
+                    log.error("Failed to load the next scheduled state (consecutive failures: $consecutiveLoadFailures), " +
+                            "will retry in $errorRetrySeconds", e)
+                    failedToLoad = true
+                    null
+                }
+                if (!failedToLoad && consecutiveLoadFailures > 0) {
+                    log.info("Loading scheduled states has recovered after $consecutiveLoadFailures consecutive failure(s)")
+                    consecutiveLoadFailures = 0
+                }
                 Pair(nextScheduledAction, rescheduled!!)
             }
             log.trace(schedulingAsNextFormat, scheduledState)
@@ -213,7 +236,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                     log.trace { "Rescheduled $scheduledState" }
                 }
             } else {
-                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds, ourRescheduledFuture)
+                awaitWithDeadline(clock, clock.instant() + if (failedToLoad) errorRetrySeconds else idleWaitSeconds, ourRescheduledFuture)
             }
 
         }
