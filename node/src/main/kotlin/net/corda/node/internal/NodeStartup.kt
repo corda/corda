@@ -468,7 +468,6 @@ open class NodeStartup : NodeStartupLogging {
     }
 }
 
-/** Provide some common logging methods for node startup commands. */
 /**
  * Returns a warning message if this node will accept RPC connections without TLS, or `null` if no warning is needed. With TLS disabled
  * RPC usernames, passwords and data are sent over the network unencrypted.
@@ -477,13 +476,21 @@ open class NodeStartup : NodeStartupLogging {
  */
 internal fun rpcTlsDisabledWarning(rpcOptions: NodeRpcOptions): String? {
     if (rpcOptions.useSsl || rpcOptions.standAloneBroker) return null
+    // An 'ssl' block without 'useSsl = true' is easy to miss and is silently ignored, so call it out specifically.
+    val sslBlockIgnored = if (rpcOptions.sslConfig != null) {
+        " An 'rpcSettings.ssl' block is present but is being ignored because 'useSsl' is not set to true."
+    } else {
+        ""
+    }
     return "RPC is running without TLS ('rpcSettings.useSsl' is false), so RPC usernames, passwords and data are sent over the network " +
-            "unencrypted. This is not recommended for production deployments. To enable TLS for RPC: (1) run the " +
-            "'generate-rpc-ssl-settings' node command to create an RPC key store and trust store; (2) in the 'rpcSettings' section of " +
-            "node.conf set 'useSsl = true' and add an 'ssl { keyStorePath = ..., keyStorePassword = ... }' block pointing at the " +
-            "generated key store; (3) give each RPC client the generated trust store and connect with ClientRpcSslOptions."
+            "unencrypted. This is not recommended for production deployments.$sslBlockIgnored To enable TLS for RPC: (1) run the " +
+            "'generate-rpc-ssl-settings' node command to create an RPC key store and trust store (skip this if you already have them); " +
+            "(2) in the 'rpcSettings' section of node.conf set 'useSsl = true' and add an " +
+            "'ssl { keyStorePath = ..., keyStorePassword = ... }' block pointing at the generated key store; (3) give each RPC client " +
+            "the generated trust store and connect with ClientRpcSslOptions."
 }
 
+/** Provide some common logging methods for node startup commands. */
 interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
