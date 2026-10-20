@@ -18,6 +18,7 @@ dependencies {
     implementation project(':confidential-identities')
 
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     // Guava: Google test library (collections test suite)
     implementation "com.google.guava:guava-testlib:$guava_version"

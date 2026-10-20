@@ -19,6 +19,7 @@ dependencies {
     implementation "org.ow2.asm:asm:$asm_version"
 
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')

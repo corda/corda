@@ -105,6 +105,7 @@ class OpenTelemetryComponent(serviceName: String, val spanStartEndEventsEnabled:
                     value
                 } else null
             }
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun keys(carrier: ContextCarrier): MutableIterable<String> {
                 return carrier.context.keys
             }

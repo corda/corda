@@ -119,6 +119,7 @@ dependencies {
     testImplementation "org.assertj:assertj-core:${assertj_version}"
     // Guava: Google utilities library.
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "com.google.code.findbugs:jsr305:$jsr305_version"
     testImplementation "com.esotericsoftware:kryo:$kryo_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "org.hibernate:hibernate-core:$hibernate_version"
