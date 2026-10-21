@@ -9,6 +9,7 @@ import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.Scope
 import liquibase.ThreadLocalScopeManager
+import liquibase.changelog.FastCheckService
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -77,6 +78,11 @@ open class SchemaMigration(
                 if (shouldBlockOnCheckpoints && existingCheckpoints)
                     throw CheckpointsException()
                 try {
+                    // Liquibase remembers, for the lifetime of the JVM, that a database is up to date for a given database URL and change log
+                    // path, and skips the update if it sees them again. The change log path is the same for every migration, so a migration
+                    // with nothing to run (such as the core schemas) would stop the next one (such as the CorDapp schemas) from running its
+                    // change sets.
+                    Scope.getCurrentScope().getSingleton(FastCheckService::class.java).clearCache()
                     runner.update(Contexts().toString())
                 } catch (exp: LiquibaseException) {
                     throw DatabaseMigrationException(exp.message, exp)
