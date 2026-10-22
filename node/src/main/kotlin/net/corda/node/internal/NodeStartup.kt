@@ -470,24 +470,21 @@ open class NodeStartup : NodeStartupLogging {
 
 /**
  * Returns a warning message if this node will accept RPC connections without TLS, or `null` if no warning is needed. With TLS disabled
- * RPC usernames, passwords and data are sent over the network unencrypted.
+ * RPC usernames and passwords are sent over the network in clear text.
  *
  * A node using a stand alone RPC broker does not host the RPC acceptor itself, so TLS is configured on the broker instead.
  */
 internal fun rpcTlsDisabledWarning(rpcOptions: NodeRpcOptions): String? {
     if (rpcOptions.useSsl || rpcOptions.standAloneBroker) return null
-    // An 'ssl' block without 'useSsl = true' is easy to miss and is silently ignored, so call it out specifically.
-    val sslBlockIgnored = if (rpcOptions.sslConfig != null) {
-        " An 'rpcSettings.ssl' block is present but is being ignored because 'useSsl' is not set to true."
+    val docsPointer = "See 'Configuring wire security' in the Client RPC documentation to enable TLS."
+    // An 'ssl' block without 'useSsl = true' is not rejected by config validation and is silently ignored, so call it out specifically.
+    return if (rpcOptions.sslConfig != null) {
+        "RPC is running without TLS: an 'rpcSettings.ssl' block is configured but 'rpcSettings.useSsl' is not true, so it is ignored and " +
+                "RPC usernames and passwords are sent over the network in clear text. $docsPointer"
     } else {
-        ""
+        "RPC is running without TLS ('rpcSettings.useSsl' is false), so RPC usernames and passwords are sent over the network in " +
+                "clear text. $docsPointer"
     }
-    return "RPC is running without TLS ('rpcSettings.useSsl' is false), so RPC usernames, passwords and data are sent over the network " +
-            "unencrypted. This is not recommended for production deployments.$sslBlockIgnored To enable TLS for RPC: (1) run the " +
-            "'generate-rpc-ssl-settings' node command to create an RPC key store and trust store (skip this if you already have them); " +
-            "(2) in the 'rpcSettings' section of node.conf set 'useSsl = true' and add an " +
-            "'ssl { keyStorePath = ..., keyStorePassword = ... }' block pointing at the generated key store; (3) give each RPC client " +
-            "the generated trust store and connect with ClientRpcSslOptions."
 }
 
 /** Provide some common logging methods for node startup commands. */

@@ -20,14 +20,14 @@ class RpcTlsWarningTest {
     fun `warns when RPC TLS is disabled`() {
         val warning = rpcTlsDisabledWarning(rpcOptions(useSsl = false))
         assertThat(warning).isNotNull()
-        assertThat(warning).contains("without TLS", "generate-rpc-ssl-settings", "useSsl = true", "ClientRpcSslOptions")
-        assertThat(warning).doesNotContain("being ignored")
+        assertThat(warning).contains("without TLS", "'rpcSettings.useSsl' is false", "clear text", "Configuring wire security")
+        assertThat(warning).doesNotContain("ignored")
     }
 
     @Test(timeout = 300_000)
     fun `warns that the ssl block is ignored when it is present but useSsl is false`() {
         val warning = rpcTlsDisabledWarning(rpcOptions(useSsl = false, hasSslBlock = true))
-        assertThat(warning).contains("without TLS", "'rpcSettings.ssl' block is present but is being ignored")
+        assertThat(warning).contains("without TLS", "'rpcSettings.ssl' block is configured", "it is ignored", "clear text", "Configuring wire security")
     }
 
     @Test(timeout = 300_000)
