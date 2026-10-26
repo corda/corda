@@ -113,15 +113,18 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
 
     /**
      * Hibernate 7 only understands the annotations of Jakarta Persistence. A class that was built against the `javax.persistence`
-     * annotations (i.e. a CorDapp built for Corda 4.14 or earlier) would be silently ignored by Hibernate and then fail in obscure ways,
-     * so fail early with a message that explains what to do.
+     * annotations only (i.e. a CorDapp built for Corda 4.14 or earlier) would be silently ignored by Hibernate and then fail in obscure
+     * ways, so fail early with a message that explains what to do.
+     *
+     * A class that carries both sets of annotations (a CorDapp built to run on Corda 4.14 and 4.15 alike) is accepted: Hibernate reads
+     * the `jakarta.persistence` annotations and the JVM ignores the `javax.persistence` ones, whose classes are not on the classpath.
      */
     private fun checkNotBuiltForJavaxPersistence(schema: MappedSchema, type: Class<*>) {
         val classBytes = type.classLoader
                 ?.getResourceAsStream(type.name.replace('.', '/') + ".class")
                 ?.use { it.readBytes() }
                 ?: return
-        check(!referencesJavaxPersistence(classBytes)) {
+        check(!builtForJavaxPersistenceOnly(classBytes)) {
             "The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier, as it uses the " +
                     "javax.persistence annotations. Corda 4.15 uses Hibernate 7, which requires jakarta.persistence. " +
                     "The CorDapp that contains the schema needs to be rebuilt for Corda 4.15 - see the \"Upgrading to Hibernate 7\" documentation."
@@ -129,7 +132,11 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 }
 
-/** Whether the bytes of a class file contain a reference to a `javax.persistence` class (constant pool entries are ASCII-compatible). */
-internal fun referencesJavaxPersistence(classBytes: ByteArray): Boolean {
-    return String(classBytes, Charsets.ISO_8859_1).contains("javax/persistence/")
+/**
+ * Whether the bytes of a class file refer to a `javax.persistence` class without also referring to a `jakarta.persistence` one
+ * (constant pool entries are ASCII-compatible). A class that refers to both is annotated for both persistence APIs on purpose.
+ */
+internal fun builtForJavaxPersistenceOnly(classBytes: ByteArray): Boolean {
+    val text = String(classBytes, Charsets.ISO_8859_1)
+    return text.contains("javax/persistence/") && !text.contains("jakarta/persistence/")
 }
