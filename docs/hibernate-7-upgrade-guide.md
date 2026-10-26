@@ -159,6 +159,19 @@ java -cp 'org.eclipse.transformer.cli-1.0.0.jar:...' org.eclipse.transformer.cli
 This **only** renames the package. It cannot convert `@Type(type = "...")`, so it is only suitable for CorDapps without those annotations,
 and the jar must be re-signed afterwards, with the same constraints implications as above. Prefer asking the vendor for a 4.15 build.
 
+### 7. A CorDapp that must run on 4.14 and 4.15
+
+One jar can serve both node generations. Annotate every mapped class with **both** the `javax.persistence` and the `jakarta.persistence`
+annotations, with the same attributes on each twin, and declare both API jars as compile-only dependencies (`javax.persistence-api:2.2`
+and `jakarta.persistence-api:3.2.0`); bundle neither in the CorDapp. Hibernate reads the set it understands and ignores the other, the JVM
+drops the annotations whose classes are not on the node's classpath, and the node's start-up check accepts a class that refers to both
+packages (it rejects only classes that refer to `javax.persistence` alone).
+
+Code that calls `ServiceHub.withEntityManager` must then not bind to either `EntityManager` interface at compile time, as the node hands
+over whichever its Hibernate version implements. Either resolve the methods you need reflectively from the object you are given (both
+interfaces have the same method names and shapes), or use `ServiceHub.jdbcSession()` instead. `@Type(type = "...")` has no equivalent that
+works on both versions, so such CorDapps cannot use it.
+
 ---
 
 ## What stays the same in the database
