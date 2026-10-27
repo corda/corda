@@ -19,4 +19,43 @@ ignore:
           unpack any TAR archives. Corda is not exposed to this vulnerability.
         expires: 2029-08-01T01:00:00.000Z
         created: 2024-05-30T10:37:24.413Z
+  SNYK-JAVA-COMGOOGLEGUAVA-20825054:
+    - '*':
+        reason: >-
+          CVE-2026-102554: This vulnerability relates to unbounded array allocation
+          when Java-deserializing Guava's CompactHashMap, CompactHashSet and
+          MapMakerInternalMap, which can lead to an OutOfMemoryError when a crafted
+          serialization stream is deserialized. The Corda Node and Corda Firewall
+          install a JVM-wide Java serialization filter (ObjectInputFilter) at
+          startup that rejects deserialization of all non-whitelisted classes,
+          including Guava types. Corda uses its own AMQP serialization for P2P and
+          RPC messaging and Kryo for checkpoints, neither of which uses Java
+          serialization. Corda is therefore not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGECLIPSEJETTY-21243592:
+    - '*':
+        reason: >-
+          CVE-2026-18660: This is an issue in Jetty's proxy, where the host
+          whitelist/blacklist is matched case-sensitively, allowing hosts that
+          differ only by case to bypass the filter (SSRF). Corda only uses Jetty
+          in tests and test/development tooling, none of which ship in the
+          released Corda Enterprise node or firewall artifacts, and Corda does
+          not use Jetty proxy host whitelists/blacklists. Production nodes use
+          Artemis/AMQP for P2P and RPC, so an external attacker would not be
+          able to exploit this.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGECLIPSEJETTY-21243523:
+    - '*':
+        reason: >-
+          CVE-2026-76182: This is an issue in Jetty's TryPathsHandler and
+          TryFilesFilter, where reserved characters in the URI path are not
+          escaped when forwarding to a template URI, allowing query parameter
+          injection. Corda does not use TryPathsHandler or TryFilesFilter, and
+          only uses Jetty in tests and test/development tooling, none of which
+          ship in the released Corda Enterprise node or firewall artifacts.
+          An external attacker would not be able to exploit this.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
 patch: {}
