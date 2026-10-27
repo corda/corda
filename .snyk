@@ -58,4 +58,72 @@ ignore:
           An external attacker would not be able to exploit this.
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGOW2ASM-21715452:
+    - '*':
+        reason: >-
+          CVE-2026-110260: This vulnerability relates to excessive memory
+          allocation in ASM's MethodWriter (computeAllFrames and
+          computeMaxStackAndLocal) when processing a crafted class file containing
+          thousands of overlapping exception handlers with COMPUTE_FRAMES or
+          COMPUTE_MAXS. Within Corda, ASM is used only by the AMQP ClassCarpenter
+          in corda-serialization, which generates simple data classes (fields,
+          constructor, getters) from fixed bytecode templates. The generated
+          bytecode never contains exception handlers, and Corda does not read or
+          rewrite external class files with ASM. Remote parties can only influence
+          class, field and type names via the AMQP schema, not the bytecode
+          structure, so Corda is not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGOW2ASM-21715439:
+    - '*':
+        reason: >-
+          CVE-2026-110261: This vulnerability relates to excessive CPU consumption
+          in ASM's MethodWriter.computeAllFrames() when a crafted class file with
+          methods that cause slow fix-point convergence is processed using
+          COMPUTE_FRAMES. Within Corda, ASM is used only by the AMQP ClassCarpenter
+          in corda-serialization, which generates simple data classes (fields,
+          constructor, getters) from fixed bytecode templates with no loops or
+          complex control flow. Corda does not read or rewrite external class
+          files with ASM, and remote parties can only influence class, field and
+          type names via the AMQP schema, not the bytecode structure, so Corda is
+          not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGOW2ASM-21715442:
+    - '*':
+        reason: >-
+          CVE-2026-110257: This vulnerability relates to excessive memory
+          allocation in ASM's ClassReader.readBootstrapMethodsAttribute() when
+          parsing a crafted class file. Within Corda, ASM is used only by the AMQP
+          ClassCarpenter in corda-serialization to generate classes with
+          ClassWriter. Corda does not parse class files with ASM's ClassReader, so
+          Corda is not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGOW2ASM-21715448:
+    - '*':
+        reason: >-
+          CVE-2026-110258: This vulnerability relates to excessive memory
+          allocation in ASM's Label.addSubroutineRetSuccessors() when processing a
+          crafted class file containing multiple RET instructions for a single
+          JSR subroutine. Within Corda, ASM is used only by the AMQP ClassCarpenter
+          in corda-serialization, which generates classes from fixed bytecode
+          templates that never contain JSR or RET instructions (these instructions
+          are not permitted in modern class file versions). Corda does not read or
+          rewrite external class files with ASM, so Corda is not susceptible to
+          this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
+  SNYK-JAVA-ORGOW2ASM-21715445:
+    - '*':
+        reason: >-
+          CVE-2026-110263: This vulnerability relates to uncontrolled recursion in
+          ASM's SignatureReader.parseType() when parsing a crafted class file with
+          a deeply nested generic Signature attribute, leading to a
+          StackOverflowError. Within Corda, ASM is used only by the AMQP
+          ClassCarpenter in corda-serialization to generate classes with
+          ClassWriter. Corda does not use ASM's SignatureReader or parse external
+          class files with ASM, so Corda is not susceptible to this vulnerability.
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-10-27T00:00:00.000Z
 patch: {}
