@@ -37,9 +37,7 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
      * @param key The key to retrieve.
      */
     fun getIfPresent(key: K): V? {
-        val wrapper = backingCache.get(key) {
-            null
-        }
+        val wrapper = backingCache.getIfPresent(key)
         return when (wrapper) {
             is Wrapper.Valid -> {
                 wrapper.value

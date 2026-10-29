@@ -73,7 +73,7 @@ class StringToMethodCallParserTest {
         val names: List<String> = parser.paramNamesFromConstructor(ctor)
         assertEquals(listOf("someWord", "aDifferentThing"), names)
         val args: Array<Any?> = parser.parseArguments(clazz.name, names.zip(ctor.parameterTypes), "someWord: Blah blah blah, aDifferentThing: 12")
-        assertArrayEquals(arrayOf("Blah blah blah", 12), args)
+        assertArrayEquals(arrayOf<Any?>("Blah blah blah", 12), args)
     }
 
     @Test(timeout=300_000)

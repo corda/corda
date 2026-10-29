@@ -105,14 +105,6 @@ dependencies {
     implementation "org.hibernate:hibernate-core:$hibernate_version"
 }
 
-compileJava {
-    doFirst {
-        options.compilerArgs = [
-                '--add-modules', 'jdk.incubator.foreign'
-        ]
-    }
-}
-
 processResources {
     from(project(":node:capsule").files("src/main/resources/node-jvm-args.txt")) {
         into("net/corda/testing/node/internal")

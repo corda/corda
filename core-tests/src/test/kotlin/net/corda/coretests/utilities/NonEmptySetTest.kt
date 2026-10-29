@@ -61,6 +61,6 @@ class NonEmptySetTest {
     }
 
     private object NonEmptySetGenerator : TestIntegerSetGenerator() {
-        override fun create(elements: Array<out Int?>): NonEmptySet<Int?> = NonEmptySet.copyOf(elements.asList())
+        override fun create(elements: Array<Int>): NonEmptySet<Int> = NonEmptySet.copyOf(elements.asList())
     }
 }

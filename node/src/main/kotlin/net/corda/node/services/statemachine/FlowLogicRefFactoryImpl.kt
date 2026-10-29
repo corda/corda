@@ -129,9 +129,7 @@ open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : Singl
         var matchNumDefArgs = 0
         for (ctor in flowClass.kotlin.constructors) {
             // Get the types of the arguments, always boxed (as that's what we get in the invocation).
-            val ctorTypes = ctor.javaConstructor!!.parameterTypes.map {
-                if (it == null) { it } else { Primitives.wrap(it) }
-            }
+            val ctorTypes: List<Class<out Any>> = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
 
             val optional = ctor.parameters.map { it.isOptional }
             val (matched, numDefaultsUsed) = matchConstructorArgs(ctorTypes, optional, argTypes)

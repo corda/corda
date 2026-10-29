@@ -22,6 +22,7 @@ import java.util.jar.Manifest
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 import kotlin.io.path.exists
+import kotlin.io.path.inputStream
 import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 
@@ -68,9 +69,20 @@ object JarSignatureTestUtils {
             executeProcess(*(arrayOf("jar", "uvf", fileName) + contents))
 
     fun Path.signJar(fileName: String, alias: String, storePassword: String, keyPassword: String = storePassword): PublicKey {
-        executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
+        // Since JDK 20 the default digest is SHA-384. If the JAR is already signed with a different digest then jarsigner rewrites the
+        // manifest in a way which invalidates the existing signatures, so we make sure to use the same digest.
+        val digestArgs = existingManifestDigestAlgorithm(resolve(fileName))?.let { arrayOf("-digestalg", it) } ?: emptyArray()
+        executeProcess("jarsigner", *digestArgs, "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
         val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
+    }
+
+    private fun existingManifestDigestAlgorithm(jar: Path): String? {
+        val manifest = JarInputStream(jar.inputStream()).use { it.manifest } ?: return null
+        return manifest.entries.values.asSequence()
+                .flatMap { attributes -> attributes.keys.asSequence().map { it.toString() } }
+                .firstOrNull { it.endsWith("-Digest") }
+                ?.removeSuffix("-Digest")
     }
 
     fun Path.unsignJar() {

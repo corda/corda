@@ -10,7 +10,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.JAVA_17_CLASS_FILE_MAJOR_VERSION
+import net.corda.core.internal.JAVA_25_CLASS_FILE_MAJOR_VERSION
 import net.corda.core.internal.JAVA_1_2_CLASS_FILE_MAJOR_VERSION
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.NamedCacheFactory
@@ -346,7 +346,7 @@ object AttachmentsClassLoaderBuilder {
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
-                        JAVA_1_2_CLASS_FILE_MAJOR_VERSION..JAVA_17_CLASS_FILE_MAJOR_VERSION)
+                        JAVA_1_2_CLASS_FILE_MAJOR_VERSION..JAVA_25_CLASS_FILE_MAJOR_VERSION)
             } catch (ex: UnsupportedClassVersionError) {
                 throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
             }

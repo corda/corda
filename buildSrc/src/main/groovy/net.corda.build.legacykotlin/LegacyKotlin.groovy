@@ -88,6 +88,11 @@ enum LegacyKotlinVersion {
         }
         project.dependencies.add(kotlinCompiler.name, "org.jetbrains.kotlin:kotlin-compiler:$compilerVersion".toString())
 
+        // Gradle configures closures delegate-first, so copy the fields into locals to avoid them resolving to task properties.
+        def kotlinVersion = compilerVersion
+        def kotlinLanguageVersion = languageVersion
+        def kotlinJvmTarget = jvmTarget
+        def kotlinExtraArgs = extraArgs
         def toolchains = project.extensions.getByType(JavaToolchainService)
         def compilerLauncher = toolchains.launcherFor {
             it.languageVersion.set(JavaLanguageVersion.of(compilerJdkVersion))
@@ -103,16 +108,16 @@ enum LegacyKotlinVersion {
 
             def taskSourceSetName = sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME ? "" : sourceSet.name.capitalize()
             def compileKotlin = project.tasks.register("compile${taskSourceSetName}Kotlin", LegacyKotlinCompile) { task ->
-                task.description = "Compiles the ${sourceSet.name} Kotlin source with Kotlin $compilerVersion"
+                task.description = "Compiles the ${sourceSet.name} Kotlin source with Kotlin $kotlinVersion"
                 task.compilerClasspath.from(kotlinCompiler)
                 task.javaLauncher.set(compilerLauncher)
                 // Paradoxically, the Java sources are also required by the Kotlin compiler. This is so that it can correctly resolve any
                 // references the Kotlin code makes to Java code.
                 task.sources.from(kotlinSource.matching { it.include("**/*.kt") }, sourceSet.allJava)
                 task.classpath.from(sourceSet.compileClasspath)
-                task.languageVersion.set(languageVersion)
-                task.jvmTarget.set(jvmTarget)
-                task.extraArgs.set(extraArgs)
+                task.languageVersion.set(kotlinLanguageVersion)
+                task.jvmTarget.set(kotlinJvmTarget)
+                task.extraArgs.set(kotlinExtraArgs)
                 task.destinationDirectory.set(project.layout.buildDirectory.dir("classes/kotlin/${sourceSet.name}"))
             }
             sourceSet.output.dir(compileKotlin.flatMap { it.destinationDirectory })

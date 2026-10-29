@@ -9,7 +9,7 @@ description 'Corda Network Builder module'
 apply plugin: 'org.openjfx.javafxplugin'
 
 javafx {
-    version = "11.0.2"
+    version = javafx_version
     modules = [
         'javafx.controls',
         'javafx.fxml',

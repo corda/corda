@@ -147,12 +147,13 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
 /**
  * Similar to [Iterable.map] except it maps to a [Set] which preserves the iteration order.
  */
-@Suppress("INVISIBLE_MEMBER", "RemoveExplicitTypeArguments")   // Because the external verifier uses Kotlin 1.2
+@Suppress("RemoveExplicitTypeArguments", "MagicNumber")   // Because the external verifier uses Kotlin 1.2
 inline fun <T, R> Collection<T>.mapToSet(transform: (T) -> R): Set<R> {
     return when (size) {
         0 -> emptySet()
         1 -> setOf(transform(first()))
-        else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
+        // Same initial capacity as the stdlib's internal mapCapacity, which can no longer be accessed from Kotlin 2
+        else -> mapTo(LinkedHashSet<R>(if (size < (1 shl 30)) (size / 0.75F + 1.0F).toInt() else Int.MAX_VALUE), transform)
     }
 }
 
@@ -654,6 +655,7 @@ val Logger.level: Level
 const val JAVA_1_2_CLASS_FILE_MAJOR_VERSION = 46
 const val JAVA_8_CLASS_FILE_MAJOR_VERSION = 52
 const val JAVA_17_CLASS_FILE_MAJOR_VERSION = 61
+const val JAVA_25_CLASS_FILE_MAJOR_VERSION = 69
 
 fun String.capitalize(): String = replaceFirstChar { it.titlecase(Locale.getDefault()) }
 

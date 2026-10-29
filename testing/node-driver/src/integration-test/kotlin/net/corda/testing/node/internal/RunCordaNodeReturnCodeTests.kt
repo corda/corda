@@ -14,10 +14,10 @@ class RunCordaNodeReturnCodeTests(val argument: String, val exitCode: Int){
         @JvmStatic
         @Parameterized.Parameters
         fun data() = listOf(
-                arrayOf("--nonExistingOption", ExitCodes.FAILURE),
-                arrayOf("--help", ExitCodes.SUCCESS),
-                arrayOf("validate-configuration", ExitCodes.FAILURE),//Should fail as there is no node.conf
-                arrayOf("initial-registration", ExitCodes.FAILURE) //Missing required option
+                arrayOf<Any>("--nonExistingOption", ExitCodes.FAILURE),
+                arrayOf<Any>("--help", ExitCodes.SUCCESS),
+                arrayOf<Any>("validate-configuration", ExitCodes.FAILURE),//Should fail as there is no node.conf
+                arrayOf<Any>("initial-registration", ExitCodes.FAILURE) //Missing required option
         )
     }
 

@@ -156,7 +156,7 @@ class CachingCustomSerializerRegistry(
                 }
                 else ->
                     // Make a subclass serializer for the subclass and return that...
-                    CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
+                    CustomSerializer.SubClass(clazz, uncheckedCast<SerializerFor, CustomSerializer<Any>>(customSerializer))
             }
         }
 
