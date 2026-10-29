@@ -1,0 +1,2 @@
+// Standalone build, deliberately not part of the main Corda build. See README.md.
+rootProject.name = 'quasar-jdk25-workaround'

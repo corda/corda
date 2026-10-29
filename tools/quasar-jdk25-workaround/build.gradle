@@ -1,0 +1,86 @@
+// Repackages Quasar 0.9.3_r3 so that it works on Java 25. See README.md.
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.6.1'
+}
+
+def quasarVersion = '0.9.3_r3'
+def asmVersion = '9.11'
+def patchedVersion = "$quasarVersion-asm$asmVersion"
+
+group = 'co.paralleluniverse'
+version = patchedVersion
+
+repositories {
+    maven { url 'https://download.corda.net/maven/corda-dependencies' }
+    mavenCentral()
+}
+
+configurations {
+    quasar { transitive = false }
+    quasarPom { transitive = false }
+    osgiAnnotations { transitive = false }
+    asm { transitive = false }
+}
+
+dependencies {
+    quasar "co.paralleluniverse:quasar-core:$quasarVersion"
+    compileOnly "co.paralleluniverse:quasar-core:$quasarVersion"
+    quasarPom "co.paralleluniverse:quasar-core:$quasarVersion@pom"
+    osgiAnnotations "co.paralleluniverse:quasar-osgi-annotations:$quasarVersion"
+    for (m in ['asm', 'asm-commons', 'asm-tree', 'asm-analysis', 'asm-util']) {
+        asm "org.ow2.asm:$m:$asmVersion"
+    }
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+}
+
+tasks.named('shadowJar') {
+    configurations = [project.configurations.asm]
+    from(sourceSets.main.output)
+    from({ zipTree(project.configurations.quasar.singleFile) }) {
+        // Replace Quasar's copy of ASM (which only supports up to Java 21 class files), but keep its own ASMUtil class
+        exclude { it.path.startsWith('co/paralleluniverse/asm/') && !it.name.startsWith('ASMUtil') }
+        // Replaced by the patched version, which supports Java 19+
+        exclude 'co/paralleluniverse/concurrent/util/ThreadAccess*.class'
+        exclude 'META-INF/MANIFEST.MF'
+    }
+    exclude 'META-INF/versions/**/module-info.class'
+    relocate 'org.objectweb.asm', 'co.paralleluniverse.asm'
+    archiveBaseName = 'quasar-core'
+    archiveClassifier = ''
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        from({ zipTree(project.configurations.quasar.singleFile).matching { include 'META-INF/MANIFEST.MF' }.singleFile })
+    }
+}
+
+// The original POM, with only the project version changed
+def patchedPom = { File original, String artifactId ->
+    def pom = original.text
+    def i = pom.indexOf("<artifactId>$artifactId</artifactId>")
+    def j = pom.indexOf("<version>$quasarVersion</version>", i)
+    pom.substring(0, j) + "<version>$patchedVersion</version>" + pom.substring(j + "<version>$quasarVersion</version>".length())
+}
+
+publishing {
+    publications {
+        quasarCore(MavenPublication) {
+            artifactId = 'quasar-core'
+            artifact tasks.named('shadowJar')
+            pom.withXml { xml -> xml.asString().replace(0, xml.asString().length(), patchedPom(configurations.quasarPom.singleFile, 'quasar-core')) }
+        }
+        // Corda also depends on this at $quasar_version. It's unchanged.
+        osgiAnnotations(MavenPublication) {
+            artifactId = 'quasar-osgi-annotations'
+            artifact({ configurations.osgiAnnotations.singleFile }) { extension 'jar' }
+        }
+    }
+}

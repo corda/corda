@@ -480,7 +480,7 @@ class CompatibleTransactionWithKeyRotationChainProofTests {
     @Test(timeout=300_000)
     fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
-        val ftxConstructor = FilteredTransaction::class.constructors.last()
+        val ftxConstructor = FilteredTransaction::class.constructors.single { it.parameters.size == 4 }
 
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP), dummyCommand(DUMMY_KEY_2.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP), dummyCommand(DUMMY_KEY_1.public).copy(keyRotationProofChainMap = DUMMY_KEY_ROTATION_PROOF_MAP))

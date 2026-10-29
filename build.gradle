@@ -281,7 +281,9 @@ allprojects {
             apiVersion = KOTLIN_2_4
             jvmTarget = JVM_25
             javaParameters = true   // Useful for reflection.
-            freeCompilerArgs = ['-jvm-default=enable']  // Equivalent to the old -Xjvm-default=all-compatibility
+            // -jvm-default=enable is equivalent to the old -Xjvm-default=all-compatibility. Lambdas and SAM conversions are compiled to
+            // classes rather than invokedynamic (the default since Kotlin 2.0), as Quasar cannot instrument suspendable invokedynamic lambdas.
+            freeCompilerArgs = ['-jvm-default=enable', '-Xlambdas=class', '-Xsam-conversions=class']
             allWarningsAsErrors = warnings_as_errors
         }
     }
