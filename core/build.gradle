@@ -98,7 +98,7 @@ test {
 
 tasks.register('testJar', Jar) {
     dependsOn testClasses
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -149,7 +149,7 @@ scanApi {
 tasks.register("writeTestResources", JavaExec) {
     classpath sourceSets.obfuscator.output
     classpath sourceSets.obfuscator.runtimeClasspath
-    main 'net.corda.core.internal.utilities.TestResourceWriter'
+    mainClass = 'net.corda.core.internal.utilities.TestResourceWriter'
     args new File(sourceSets.test.resources.srcDirs.first(), "zip").toString()
 }
 

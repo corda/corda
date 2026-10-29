@@ -26,7 +26,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-mock'
+    archiveBaseName = 'corda-mock'
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.client.mock',
@@ -41,7 +41,7 @@ jar {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

@@ -41,7 +41,7 @@ jar {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
-    baseName = "network-bootstrapper"
+    archiveBaseName = "network-bootstrapper"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.bootstrapper.MainKt'

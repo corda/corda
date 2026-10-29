@@ -1,7 +1,9 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
-mainClassName = 'net.corda.loadtest.MainKt'
+application {
+    mainClass = 'net.corda.loadtest.MainKt'
+}
 
 dependencies {
     implementation project(':core')

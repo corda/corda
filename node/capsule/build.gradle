@@ -2,7 +2,7 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * node project because the bintray plugin cannot publish two modules from one project.
  */
-apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'corda.capsule'
 apply plugin: 'corda.common-publishing'
 
 description 'Corda standalone node'
@@ -39,14 +39,12 @@ capsule {
 
 def nodeProject = project(':node')
 
-configurations.runtimeOnly.canBeResolved = true
 tasks.register('buildCordaJAR', FatCapsule) {
     dependsOn(nodeProject.tasks.named('jar'))
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
     archiveClassifier = ''
     archiveVersion = corda_release_version
-    archiveName = archiveFileName.get()
     applicationSource = files(
             nodeProject.configurations.runtimeClasspath,
             nodeProject.tasks.jar,

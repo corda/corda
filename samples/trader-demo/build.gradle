@@ -157,14 +157,14 @@ idea {
 
 task runBank(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.test.runtimeClasspath
-    main = 'net.corda.traderdemo.TraderDemoKt'
+    mainClass = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'
     args 'BANK'
 }
 
 task runSeller(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.test.runtimeClasspath
-    main = 'net.corda.traderdemo.TraderDemoKt'
+    mainClass = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'
     args 'SELLER'
 }

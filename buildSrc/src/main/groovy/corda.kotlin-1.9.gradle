@@ -1,0 +1,5 @@
+import net.corda.build.legacykotlin.LegacyKotlinVersion
+
+// The Kotlin Gradle plugin on the build classpath is for the current version of Kotlin, so the 1.9 compiler is called directly. See
+// LegacyKotlinVersion.
+LegacyKotlinVersion.KOTLIN_1_9.apply(project)

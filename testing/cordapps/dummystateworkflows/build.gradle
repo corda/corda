@@ -8,5 +8,5 @@ dependencies {
 }
 
 jar {
-    baseName "dummystate-creation-cordapp"
+    archiveBaseName = "dummystate-creation-cordapp"
 }

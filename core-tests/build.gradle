@@ -5,17 +5,6 @@ apply plugin: 'idea'
 
 description 'Corda core tests'
 
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-
-    smokeTestImplementation.extendsFrom implementation
-    smokeTestRuntimeOnly.extendsFrom runtimeOnly
-
-    testArtifacts.extendsFrom testRuntimeOnlyClasspath
-
-    corda4_11
-}
 
 sourceSets {
     integrationTest {
@@ -40,6 +29,18 @@ sourceSets {
             srcDir file('src/smoke-test/java')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    smokeTestImplementation.extendsFrom implementation
+    smokeTestRuntimeOnly.extendsFrom runtimeOnly
+
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+
+    corda4_11
 }
 
 processSmokeTestResources {
@@ -167,7 +168,7 @@ tasks.withType(Test).configureEach {
 }
 
 tasks.register('testJar', Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -177,7 +178,7 @@ tasks.register('integrationTest', Test) {
 }
 
 tasks.register('smokeTestJar', Jar) {
-    classifier 'smokeTests'
+    archiveClassifier = 'smokeTests'
     from(sourceSets.smokeTest.output) {
         exclude("*.jar")
     }

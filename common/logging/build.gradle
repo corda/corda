@@ -37,13 +37,13 @@ processResources.dependsOn generateSource
 sourcesJar.dependsOn generateSource
 
 jar {
-    baseName 'corda-common-logging'
+    archiveBaseName = 'corda-common-logging'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

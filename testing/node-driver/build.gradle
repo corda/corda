@@ -7,10 +7,6 @@ apply plugin: 'corda.common-publishing'
 description 'Corda Node Driver module'
 
 //noinspection GroovyAssignabilityCheck
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntime.extendsFrom testRuntimeOnly
-}
 
 sourceSets {
     integrationTest {
@@ -23,6 +19,11 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 dependencies {
@@ -124,7 +125,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-node-driver'
+    archiveBaseName = 'corda-node-driver'
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -151,7 +152,7 @@ scanApi {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

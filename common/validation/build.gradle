@@ -8,13 +8,13 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-common-validation'
+    archiveBaseName = 'corda-common-validation'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

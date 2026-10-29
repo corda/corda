@@ -19,5 +19,5 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-network-verifier-contracts'
+    archiveBaseName = 'corda-network-verifier-contracts'
 }

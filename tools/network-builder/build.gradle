@@ -1,6 +1,6 @@
 // JDK 11 JavaFX
 plugins {
-    id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'org.openjfx.javafxplugin' version '0.1.0' apply false
     id 'corda.common-publishing'
 }
 
@@ -24,10 +24,12 @@ ext {
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'application'
-// We need to set mainClassName before applying the shadow plugin.
-mainClassName = 'net.corda.networkbuilder.Main'
+// We need to set the main class before applying the shadow plugin.
+application {
+    mainClass = 'net.corda.networkbuilder.Main'
+}
 
-apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'com.gradleup.shadow'
 
 configurations {
     implementation {
@@ -98,7 +100,7 @@ publishing {
     publications {
         shadow(MavenPublication) { publication ->
             artifactId 'corda-tools-network-builder'
-            project.shadow.component(publication)
+            from components.shadow
         }
     }
 }

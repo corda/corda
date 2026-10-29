@@ -3,10 +3,6 @@ apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server'
 
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntime.extendsFrom testRuntimeOnly
-}
 
 sourceSets {
     integrationTest {
@@ -16,6 +12,11 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 processResources {
@@ -81,7 +82,7 @@ tasks.register('integrationTest', Test) {
 }
 
 jar {
-    baseName 'corda-testserver-impl'
+    archiveBaseName = 'corda-testserver-impl'
 }
 
 compileJava.dependsOn ':node:capsule:buildCordaJAR'
@@ -90,7 +91,7 @@ javadoc.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

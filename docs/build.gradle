@@ -29,47 +29,43 @@ jar {
     enabled = false
 }
 
-dokkaHtml {
-    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/html")
-}
+apply plugin: 'org.jetbrains.dokka-javadoc'
 
-dokkaJavadoc {
-    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
-}
-
-[dokkaHtml, dokkaJavadoc].forEach {
-    it.dokkaSourceSets {
-        customSourceSet {
-            sourceRoot(file('../core/src/main/kotlin'))
-            sourceRoot(file('../client/rpc/src/main/kotlin'))
-            sourceRoot(file('../finance/workflows/src/main/kotlin'))
-            sourceRoot(file('../finance/contracts/src/main/kotlin'))
-            sourceRoot(file('../client/jackson/src/main/kotlin'))
-            sourceRoot(file('../testing/test-utils/src/main/kotlin'))
-            sourceRoot(file('../testing/node-driver/src/main/kotlin'))
-            sourceRoot(file('../core/src/main/kotlin'))
-            sourceRoot(file('../client/rpc/src/main/kotlin'))
-            sourceRoot(file('../client/rpc/src/main/kotlin'))
-
-            externalDocumentationLink {
-                url.set(new URL("https://fasterxml.github.io/jackson-core/javadoc/2.9/"))
-            }
-            externalDocumentationLink {
-                url.set(new URL("https://docs.oracle.com/javafx/2/api/"))
-            }
-            externalDocumentationLink {
-                url.set(new URL("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/"))
-                packageListUrl.set(new URL("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/element-list"))
-            }
-            externalDocumentationLink {
-                url.set(new URL("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/"))
-                packageListUrl.set(new URL("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/element-list"))
-            }
+dokka {
+    dokkaPublications.html {
+        outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/html")
+    }
+    dokkaPublications.javadoc {
+        outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
+    }
+    dokkaSourceSets.register('customSourceSet') {
+        sourceRoots.from(
+                file('../core/src/main/kotlin'),
+                file('../client/rpc/src/main/kotlin'),
+                file('../finance/workflows/src/main/kotlin'),
+                file('../finance/contracts/src/main/kotlin'),
+                file('../client/jackson/src/main/kotlin'),
+                file('../testing/test-utils/src/main/kotlin'),
+                file('../testing/node-driver/src/main/kotlin')
+        )
+        externalDocumentationLinks.register('jackson') {
+            url("https://fasterxml.github.io/jackson-core/javadoc/2.9/")
+        }
+        externalDocumentationLinks.register('javafx') {
+            url("https://docs.oracle.com/javafx/2/api/")
+        }
+        externalDocumentationLinks.register('bcpkix') {
+            url("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/")
+            packageListUrl("https://downloads.bouncycastle.org/java/docs/bcpkix-jdk18on-javadoc/element-list")
+        }
+        externalDocumentationLinks.register('bcprov') {
+            url("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/")
+            packageListUrl("https://downloads.bouncycastle.org/java/docs/bcprov-jdk18on-javadoc/element-list")
         }
     }
 }
 
-task apidocs(dependsOn: ['dokkaHtml', 'dokkaJavadoc']) {
+task apidocs(dependsOn: ['dokkaGeneratePublicationHtml', 'dokkaGeneratePublicationJavadoc']) {
     group "Documentation"
     description "Build API documentation"
 }
@@ -97,7 +93,7 @@ task archiveApiDocs(type: Tar) {
     dependsOn apidocs
     from buildDir
     include 'html/**'
-    extension 'tgz'
+    archiveExtension = 'tgz'
     compression Compression.GZIP
 }
 

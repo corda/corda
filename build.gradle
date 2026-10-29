@@ -3,9 +3,9 @@ import com.r3.testing.PodLogLevel
 import net.corda.plugins.apiscanner.GenerateApi
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-import static org.gradle.api.JavaVersion.VERSION_17
-import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-import static org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9
+import static org.gradle.api.JavaVersion.VERSION_25
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+import static org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4
 
 buildscript {
     // For sharing constants between builds
@@ -189,9 +189,6 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.dokka:dokka-base:$dokka_version"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
-        // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
-        // See https://github.com/corda/gradle-capsule-plugin
-        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.5_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
@@ -206,7 +203,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' apply false
     id 'org.jetbrains.kotlin.plugin.allopen' apply false
     id 'org.jetbrains.kotlin.plugin.jpa' apply false
-    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
+    id 'com.gradleup.shadow' version '9.6.1' apply false
     id "org.ajoberstar.grgit" version "4.0.0"
     id 'corda.root-publish'
     id "org.jetbrains.dokka" version "$dokka_version"
@@ -251,11 +248,13 @@ allprojects {
         )
     }
 
-    sourceCompatibility = VERSION_17
-    targetCompatibility = VERSION_17
+    java {
+        sourceCompatibility = VERSION_25
+        targetCompatibility = VERSION_25
+    }
 
     jacoco {
-        toolVersion = "0.8.7"
+        toolVersion = "0.8.16"
     }
 
     java {
@@ -277,9 +276,9 @@ allprojects {
 
     tasks.withType(KotlinCompile).configureEach {
         compilerOptions {
-            languageVersion = KOTLIN_1_9
-            apiVersion = KOTLIN_1_9
-            jvmTarget = JVM_17
+            languageVersion = KOTLIN_2_4
+            apiVersion = KOTLIN_2_4
+            jvmTarget = JVM_25
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=all-compatibility']
             allWarningsAsErrors = warnings_as_errors
@@ -549,25 +548,25 @@ allprojects {
                 dependencySubstitution {
                     // We want to use SLF4J's version of these bindings: jcl-over-slf4j
                     // Remove any transitive dependency on Apache's version.
-                    substitute module('commons-logging:commons-logging') with module("org.slf4j:jcl-over-slf4j:$slf4j_version")
+                    substitute module('commons-logging:commons-logging') using module("org.slf4j:jcl-over-slf4j:$slf4j_version")
 
                     // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
-                    substitute module('ch.qos.logback:logback-classic') with module("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version")
+                    substitute module('ch.qos.logback:logback-classic') using module("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version")
 
                     // Netty-All is an uber-jar which contains every Netty module.
                     // Exclude it to force us to use the individual Netty modules instead.
-                    substitute module('io.netty:netty-all') with module("io.netty:netty-common:$netty_version")
+                    substitute module('io.netty:netty-all') using module("io.netty:netty-common:$netty_version")
 
                     // Force dependencies to use the same version of Guava as Corda.
-                    substitute module('com.google.guava:guava') with module("com.google.guava:guava:$guava_version")
+                    substitute module('com.google.guava:guava') using module("com.google.guava:guava:$guava_version")
 
                     // Effectively delete this unused and unwanted transitive dependency of Artemis.
-                    substitute module('org.jgroups:jgroups') with module("org.apache.artemis:artemis-commons:$artemis_version")
+                    substitute module('org.jgroups:jgroups') using module("org.apache.artemis:artemis-commons:$artemis_version")
 
                     // Force use of LTS version of BC everywhere
-                    substitute module('org.bouncycastle:bcutil-jdk18on') with module("org.bouncycastle:bcutil-lts8on:$bouncycastle_version")
-                    substitute module('org.bouncycastle:bcprov-jdk18on') with module("org.bouncycastle:bcprov-lts8on:$bouncycastle_version")
-                    substitute module('org.bouncycastle:bcpkix-jdk18on') with module("org.bouncycastle:bcpkix-lts8on:$bouncycastle_version")
+                    substitute module('org.bouncycastle:bcutil-jdk18on') using module("org.bouncycastle:bcutil-lts8on:$bouncycastle_version")
+                    substitute module('org.bouncycastle:bcprov-jdk18on') using module("org.bouncycastle:bcprov-lts8on:$bouncycastle_version")
+                    substitute module('org.bouncycastle:bcpkix-jdk18on') using module("org.bouncycastle:bcpkix-lts8on:$bouncycastle_version")
                 }
 
                 // FORCE Gradle to use latest SNAPSHOT dependencies.
@@ -582,9 +581,9 @@ allprojects {
                 cfg.resolutionStrategy {
                     dependencySubstitution {
                         // Force dependencies to use the same version of Kotlin as Corda.
-                        substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
-                        substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-                        substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
+                        substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') using module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
+                        substitute module('org.jetbrains.kotlin:kotlin-stdlib') using module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
+                        substitute module('org.jetbrains.kotlin:kotlin-reflect') using module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
                     }
                 }
             }
@@ -691,10 +690,9 @@ tasks.register('testReport', TestReport) {
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
 tasks.register('buildCordappDependenciesZip', Zip) {
-    baseName 'corda-deps'
-    from configurations.runtimeOnly
-    from configurations.implementation
-    from configurations.testImplementation
+    archiveBaseName = 'corda-deps'
+    from configurations.runtimeClasspath
+    from configurations.testRuntimeClasspath
     from buildscript.configurations.classpath
     from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

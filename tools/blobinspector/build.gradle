@@ -32,15 +32,14 @@ dependencies {
     testImplementation "junit:junit:$junit_version"
 }
 
-configurations.implementation.canBeResolved = true
 
 jar {
-    from(configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) }) {
+    from(configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }) {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    baseName = "blob-inspector"
+    archiveBaseName = "blob-inspector"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'

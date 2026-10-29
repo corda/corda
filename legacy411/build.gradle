@@ -14,9 +14,10 @@ dependencies {
     cordaProvided("net.corda:corda-core:4.11") {
         exclude group: quasar_group, module: 'quasar-core'
     }
-    cordaProvided configurations['quasar']
     cordaProvided "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 }
+
+configurations.cordaProvided.extendsFrom(configurations.quasar)
 
 cordapp {
     targetPlatformVersion 1

@@ -96,7 +96,7 @@ configurations {
 }
 
 tasks.register('testJar', Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -105,13 +105,13 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-node-api'
+    archiveBaseName = 'corda-node-api'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

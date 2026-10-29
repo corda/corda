@@ -1,7 +1,7 @@
 plugins {
     id "corda.kotlin-1.2"
     id "application"
-    id "com.github.johnrengelman.shadow"
+    id "com.gradleup.shadow"
 }
 
 application {

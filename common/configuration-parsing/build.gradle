@@ -22,13 +22,13 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-common-configuration-parsing'
+    archiveBaseName = 'corda-common-configuration-parsing'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

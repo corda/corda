@@ -1,0 +1,4 @@
+import net.corda.build.capsule.CapsulePlugin
+
+// Builds Capsule fat JARs with the FatCapsule task. This replaces the 'us.kirchmeier.capsule' plugin which doesn't support Gradle 9.
+CapsulePlugin.apply(project)

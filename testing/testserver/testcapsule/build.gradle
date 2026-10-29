@@ -2,7 +2,7 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * webserver project because the bintray plugin cannot publish two modules from one project.
  */
-apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'corda.capsule'
 apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server capsule'
@@ -19,25 +19,23 @@ dependencies {
 
 jar {
     enabled = true
-    classifier 'ignore'
+    archiveClassifier = 'ignore'
 }
 
 capsule {
     version capsule_version
 }
 
-configurations.runtimeOnly.canBeResolved = true
 tasks.register('buildWebserverJar', FatCapsule) {
     dependsOn project(':node').tasks.jar
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
     archiveVersion = corda_release_version
-    archiveName = archiveFileName.get()
     applicationSource = files(
             project(':testing:testserver').configurations.runtimeClasspath,
             project(':testing:testserver').tasks.jar,
-            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
-            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
+            project(':testing:testserver').sourceSets.main.java.destinationDirectory.get().asFile.toString() + '/CordaWebserverCaplet.class',
+            project(':testing:testserver').sourceSets.main.java.destinationDirectory.get().asFile.toString() + '/CordaWebserverCaplet$1.class',
             project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
             "$rootDir/config/dev/log4j2.xml",
             project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice

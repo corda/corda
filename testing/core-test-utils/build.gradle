@@ -43,7 +43,7 @@ test {
 }
 
 jar {
-    baseName 'corda-core-test-utils'
+    archiveBaseName = 'corda-core-test-utils'
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -54,7 +54,7 @@ jar {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

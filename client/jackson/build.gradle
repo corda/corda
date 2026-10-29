@@ -46,7 +46,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-jackson'
+    archiveBaseName = 'corda-jackson'
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.jackson'
     }
@@ -55,7 +55,7 @@ jar {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

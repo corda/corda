@@ -1,9 +1,11 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
-// We need to set mainClassName before applying the shadow plugin.
-mainClassName = "net.corda.avalanche.MainKt"
+// We need to set the main class before applying the shadow plugin.
+application {
+    mainClass = "net.corda.avalanche.MainKt"
+}
 
-apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'com.gradleup.shadow'
 
 dependencies {
     implementation "info.picocli:picocli:$picocli_version"
@@ -19,7 +21,7 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    baseName = "avalanche"
+    archiveBaseName = "avalanche"
 }
 
 artifacts {

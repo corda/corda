@@ -8,9 +8,8 @@ dependencies {
     implementation "org.javassist:javassist:$javaassist_version"
 }
 
-configurations.implementation.canBeResolved = true
 jar {
-    archiveName = "${project.name}.jar"
+    archiveFileName = "${project.name}.jar"
     manifest {
         attributes(
                 'Premain-Class': 'net.corda.quasarhook.QuasarInstrumentationHookAgent',
@@ -21,6 +20,6 @@ jar {
                 'Implementation-Version': rootProject.version
         )
     }
-    from { configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

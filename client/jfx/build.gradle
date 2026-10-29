@@ -1,6 +1,6 @@
 // JDK 11 JavaFX
 plugins {
-    id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'org.openjfx.javafxplugin' version '0.1.0' apply false
     id 'corda.common-publishing'
 }
 
@@ -19,10 +19,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 description 'Corda client JavaFX modules'
 
 //noinspection GroovyAssignabilityCheck
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntime.extendsFrom testRuntimeOnly
-}
 
 sourceSets {
     integrationTest {
@@ -32,6 +28,11 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -86,7 +87,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-jfx'
+    archiveBaseName = 'corda-jfx'
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.jfx'
     }
@@ -95,7 +96,7 @@ jar {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

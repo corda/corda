@@ -1,7 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
-    id 'com.github.johnrengelman.shadow'
+    id 'com.gradleup.shadow'
     id 'corda.common-publishing'
 }
 

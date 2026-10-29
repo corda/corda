@@ -26,7 +26,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-trader-demo-workflows'
+    archiveBaseName = 'corda-trader-demo-workflows'
 }
 
 cordapp {

@@ -1,7 +1,7 @@
 /**
  * This build.gradle exists to package Node Explorer as an executable fat jar.
  */
-apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'corda.capsule'
 apply plugin: 'corda.common-publishing'
 
 description 'Node Explorer'
@@ -14,17 +14,15 @@ capsule {
     version capsule_version
 }
 
-configurations.runtimeOnly.canBeResolved = true
 tasks.register('buildExplorerJAR', FatCapsule) {
     dependsOn project(':tools:explorer').tasks.jar
     applicationClass 'net.corda.explorer.Main'
     archiveBaseName = 'node-explorer'
     archiveVersion = corda_release_version
-    archiveName = archiveFileName.get()
     applicationSource = files(
             project(':tools:explorer').configurations.runtimeClasspath,
             project(':tools:explorer').tasks.jar,
-            project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
+            project(':tools:explorer').sourceSets.main.java.destinationDirectory.get().asFile.toString() + '/ExplorerCaplet.class'
     )
 
     capsuleManifest {
@@ -36,7 +34,7 @@ tasks.register('buildExplorerJAR', FatCapsule) {
 }
 
 jar {
-    classifier "ignore"
+    archiveClassifier = "ignore"
     enabled = true
 }
 

@@ -291,5 +291,5 @@ task deployNodesBFT(type: Cordform) {
 
 task notarise(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.notarydemo.client.NotariseKt'
+    mainClass = 'net.corda.notarydemo.client.NotariseKt'
 }

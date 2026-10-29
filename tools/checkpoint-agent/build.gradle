@@ -14,7 +14,6 @@ dependencies {
     }
 }
 
-configurations.implementation.canBeResolved = true
 jar {
     archiveBaseName = "${project.name}"
     manifest {
@@ -27,7 +26,7 @@ jar {
                 'Implementation-Version': rootProject.version
         )
     }
-    from { configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 

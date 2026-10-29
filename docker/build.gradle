@@ -16,9 +16,11 @@ import java.util.stream.Stream
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
-// We need to set mainClassName before applying the shadow plugin.
-mainClassName = 'net.corda.core.ConfigExporterMain'
-apply plugin: 'com.github.johnrengelman.shadow'
+// We need to set the main class before applying the shadow plugin.
+application {
+    mainClass = 'net.corda.core.ConfigExporterMain'
+}
+apply plugin: 'com.gradleup.shadow'
 
 dependencies{
     implementation project(':node')
@@ -30,8 +32,8 @@ dependencies{
 }
 
 shadowJar {
-    baseName = 'config-exporter'
-    classifier = null
+    archiveBaseName = 'config-exporter'
+    archiveClassifier = ''
     version = null
     zip64 true
     exclude '**/Log4j2Plugins.dat'

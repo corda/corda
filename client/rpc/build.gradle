@@ -2,18 +2,10 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
-apply plugin: 'us.kirchmeier.capsule'
 
 description 'Corda client RPC modules'
 
 //noinspection GroovyAssignabilityCheck
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-
-    smokeTestImplementation.extendsFrom compile
-    smokeTestRuntimeOnly.extendsFrom runtimeOnly
-}
 
 sourceSets {
     integrationTest {
@@ -45,6 +37,14 @@ sourceSets {
             srcDir file('src/smoke-test/java')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    smokeTestImplementation.extendsFrom compile
+    smokeTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
 dependencies {
@@ -124,7 +124,7 @@ tasks.register('smokeTest', Test) {
 }
 
 jar {
-    baseName 'corda-rpc'
+    archiveBaseName = 'corda-rpc'
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
     }
@@ -133,7 +133,7 @@ jar {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

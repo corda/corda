@@ -19,21 +19,6 @@ ext {
 }
 
 //noinspection GroovyAssignabilityCheck
-configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-
-    integrationTest1Implementation.extendsFrom testImplementation
-    integrationTest1RuntimeOnly.extendsFrom testRuntimeOnly
-
-    integrationTest2Implementation.extendsFrom testImplementation
-    integrationTest2RuntimeOnly.extendsFrom testRuntimeOnly
-
-    slowIntegrationTestImplementation.extendsFrom testImplementation
-    slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-
-    corda4_11
-}
 
 sourceSets {
     integrationTest {
@@ -96,6 +81,22 @@ sourceSets {
             srcDir file('src/integration-test-slow/resources')
         }
     }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    integrationTest1Implementation.extendsFrom testImplementation
+    integrationTest1RuntimeOnly.extendsFrom testRuntimeOnly
+
+    integrationTest2Implementation.extendsFrom testImplementation
+    integrationTest2RuntimeOnly.extendsFrom testRuntimeOnly
+
+    slowIntegrationTestImplementation.extendsFrom testImplementation
+    slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    corda4_11
 }
 
 jib.container {
@@ -370,7 +371,7 @@ quasar {
 }
 
 jar {
-    baseName 'corda-node'
+    archiveBaseName = 'corda-node'
 }
 
 tasks.named('test', Test) {
@@ -381,7 +382,7 @@ tasks.named('test', Test) {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId jar.baseName
+            artifactId jar.archiveBaseName.get()
             from components.java
         }
     }

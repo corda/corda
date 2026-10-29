@@ -30,5 +30,5 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-attachment-demo-workflows'
+    archiveBaseName = 'corda-attachment-demo-workflows'
 }
