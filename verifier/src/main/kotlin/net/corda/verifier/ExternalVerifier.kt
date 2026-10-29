@@ -11,6 +11,7 @@ import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.verification.ContractGeneration
+import net.corda.core.internal.verification.verifyInProcessWithSupport
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationContext
@@ -102,15 +103,14 @@ class ExternalVerifier(private val channel: SocketChannel, private val generatio
         log.info("External verifier initialised")
     }
 
-    @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(attachmentsClassLoaderCache, this,
                 request.ctxInputsAndReferences, rotatedKeys, generation)
         val result: Try<Unit> = try {
             val ctx = request.ctx
             when (ctx) {
-                is WireTransaction -> ctx.verifyInProcess(verificationContext)
-                is ContractUpgradeWireTransaction -> ctx.verifyInProcess(verificationContext)
+                is WireTransaction -> ctx.verifyInProcessWithSupport(verificationContext)
+                is ContractUpgradeWireTransaction -> ctx.verifyInProcessWithSupport(verificationContext)
                 else -> throw IllegalArgumentException("${ctx.toSimpleString()} not supported")
             }
             log.info("${ctx.toSimpleString()} verified")

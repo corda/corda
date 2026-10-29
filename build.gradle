@@ -281,7 +281,7 @@ allprojects {
             apiVersion = KOTLIN_2_4
             jvmTarget = JVM_25
             javaParameters = true   // Useful for reflection.
-            freeCompilerArgs = ['-Xjvm-default=all-compatibility']
+            freeCompilerArgs = ['-jvm-default=enable']  // Equivalent to the old -Xjvm-default=all-compatibility
             allWarningsAsErrors = warnings_as_errors
         }
     }
