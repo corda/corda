@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.SerializedTransactionState
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
@@ -15,7 +16,8 @@ class ExternalVerificationContext(
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
         private val externalVerifier: ExternalVerifier,
         private val transactionInputsAndReferences: Map<StateRef, SerializedTransactionState>,
-        override val rotatedKeys: RotatedKeys
+        override val rotatedKeys: RotatedKeys,
+        override val contractGeneration: ContractGeneration
 ) : VerificationSupport {
     override val appClassLoader: ClassLoader get() = throw NotImplementedError("Cannot call appClassLoader")
 
@@ -31,7 +33,7 @@ class ExternalVerificationContext(
 
     override fun isAttachmentTrusted(attachment: Attachment): Boolean = externalVerifier.getAttachment(attachment.id)!!.isTrusted
 
-    override fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment> {
+    override fun getTrustedClassAttachments(className: String, generation: ContractGeneration): List<Attachment> {
         return externalVerifier.getTrustedClassAttachments(className)
     }
 

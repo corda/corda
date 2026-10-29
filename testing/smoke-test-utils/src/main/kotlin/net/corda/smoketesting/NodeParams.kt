@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
@@ -22,7 +23,9 @@ class NodeParams @JvmOverloads constructor(
         val jarDirs: List<Path> = emptyList(),
         val clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         val devMode: Boolean = true,
-        val version: String? = null
+        val version: String? = null,
+        /** The legacy contract CorDapps of each [ContractGeneration], in addition to [legacyContractJars] which are for 4.11. */
+        val legacyContractJarsByGeneration: Map<ContractGeneration, List<Path>> = emptyMap()
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)

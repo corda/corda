@@ -39,6 +39,7 @@ import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.internal.verification.VerificationResult
 import net.corda.core.internal.verification.VerificationResult.External
@@ -186,7 +187,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             }
             // These are not used
             override val appClassLoader: ClassLoader get() = throw AbstractMethodError()
-            override fun getTrustedClassAttachments(className: String, isLegacy: Boolean) = throw AbstractMethodError()
+            override fun getTrustedClassAttachments(className: String, generation: ContractGeneration) = throw AbstractMethodError()
             override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>) = throw AbstractMethodError()
             override val rotatedKeys: RotatedKeys get() = throw AbstractMethodError()
         })
@@ -230,15 +231,16 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val resolvedReferences = serializedResolvedReferences.lazyMapped(toStateAndRef)
 
+        // Only the attachments of the generation being verified are looked at, since they're the only ones compatible with it. For the
+        // node this is the current generation, and for an external verifier it's the legacy generation it was built for.
+        val generationAttachments = attachmentsFor(verificationSupport.contractGeneration)
         val resolvedAttachments = if (verificationSupport.isInProcess) {
-            // The 4.12+ node only looks at the new attachments group
-            nonLegacyAttachments.lazyMapped { id, _ ->
+            generationAttachments.lazyMapped { id, _ ->
                 verificationSupport.getAttachment(id) ?: throw AttachmentResolutionException(id)
             }
         } else {
-            // The 4.11 external verifier only looks at the legacy attachments group since it will only contain attachments compatible with 4.11
-            verificationSupport.getAttachments(legacyAttachments).mapIndexed { index, attachment ->
-                attachment ?: throw AttachmentResolutionException(legacyAttachments[index])
+            verificationSupport.getAttachments(generationAttachments).mapIndexed { index, attachment ->
+                attachment ?: throw AttachmentResolutionException(generationAttachments[index])
             }
         }
 
@@ -409,20 +411,27 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @CordaInternal
     @JvmSynthetic
     internal fun tryVerify(verificationSupport: NodeVerificationSupport, disableWarnings: Boolean = false): VerificationResult {
+        // Each legacy generation the transaction has attachments for is verified by that generation's external verifier, and the current
+        // generation is verified in-process. A transaction without any attachments is also verified in-process.
+        val legacyGenerations = attachmentGenerations.filter { !it.isCurrent }
+        val verifyExternally = {
+            legacyGenerations.associate { generation ->
+                generation to Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this, generation) }
+            }
+        }
         return when {
-            legacyAttachments.isEmpty() -> {
+            legacyGenerations.isEmpty() -> {
                 log.debug { "${toSimpleString()} will be verified in-process" }
                 InProcess(Try.on { verifyInProcess(verificationSupport, disableWarnings) })
             }
-            nonLegacyAttachments.isEmpty() -> {
-                log.debug { "${toSimpleString()} will be verified by the external verifer" }
-                External(Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) })
+            attachmentsFor(ContractGeneration.CURRENT).isEmpty() -> {
+                log.debug { "${toSimpleString()} will be verified by the external verifier for $legacyGenerations" }
+                External(verifyExternally())
             }
             else -> {
-                log.debug { "${toSimpleString()} will be verified both in-process and by the external verifer" }
+                log.debug { "${toSimpleString()} will be verified both in-process and by the external verifier for $legacyGenerations" }
                 val inProcessResult = Try.on { verifyInProcess(verificationSupport, disableWarnings) }
-                val externalResult = Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) }
-                InProcessAndExternal(inProcessResult, externalResult)
+                InProcessAndExternal(inProcessResult, verifyExternally())
             }
         }
     }
@@ -513,7 +522,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * so resort to the original mechanism of trying to find an attachment that contains
          * the missing class.
          */
-        val extraAttachment = requireNotNull(verificationSupport.getTrustedClassAttachments(missingClass, false).firstOrNull()) {
+        val extraAttachment = requireNotNull(verificationSupport.getTrustedClassAttachments(missingClass, verificationSupport.contractGeneration).firstOrNull()) {
             """Transaction $ltx is incorrectly formed. Most likely it was created during version 3 of Corda
                 |when the verification logic was more lenient. Attempted to find local dependency for class: $missingClass,
                 |but could not find one.
@@ -589,13 +598,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             val emoji = Emoji.diamond
             buf.appendLine("${emoji}COMMAND:        $command")
         }
-        for (attachment in nonLegacyAttachments) {
-            val emoji = Emoji.paperclip
-            buf.appendLine("${emoji}ATTACHMENT:     $attachment")
-        }
-        for (attachment in legacyAttachments) {
-            val emoji = Emoji.paperclip
-            buf.appendLine("${emoji}ATTACHMENT:     $attachment (legacy)")
+        for (generation in ContractGeneration.values().reversed()) {
+            val suffix = if (generation.isCurrent) "" else " (legacy ${generation.releases})"
+            for (attachment in attachmentsFor(generation)) {
+                val emoji = Emoji.paperclip
+                buf.appendLine("${emoji}ATTACHMENT:     $attachment$suffix")
+            }
         }
         if (networkParametersHash != null) {
             val emoji = Emoji.newspaper

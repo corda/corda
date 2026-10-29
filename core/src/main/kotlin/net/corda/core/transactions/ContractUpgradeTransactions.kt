@@ -24,6 +24,7 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.combinedHash
 import net.corda.core.internal.getRequiredSigningKeysInternal
 import net.corda.core.internal.loadClassOfType
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.internal.verification.VerificationResult
 import net.corda.core.internal.verification.VerificationSupport
@@ -169,7 +170,8 @@ data class ContractUpgradeWireTransaction(
     @JvmSynthetic
     internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult.External {
         // Contract upgrades only work on 4.11 and earlier
-        return VerificationResult.External(Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) })
+        val generation = ContractGeneration.CORDA_4_11
+        return VerificationResult.External(generation, Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this, generation) })
     }
 
     @CordaInternal

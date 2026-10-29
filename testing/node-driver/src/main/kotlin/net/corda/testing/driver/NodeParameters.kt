@@ -24,6 +24,9 @@ import net.corda.testing.node.User
  * @property logLevelOverride log level to be passed as parameter to an out of process node. ERROR, WARN, INFO, DEBUG, TRACE. This overrides debug port
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
+ * @property legacyContracts Legacy contract CorDapps, needed to create transactions compatible with older nodes. Each one is placed in the
+ * legacy contracts directory of the oldest legacy version of Corda it's compatible with, e.g. `legacy-contracts` for 4.11 (Kotlin 1.2)
+ * contracts and `legacy-contracts1.9` for 4.12 to 4.15 (Kotlin 1.9) contracts.
  */
 @Suppress("unused", "TooManyFunctions")
 data class NodeParameters(

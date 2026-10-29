@@ -5,6 +5,9 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.hash
 import net.corda.core.internal.toPath
+import net.corda.core.internal.verification.ContractGeneration
+import net.corda.core.internal.verification.ContractGeneration.CORDA_4_11
+import net.corda.core.internal.verification.ContractGeneration.CORDA_4_12
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.DOLLARS
@@ -40,6 +43,7 @@ class CordappProviderImplTests {
         val currentFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts.jar")!!.toPath()
         val currentFinanceWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
         val legacyFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts-4.11.jar")!!.toPath()
+        val legacy19FinanceContractsJar = this::class.java.getResource("/corda-finance-contracts-4.14.jar")!!.toPath()
 
         @JvmField
         val ID1 = AttachmentId.randomSHA256()
@@ -136,22 +140,48 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
     fun `retrieving legacy attachment for contract on network that does not support pre-412 `() {
-        val provider = newCordappProvider(setOf(currentFinanceContractsJar), setOf(legacyFinanceContractsJar))
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar), mapOf(CORDA_4_11 to setOf(legacyFinanceContractsJar)))
         val (current, legacy) = provider.getContractAttachments(Cash::class.java.name, PlatformVersionSwitches.LEGACY_ATTACHMENTS)!!
         assertThat(current.id).isEqualTo(currentFinanceContractsJar.hash)
-        assertThat(legacy?.id).isNull()
+        assertThat(legacy).isEmpty()
         // getContractAttachmentID should always return the non-legacy attachment ID
         assertThat(provider.getContractAttachmentID(Cash::class.java.name)).isEqualTo(currentFinanceContractsJar.hash)
     }
 
     @Test(timeout = 300_000)
     fun `retrieving legacy attachment for contract on mixed network of versions`() {
-        val provider = newCordappProvider(setOf(currentFinanceContractsJar), setOf(legacyFinanceContractsJar))
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar), mapOf(CORDA_4_11 to setOf(legacyFinanceContractsJar)))
         val (current, legacy) = provider.getContractAttachments(Cash::class.java.name, PlatformVersionSwitches.LEGACY_ATTACHMENTS - 1)!!
         assertThat(current.id).isEqualTo(currentFinanceContractsJar.hash)
-        assertThat(legacy?.id).isEqualTo(legacyFinanceContractsJar.hash)
+        assertThat(legacy.mapValues { it.value.id }).isEqualTo(mapOf(CORDA_4_11 to legacyFinanceContractsJar.hash))
         // getContractAttachmentID should always return the non-legacy attachment ID
         assertThat(provider.getContractAttachmentID(Cash::class.java.name)).isEqualTo(currentFinanceContractsJar.hash)
+    }
+
+    @Test(timeout = 300_000)
+    fun `retrieving legacy attachments of every legacy generation depends on the minimum platform version`() {
+        val provider = newCordappProvider(
+                setOf(currentFinanceContractsJar),
+                mapOf(CORDA_4_11 to setOf(legacyFinanceContractsJar), CORDA_4_12 to setOf(legacy19FinanceContractsJar))
+        )
+        fun legacyAttachments(minimumPlatformVersion: Int): Map<ContractGeneration, AttachmentId> {
+            val attachments = provider.getContractAttachments(Cash::class.java.name, minimumPlatformVersion)!!
+            assertThat(attachments.currentAttachment.id).isEqualTo(currentFinanceContractsJar.hash)
+            return attachments.legacyAttachments.mapValues { it.value.id }
+        }
+        // Network with 4.11 nodes
+        assertThat(legacyAttachments(PlatformVersionSwitches.LEGACY_ATTACHMENTS - 1)).isEqualTo(mapOf(
+                CORDA_4_11 to legacyFinanceContractsJar.hash,
+                CORDA_4_12 to legacy19FinanceContractsJar.hash
+        ))
+        // Network with 4.12 to 4.15 nodes
+        assertThat(legacyAttachments(PlatformVersionSwitches.LEGACY_ATTACHMENTS)).isEqualTo(mapOf(CORDA_4_12 to legacy19FinanceContractsJar.hash))
+        assertThat(legacyAttachments(PlatformVersionSwitches.ATTACHMENTS_V3 - 1)).isEqualTo(mapOf(CORDA_4_12 to legacy19FinanceContractsJar.hash))
+        // Network of only 4.16 or later nodes
+        assertThat(legacyAttachments(PlatformVersionSwitches.ATTACHMENTS_V3)).isEmpty()
+        // Both legacy versions are loaded into the attachment store
+        assertThat(attachmentStore.hasAttachment(legacyFinanceContractsJar.hash)).isTrue()
+        assertThat(attachmentStore.hasAttachment(legacy19FinanceContractsJar.hash)).isTrue()
     }
 
     @Test(timeout=300_000)
@@ -243,7 +273,7 @@ class CordappProviderImplTests {
     }
 
     private fun newCordappProvider(cordappJars: Set<Path>,
-                                   legacyContractJars: Set<Path> = emptySet(),
+                                   legacyContractJars: Map<ContractGeneration, Set<Path>> = emptyMap(),
                                    cordappConfigProvider: CordappConfigProvider = stubConfigProvider): CordappProviderImpl {
         val loader = JarScanningCordappLoader(cordappJars, legacyContractJars)
         return CordappProviderImpl(loader, cordappConfigProvider, attachmentStore).apply { start() }

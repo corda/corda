@@ -4,8 +4,18 @@ plugins {
     id "com.gradleup.shadow"
 }
 
+description 'External verifier for Corda 4.11 (Kotlin 1.2) transactions'
+
 application {
     mainClass.set("net.corda.verifier.Main")
+}
+
+sourceSets {
+    main {
+        // The verifier source is shared by all the external verifiers
+        kotlin.srcDir("../verifier/src/main/kotlin")
+        resources.srcDir("../verifier/src/main/resources")
+    }
 }
 
 dependencies {

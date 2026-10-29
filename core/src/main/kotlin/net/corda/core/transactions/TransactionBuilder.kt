@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS
 import net.corda.core.internal.cordapp.ContractAttachmentWithLegacy
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -93,7 +94,7 @@ open class TransactionBuilder(
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private var excludedAttachments: Set<AttachmentId> = emptySet()
-    private var extraLegacyAttachments: MutableSet<AttachmentId>? = null
+    private var extraLegacyAttachments: MutableMap<ContractGeneration, MutableSet<AttachmentId>>? = null
 
     /**
      * Creates a copy of the builder.
@@ -208,27 +209,27 @@ open class TransactionBuilder(
 
         val wireTx = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             // Sort the attachments to ensure transaction builds are stable.
-            val nonLegacyAttachments = allContractAttachments.mapTo(TreeSet()) { it.currentAttachment.id }.apply {
+            val attachmentsByGeneration = LinkedHashMap<ContractGeneration, List<AttachmentId>>()
+            attachmentsByGeneration[ContractGeneration.CURRENT] = allContractAttachments.mapTo(TreeSet()) { it.currentAttachment.id }.apply {
                 addAll(attachments)
                 removeAll(excludedAttachments)
             }.toList()
-            val legacyAttachments = allContractAttachments.mapNotNullTo(TreeSet()) { it.legacyAttachment?.id }.apply {
-                if (extraLegacyAttachments != null) {
-                    addAll(extraLegacyAttachments!!)
-                }
-            }.toList()
+            for (generation in ContractGeneration.LEGACY) {
+                attachmentsByGeneration[generation] = allContractAttachments.mapNotNullTo(TreeSet()) { it.legacyAttachments[generation]?.id }.apply {
+                    extraLegacyAttachments?.get(generation)?.let { addAll(it) }
+                }.toList()
+            }
             WireTransaction(
                     createComponentGroups(
                             inputStates(),
                             resolvedOutputs,
                             commands(),
-                            nonLegacyAttachments,
                             notary,
                             window,
                             referenceStates,
                             serviceHub.networkParametersService.currentHash,
-                            legacyAttachments,
-                            notaryInstructions
+                            notaryInstructions,
+                            attachmentsByGeneration
                     ),
                     privacySalt,
                     serviceHub.digestService
@@ -254,28 +255,35 @@ open class TransactionBuilder(
     private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
         log.debug { "Checking if there are any missing attachment dependencies for transaction ${wireTx.id}..." }
         val verificationResult = wireTx.tryVerify(serviceHub, true)
-        // Check both legacy and non-legacy components are working, and try to add any missing dependencies if either are not.
+        // Check the current and each legacy component are working, and try to add any missing dependencies if any are not.
         (verificationResult.inProcessResult as? Failure)?.let { (inProcessException) ->
-            return addMissingDependency(inProcessException, wireTx, false, serviceHub, tryCount)
+            return addMissingDependency(inProcessException, wireTx, ContractGeneration.CURRENT, serviceHub, tryCount)
         }
-        log.debug("Non-legacy portion of transaction does not have any missing attachments, checking legacy portion...")
-        (verificationResult.externalResult as? Failure)?.let { (externalException) ->
-            return addMissingDependency(externalException, wireTx, true, serviceHub, tryCount)
+        log.debug("Current portion of transaction does not have any missing attachments, checking legacy portions...")
+        for ((generation, externalResult) in verificationResult.externalResults) {
+            (externalResult as? Failure)?.let { (externalException) ->
+                return addMissingDependency(externalException, wireTx, generation, serviceHub, tryCount)
+            }
         }
-        log.debug("Legacy portion of transaction also does not have any missing attachments")
+        log.debug("Legacy portions of transaction also do not have any missing attachments")
         // The transaction verified successfully without needing any extra dependency.
         return false
     }
 
-    private fun addMissingDependency(e: Throwable, wireTx: WireTransaction, isLegacy: Boolean, serviceHub: VerifyingServiceHub, tryCount: Int): Boolean {
+    private fun addMissingDependency(e: Throwable,
+                                     wireTx: WireTransaction,
+                                     generation: ContractGeneration,
+                                     serviceHub: VerifyingServiceHub,
+                                     tryCount: Int): Boolean {
         val missingClass = extractMissingClass(e)
         if (log.isDebugEnabled) {
-            log.debug("${if (isLegacy) "Legacy" else "Non-legacy"} portion of transaction has missing dependency (missingClass=$missingClass) $wireTx", e)
+            val portion = if (generation.isCurrent) "Current" else "Legacy $generation"
+            log.debug("$portion portion of transaction has missing dependency (missingClass=$missingClass) $wireTx", e)
         }
         return when {
             missingClass != null -> {
-                val attachments = if (isLegacy) wireTx.legacyAttachments else wireTx.nonLegacyAttachments
-                (tryCount == 0 && fixupAttachments(attachments, serviceHub, e)) || addMissingAttachment(missingClass, isLegacy, serviceHub, e)
+                val attachments = wireTx.attachmentsFor(generation)
+                (tryCount == 0 && fixupAttachments(attachments, serviceHub, e)) || addMissingAttachment(missingClass, generation, serviceHub, e)
             }
             // Ignore these exceptions as they will break unit tests.
             // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
@@ -348,7 +356,11 @@ open class TransactionBuilder(
         return true
     }
 
-    private fun addMissingAttachment(missingClass: String, isLegacy: Boolean, serviceHub: VerifyingServiceHub, originalException: Throwable): Boolean {
+    private fun addMissingAttachment(missingClass: String,
+                                     generation: ContractGeneration,
+                                     serviceHub: VerifyingServiceHub,
+                                     originalException: Throwable): Boolean {
+        val isLegacy = !generation.isCurrent
         if (!isValidJavaClass(missingClass)) {
             log.warn("Could not autodetect a valid attachment for the transaction being built.")
             throw originalException
@@ -357,7 +369,7 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachment = serviceHub.getTrustedClassAttachments(missingClass, isLegacy).firstOrNull()
+        val attachment = serviceHub.getTrustedClassAttachments(missingClass, generation).firstOrNull()
 
         if (attachment == null) {
             throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
@@ -371,7 +383,10 @@ open class TransactionBuilder(
                     """.trimIndent())
 
         if (isLegacy) {
-            (extraLegacyAttachments ?: LinkedHashSet<AttachmentId>().also { extraLegacyAttachments = it }) += attachment.id
+            val extraAttachments = extraLegacyAttachments ?: LinkedHashMap<ContractGeneration, MutableSet<AttachmentId>>().also {
+                extraLegacyAttachments = it
+            }
+            extraAttachments.getOrPut(generation) { LinkedHashSet() } += attachment.id
         } else {
             addAttachment(attachment.id)
         }
@@ -511,9 +526,9 @@ open class TransactionBuilder(
                 }
             }
             // This *has* to be used by this transaction as it is explicit
-            ContractAttachmentWithLegacy(explicitContractAttachment, null)  // By definition there can be no legacy version
+            ContractAttachmentWithLegacy(explicitContractAttachment)  // By definition there can be no legacy version
         } else {
-            hashAttachment?.let { ContractAttachmentWithLegacy(it, null) } ?: selectAttachmentForContract()
+            hashAttachment?.let { ContractAttachmentWithLegacy(it) } ?: selectAttachmentForContract()
         }
 
         // For Exit transactions (no output states) there is no need to resolve the output constraints.
@@ -704,12 +719,15 @@ open class TransactionBuilder(
             contractClassName: String,
             statesForException: () -> List<TransactionState<*>>
     ): ContractAttachmentWithLegacy {
-        // Stop using legacy attachments when the 4.12 min platform version is reached
-        val attachmentWithLegacy = cordappProvider.getContractAttachments(contractClassName, networkParameters.minimumPlatformVersion)
+        // Each legacy generation's attachments are no longer used once the next generation's min platform version is reached
+        val minimumPlatformVersion = networkParameters.minimumPlatformVersion
+        val attachmentWithLegacy = cordappProvider.getContractAttachments(contractClassName, minimumPlatformVersion)
                 ?: throw MissingContractAttachments(statesForException(), contractClassName)
-        if (networkParameters.minimumPlatformVersion < PlatformVersionSwitches.LEGACY_ATTACHMENTS && attachmentWithLegacy.legacyAttachment == null) {
-            log.warnOnce("Contract $contractClassName does not have a legacy (4.11 or earlier) version installed. This means the " +
-                    "transaction will not be compatible with older nodes.")
+        for (generation in ContractGeneration.LEGACY) {
+            if (generation.isRequiredFor(minimumPlatformVersion) && generation !in attachmentWithLegacy.legacyAttachments) {
+                log.warnOnce("Contract $contractClassName does not have a legacy (${generation.releases}) version installed. This means " +
+                        "the transaction will not be compatible with older nodes.")
+            }
         }
         return attachmentWithLegacy
     }

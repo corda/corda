@@ -37,8 +37,8 @@ import org.junit.Test
 import java.time.Instant
 import kotlin.io.path.inputStream
 import kotlin.test.assertFailsWith
+import net.corda.core.internal.verification.ContractGeneration
 
-@Suppress("INVISIBLE_MEMBER")
 class TransactionBuilderTest {
     @Rule
     @JvmField
@@ -67,8 +67,8 @@ class TransactionBuilderTest {
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
         assertThat(wtx.networkParametersHash).isEqualTo(services.networkParametersService.currentHash)
-        // From 4.12 attachments are added to the new component group by default
-        assertThat(wtx.nonLegacyAttachments).isNotEmpty
+        // Attachments are added to the current generation component group by default
+        assertThat(wtx.attachmentsFor(ContractGeneration.CURRENT)).isNotEmpty
         assertThat(wtx.legacyAttachments).isEmpty()
         assertThat(wtx.notaryInstructions).isEmpty()
     }

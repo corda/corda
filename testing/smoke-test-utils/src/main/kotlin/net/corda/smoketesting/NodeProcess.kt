@@ -4,6 +4,7 @@ import com.google.common.collect.Lists
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.toPath
@@ -84,11 +85,17 @@ class NodeProcess(
                     val (javaHome, versionSuffix) = if (version.isEmpty()) {
                         System.getProperty("java.home") to ""
                     } else {
-                        val javaHome = if (version.split(".")[1].toInt() > 11) {
-                            System.getProperty("java.home")
-                        } else {
+                        val minorVersion = version.split(".")[1].toInt()
+                        val javaHome = when {
                             // 4.11 and below need JDK 8 to run
-                            checkNotNull(System.getenv("JAVA_8_HOME")) { "Please set JAVA_8_HOME env variable to home directory of JDK 8" }
+                            minorVersion <= 11 -> {
+                                checkNotNull(System.getenv("JAVA_8_HOME")) { "Please set JAVA_8_HOME env variable to home directory of JDK 8" }
+                            }
+                            // 4.12 to 4.15 need JDK 17 to run
+                            minorVersion <= 15 -> {
+                                checkNotNull(System.getenv("JAVA_17_HOME")) { "Please set JAVA_17_HOME env variable to home directory of JDK 17" }
+                            }
+                            else -> System.getProperty("java.home")
                         }
                         javaHome to "-$version"
                     }
@@ -138,9 +145,13 @@ class NodeProcess(
             log.info("Node directory: {}", nodeDir)
             val cordappsDir = (nodeDir / CORDAPPS_DIR_NAME).createDirectory()
             params.cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+            val legacyContractJars = params.legacyContractJarsByGeneration.toMutableMap()
             if (params.legacyContractJars.isNotEmpty()) {
-                val legacyContractsDir = (nodeDir / "legacy-contracts").createDirectories()
-                params.legacyContractJars.forEach { it.copyToDirectory(legacyContractsDir) }
+                legacyContractJars.merge(ContractGeneration.CORDA_4_11, params.legacyContractJars) { a, b -> a + b }
+            }
+            for ((generation, jars) in legacyContractJars) {
+                val legacyContractsDir = (nodeDir / generation.legacyContractsDirName!!).createDirectories()
+                jars.forEach { it.copyToDirectory(legacyContractsDir) }
             }
             (nodeDir / "node.conf").writeText(params.createNodeConfig(isNotary))
             networkParametersCopier.install(nodeDir)

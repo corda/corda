@@ -80,7 +80,6 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
-import net.corda.node.internal.cordapp.JarScanningCordappLoader.Companion.LEGACY_CONTRACTS_DIR_NAME
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
@@ -857,7 +856,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
-                (configuration.baseDirectory / LEGACY_CONTRACTS_DIR_NAME).takeIf { it.exists() },
+                JarScanningCordappLoader.legacyContractsDirs(configuration.baseDirectory),
                 versionInfo,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys,

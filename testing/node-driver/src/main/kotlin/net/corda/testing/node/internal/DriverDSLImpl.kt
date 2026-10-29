@@ -56,7 +56,7 @@ import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
-import net.corda.node.internal.cordapp.JarScanningCordappLoader.Companion.LEGACY_CONTRACTS_DIR_NAME
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FlowOverride
@@ -722,9 +722,14 @@ class DriverDSLImpl(
                 extraCustomCordapps + (cordappsForAllNodes ?: emptySet())
         )
 
-        if (parameters.legacyContracts.isNotEmpty()) {
-            val legacyContractsDir = (baseDirectory / LEGACY_CONTRACTS_DIR_NAME).createDirectories()
-            parameters.legacyContracts.forEach { (it as TestCordappInternal).jarFile.copyToDirectory(legacyContractsDir) }
+        // Each legacy contract CorDapp is placed in the directory of the (oldest) legacy contract generation it's compatible with
+        for (legacyContract in parameters.legacyContracts) {
+            val jarFile = (legacyContract as TestCordappInternal).jarFile
+            val generation = checkNotNull(JarScanningCordappLoader.legacyGenerationOf(jarFile)) {
+                "$jarFile is not compatible with any legacy contract generation"
+            }
+            val legacyContractsDir = (baseDirectory / generation.legacyContractsDirName!!).createDirectories()
+            jarFile.copyToDirectory(legacyContractsDir)
         }
 
         val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {

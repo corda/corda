@@ -148,8 +148,8 @@ interface NodeVerificationSupport : VerificationSupport {
 
     /**
      * Returns at most one `Attachment` containing [className], prioritising installed CorDapps first.
-     * Legacy contracts are only searched in legacy CorDapps. Non-legacy may optionally fall back to searching the attachment
-     * store (database) if no matching installed CorDapp is found and fallback is enabled.
+     * Legacy contracts are only searched in the legacy CorDapps of the given [ContractGeneration]. Non-legacy (current generation) may
+     * optionally fall back to searching the attachment store (database) if no matching installed CorDapp is found and fallback is enabled.
      *
      * The function returns either:
      * - A single-element list containing the first matching attachment (after deterministic sorting:
@@ -163,12 +163,13 @@ interface NodeVerificationSupport : VerificationSupport {
      * - `net.corda.node.transactionbuilder.installedFirstSearchDisabled`:
      *   If `true`, disables the new “installed-first” lookup logic and reverts to the old database-only behaviour.
      * @param className Fully qualified class name to search for
-     * @param isLegacy Whether to search for legacy contract attachments
+     * @param generation The [ContractGeneration] of the attachments to search
      * @return A list containing a single matching attachment, or an empty list if none are found.
      */
     @Suppress("ComplexMethod")
-    override fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment> {
+    override fun getTrustedClassAttachments(className: String, generation: ContractGeneration): List<Attachment> {
         val fileName = "$className.class"
+        val isLegacy = !generation.isCurrent
 
         // 1. Old logic only
         if (INSTALLED_FIRST_SEARCH_DISABLED) {
@@ -181,7 +182,7 @@ interface NodeVerificationSupport : VerificationSupport {
             )
             val dbAttachments = dbAttachmentIds.mapNotNull { id -> attachments.openAttachment(id) }.filter { it.hasFile(fileName) }
             val attachment = if (isLegacy) {
-                val legacyContractCordapps = cordappProvider.legacyContractCordapps.mapToSet { it.jarHash }
+                val legacyContractCordapps = generationLegacyContractCordapps(generation).mapToSet { it.jarHash }
                 dbAttachments.firstOrNull { it.id in legacyContractCordapps }
             } else {
                 dbAttachments.firstOrNull()
@@ -191,7 +192,7 @@ interface NodeVerificationSupport : VerificationSupport {
 
         // 2. Get installed CorDapps first
         val installedCordapps = if (isLegacy) {
-            cordappProvider.legacyContractCordapps
+            generationLegacyContractCordapps(generation)
         } else {
             cordappProvider.cordapps
         }
@@ -214,7 +215,7 @@ interface NodeVerificationSupport : VerificationSupport {
                     )
             )
             val matchingDbAttachment = dbAttachments.mapNotNull { id -> attachments.openAttachment(id) }
-                    .firstOrNull { it.hasFile(fileName) && it.isNonLegacyCompatible() }?.let { listOf(it) } ?: emptyList()
+                    .firstOrNull { it.hasFile(fileName) && it.isCompatibleWith(generation) }?.let { listOf(it) } ?: emptyList()
             if (matchingDbAttachment.isNotEmpty()) {
                 logger.warnOnce("Falling back to database-stored attachments because no installed matching non-legacy attachments " +
                         "were found. This fallback may be disabled in a future version of Corda. If you see this message, " +
@@ -274,8 +275,9 @@ interface NodeVerificationSupport : VerificationSupport {
         }
     }
 
-    private fun Attachment.isLegacyCompatible() = determineLanguageVersion()?.let { it.isLegacyCompatible } ?: false
-    private fun Attachment.isNonLegacyCompatible() = determineLanguageVersion()?.let { it.isNonLegacyCompatible } ?: false
+    private fun generationLegacyContractCordapps(generation: ContractGeneration) = cordappProvider.legacyContractCordapps[generation] ?: emptyList()
+
+    private fun Attachment.isCompatibleWith(generation: ContractGeneration) = determineLanguageVersion()?.isCompatibleWith(generation) ?: false
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }
 

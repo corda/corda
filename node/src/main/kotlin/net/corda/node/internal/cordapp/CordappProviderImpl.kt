@@ -6,8 +6,8 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.ContractAttachmentWithLegacy
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.groupByMultipleKeys
@@ -38,11 +38,11 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      */
     override val cordapps: List<CordappImpl> get() = cordappLoader.cordapps
 
-    override val legacyContractCordapps: List<CordappImpl> get() = cordappLoader.legacyContractCordapps
+    override val legacyContractCordapps: Map<ContractGeneration, List<CordappImpl>> get() = cordappLoader.legacyContractCordapps
 
     fun start() {
         loadContractsIntoAttachmentStore(cordappLoader.cordapps)
-        loadContractsIntoAttachmentStore(cordappLoader.legacyContractCordapps)
+        cordappLoader.legacyContractCordapps.values.forEach(::loadContractsIntoAttachmentStore)
         flowToCordapp = makeFlowToCordapp()
         // Load the fix-ups after uploading any new contracts into attachment storage.
         attachmentFixups.load(cordappLoader.appClassLoader)
@@ -66,9 +66,14 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
 
     override fun getContractAttachments(contractClassName: ContractClassName, minimumPlatformVersion: Int): ContractAttachmentWithLegacy? {
         val currentAttachmentId = getContractAttachmentID(contractClassName) ?: return null
-        val legacyAttachmentId = if (minimumPlatformVersion < PlatformVersionSwitches.LEGACY_ATTACHMENTS)
-            cordappLoader.legacyContractCordapps.findCordapp(contractClassName) else null
-        return ContractAttachmentWithLegacy(getContractAttachment(currentAttachmentId), legacyAttachmentId?.let(::getContractAttachment))
+        // Only include the legacy versions which nodes on the network may still need
+        val legacyAttachments = ContractGeneration.LEGACY
+                .filter { it.isRequiredFor(minimumPlatformVersion) }
+                .mapNotNull { generation ->
+                    cordappLoader.legacyContractCordapps[generation]?.findCordapp(contractClassName)?.let { generation to getContractAttachment(it) }
+                }
+                .toMap()
+        return ContractAttachmentWithLegacy(getContractAttachment(currentAttachmentId), legacyAttachments)
     }
 
     private fun List<CordappImpl>.findCordapp(contractClassName: ContractClassName): AttachmentId? {

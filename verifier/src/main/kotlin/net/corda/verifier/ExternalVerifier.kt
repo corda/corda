@@ -10,6 +10,7 @@ import net.corda.core.internal.mapToSet
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.toSynchronised
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationContext
@@ -51,7 +52,7 @@ import java.security.PublicKey
 import java.util.Optional
 
 @Suppress("MagicNumber")
-class ExternalVerifier(private val channel: SocketChannel) {
+class ExternalVerifier(private val channel: SocketChannel, private val generation: ContractGeneration) {
     companion object {
         private val log = contextLogger()
     }
@@ -104,7 +105,7 @@ class ExternalVerifier(private val channel: SocketChannel) {
     @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(attachmentsClassLoaderCache, this,
-                request.ctxInputsAndReferences, rotatedKeys)
+                request.ctxInputsAndReferences, rotatedKeys, generation)
         val result: Try<Unit> = try {
             val ctx = request.ctx
             when (ctx) {

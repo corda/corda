@@ -3,7 +3,7 @@
 
     <Properties>
         <Property name="log_path">${sys:logPath:-logs}</Property>
-        <Property name="log_name">verifier-${hostName}</Property>
+        <Property name="log_name">verifier${sys:verifierLogNameSuffix:-}-${hostName}</Property>
         <Property name="archive">${log_path}/archive</Property>
         <Property name="default_log_level">${sys:defaultLogLevel:-info}</Property>
     </Properties>

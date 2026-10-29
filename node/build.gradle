@@ -97,6 +97,10 @@ configurations {
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     corda4_11
+    // A Corda 4.12 to 4.15 (Kotlin 1.9) release, for testing legacy-contracts1.9
+    corda4_14 {
+        transitive = false
+    }
 }
 
 jib.container {
@@ -111,9 +115,12 @@ jib.container {
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
     from file("$rootDir/config/dev/jolokia-access.xml")
-    from(tasks.getByPath(":verifier:shadowJar")) {
-        into("net/corda/node/verification")
-        rename { "external-verifier.jar" }
+    // The external verifier for each legacy contract generation, named after its Kotlin version (see ExternalVerifierHandleImpl)
+    ['1.2', '1.9'].each { kotlinVersion ->
+        from(tasks.getByPath(":verifier-$kotlinVersion:shadowJar")) {
+            into("net/corda/node/verification")
+            rename { "external-verifier-${kotlinVersion}.jar" }
+        }
     }
 }
 
@@ -129,6 +136,9 @@ processTestResources {
         rename 'testing-cashobservers-cordapp-.*.jar', 'testing-cashobservers-cordapp.jar'
     }
     from(configurations.corda4_11)
+    from(configurations.corda4_14) {
+        rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts-4.14.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -293,6 +303,7 @@ dependencies {
     slowIntegrationTestImplementation "org.jboss.byteman:byteman:4.0.22"
 
     corda4_11 "net.corda:corda-finance-contracts:4.11"
+    corda4_14 "net.corda:corda-finance-contracts:4.14.4"
 }
 
 tasks.withType(JavaCompile).configureEach {

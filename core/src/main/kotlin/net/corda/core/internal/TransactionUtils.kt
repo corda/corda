@@ -3,8 +3,6 @@ package net.corda.core.internal
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ComponentGroupEnum
-import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_GROUP
-import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
@@ -33,6 +31,7 @@ import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.crypto.keyrotation.crossprovider.KeyRotationProofChain
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.MissingAttachmentsRuntimeException
@@ -217,6 +216,10 @@ fun deserialiseCommands(
     }
 }
 
+/**
+ * @param attachments The attachments of the current [ContractGeneration].
+ * @param legacyAttachments The attachments for 4.11 (or earlier) nodes.
+ */
 @Suppress("LongParameterList")
 fun createComponentGroups(inputs: List<StateRef>,
                           outputs: List<TransactionState<ContractState>>,
@@ -229,6 +232,33 @@ fun createComponentGroups(inputs: List<StateRef>,
                           // The old attachments group is now only used to create transaction compatible with 4.11 (or earlier) nodes
                           legacyAttachments: List<SecureHash>,
                           notaryInstructions: List<NotaryInstruction>): List<ComponentGroup> {
+    return createComponentGroups(
+            inputs,
+            outputs,
+            commands,
+            notary,
+            timeWindow,
+            references,
+            networkParametersHash,
+            notaryInstructions,
+            mapOf(ContractGeneration.CURRENT to attachments, ContractGeneration.CORDA_4_11 to legacyAttachments)
+    )
+}
+
+/**
+ * @param attachmentsByGeneration The attachments of each [ContractGeneration]. Each generation's attachments are stored in its own
+ * component group, so that the transaction can be verified by nodes of that generation.
+ */
+@Suppress("LongParameterList")
+fun createComponentGroups(inputs: List<StateRef>,
+                          outputs: List<TransactionState<ContractState>>,
+                          commands: List<Command<*>>,
+                          notary: Party?,
+                          timeWindow: TimeWindow?,
+                          references: List<StateRef>,
+                          networkParametersHash: SecureHash?,
+                          notaryInstructions: List<NotaryInstruction>,
+                          attachmentsByGeneration: Map<ContractGeneration, List<SecureHash>>): List<ComponentGroup> {
     val serializationFactory = SerializationFactory.defaultFactory
     val serializationContext = serializationFactory.defaultContext
     val serialize = { value: Any, _: Int -> value.serialize(serializationFactory, serializationContext) }
@@ -238,10 +268,11 @@ fun createComponentGroups(inputs: List<StateRef>,
     componentGroupMap.addListGroup(OUTPUTS_GROUP, outputs, serialize)
     // Adding commandData only to the commands group. Signers are added in their own group.
     componentGroupMap.addListGroup(COMMANDS_GROUP, commands.map { it.value }, serialize)
-    // Attachments which can only be processed by 4.12 and later.
-    componentGroupMap.addListGroup(ATTACHMENTS_V2_GROUP, attachments, serialize)
-    // The original attachments group now only contains attachments which can be processed by 4.11 and earlier (and the external verifier).
-    componentGroupMap.addListGroup(ATTACHMENTS_GROUP, legacyAttachments, serialize)
+    // Each generation's attachments are in their own group, newest first. The original attachments group now only contains attachments
+    // which can be processed by 4.11 and earlier (and the 4.11 external verifier).
+    for (generation in ContractGeneration.values().reversed()) {
+        componentGroupMap.addListGroup(generation.attachmentsGroup, attachmentsByGeneration[generation] ?: emptyList(), serialize)
+    }
     if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
     if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
     // Adding signers to their own group. This is required for command visibility purposes: a party receiving

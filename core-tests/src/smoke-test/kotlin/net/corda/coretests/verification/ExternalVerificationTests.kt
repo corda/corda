@@ -8,8 +8,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS
 import net.corda.core.internal.toPath
+import net.corda.core.internal.verification.ContractGeneration
+import net.corda.core.internal.verification.ContractGeneration.CORDA_4_12
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
@@ -157,39 +160,63 @@ class ExternalVerificationSignedCordappsTest {
         val issuanceStateRef = issuerRpc.startFlowDynamic(LegacyIssuanceWithSystemEnvVarFlow::class.java, 2).returnValue.getOrThrow() as StateRef
         return issuanceStateRef
     }
+}
 
-    private fun cashIssuanceAndPayment(issuer: NodeProcess, recipient: NodeProcess): Pair<SignedTransaction, SignedTransaction> {
-        val issuerRpc = issuer.connect(superUser).proxy
-        val recipientRpc = recipient.connect(superUser).proxy
-        val recipientNodeInfo = recipientRpc.nodeInfo()
-        val notaryIdentity = issuerRpc.notaryIdentities()[0]
+/**
+ * Tests a 4.16 node interoperating with a 4.12 to 4.15 (Kotlin 1.9) node, which needs the Kotlin 1.9 external verifier and the 4.14
+ * finance contracts in the `legacy-contracts1.9` directory.
+ */
+class ExternalVerificationKotlin19Test {
+    private companion object {
+        // There are no 4.11 nodes on this network
+        private val factory = NodeProcess.Factory(testNetworkParameters(minimumPlatformVersion = PlatformVersionSwitches.LEGACY_ATTACHMENTS))
 
-        val beforeAmount = recipientRpc.getCashBalance(USD)
+        private lateinit var notary: NodeProcess
+        private lateinit var oldNode: NodeProcess
+        private lateinit var currentNode: NodeProcess
 
-        val (issuanceTx) = issuerRpc.startFlow(
-                ::CashIssueFlow,
-                10.DOLLARS,
-                OpaqueBytes.of(0x01),
-                notaryIdentity
-        ).returnValue.getOrThrow()
+        @BeforeClass
+        @JvmStatic
+        fun startNodes() {
+            val (legacyContractsCordapp, legacyWorkflowsCordapp) = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it-4.14.jar") }
+            // The current version finance CorDapp jars
+            val currentCordapps = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it.jar") }
+            val legacyContracts = mapOf(CORDA_4_12 to listOf(legacyContractsCordapp))
 
-        issuerRpc.waitForVisibility(recipientNodeInfo)
-        recipientRpc.waitForVisibility(issuerRpc.nodeInfo())
+            notary = factory.createNotaries(nodeParams(DUMMY_NOTARY_NAME, currentCordapps, legacyContractJarsByGeneration = legacyContracts))[0]
+            oldNode = factory.createNode(nodeParams(
+                    CordaX500Name("Old", "Delhi", "IN"),
+                    listOf(legacyContractsCordapp, legacyWorkflowsCordapp),
+                    clientRpcConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
+                    version = "4.14"
+            ))
+            currentNode = factory.createNode(nodeParams(
+                    CordaX500Name("New", "York", "US"),
+                    currentCordapps,
+                    legacyContractJarsByGeneration = legacyContracts
+            ))
+        }
 
-        val (_, update) = recipientRpc.vaultTrack(Cash.State::class.java)
-        val cashArrived = update.waitForFirst { true }
+        @AfterClass
+        @JvmStatic
+        fun close() {
+            factory.close()
+        }
+    }
 
-        val (paymentTx) = issuerRpc.startFlow(
-                ::CashPaymentFlow,
-                10.DOLLARS,
-                recipientNodeInfo.legalIdentities[0],
-                false,
-        ).returnValue.getOrThrow()
+    @Test(timeout=300_000)
+    fun `transaction containing 4_12 to 4_15 contract attachment only sent to current node`() {
+        val (issuanceTx, paymentTx) = cashIssuanceAndPayment(issuer = oldNode, recipient = currentNode)
+        notary.assertTransactionsWereVerified(EXTERNAL, paymentTx.id)
+        currentNode.assertTransactionsWereVerified(EXTERNAL, issuanceTx.id, paymentTx.id)
+        assertThat(currentNode.externalVerifierLogs()).contains("External verifier started for CORDA_4_12")
+    }
 
-        cashArrived.getOrThrow()
-        assertThat(recipientRpc.getCashBalance(USD) - beforeAmount).isEqualTo(10.DOLLARS)
-
-        return Pair(issuanceTx, paymentTx)
+    @Test(timeout=300_000)
+    fun `transaction containing 4_12 to 4_15 and current contract attachments sent to old node`() {
+        val (issuanceTx, paymentTx) = cashIssuanceAndPayment(issuer = currentNode, recipient = oldNode)
+        notary.assertTransactionsWereVerified(BOTH, paymentTx.id)
+        currentNode.assertTransactionsWereVerified(BOTH, issuanceTx.id, paymentTx.id)
     }
 }
 
@@ -274,7 +301,8 @@ private fun nodeParams(
         cordappJars: List<Path> = emptyList(),
         legacyContractJars: List<Path> = emptyList(),
         clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-        version: String? = null
+        version: String? = null,
+        legacyContractJarsByGeneration: Map<ContractGeneration, List<Path>> = emptyMap()
 ): NodeParams {
     return NodeParams(
             legalName = legalName,
@@ -285,9 +313,45 @@ private fun nodeParams(
             cordappJars = cordappJars,
             legacyContractJars = legacyContractJars,
             clientRpcConfig = clientRpcConfig,
-            version = version
+            version = version,
+            legacyContractJarsByGeneration = legacyContractJarsByGeneration
     )
 }
+
+private fun cashIssuanceAndPayment(issuer: NodeProcess, recipient: NodeProcess): Pair<SignedTransaction, SignedTransaction> {
+    val issuerRpc = issuer.connect(superUser).proxy
+    val recipientRpc = recipient.connect(superUser).proxy
+    val recipientNodeInfo = recipientRpc.nodeInfo()
+    val notaryIdentity = issuerRpc.notaryIdentities()[0]
+
+    val beforeAmount = recipientRpc.getCashBalance(USD)
+
+    val (issuanceTx) = issuerRpc.startFlow(
+            ::CashIssueFlow,
+            10.DOLLARS,
+            OpaqueBytes.of(0x01),
+            notaryIdentity
+    ).returnValue.getOrThrow()
+
+    issuerRpc.waitForVisibility(recipientNodeInfo)
+    recipientRpc.waitForVisibility(issuerRpc.nodeInfo())
+
+    val (_, update) = recipientRpc.vaultTrack(Cash.State::class.java)
+    val cashArrived = update.waitForFirst { true }
+
+    val (paymentTx) = issuerRpc.startFlow(
+            ::CashPaymentFlow,
+            10.DOLLARS,
+            recipientNodeInfo.legalIdentities[0],
+            false,
+    ).returnValue.getOrThrow()
+
+    cashArrived.getOrThrow()
+    assertThat(recipientRpc.getCashBalance(USD) - beforeAmount).isEqualTo(10.DOLLARS)
+
+    return Pair(issuanceTx, paymentTx)
+}
+
 
 private fun CordaRPCOps.waitForVisibility(other: NodeInfo) {
     val (snapshot, updates) = networkMapFeed()
@@ -320,7 +384,11 @@ private fun NodeProcess.assertTransactionsWereVerified(verificationType: Verific
     }
 }
 
-private fun NodeProcess.externalVerifierLogs(): String? = logContents("verifier")
+/** The logs of all the external verifiers, or null if none were started. */
+private fun NodeProcess.externalVerifierLogs(): String? {
+    val logFiles = (nodeDir / "logs").listDirectoryEntries("verifier*-${InetAddress.getLocalHost().hostName}.log")
+    return if (logFiles.isEmpty()) null else logFiles.joinToString("\n") { it.readText() }
+}
 
 private fun NodeProcess.logFile(name: String): Path? {
     return (nodeDir / "logs").listDirectoryEntries("$name-${InetAddress.getLocalHost().hostName}.log").singleOrNull()
@@ -334,7 +402,7 @@ private enum class VerificationType {
     val logStatement: String
         get() = when (this) {
             IN_PROCESS -> "in-process"
-            EXTERNAL -> "by the external verifer"
-            BOTH -> "both in-process and by the external verifer"
+            EXTERNAL -> "by the external verifier"
+            BOTH -> "both in-process and by the external verifier"
         }
 }

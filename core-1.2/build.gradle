@@ -15,7 +15,7 @@ dependencies {
     implementation(project(path: ":core", configuration: "resolvableImplementation")) {
         exclude(group: "org.jetbrains.kotlin")
     }
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_1_2_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$legacy_kotlin_version"
     implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 

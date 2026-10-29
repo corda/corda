@@ -17,7 +17,7 @@ dependencies {
         exclude(module: "core")
         exclude(group: "org.jetbrains.kotlin")
     }
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_1_2_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$legacy_kotlin_version"
 }
 
 jar {

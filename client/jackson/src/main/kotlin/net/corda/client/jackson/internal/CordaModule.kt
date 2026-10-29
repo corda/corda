@@ -75,6 +75,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -258,8 +259,17 @@ private data class StxJson(
 @JsonDeserialize(using = WireTransactionDeserializer::class)
 private interface WireTransactionMixin
 
+/**
+ * The attachments of each legacy [ContractGeneration] are distinguished with a suffix, e.g. "-legacy" for 4.11.
+ */
+private val ContractGeneration.attachmentSuffix: String
+    get() = when {
+        isCurrent -> ""
+        this == ContractGeneration.CORDA_4_11 -> "-legacy"
+        else -> "-legacy-$kotlinVersionString"
+    }
+
 private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
-    @Suppress("INVISIBLE_MEMBER")
     override fun serialize(value: WireTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
         gen.writeObject(WireTransactionJson(
                 value.digestService,
@@ -269,7 +279,9 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.outputs,
                 value.commands,
                 value.timeWindow,
-                value.legacyAttachments.map { "$it-legacy" } + value.nonLegacyAttachments.map { it.toString() },
+                ContractGeneration.values().flatMap { generation ->
+                    value.attachmentsFor(generation).map { "$it${generation.attachmentSuffix}" }
+                },
                 value.references,
                 value.privacySalt,
                 value.networkParametersHash,
@@ -281,19 +293,22 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
 private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): WireTransaction {
         val wrapper = parser.readValueAs<WireTransactionJson>()
-        // We're not concerned with backwards compatibility for any JSON string that was created with 4.11 and being materialised in 4.12.
-        val (legacyAttachments, newerAttachments) = wrapper.attachments.partition { it.endsWith("-legacy") }
+        // We're not concerned with backwards compatibility for any JSON string that was created with an older version of Corda.
+        val generationsBySuffix = ContractGeneration.values().filter { !it.isCurrent }.associateBy { it.attachmentSuffix }
+        val attachmentsByGeneration = wrapper.attachments.groupBy(
+                { attachment -> generationsBySuffix.entries.firstOrNull { attachment.endsWith(it.key) }?.value ?: ContractGeneration.CURRENT },
+                { attachment -> SecureHash.parse(attachment.substringBefore("-legacy")) }
+        )
         val componentGroups = createComponentGroups(
                 wrapper.inputs,
                 wrapper.outputs,
                 wrapper.commands,
-                newerAttachments.map(SecureHash::parse),
                 wrapper.notary,
                 wrapper.timeWindow,
                 wrapper.references,
                 wrapper.networkParametersHash,
-                legacyAttachments.map { SecureHash.parse(it.removeSuffix("-legacy")) },
-                wrapper.notaryInstructions
+                wrapper.notaryInstructions,
+                attachmentsByGeneration
         )
         return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }

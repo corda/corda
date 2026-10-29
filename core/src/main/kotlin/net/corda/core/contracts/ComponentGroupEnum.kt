@@ -14,7 +14,8 @@ enum class ComponentGroupEnum {
     SIGNERS_GROUP, // ordinal = 6.
     REFERENCES_GROUP, // ordinal = 7.
     PARAMETERS_GROUP, // ordinal = 8.
-    ATTACHMENTS_V2_GROUP, // ordinal = 9. From 4.12+ this group is used for attachments.
+    ATTACHMENTS_V2_GROUP, // ordinal = 9. From 4.12 to 4.15 this group is used for attachments (Kotlin 1.9, Java 17).
     NOTARY_INSTRUCTIONS_GROUP, // ordinal = 10.
     KEY_ROTATION_PROOF_GROUP, // ordinal = 11.
+    ATTACHMENTS_V3_GROUP, // ordinal = 12. From 4.16+ this group is used for attachments (Kotlin 2.4, Java 25).
 }

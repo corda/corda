@@ -21,6 +21,11 @@ import java.security.PublicKey
 interface VerificationSupport {
     val isInProcess: Boolean get() = true
 
+    /**
+     * The [ContractGeneration] whose attachments are verified. This is the current generation, except in an external verifier.
+     */
+    val contractGeneration: ContractGeneration get() = ContractGeneration.CURRENT
+
     val appClassLoader: ClassLoader
 
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache? get() = null
@@ -37,7 +42,10 @@ interface VerificationSupport {
 
     fun isAttachmentTrusted(attachment: Attachment): Boolean
 
-    fun getTrustedClassAttachments(className: String, isLegacy: Boolean): List<Attachment>
+    /**
+     * Returns the trusted attachments of the given [ContractGeneration] which contain the given class.
+     */
+    fun getTrustedClassAttachments(className: String, generation: ContractGeneration): List<Attachment>
 
     fun getNetworkParameters(id: SecureHash?): NetworkParameters?
 

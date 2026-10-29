@@ -4,6 +4,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.LanguageVersion
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.NodeVerificationSupport
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -28,7 +29,7 @@ class DetermineLanguageVersionTest {
 
     @Test(timeout = 300_000)
     fun `determineLanguageVersion returns correct metadata for Kotlin 1_9 jar`() {
-        val jarBytes = javaClass.getResourceAsStream("/corda-finance-contracts.jar")!!.readBytes()
+        val jarBytes = javaClass.getResourceAsStream("/corda-finance-contracts-4.14.jar")!!.readBytes()
         val attachment = InMemoryAttachment(jarBytes)
         val lvBytecode = invokeDetermineLanguageVersion(attachment)
         assertThat(lvBytecode.classFileMajorVersion).isEqualTo(61)  // Java 17 (61) bytecode
@@ -37,6 +38,21 @@ class DetermineLanguageVersionTest {
         // Kotlin 1.9 produces metadata version 1.9.0 (major=1, minor=9, patch=0).
         assertThat(kotlinMeta!!.major).isEqualTo(1)
         assertThat(kotlinMeta.minor).isEqualTo(9)
+        assertThat(lvBytecode.isCompatibleWith(ContractGeneration.CORDA_4_12)).isTrue()
+    }
+
+    @Test(timeout = 300_000)
+    fun `determineLanguageVersion returns correct metadata for Kotlin 2_4 jar`() {
+        val jarBytes = javaClass.getResourceAsStream("/corda-finance-contracts.jar")!!.readBytes()
+        val attachment = InMemoryAttachment(jarBytes)
+        val lvBytecode = invokeDetermineLanguageVersion(attachment)
+        assertThat(lvBytecode.classFileMajorVersion).isEqualTo(69)  // Java 25 (69) bytecode
+        val kotlinMeta = lvBytecode.kotlinMetadataVersion
+        assertThat(kotlinMeta).isNotNull
+        // Kotlin 2.4 produces metadata version 2.4.0 (major=2, minor=4).
+        assertThat(kotlinMeta!!.major).isEqualTo(2)
+        assertThat(kotlinMeta.minor).isEqualTo(4)
+        assertThat(lvBytecode.isCompatibleWith(ContractGeneration.CURRENT)).isTrue()
     }
 
     @Test(timeout = 300_000)

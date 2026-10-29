@@ -42,8 +42,8 @@ import java.time.Instant
 import kotlin.io.path.inputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import net.corda.core.internal.verification.ContractGeneration
 
-@Suppress("INVISIBLE_MEMBER")
 class TransactionBuilderWithKeyRotationProofTest {
     @Rule
     @JvmField
@@ -79,7 +79,7 @@ class TransactionBuilderWithKeyRotationProofTest {
         assertThat(wtx.commands).containsOnly(dummyCommand)
         assertThat(wtx.networkParametersHash).isEqualTo(services.networkParametersService.currentHash)
         // From 4.12 attachments are added to the new component group by default
-        assertThat(wtx.nonLegacyAttachments).isNotEmpty
+        assertThat(wtx.attachmentsFor(ContractGeneration.CURRENT)).isNotEmpty
         assertThat(wtx.legacyAttachments).isEmpty()
         assertThat(wtx.notaryInstructions).isEmpty()
     }

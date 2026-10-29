@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.cordapp
 
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.flatMapToSet
 import net.corda.core.schemas.MappedSchema
 
@@ -15,9 +16,10 @@ interface CordappLoader : AutoCloseable {
     val cordapps: List<CordappImpl>
 
     /**
-     * Returns all legacy (4.11 or older) contract CorDapps. These are used to form backward compatible transactions.
+     * Returns the contract CorDapps of each legacy [ContractGeneration] (e.g. 4.11 or older). These are used to form backward compatible
+     * transactions.
      */
-    val legacyContractCordapps: List<CordappImpl>
+    val legacyContractCordapps: Map<ContractGeneration, List<CordappImpl>>
 
     /**
      * Returns a [ClassLoader] containing all types from all [Cordapp]s.

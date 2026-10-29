@@ -6,7 +6,6 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_GROUP
-import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.KEY_ROTATION_PROOF_GROUP
@@ -33,6 +32,7 @@ import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.getGroup
 import net.corda.core.internal.getRequiredGroup
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
@@ -62,27 +62,43 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     val legacyAttachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
 
     /**
-     * Returns the attachments compatible with 4.12 and later. This will be empty for transactions created on 4.11 or earlier.
-     *
-     * [legacyAttachments] and [nonLegacyAttachments] are independent of each other and may contain the same attachments. This is to provide backwards
-     * compatibility and enable both 4.11 and 4.12 nodes to verify the same transaction.
+     * The attachments of each [ContractGeneration], indexed by its ordinal. The attachments of each generation are independent of each
+     * other and may contain the same attachments. This is to provide backwards compatibility and enable nodes of each generation to verify
+     * the same transaction.
+     */
+    private val attachmentsByGeneration: List<List<SecureHash>> = ContractGeneration.values().map { generation ->
+        if (generation.attachmentsGroup == ATTACHMENTS_GROUP) {
+            legacyAttachments
+        } else {
+            deserialiseComponentGroup(componentGroups, SecureHash::class, generation.attachmentsGroup)
+        }
+    }
+
+    /**
+     * Returns the attachments compatible with the given [ContractGeneration]. This may be empty, which means this transaction cannot be
+     * verified by nodes of that generation.
      */
     @CordaInternal
-    @JvmSynthetic
-    internal val nonLegacyAttachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_V2_GROUP)
+    fun attachmentsFor(generation: ContractGeneration): List<SecureHash> = attachmentsByGeneration[generation.ordinal]
 
-    /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
+    /**
+     * The [ContractGeneration]s this transaction has attachments for, oldest first.
+     */
+    @CordaInternal
+    val attachmentGenerations: List<ContractGeneration>
+        get() = ContractGeneration.values().filter { attachmentsFor(it).isNotEmpty() }
+
+    /**
+     * Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. These are the attachments of the
+     * newest [ContractGeneration] the transaction has. From an API PoV we're not concerned with any older (legacy) attachments.
+     */
     val attachments: List<SecureHash>
-        get() = when {
-            legacyAttachments.isEmpty() -> nonLegacyAttachments  // 4.12+ only transaction
-            nonLegacyAttachments.isEmpty() -> legacyAttachments  // 4.11 or earlier transaction
-            else -> nonLegacyAttachments  // This is a backwards compatible transaction, but from an API PoV we're not concerned with the legacy attachments
-        }
+        get() = attachmentsByGeneration.lastOrNull { it.isNotEmpty() } ?: emptyList()
 
     @CordaInternal
     internal val allAttachments: Set<SecureHash>
         @JvmSynthetic
-        get() = legacyAttachments.toMutableSet().apply { addAll(nonLegacyAttachments) }
+        get() = attachmentsByGeneration.flatMapTo(LinkedHashSet()) { it }
 
     /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
     override val inputs: List<StateRef> = deserialiseComponentGroup(componentGroups, StateRef::class, INPUTS_GROUP)
@@ -131,6 +147,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - network parameters hash if present
      * - list of each attachment that is present
      * - list of each notary instruction that is present
+     * - list of each attachment of any newer [ContractGeneration] that is present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
@@ -138,8 +155,12 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             networkParametersHash?.let { result += listOf(it) }
-            result += nonLegacyAttachments
+            result += attachmentsFor(ContractGeneration.CORDA_4_12)
             result += notaryInstructions
+            // The attachments of any newer generations
+            for (generation in ContractGeneration.values()) {
+                if (generation.attachmentsGroup.ordinal > NOTARY_INSTRUCTIONS_GROUP.ordinal) result += attachmentsFor(generation)
+            }
             return result
         }
 }
@@ -233,8 +254,10 @@ class FilteredTransaction internal constructor(
                 wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, INPUTS_GROUP.ordinal, internalIndex) }
                 wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, OUTPUTS_GROUP.ordinal, internalIndex) }
                 wtx.commands.forEachIndexed { internalIndex, it -> filter(it, COMMANDS_GROUP.ordinal, internalIndex) }
-                wtx.legacyAttachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
-                wtx.nonLegacyAttachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_V2_GROUP.ordinal, internalIndex) }
+                for (generation in ContractGeneration.values()) {
+                    val groupIndex = generation.attachmentsGroup.ordinal
+                    wtx.attachmentsFor(generation).forEachIndexed { internalIndex, it -> filter(it, groupIndex, internalIndex) }
+                }
                 if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
                 // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],

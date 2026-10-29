@@ -41,6 +41,10 @@ configurations {
     testArtifacts.extendsFrom testRuntimeOnlyClasspath
 
     corda4_11
+    // A Corda 4.12 to 4.15 (Kotlin 1.9) release, for testing backwards compatibility with those nodes
+    corda4_14 {
+        transitive = false
+    }
 }
 
 processSmokeTestResources {
@@ -58,6 +62,9 @@ processSmokeTestResources {
     from(configurations.corda4_11) {
         rename 'jackson-core-.*.jar', 'jackson-core.jar'
     }
+    from(configurations.corda4_14) {
+        rename '(.*)-4\\.14\\..*\\.jar', '$1-4.14.jar'
+    }
     from(tasks.getByPath(":legacy411:jar")) {
         rename 'legacy411-.*.jar', 'legacy411.jar'
     }
@@ -71,10 +78,18 @@ processIntegrationTestResources {
         rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
     }
     from(configurations.corda4_11)
+    from(configurations.corda4_14) {
+        exclude 'corda-4.*'  // The node is only needed by the smoke tests
+        rename '(.*)-4\\.14\\..*\\.jar', '$1-4.14.jar'
+    }
 }
 
 processTestResources {
     from(configurations.corda4_11)
+    from(configurations.corda4_14) {
+        exclude 'corda-4.*'  // The node is only needed by the smoke tests
+        rename '(.*)-4\\.14\\..*\\.jar', '$1-4.14.jar'
+    }
     from(tasks.getByPath(":finance:contracts:jar")) {
         rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
     }
@@ -160,6 +175,10 @@ dependencies {
     corda4_11 "net.corda:corda-finance-workflows:4.11"
     corda4_11 "net.corda:corda:4.11"
     corda4_11 "com.fasterxml.jackson.core:jackson-core:2.17.2"
+
+    corda4_14 "net.corda:corda-finance-contracts:4.14.4"
+    corda4_14 "net.corda:corda-finance-workflows:4.14.4"
+    corda4_14 "net.corda:corda:4.14.4"
 }
 
 tasks.withType(Test).configureEach {

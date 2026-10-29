@@ -22,6 +22,7 @@ import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
 import net.corda.core.internal.cordapp.KotlinMetadataVersion
 import net.corda.core.internal.cordapp.LanguageVersion
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.flatMapToSet
 import net.corda.core.internal.groupByMultipleKeys
@@ -59,23 +60,24 @@ import java.util.TreeSet
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.io.path.isSameFileAs
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.useDirectoryEntries
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
 
 /**
  * Handles CorDapp loading and classpath scanning of CorDapp JARs
  *
  * @property cordappJars The classpath of cordapp JARs
- * @property legacyContractJars Legacy contract CorDapps (4.11 or earlier) needed for backwards compatibility with 4.11 nodes.
+ * @property legacyContractJars The legacy contract CorDapps of each legacy [ContractGeneration] (e.g. 4.11 or earlier) needed for
+ * backwards compatibility with the nodes of that generation.
  */
 @Suppress("TooManyFunctions", "LongParameterList")
 class JarScanningCordappLoader(private val cordappJars: Set<Path>,
-                               private val legacyContractJars: Set<Path> = emptySet(),
+                               private val legacyContractJars: Map<ContractGeneration, Set<Path>> = emptyMap(),
                                private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                private val extraCordapps: List<CordappImpl> = emptyList(),
                                private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
@@ -83,16 +85,31 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
     companion object {
         private val logger = contextLogger()
 
-        const val LEGACY_CONTRACTS_DIR_NAME = "legacy-contracts"
+        /**
+         * Returns the node directory for the contract CorDapps of each legacy [ContractGeneration], e.g. `legacy-contracts` for 4.11.
+         */
+        fun legacyContractsDirs(baseDirectory: Path): Map<ContractGeneration, Path> {
+            return ContractGeneration.LEGACY.associateWith { baseDirectory / it.legacyContractsDirName!! }
+        }
+
+        /**
+         * Returns the oldest legacy [ContractGeneration] the given contract CorDapp is compatible with, i.e. the legacy contracts directory
+         * it should be placed in (see [legacyContractsDirs]), or null if it's not compatible with any.
+         */
+        fun legacyGenerationOf(contractsJar: Path): ContractGeneration? {
+            val languageVersion = JarScanningCordappLoader(emptySet()).use { it.scanCordapp(contractsJar).languageVersion }
+            return ContractGeneration.LEGACY.firstOrNull { languageVersion.isCompatibleWith(it) }
+        }
 
         /**
          * Creates a CordappLoader from multiple directories.
          *
          * @param cordappDirs Directories used to scan for CorDapp JARs.
-         * @param legacyContractsDir Directory containing legacy contract CorDapps (4.11 or earlier).
+         * @param legacyContractsDirs The directory containing the legacy contract CorDapps of each legacy [ContractGeneration]. The
+         * directories do not have to exist.
          */
         fun fromDirectories(cordappDirs: Collection<Path>,
-                            legacyContractsDir: Path? = null,
+                            legacyContractsDirs: Map<ContractGeneration, Path> = emptyMap(),
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
                             signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
@@ -102,7 +119,9 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                     .asSequence()
                     .flatMap { if (it.exists()) it.listDirectoryEntries("*.jar") else emptyList() }
                     .toSet()
-            val legacyContractJars = legacyContractsDir?.useDirectoryEntries("*.jar") { it.toSet() } ?: emptySet()
+            val legacyContractJars = legacyContractsDirs
+                    .mapValues { (_, dir) -> if (dir.exists()) dir.useDirectoryEntries("*.jar") { it.toSet() } else emptySet() }
+                    .filterValues { it.isNotEmpty() }
             return JarScanningCordappLoader(cordappJars, legacyContractJars, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, rotatedKeys)
         }
     }
@@ -119,41 +138,53 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
     override val cordapps: List<CordappImpl>
         get() = internal.nonLegacyCordapps
 
-    override val legacyContractCordapps: List<CordappImpl>
+    override val legacyContractCordapps: Map<ContractGeneration, List<CordappImpl>>
         get() = internal.legacyContractCordapps
 
     override fun close() = appClassLoader.close()
 
     private inner class InternalHolder {
         val nonLegacyCordapps = cordappJars.mapTo(ArrayList(), ::scanCordapp)
-        val legacyContractCordapps = legacyContractJars.map(::scanCordapp)
+        val legacyContractCordapps: Map<ContractGeneration, List<CordappImpl>> = ContractGeneration.LEGACY
+                .mapNotNull { generation -> legacyContractJars[generation]?.let { jars -> generation to jars.map(::scanCordapp) } }
+                .toMap()
 
         init {
-            commonChecks(nonLegacyCordapps, LanguageVersion::isNonLegacyCompatible)
+            commonChecks(nonLegacyCordapps, ContractGeneration.CURRENT)
             nonLegacyCordapps += extraCordapps
-            if (legacyContractCordapps.isNotEmpty()) {
-                commonChecks(legacyContractCordapps, LanguageVersion::isLegacyCompatible)
-                checkLegacyContracts()
+            for ((generation, cordapps) in legacyContractCordapps) {
+                commonChecks(cordapps, generation)
+                checkLegacyContracts(generation, cordapps)
             }
         }
 
-        private fun commonChecks(cordapps: List<CordappImpl>, compatibilityProperty: KProperty1<LanguageVersion, Boolean>) {
+        private fun commonChecks(cordapps: List<CordappImpl>, generation: ContractGeneration) {
             for (cordapp in cordapps) {
-                check(compatibilityProperty(cordapp.languageVersion)) {
-                    val isLegacyCompatibleCheck = compatibilityProperty == LanguageVersion::isLegacyCompatible
-                    val msg = when {
-                        isLegacyCompatibleCheck -> "not legacy; please remove or place it in the node's CorDapps directory."
-                        cordapp.contractClassNames.isEmpty() -> "legacy (should be 4.12 or later)"
-                        else -> "legacy contracts; please place it in the node's '$LEGACY_CONTRACTS_DIR_NAME' directory."
-                    }
-                    "CorDapp ${cordapp.jarFile} is $msg"
+                check(cordapp.languageVersion.isCompatibleWith(generation)) {
+                    "CorDapp ${cordapp.jarFile} is ${incompatibleMessage(cordapp, generation)}"
                 }
             }
             checkInvalidCordapps(cordapps)
             checkDuplicateCordapps(cordapps)
-            // The same contract may occur in both 4.11 and 4.12 CorDapps for ledger compatibility, so we only check for overlap within each
-            // compatibility group
+            // The same contract may occur in the CorDapps of each generation for ledger compatibility, so we only check for overlap within
+            // each compatibility group
             checkContractOverlap(cordapps)
+        }
+
+        private fun incompatibleMessage(cordapp: CordappImpl, generation: ContractGeneration): String {
+            // Where the CorDapp should go instead
+            val compatibleGeneration = ContractGeneration.values().firstOrNull { cordapp.languageVersion.isCompatibleWith(it) }
+            return when {
+                !generation.isCurrent -> when {
+                    compatibleGeneration == null -> "not ${generation.releases} compatible; please remove it."
+                    compatibleGeneration.isCurrent -> "not legacy; please remove or place it in the node's CorDapps directory."
+                    else -> "not ${generation.releases} compatible; please remove or place it in the node's " +
+                            "'${compatibleGeneration.legacyContractsDirName}' directory."
+                }
+                cordapp.contractClassNames.isEmpty() -> "legacy (should be ${generation.releases})"
+                compatibleGeneration == null -> "not compatible with this node (should be ${generation.releases})"
+                else -> "legacy contracts; please place it in the node's '${compatibleGeneration.legacyContractsDirName}' directory."
+            }
         }
 
         private fun checkInvalidCordapps(cordapps: List<CordappImpl>) {
@@ -197,16 +228,22 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
             }
         }
 
-        private fun checkLegacyContracts() {
-            for (legacyCordapp in legacyContractCordapps) {
+        private fun checkLegacyContracts(generation: ContractGeneration, cordapps: List<CordappImpl>) {
+            for (legacyCordapp in cordapps) {
                 if (legacyCordapp.contractClassNames.isEmpty()) continue
-                logger.debug { "Contracts CorDapp ${legacyCordapp.name} is legacy (4.11 or older), searching for corresponding 4.12+ contracts" }
+                logger.debug {
+                    "Contracts CorDapp ${legacyCordapp.name} is legacy (${generation.releases}), searching for corresponding newer contracts"
+                }
                 for (legacyContract in legacyCordapp.contractClassNames) {
-                    val newerCordapp = nonLegacyCordapps.find { legacyContract in it.contractClassNames }
-                    checkNotNull(newerCordapp) {
-                        "Contract $legacyContract in legacy CorDapp (4.11 or older) '${legacyCordapp.jarFile}' does not have a " +
-                                "corresponding newer version (4.12 or later). Please add this corresponding CorDapp or remove the legacy one."
+                    // There must always be a current version of the contract
+                    val currentCordapp = nonLegacyCordapps.find { legacyContract in it.contractClassNames }
+                    checkNotNull(currentCordapp) {
+                        "Contract $legacyContract in legacy CorDapp (${generation.releases}) '${legacyCordapp.jarFile}' does not have a " +
+                                "corresponding newer version (${ContractGeneration.CURRENT.releases}). Please add this corresponding CorDapp " +
+                                "or remove the legacy one."
                     }
+                    // The versions of the contract must be in order, so compare against the next newer version
+                    val newerCordapp = findNewerLegacyCordapp(generation, legacyContract) ?: currentCordapp
                     check(newerCordapp.contractVersionId > legacyCordapp.contractVersionId) {
                         "Newer contract CorDapp '${newerCordapp.jarFile}' does not have a higher versionId " +
                                 "(${newerCordapp.contractVersionId}) than corresponding legacy contract CorDapp " +
@@ -215,6 +252,14 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                     checkSignersMatch(legacyCordapp, newerCordapp)
                 }
             }
+        }
+
+        private fun findNewerLegacyCordapp(generation: ContractGeneration, contract: String): CordappImpl? {
+            return ContractGeneration.LEGACY
+                    .filter { it > generation }
+                    .firstNotNullOfOrNull { newerGeneration ->
+                        legacyContractCordapps[newerGeneration]?.find { contract in it.contractClassNames }
+                    }
         }
 
         private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {

@@ -9,6 +9,7 @@ import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
 import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.internal.toSimpleString
+import net.corda.core.internal.verification.ContractGeneration
 import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.serialization.serialize
@@ -51,6 +52,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermissions.fromString
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
@@ -61,7 +63,9 @@ import kotlin.io.path.isExecutable
 import kotlin.io.path.isWritable
 
 /**
- * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
+ * Handle to the node's external verifiers. There is one for each legacy [ContractGeneration], built with that generation's version of Kotlin
+ * and embedded in the node as `external-verifier-<Kotlin version>.jar`. Each verifier process is started lazily on the first verification
+ * request for its generation.
  */
 class ExternalVerifierHandleImpl(
         private val verificationSupport: NodeVerificationSupport,
@@ -73,194 +77,231 @@ class ExternalVerifierHandleImpl(
 
         private const val MAX_ATTEMPTS = 5
 
-        private val verifierJar: Path = Files.createTempFile("corda-external-verifier", ".jar")
-        init {
-            // Extract the embedded verifier jar
-            Companion::class.java.getResourceAsStream("external-verifier.jar")!!.use {
-                it.copyTo(verifierJar, REPLACE_EXISTING)
-            }
-            log.debug { "Extracted external verifier jar to ${verifierJar.absolutePathString()}" }
-            verifierJar.toFile().deleteOnExit()
-        }
-    }
+        private val verifierJars = ConcurrentHashMap<ContractGeneration, Path>()
 
-    private lateinit var socketFile: Path
-    private lateinit var serverChannel: ServerSocketChannel
-    @Volatile
-    private var connection: Connection? = null
+        fun verifierJarResourceName(generation: ContractGeneration): String = "external-verifier-${generation.kotlinVersionString}.jar"
 
-    override fun verifyTransaction(ctx: CoreTransaction) {
-        log.info("Verify ${ctx.toSimpleString()} externally")
-        // By definition input states are unique, and so it makes sense to eagerly send them across with the transaction.
-        // Reference states are not, but for now we'll send them anyway and assume they aren't used often. If this assumption is not
-        // correct, and there's a benefit, then we can send them lazily.
-        val ctxInputsAndReferences = (ctx.inputs + ctx.references).associateWith(verificationSupport::getSerializedState)
-        val request = VerificationRequest(ctx, ctxInputsAndReferences)
-
-        // To keep things simple the verifier only supports one verification request at a time.
-        synchronized(this) {
-            startServer()
-            var attempt = 1
-            while (true) {
-                val result = try {
-                    tryVerification(request)
-                } catch (e: Exception) {
-                    processError(attempt, e)
-                    attempt += 1
-                    continue
+        private fun verifierJar(generation: ContractGeneration): Path {
+            return verifierJars.computeIfAbsent(generation) {
+                val resourceName = verifierJarResourceName(generation)
+                val verifierJar = Files.createTempFile("corda-external-verifier-${generation.kotlinVersionString}-", ".jar")
+                // Extract the embedded verifier jar
+                val resource = checkNotNull(Companion::class.java.getResourceAsStream(resourceName)) {
+                    "External verifier $resourceName for $generation transactions is missing"
                 }
-                when (result) {
-                    is Try.Success -> return
-                    is Try.Failure -> throw result.exception
-                }
+                resource.use { it.copyTo(verifierJar, REPLACE_EXISTING) }
+                log.debug { "Extracted $generation external verifier jar to ${verifierJar.absolutePathString()}" }
+                verifierJar.toFile().deleteOnExit()
+                verifierJar
             }
         }
     }
 
-    private fun startServer() {
-        if (::socketFile.isInitialized) return
-        // Try to create the UNIX domain file in /tmp to keep the full path under the 100 char limit. If we don't have access to it then
-        // fallback to the temp dir specified by the JVM and hope it's short enough.
-        val tempDir = Path("/tmp").takeIf { it.isWritable() && it.isExecutable() } ?: Path(System.getProperty("java.io.tmpdir"))
-        socketFile = tempDir / "corda-external-verifier-${random63BitValue().toString(MAX_RADIX)}.socket"
-        serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
-        log.debug { "Binding to UNIX domain file $socketFile" }
-        serverChannel.bind(UnixDomainSocketAddress.of(socketFile), 1)
-        // Lock down access to the file
-        socketFile.fileAttributesViewOrNull<PosixFileAttributeView>()?.setPermissions(fromString("rwx------"))
-        // Just in case...
-        Runtime.getRuntime().addShutdownHook(Thread(::close))
-    }
+    private val verifiers = ConcurrentHashMap<ContractGeneration, GenerationVerifier>()
 
-    private fun processError(attempt: Int, e: Exception) {
-        if (attempt == MAX_ATTEMPTS) {
-            throw IOException("Unable to verify with external verifier", e)
-        } else {
-            log.warn("Unable to verify with external verifier, trying again...", e)
-        }
-        try {
-            connection?.close()
-        } catch (e: Exception) {
-            log.debug("Problem closing external verifier connection", e)
-        }
-        connection = null
-    }
-
-    private fun tryVerification(request: VerificationRequest): Try<Unit> {
-        val connection = getConnection()
-        connection.channel.writeCordaSerializable(request)
-        // Send the verification request and then wait for any requests from verifier for more information. The last message will either
-        // be a verification success or failure message.
-        while (true) {
-            val message = connection.channel.readCordaSerializable(ExternalVerifierOutbound::class)
-            log.debug { "Received from external verifier: $message" }
-            when (message) {
-                // Process the information the verifier needs and then loop back and wait for more messages
-                is VerifierRequest -> processVerifierRequest(message, connection)
-                is VerificationResult -> return message.result
-            }
-        }
-    }
-
-    private fun getConnection(): Connection {
-        return connection ?: Connection().also { connection = it }
-    }
-
-    private fun processVerifierRequest(request: VerifierRequest, connection: Connection) {
-        val result = when (request) {
-            is GetParties -> PartiesResult(verificationSupport.getParties(request.keys))
-            is GetAttachment -> AttachmentResult(verificationSupport.getAttachment(request.id)?.withTrust())
-            is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map { it?.withTrust() })
-            is GetNetworkParameters -> NetworkParametersResult(verificationSupport.getNetworkParameters(request.id))
-            is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(verificationSupport.getTrustedClassAttachments(request.className, true).map { it.id })
-        }
-        log.debug { "Sending response to external verifier: $result" }
-        connection.channel.writeCordaSerializable(result)
-    }
-
-    private fun Attachment.withTrust(): AttachmentWithTrust {
-        val isTrusted = verificationSupport.isAttachmentTrusted(this)
-        val attachmentForSer = when (this) {
-            // The Attachment retrieved from the database is not serialisable, so we have to convert it into one
-            is AbstractAttachment -> GeneratedAttachment(open().readFully(), uploader)
-            // For everything else we keep as is, in particular preserving ContractAttachment
-            else -> this
-        }
-        return AttachmentWithTrust(attachmentForSer, isTrusted)
+    override fun verifyTransaction(ctx: CoreTransaction, generation: ContractGeneration) {
+        require(!generation.isCurrent) { "$generation transactions are verified in-process" }
+        verifiers.computeIfAbsent(generation, ::GenerationVerifier).verifyTransaction(ctx)
     }
 
     override fun close() {
-        connection?.close()
-        connection = null
-        if (::serverChannel.isInitialized) {
-            serverChannel.close()
-        }
-        if (::socketFile.isInitialized) {
-            socketFile.deleteIfExists()
+        for (verifier in verifiers.values) {
+            try {
+                verifier.close()
+            } catch (e: Exception) {
+                log.debug("Problem closing ${verifier.generation} external verifier", e)
+            }
         }
     }
 
-    private inner class Connection : AutoCloseable {
-        private val verifierProcess: Process
-        val channel: SocketChannel
+    /**
+     * The external verifier for a single legacy [ContractGeneration].
+     */
+    private inner class GenerationVerifier(val generation: ContractGeneration) : AutoCloseable {
+        private lateinit var socketFile: Path
+        private lateinit var serverChannel: ServerSocketChannel
+        @Volatile
+        private var connection: Connection? = null
 
-        init {
-            val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { "--add-opens" in it }
-            val command = ArrayList<String>()
-            command += "${Path(System.getProperty("java.home"), "bin", "java")}"
-            command += inheritedJvmArgs
-            command += jvmArgsFromConfig
+        fun verifyTransaction(ctx: CoreTransaction) {
+            log.info("Verify ${ctx.toSimpleString()} externally with the $generation verifier")
+            // By definition input states are unique, and so it makes sense to eagerly send them across with the transaction.
+            // Reference states are not, but for now we'll send them anyway and assume they aren't used often. If this assumption is not
+            // correct, and there's a benefit, then we can send them lazily.
+            val ctxInputsAndReferences = (ctx.inputs + ctx.references).associateWith(verificationSupport::getSerializedState)
+            val request = VerificationRequest(ctx, ctxInputsAndReferences)
 
-            // Build list of 3rd party jars
-            val legacyJarsPath = baseDirectory / "legacy-jars"
-            val extraClassPath = legacyJarsPath.toFile().listFiles { _, name ->
-                name.endsWith(".jar")
-            }?.joinToString(File.pathSeparator, File.pathSeparator)
-            val classpath = if (extraClassPath == null) "$verifierJar" else "$verifierJar$extraClassPath"
-
-            command += listOf(
-                    "-cp",
-                    classpath,
-                    "net.corda.verifier.Main",
-                    socketFile.absolutePathString(),
-                    log.level.name.lowercase()
-            )
-            log.debug { "External verifier command: $command" }
-            val logsDirectory = (baseDirectory / "logs").safeSymbolicRead().createDirectories()
-            verifierProcess = ProcessBuilder(command)
-                    .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))
-                    .redirectError(Redirect.appendTo((logsDirectory / "verifier-stderr.log").toFile()))
-                    .directory(baseDirectory.toFile())
-                    .start()
-            log.info("External verifier process started; PID ${verifierProcess.pid()}")
-
-            verifierProcess.onExit().whenComplete { _, _ ->
-                if (connection != null) {
-                    log.warn("The external verifier has unexpectedly terminated with error code ${verifierProcess.exitValue()}. " +
-                            "Please check verifier logs for more details.")
+            // To keep things simple the verifier only supports one verification request at a time.
+            synchronized(this) {
+                startServer()
+                var attempt = 1
+                while (true) {
+                    val result = try {
+                        tryVerification(request)
+                    } catch (e: Exception) {
+                        processError(attempt, e)
+                        attempt += 1
+                        continue
+                    }
+                    when (result) {
+                        is Try.Success -> return
+                        is Try.Failure -> throw result.exception
+                    }
                 }
-                // Allow a new process to be started on the next verification request
-                connection = null
             }
+        }
 
-            channel = serverChannel.accept()
+        private fun startServer() {
+            if (::socketFile.isInitialized) return
+            // Try to create the UNIX domain file in /tmp to keep the full path under the 100 char limit. If we don't have access to it then
+            // fallback to the temp dir specified by the JVM and hope it's short enough.
+            val tempDir = Path("/tmp").takeIf { it.isWritable() && it.isExecutable() } ?: Path(System.getProperty("java.io.tmpdir"))
+            socketFile = tempDir / "corda-external-verifier-${generation.kotlinVersionString}-${random63BitValue().toString(MAX_RADIX)}.socket"
+            serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
+            log.debug { "Binding to UNIX domain file $socketFile" }
+            serverChannel.bind(UnixDomainSocketAddress.of(socketFile), 1)
+            // Lock down access to the file
+            socketFile.fileAttributesViewOrNull<PosixFileAttributeView>()?.setPermissions(fromString("rwx------"))
+            // Just in case...
+            Runtime.getRuntime().addShutdownHook(Thread(::close))
+        }
 
-            val cordapps = verificationSupport.cordappProvider.cordapps
-            val initialisation = Initialisation(
-                    customSerializerClassNames = cordapps.customSerializers.mapToSet { it.javaClass.name },
-                    serializationWhitelistClassNames = cordapps.serializationWhitelists.mapToSet { it.javaClass.name },
-                    System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
-                    serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize(),
-                    serializedRotatedKeys = verificationSupport.rotatedKeys.serialize()
-            )
-            channel.writeCordaSerializable(initialisation)
+        private fun processError(attempt: Int, e: Exception) {
+            if (attempt == MAX_ATTEMPTS) {
+                throw IOException("Unable to verify with $generation external verifier", e)
+            } else {
+                log.warn("Unable to verify with $generation external verifier, trying again...", e)
+            }
+            try {
+                connection?.close()
+            } catch (e: Exception) {
+                log.debug("Problem closing external verifier connection", e)
+            }
+            connection = null
+        }
+
+        private fun tryVerification(request: VerificationRequest): Try<Unit> {
+            val connection = getConnection()
+            connection.channel.writeCordaSerializable(request)
+            // Send the verification request and then wait for any requests from verifier for more information. The last message will either
+            // be a verification success or failure message.
+            while (true) {
+                val message = connection.channel.readCordaSerializable(ExternalVerifierOutbound::class)
+                log.debug { "Received from $generation external verifier: $message" }
+                when (message) {
+                    // Process the information the verifier needs and then loop back and wait for more messages
+                    is VerifierRequest -> processVerifierRequest(message, connection)
+                    is VerificationResult -> return message.result
+                }
+            }
+        }
+
+        private fun getConnection(): Connection {
+            return connection ?: Connection().also { connection = it }
+        }
+
+        private fun processVerifierRequest(request: VerifierRequest, connection: Connection) {
+            val result = when (request) {
+                is GetParties -> PartiesResult(verificationSupport.getParties(request.keys))
+                is GetAttachment -> AttachmentResult(verificationSupport.getAttachment(request.id)?.withTrust())
+                is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map { it?.withTrust() })
+                is GetNetworkParameters -> NetworkParametersResult(verificationSupport.getNetworkParameters(request.id))
+                is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(
+                        verificationSupport.getTrustedClassAttachments(request.className, generation).map { it.id }
+                )
+            }
+            log.debug { "Sending response to $generation external verifier: $result" }
+            connection.channel.writeCordaSerializable(result)
+        }
+
+        private fun Attachment.withTrust(): AttachmentWithTrust {
+            val isTrusted = verificationSupport.isAttachmentTrusted(this)
+            val attachmentForSer = when (this) {
+                // The Attachment retrieved from the database is not serialisable, so we have to convert it into one
+                is AbstractAttachment -> GeneratedAttachment(open().readFully(), uploader)
+                // For everything else we keep as is, in particular preserving ContractAttachment
+                else -> this
+            }
+            return AttachmentWithTrust(attachmentForSer, isTrusted)
         }
 
         override fun close() {
-            try {
-                channel.close()
-            } finally {
-                verifierProcess.destroyForcibly()
+            connection?.close()
+            connection = null
+            if (::serverChannel.isInitialized) {
+                serverChannel.close()
+            }
+            if (::socketFile.isInitialized) {
+                socketFile.deleteIfExists()
+            }
+        }
+
+        private inner class Connection : AutoCloseable {
+            private val verifierProcess: Process
+            val channel: SocketChannel
+
+            init {
+                val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { "--add-opens" in it }
+                val command = ArrayList<String>()
+                command += "${Path(System.getProperty("java.home"), "bin", "java")}"
+                command += inheritedJvmArgs
+                command += jvmArgsFromConfig
+
+                // Build list of 3rd party jars for this generation
+                val verifierJar = verifierJar(generation)
+                val legacyJarsPath = baseDirectory / generation.legacyJarsDirName!!
+                val extraClassPath = legacyJarsPath.toFile().listFiles { _, name ->
+                    name.endsWith(".jar")
+                }?.joinToString(File.pathSeparator, File.pathSeparator)
+                val classpath = if (extraClassPath == null) "$verifierJar" else "$verifierJar$extraClassPath"
+
+                command += listOf(
+                        "-cp",
+                        classpath,
+                        "net.corda.verifier.Main",
+                        socketFile.absolutePathString(),
+                        log.level.name.lowercase(),
+                        generation.name
+                )
+                log.debug { "External verifier command: $command" }
+                val logsDirectory = (baseDirectory / "logs").safeSymbolicRead().createDirectories()
+                // The original 4.11 verifier keeps its existing log file names
+                val logPrefix = if (generation == ContractGeneration.CORDA_4_11) "verifier" else "verifier-${generation.kotlinVersionString}"
+                verifierProcess = ProcessBuilder(command)
+                        .redirectOutput(Redirect.appendTo((logsDirectory / "$logPrefix-stdout.log").toFile()))
+                        .redirectError(Redirect.appendTo((logsDirectory / "$logPrefix-stderr.log").toFile()))
+                        .directory(baseDirectory.toFile())
+                        .start()
+                log.info("$generation external verifier process started; PID ${verifierProcess.pid()}")
+
+                verifierProcess.onExit().whenComplete { _, _ ->
+                    if (connection != null) {
+                        log.warn("The $generation external verifier has unexpectedly terminated with error code " +
+                                "${verifierProcess.exitValue()}. Please check verifier logs for more details.")
+                    }
+                    // Allow a new process to be started on the next verification request
+                    connection = null
+                }
+
+                channel = serverChannel.accept()
+
+                val cordapps = verificationSupport.cordappProvider.cordapps
+                val initialisation = Initialisation(
+                        customSerializerClassNames = cordapps.customSerializers.mapToSet { it.javaClass.name },
+                        serializationWhitelistClassNames = cordapps.serializationWhitelists.mapToSet { it.javaClass.name },
+                        System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
+                        serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize(),
+                        serializedRotatedKeys = verificationSupport.rotatedKeys.serialize()
+                )
+                channel.writeCordaSerializable(initialisation)
+            }
+
+            override fun close() {
+                try {
+                    channel.close()
+                } finally {
+                    verifierProcess.destroyForcibly()
+                }
             }
         }
     }

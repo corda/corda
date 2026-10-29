@@ -19,7 +19,10 @@ object PlatformVersionSwitches {
     const val RESTRICTED_DATABASE_OPERATIONS = 7
     const val CERTIFICATE_ROTATION = 9
     const val TWO_PHASE_FINALITY = 13
+    /** From this version (4.12) [net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP] is used for attachments. */
     const val LEGACY_ATTACHMENTS = 140
     const val NOTARY_INSTRUCTIONS = 160
     const val CROSS_PROVIDER_KEY_ROTATION = 170
+    /** From this version (4.16) [net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V3_GROUP] is used for attachments. */
+    const val ATTACHMENTS_V3 = 180
 }
