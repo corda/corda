@@ -1,5 +1,6 @@
 package net.corda.core.internal.utilities
 
+import com.google.common.collect.Interner
 import com.google.common.collect.Interners
 import net.corda.core.CordaInternal
 import net.corda.core.internal.packageNameOrNull
@@ -62,8 +63,10 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
         }
     }
 
-    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<T>()
+    // Guava's Interner is null-marked (JSpecify) and only accepts non-null elements. T is unbounded here (and this source must
+    // also compile with Kotlin 1.2 for core-1.2, so `T & Any` is not available), hence type the interner on Any and cast back.
+    private val interner: Interner<Any> = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build()
 
-    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!)))
+    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, uncheckedCast<Any?, T>(interner.intern(sample!!))))
 }
 
