@@ -33,7 +33,9 @@ apply plugin: 'application'
 evaluationDependsOn(':tools:explorer:capsule')
 evaluationDependsOn(':testing:testserver:testcapsule:')
 
-mainClassName = 'net.corda.demobench.DemoBench'
+application {
+    mainClass = 'net.corda.demobench.DemoBench'
+}
 applicationDefaultJvmArgs = [
     '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
     '-Dorg.jboss.logging.provider=slf4j'
@@ -107,7 +109,7 @@ tasks.withType(JavaCompile).configureEach {
 jar {
     manifest {
         attributes(
-            'Main-Class': mainClassName,
+            'Main-Class': application.mainClass.get(),
             'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
         )
     }
@@ -202,7 +204,7 @@ tasks.register('javapackage') {
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {
-            application(name: 'Corda DemoBench', version: pkg_version, mainClass: mainClassName)
+            application(name: 'Corda DemoBench', version: pkg_version, mainClass: application.mainClass.get())
             info(title: 'Corda DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             //noinspection GroovyAssignabilityCheck
             resources {

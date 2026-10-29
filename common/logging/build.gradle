@@ -35,6 +35,8 @@ task generateSource(type: Copy) {
 compileKotlin.dependsOn generateSource
 processResources.dependsOn generateSource
 sourcesJar.dependsOn generateSource
+// KGP 2.x also creates a kotlinSourcesJar task which packages the generated source
+tasks.matching { it.name == 'kotlinSourcesJar' }.configureEach { dependsOn generateSource }
 
 jar {
     archiveBaseName = 'corda-common-logging'

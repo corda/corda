@@ -1,6 +1,12 @@
 import java.io.*;
 import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ExplorerCaplet extends Capsule {
 
@@ -46,4 +52,21 @@ public class ExplorerCaplet extends Capsule {
         return file.getName().toLowerCase().endsWith(".jar");
     }
 
+    /**
+     * Capsule is unable to parse Java versions with more than four components, such as Azul's 25.0.5.0.3, and fails when choosing the JVM.
+     * So unless a specific Java home is requested, use the current JVM and only keep the first three components of its version.
+     */
+    @Override
+    protected Map.Entry<String, Path> chooseJavaHome() {
+        String requestedJavaHome = System.getProperty("capsule.java.home");
+        if (requestedJavaHome != null && !requestedJavaHome.equals("current")) {
+            return super.chooseJavaHome();
+        }
+        String version = System.getProperty("java.version");
+        Matcher matcher = Pattern.compile("^(\\d+(?:\\.\\d+){0,2})(?:\\.\\d+)*(.*)$").matcher(version);
+        if (matcher.matches()) {
+            version = matcher.group(1) + matcher.group(2);
+        }
+        return new AbstractMap.SimpleImmutableEntry<>(version, Paths.get(System.getProperty("java.home")));
+    }
 }
