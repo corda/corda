@@ -44,8 +44,8 @@ shadowJar {
 }
 
 enum ImageVariant {
-    UBUNTU_ZULU("Dockerfile", "17", "zulu-openjdk"),
-    AL_CORRETTO("DockerfileAL", "17", "amazonlinux2"),
+    UBUNTU_ZULU("Dockerfile", "25", "zulu-openjdk"),
+    AL_CORRETTO("DockerfileAL", "25", "amazonlinux2"),
     OFFICIAL(UBUNTU_ZULU)
 
     String dockerFile

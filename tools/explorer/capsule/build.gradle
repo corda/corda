@@ -28,7 +28,7 @@ tasks.register('buildExplorerJAR', FatCapsule) {
     capsuleManifest {
         applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'Node Explorer'
-        minJavaVersion = '17.0'
+        minJavaVersion = '25.0'
         caplets = ['ExplorerCaplet']
     }
 }

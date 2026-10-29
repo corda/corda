@@ -17,12 +17,15 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.typesafe.config.ConfigUtil.splitPath;
@@ -97,6 +100,25 @@ public class CordaCaplet extends Capsule {
             index++;
         }
         return null;
+    }
+
+    /**
+     * Capsule is unable to parse Java versions with more than four components, such as Azul's 25.0.5.0.3, and fails when choosing the JVM.
+     * So unless a specific Java home is requested, use the current JVM and only keep the first three components of its version. The Java
+     * version is checked separately (see checkJavaVersion).
+     */
+    @Override
+    protected Map.Entry<String, Path> chooseJavaHome() {
+        String requestedJavaHome = System.getProperty("capsule.java.home");
+        if (requestedJavaHome != null && !requestedJavaHome.equals("current")) {
+            return super.chooseJavaHome();
+        }
+        String version = System.getProperty("java.version");
+        Matcher matcher = Pattern.compile("^(\\d+(?:\\.\\d+){0,2})(?:\\.\\d+)*(.*)$").matcher(version);
+        if (matcher.matches()) {
+            version = matcher.group(1) + matcher.group(2);
+        }
+        return new AbstractMap.SimpleImmutableEntry<>(version, Paths.get(System.getProperty("java.home")));
     }
 
     @Override
@@ -225,8 +247,8 @@ public class CordaCaplet extends Capsule {
 
     private static void checkJavaVersion() {
         String version = System.getProperty("java.version");
-        if (version == null || Stream.of("17").noneMatch(version::startsWith)) {
-            System.err.printf("Error: Unsupported Java version %s; currently only version 17 is supported.\n", version);
+        if (version == null || Stream.of("25").noneMatch(version::startsWith)) {
+            System.err.printf("Error: Unsupported Java version %s; currently only version 25 is supported.\n", version);
             System.exit(1);
         }
     }

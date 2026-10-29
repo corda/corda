@@ -77,7 +77,6 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.verifier.loadCustomSerializationScheme
-import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.h2.jdbc.JdbcSQLNonTransientConnectionException
 import org.slf4j.Logger
@@ -167,16 +166,16 @@ open class Node(configuration: NodeConfiguration,
 
         fun isInvalidJavaVersion(): Boolean {
             if (!hasMinimumJavaVersion()) {
-                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 17.")
+                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java $MINIMUM_JAVA_VERSION.")
                 println("Corda will now exit...")
                 return true
             }
             return false
         }
 
-        private fun hasMinimumJavaVersion(): Boolean {
-            return SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_17)
-        }
+        private const val MINIMUM_JAVA_VERSION = 25
+
+        private fun hasMinimumJavaVersion(): Boolean = Runtime.version().feature() >= MINIMUM_JAVA_VERSION
     }
 
     override val log: Logger get() = staticLog

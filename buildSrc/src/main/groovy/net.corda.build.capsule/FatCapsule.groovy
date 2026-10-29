@@ -42,9 +42,13 @@ abstract class FatCapsule extends Jar {
         from({ project.configurations.getByName(CapsulePlugin.CAPSULE_CONFIGURATION).collect { project.zipTree(it) } })
         from({ applicationSource ?: [] })
         from({ embedConfiguration ?: [] })
-        doFirst {
-            manifest.attributes(capsuleManifest.toAttributes())
-        }
+    }
+
+    @Override
+    protected void copy() {
+        // The capsule manifest attributes can only be added once the task has been fully configured
+        manifest.attributes(capsuleManifest.toAttributes())
+        super.copy()
     }
 
     @Input
