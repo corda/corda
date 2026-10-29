@@ -118,6 +118,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation "org.fusesource.jansi:jansi:$jansi_version"
     implementation "com.google.guava:guava:$guava_version"
+    // Guava no longer brings jsr305 in transitively; needed for javax.annotation.concurrent.ThreadSafe.
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     implementation "commons-io:commons-io:$commons_io_version"
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
