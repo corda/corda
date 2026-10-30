@@ -2,6 +2,7 @@ package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -608,6 +609,25 @@ class CashTests {
     @Test(timeout=300_000)
 	fun generateInsufficientExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, megaCorp.party, 1) }
+    }
+
+    /**
+     * After a notary key rotation, states notarised under the previous and the current identity of the notary, which share its name,
+     * are exited together.
+     */
+    @Test(timeout=300_000)
+    fun generateExitAcrossNotaryKeyRotation() {
+        val rotatedNotary = Party(dummyNotary.name, generateKeyPair().public)
+        val statesUnderBothIdentities = listOf(
+                cashStates[0],
+                cashStates[1].let { it.copy(state = it.state.copy(notary = rotatedNotary)) }
+        )
+        val tx = TransactionBuilder(dummyNotary.party)
+        Cash().generateExit(tx, Amount(500.DOLLARS.quantity, Issued(megaCorp.ref(1), USD)), statesUnderBothIdentities, ourIdentity)
+        val wtx = tx.toWireTransaction(miniCorpServices)
+        assertEquals(statesUnderBothIdentities.map { it.ref }.toSet(), wtx.inputs.toSet())
+        assertEquals(0, wtx.outputs.size)
+        assertEquals(dummyNotary.party, wtx.notary, "The transaction notary should be resolved to the current identity of the notary")
     }
 
     /**
