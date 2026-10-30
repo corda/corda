@@ -50,6 +50,8 @@ tasks.named('shadowJar') {
         exclude { it.path.startsWith('co/paralleluniverse/asm/') && !it.name.startsWith('ASMUtil') }
         // Replaced by the patched version, which supports Java 19+
         exclude 'co/paralleluniverse/concurrent/util/ThreadAccess*.class'
+        // Replaced by the patched version, which handles ASM 9.6+'s DUP analysis
+        exclude 'co/paralleluniverse/fibers/instrument/TypeAnalyzer*.class'
         exclude 'META-INF/MANIFEST.MF'
     }
     exclude 'META-INF/versions/**/module-info.class'

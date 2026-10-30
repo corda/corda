@@ -124,6 +124,8 @@ class DefaultCryptoServiceTests {
 
     private fun signAndVerify(signAlgo: String, alias: String, keyTypeAlgo: String): Boolean {
         val keyPairGenerator = KeyPairGenerator.getInstance(keyTypeAlgo)
+        // Java 25 defaults to secp384r1 for EC keys, which Corda doesn't support, so use secp256r1 as earlier Java versions did.
+        if (keyTypeAlgo == "EC") keyPairGenerator.initialize(ECGenParameterSpec("secp256r1"))
         val keyPair = keyPairGenerator.genKeyPair()
         val cryptoService = DefaultCryptoService(ALICE_NAME.x500Principal, createKeystore(alias, keyPair), wrappingKeyStorePath)
         assertTrue { cryptoService.containsKey(alias) }
