@@ -16,6 +16,8 @@ dependencies {
     implementation "org.apache.artemis:artemis-commons:${artemis_version}"
     implementation "org.ow2.asm:asm:$asm_version"
     implementation "com.google.guava:guava:$guava_version"
+    // Guava no longer brings jsr305 in transitively; needed for javax.annotation.* annotations.
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     // For AMQP serialisation.
     implementation "org.apache.qpid:proton-j:$protonj_version"
     // ClassGraph: classpath scanning

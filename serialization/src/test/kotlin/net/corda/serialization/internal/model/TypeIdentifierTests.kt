@@ -58,12 +58,12 @@ class TypeIdentifierTests {
     private fun assertIdentified(type: Type, expected: String) =
             assertEquals(expected, TypeIdentifier.forGenericType(type).prettyPrint())
 
-    private inline fun <reified T> assertIdentified(expected: String) =
+    private inline fun <reified T : Any> assertIdentified(expected: String) =
             assertEquals(expected, TypeIdentifier.forGenericType(typeOf<T>()).prettyPrint())
 
-    private inline fun <reified T> typeOf() = object : TypeToken<T>() {}.type
+    private inline fun <reified T : Any> typeOf() = object : TypeToken<T>() {}.type
 
-    private inline fun <reified T> assertRoundtrips() = assertRoundtrips(typeOf<T>())
+    private inline fun <reified T : Any> assertRoundtrips() = assertRoundtrips(typeOf<T>())
 
     private fun assertRoundtrips(original: Type) {
         val identifier = TypeIdentifier.forGenericType(original)
