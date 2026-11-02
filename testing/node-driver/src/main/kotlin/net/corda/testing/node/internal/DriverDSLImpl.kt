@@ -1075,7 +1075,10 @@ class DriverDSLImpl(
                     workingDirectory = handle.baseDirectory,
                     arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
-                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
+                    // The web server uses native libraries (Netty) and sun.misc.Unsafe memory access (ClassGraph), so allow them without the
+                    // Java 24+ warnings (as the test web server capsule does).
+                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver",
+                            "--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
                     maximumHeapSize = maximumHeapSize
             )

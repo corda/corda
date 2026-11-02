@@ -26,3 +26,5 @@
 --add-opens=java.base/sun.security.ec=ALL-UNNAMED
 --add-opens=java.base/sun.security.ec.ed=ALL-UNNAMED
 --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+--enable-native-access=ALL-UNNAMED
+--sun-misc-unsafe-memory-access=allow

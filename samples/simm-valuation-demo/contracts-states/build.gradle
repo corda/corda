@@ -108,6 +108,9 @@ tasks.register('shrink', ProGuardTask) {
     dontoptimize
     verbose
 
+    // Keep the Kotlin metadata, which Corda's serialization needs (e.g. to find primary constructors).
+    keep 'class kotlin.Metadata'
+
     // These are our CorDapp classes, so don't change these.
     keep 'class net.corda.vega.** { *; }', includedescriptorclasses: true
 

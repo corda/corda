@@ -77,6 +77,12 @@ class ExternalVerifierHandleImpl(
 
         private const val MAX_ATTEMPTS = 5
 
+        /**
+         * The node's JVM arguments which the external verifiers also need: the module opens, and the Java 24+ native and memory access
+         * permissions (see node-jvm-args.txt).
+         */
+        private val INHERITED_JVM_ARGS = listOf("--add-opens", "--enable-native-access", "--sun-misc-unsafe-memory-access")
+
         private val verifierJars = ConcurrentHashMap<ContractGeneration, Path>()
 
         fun verifierJarResourceName(generation: ContractGeneration): String = "external-verifier-${generation.kotlinVersionString}.jar"
@@ -241,7 +247,7 @@ class ExternalVerifierHandleImpl(
             val channel: SocketChannel
 
             init {
-                val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { "--add-opens" in it }
+                val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { arg -> INHERITED_JVM_ARGS.any { arg.startsWith(it) } }
                 val command = ArrayList<String>()
                 command += "${Path(System.getProperty("java.home"), "bin", "java")}"
                 command += inheritedJvmArgs

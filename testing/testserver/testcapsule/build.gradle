@@ -54,7 +54,8 @@ tasks.register('buildWebserverJar', FatCapsule) {
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         //
         // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx200m']
+        // - Allow the native libraries (Netty) and sun.misc.Unsafe memory access (ClassGraph) without Java 24+ warnings.
+        jvmArgs = ['-Xmx200m', '--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
     }
 }
 

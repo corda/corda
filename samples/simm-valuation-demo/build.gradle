@@ -168,6 +168,11 @@ task deployNodes(type: net.corda.plugins.Cordform) {
     }
 }
 
+tasks.named('test', Test) {
+    // src/test only contains example programs, which Gradle 9 would otherwise reject as a misconfiguration.
+    failOnNoDiscoveredTests = false
+}
+
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
