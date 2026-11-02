@@ -42,6 +42,7 @@ class MyCustomValidatingNotaryService(
 @Suppress("UNUSED_PARAMETER")
 // START 2
 class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : ValidatingNotaryFlow(otherSide, service) {
+    @Suspendable
     override fun verifyTransaction(requestPayload: NotarisationPayload) {
         try {
             val stx = requestPayload.signedTransaction
