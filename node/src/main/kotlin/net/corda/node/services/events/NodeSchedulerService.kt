@@ -76,8 +76,6 @@ class NodeSchedulerService(private val clock: CordaClock,
     companion object {
         private val staticLog get() = contextLogger()
 
-        // Names of the metrics registered by [registerMetrics], defined once here and shared with the tests so the
-        // metric name strings are not duplicated.
         internal const val DATABASE_FAILURES_METRIC_NAME = "NodeSchedulerService.DatabaseFailures"
         internal const val CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME = "NodeSchedulerService.ConsecutiveDatabaseFailures"
         internal const val MILLIS_STALLED_METRIC_NAME = "NodeSchedulerService.MillisStalled"
