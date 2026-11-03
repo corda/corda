@@ -155,7 +155,8 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             nodeProperties,
             Duration.ofSeconds(5),
             log,
-            schedulerRepo = MockScheduledFlowRepository()
+            schedulerRepo = MockScheduledFlowRepository(),
+            metricRegistry = MetricRegistry()
     ).apply { start() }
 
     // Runs before the rule below, and always, so that the scheduler never outlives the database it uses.
@@ -341,7 +342,8 @@ class NodeSchedulerServiceDatabaseFailureTest : NodeSchedulerServiceTestBase() {
                 nodeProperties,
                 Duration.ofSeconds(5),
                 log,
-                schedulerRepo = repo
+                schedulerRepo = repo,
+                metricRegistry = MetricRegistry()
         )
         try {
             scheduler.start()
@@ -428,7 +430,8 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
                 flowLogicRefFactory = flowLogicRefFactory,
                 nodeProperties = nodeProperties,
                 drainingModePollPeriod = Duration.ofSeconds(5),
-                log = log).apply { start() }
+                log = log,
+                metricRegistry = MetricRegistry()).apply { start() }
     }
 
     private fun transactionStateMock(logicRef: FlowLogicRef, time: Instant): TransactionState<*> {

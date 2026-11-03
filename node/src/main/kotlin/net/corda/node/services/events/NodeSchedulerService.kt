@@ -70,7 +70,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val log: Logger = staticLog,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database),
-                           private val metricRegistry: MetricRegistry = MetricRegistry())
+                           private val metricRegistry: MetricRegistry)
     : SchedulerService, AutoCloseable, SingletonSerializeAsToken() {
 
     companion object {
@@ -189,10 +189,6 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.execute { runLoopFunction() }
     }
 
-    // Registers metrics that let operators observe the health of the scheduler loop. A running total of database load
-    // failures, the current number of consecutive failures (zero when healthy), and how long the loop has been stalled
-    // past the point it should next have run (also zero when healthy). These complement the self-healing retry logic in
-    // [runLoopFunction] by surfacing a problem that would otherwise be silent at the node level.
     private fun registerMetrics() {
         loadFailures = metricRegistry.counter(DATABASE_FAILURES_METRIC_NAME)
         metricRegistry.register(CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME, Gauge { consecutiveLoadFailures })
