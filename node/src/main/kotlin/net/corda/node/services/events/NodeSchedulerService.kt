@@ -76,9 +76,10 @@ class NodeSchedulerService(private val clock: CordaClock,
     companion object {
         private val staticLog get() = contextLogger()
 
-        internal const val DATABASE_FAILURES_METRIC_NAME = "NodeSchedulerService.DatabaseFailures"
-        internal const val CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME = "NodeSchedulerService.ConsecutiveDatabaseFailures"
-        internal const val MILLIS_STALLED_METRIC_NAME = "NodeSchedulerService.MillisStalled"
+        private const val METRIC_PREFIX = "NodeSchedulerService"
+        internal const val DATABASE_FAILURES_METRIC_NAME = "$METRIC_PREFIX.DatabaseFailures"
+        internal const val CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME = "$METRIC_PREFIX.ConsecutiveDatabaseFailures"
+        internal const val MILLIS_STALLED_METRIC_NAME = "$METRIC_PREFIX.MillisStalled"
 
         /**
          * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
