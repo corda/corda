@@ -264,7 +264,10 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
             // TODO: We should be prepared to produce multiple transactions exiting inputs from
             // different notaries, or at least group states by notary and take the set with the
             // highest total value
-            acceptableCoins = acceptableCoins.filter { it.state.notary == tx.notary }
+            // The notary is identified by name: after a notary key rotation, states notarised under its previous and its current
+            // identity are combined, as [TransactionBuilder.checkNotary] allows, and the builder resolves the transaction notary to
+            // the current identity.
+            acceptableCoins = acceptableCoins.filter { it.state.notary.name == tx.notary?.name }
 
             val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
             val takeChangeFrom = gathered.lastOrNull()
