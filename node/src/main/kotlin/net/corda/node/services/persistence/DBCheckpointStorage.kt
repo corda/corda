@@ -40,6 +40,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToOne
+import jakarta.persistence.OptimisticLockException
 import jakarta.persistence.PrimaryKeyJoinColumn
 
 /**
@@ -65,24 +66,6 @@ class DBCheckpointStorage(
         const val MAX_CLIENT_ID_LENGTH = 512
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
-
-        // This is a dummy [DBFlowMetadata] object which help us whenever we want to persist a [DBFlowCheckpoint], but not persist its [DBFlowMetadata].
-        // [DBFlowCheckpoint] needs to always reference a [DBFlowMetadata] ([DBFlowCheckpoint.flowMetadata] is not nullable).
-        // However, since we do not -hibernate- cascade, it does not get persisted into the database.
-        private val dummyDBFlowMetadata: DBFlowMetadata = DBFlowMetadata(
-                flowId = "dummyFlowId",
-                invocationId = "dummyInvocationId",
-                flowName = "dummyFlowName",
-                userSuppliedIdentifier = "dummyUserSuppliedIdentifier",
-                startType = StartReason.INITIATED,
-                initialParameters = ByteArray(0),
-                launchingCordapp = "dummyLaunchingCordapp",
-                platformVersion = -1,
-                startedBy = "dummyStartedBy",
-                invocationInstant = Instant.now(),
-                startInstant = Instant.now(),
-                finishInstant = null
-        )
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -470,26 +453,62 @@ class DBCheckpointStorage(
             null
         }
 
-        // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
-        val dbFlowCheckpoint = DBFlowCheckpoint(
-            flowId = flowId,
-            blob = blob,
-            result = dbFlowResult,
-            exceptionDetails = dbFlowException,
-            flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
-            status = checkpoint.status,
-            compatible = checkpoint.compatible,
-            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
-            ioRequestType = checkpoint.flowIoRequest,
-            checkpointInstant = now
-        )
-
-        currentDBSession().merge(dbFlowCheckpoint)
-        blob?.let { currentDBSession().merge(it) }
+        // The checkpoint and its blob are updated with queries rather than with Session.merge(). merge() has to load the existing
+        // row first, and with it every child entity (they share the checkpoint's primary key, so are always fetched eagerly),
+        // including the whole of the old blob, only to overwrite it. The queries issue just the two UPDATEs, as Session.update()
+        // did in Hibernate 5. [DBFlowMetadata] only has its 'finish_time' updated, when a checkpoint finishes.
+        updateDBFlowCheckpoint(flowId, checkpoint, now)
+        blob?.let { updateDBFlowCheckpointBlob(it) }
         dbFlowResult?.let { currentDBSession().persist(it) }
         dbFlowException?.let { currentDBSession().persist(it) }
         if (checkpoint.isFinished()) {
             setDBFlowMetadataFinishTime(flowId, now)
+        }
+    }
+
+    private fun updateDBFlowCheckpoint(flowId: String, checkpoint: Checkpoint, now: Instant) {
+        val rowsUpdated = currentDBSession()
+            .createMutationQuery("""update ${DBFlowCheckpoint::class.java.name} checkpoint
+                set checkpoint.${DBFlowCheckpoint::status.name} = :status,
+                    checkpoint.${DBFlowCheckpoint::compatible.name} = :compatible,
+                    checkpoint.${DBFlowCheckpoint::progressStep.name} = :progressStep,
+                    checkpoint.${DBFlowCheckpoint::ioRequestType.name} = :ioRequestType,
+                    checkpoint.${DBFlowCheckpoint::checkpointInstant.name} = :checkpointInstant
+                where checkpoint.${DBFlowCheckpoint::flowId.name} = :flowId""")
+            .setParameter("status", checkpoint.status)
+            .setParameter("compatible", checkpoint.compatible)
+            .setParameter("progressStep", checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH))
+            .setParameter("ioRequestType", checkpoint.flowIoRequest)
+            .setParameter("checkpointInstant", now)
+            .setParameter("flowId", flowId)
+            .executeUpdate()
+        checkRowUpdated(rowsUpdated, "checkpoint", flowId)
+    }
+
+    private fun updateDBFlowCheckpointBlob(blob: DBFlowCheckpointBlob) {
+        val rowsUpdated = currentDBSession()
+            .createMutationQuery("""update ${DBFlowCheckpointBlob::class.java.name} blob
+                set blob.${DBFlowCheckpointBlob::checkpoint.name} = :checkpoint,
+                    blob.${DBFlowCheckpointBlob::flowStack.name} = :flowStack,
+                    blob.${DBFlowCheckpointBlob::hmac.name} = :hmac,
+                    blob.${DBFlowCheckpointBlob::persistedInstant.name} = :persistedInstant
+                where blob.${DBFlowCheckpointBlob::flowId.name} = :flowId""")
+            .setParameter("checkpoint", blob.checkpoint)
+            .setParameter("flowStack", blob.flowStack)
+            .setParameter("hmac", blob.hmac)
+            .setParameter("persistedInstant", blob.persistedInstant)
+            .setParameter("flowId", blob.flowId)
+            .executeUpdate()
+        checkRowUpdated(rowsUpdated, "checkpoint blob", blob.flowId)
+    }
+
+    /**
+     * Fails in the same way that Session.update() did in Hibernate 5 if the row no longer exists, which happens if the flow was killed
+     * (and its checkpoint deleted) while this transition was being executed. [TransitionExecutorImpl] recognises this exception.
+     */
+    private fun checkRowUpdated(rowsUpdated: Int, entity: String, flowId: String) {
+        if (rowsUpdated == 0) {
+            throw OptimisticLockException("The $entity of flow $flowId could not be updated as it no longer exists")
         }
     }
 

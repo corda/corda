@@ -44,6 +44,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
+import jakarta.persistence.OptimisticLockException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -179,6 +180,31 @@ class DBCheckpointStorageTests {
                     pausedCheckpoint.copy(flowState = FlowState.Paused),
                     checkpointStorage.checkpoints().single().deserialize()
             )
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `updating a checkpoint that has been removed fails and does not recreate it`() {
+        val (id, checkpoint) = newCheckpoint()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, checkpoint.serializeFlowState(), checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.removeCheckpoint(id)
+        }
+        // This is what happens when a flow is killed while one of its transitions is being executed. Hibernate 5's Session.update()
+        // failed with an OptimisticLockException; Session.merge() would have inserted the checkpoint again.
+        val updatedCheckpoint = checkpoint.copy(progressStep = "I have made progress")
+        assertThatThrownBy {
+            database.transaction {
+                checkpointStorage.updateCheckpoint(
+                    id, updatedCheckpoint, updatedCheckpoint.serializeFlowState(), updatedCheckpoint.serializeCheckpointState()
+                )
+            }
+        }.isInstanceOf(OptimisticLockException::class.java)
+        database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
         }
     }
 

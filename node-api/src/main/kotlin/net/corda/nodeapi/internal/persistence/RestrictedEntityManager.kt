@@ -1,9 +1,12 @@
 package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.node.ServiceHub
+import jakarta.persistence.ConnectionConsumer
+import jakarta.persistence.ConnectionFunction
 import jakarta.persistence.EntityManager
 import jakarta.persistence.EntityTransaction
 import jakarta.persistence.LockModeType
+import jakarta.persistence.LockOption
 import jakarta.persistence.metamodel.Metamodel
 
 /**
@@ -41,6 +44,20 @@ class RestrictedEntityManager(private val delegate: EntityManager, private val s
 
     override fun lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?) {
         restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode, properties) }
+    }
+
+    override fun lock(entity: Any?, lockMode: LockModeType?, vararg options: LockOption?) {
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode, *options) }
+    }
+
+    // Added by Jakarta Persistence 3.2. They give access to the JDBC connection itself (not the RestrictedConnection that
+    // ServiceHub.jdbcSession() returns), so they are restricted in the same way as unwrap and getDelegate.
+    override fun <C : Any?> runWithConnection(action: ConnectionConsumer<C>?) {
+        restrictDatabaseOperationFromEntityManager("runWithConnection", serviceHub) { delegate.runWithConnection(action) }
+    }
+
+    override fun <C : Any?, T : Any?> callWithConnection(function: ConnectionFunction<C, T>?): T {
+        return restrictDatabaseOperationFromEntityManager("callWithConnection", serviceHub) { delegate.callWithConnection(function) }
     }
 
     override fun setProperty(propertyName: String?, value: Any?) {

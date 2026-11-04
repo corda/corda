@@ -121,12 +121,15 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 ?.getResourceAsStream(type.name.replace('.', '/') + ".class")
                 ?.use { it.readBytes() }
                 ?: return
-        check(!referencesJavaxPersistence(classBytes)) {
-            "The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier, as it uses the " +
-                    "javax.persistence annotations. Corda 4.15 uses Hibernate 7, which requires jakarta.persistence. " +
-                    "The CorDapp that contains the schema needs to be rebuilt for Corda 4.15 - see the \"Upgrading to Hibernate 7\" documentation."
-        }
+        check(!referencesJavaxPersistence(classBytes)) { builtForJavaxPersistenceMessage(type.name, schema::class.java.name) }
     }
+}
+
+/** The message that the node fails with when the class [className] of the schema [schemaName] was built against `javax.persistence`. */
+internal fun builtForJavaxPersistenceMessage(className: String, schemaName: String): String {
+    return "The class $className of the schema $schemaName was built for Corda 4.14 or earlier, as it uses the " +
+            "javax.persistence annotations. Corda 4.15 uses Hibernate 7, which requires jakarta.persistence. " +
+            "The CorDapp that contains the schema needs to be rebuilt for Corda 4.15 - see the \"Upgrading to Hibernate 7\" documentation."
 }
 
 /** Whether the bytes of a class file contain a reference to a `javax.persistence` class (constant pool entries are ASCII-compatible). */
