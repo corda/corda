@@ -20,12 +20,18 @@ import org.hibernate.tool.schema.spi.SchemaMigrator
 /**
  * The [org.hibernate.tool.schema.spi.SchemaManagementTool] used when Hibernate is allowed to manage the schema (`hbm2ddl.auto=update`).
  *
- * From Hibernate 6, the `update` mode not only creates missing tables and columns, but also alters the type and length of existing
- * columns so that they match the entity mapping. Hibernate 5 never did this. The tables of the node (and of CorDapps) are created
- * and owned by Liquibase, and their column definitions deliberately differ from Hibernate's defaults (e.g. `NVARCHAR(1024)` for a
- * `String` with no explicit length), so altering them would for example shrink such columns to 255 characters.
+ * In production, the schema is managed only by Liquibase, and Hibernate just validates it (`hbm2ddl.auto=validate`). Hibernate is only
+ * allowed to manage the schema when the node is started with `--allow-hibernate-to-manage-app-schema`, which requires dev mode, and by
+ * the test frameworks (the driver DSL and the mock network do so by default). This lets CorDapps without migration scripts be run.
+ * Although the option refers to the app schema, `update` applies to every entity of the session factory, including the node's own,
+ * whose tables Liquibase has already created.
  *
- * This tool restores the Hibernate 5 behaviour: only missing tables and columns are created.
+ * Hibernate 5's `update` mode only created missing tables and columns. From Hibernate 6, it also alters the type and length of
+ * existing columns so that they match the entity mapping. The column definitions of the Liquibase tables deliberately differ from
+ * Hibernate's defaults (e.g. `NVARCHAR(1024)` for a `String` with no explicit length), so altering them would for example shrink such
+ * columns to 255 characters.
+ *
+ * This tool restores the Hibernate 5 behaviour: only missing tables and columns are created, and existing columns are never altered.
  */
 class CordaSchemaManagementTool : HibernateSchemaManagementTool() {
     override fun getSchemaMigrator(options: MutableMap<String, Any>?): SchemaMigrator {

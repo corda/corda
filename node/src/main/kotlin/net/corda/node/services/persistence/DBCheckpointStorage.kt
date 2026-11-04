@@ -582,8 +582,8 @@ class DBCheckpointStorage(
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
                 checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible, exception.id) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
-                join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob
-                left outer join ${DBFlowException::class.java.name} exception on checkpoint.exceptionDetails = exception
+                join checkpoint.${DBFlowCheckpoint::blob.name} blob
+                left outer join checkpoint.${DBFlowCheckpoint::exceptionDetails.name} exception
                 where checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
@@ -601,7 +601,7 @@ class DBCheckpointStorage(
                     metadata.startedBy
                 ) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
-                join ${DBFlowMetadata::class.java.name} metadata on metadata = checkpoint.flowMetadata  
+                join checkpoint.${DBFlowCheckpoint::flowMetadata.name} metadata
                 where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}
                 or checkpoint.status = ${FlowStatus.FAILED.ordinal}
                 or checkpoint.status = ${FlowStatus.KILLED.ordinal}""".trimIndent()
