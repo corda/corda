@@ -228,7 +228,7 @@ class LocalTypeModelTests {
         }
     }
 
-    private inline fun <reified T> assertInformation(expected: String) {
+    private inline fun <reified T : Any> assertInformation(expected: String) {
         assertEquals(expected.trimIndent(), model.inspect(typeOf<T>()).prettyPrint())
     }
 
@@ -236,9 +236,9 @@ class LocalTypeModelTests {
      * Handy for seeing what the inspector/pretty printer actually outputs for a type
      */
     @Suppress("unused")
-    private inline fun <reified T> printInformation() {
+    private inline fun <reified T : Any> printInformation() {
         println(model.inspect(typeOf<T>()).prettyPrint())
     }
 
-    private inline fun <reified T> typeOf(): Type = object : TypeToken<T>() {}.type
+    private inline fun <reified T : Any> typeOf(): Type = object : TypeToken<T>() {}.type
 }

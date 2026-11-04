@@ -87,9 +87,9 @@ class ClassCarpentingTypeLoaderTests {
             if (parameters.isEmpty()) TypeIdentifier.Unparameterised(typeName)
             else TypeIdentifier.Parameterised(typeName, null, parameters.toList())
 
-    private inline fun <reified T> typeOf(): Type = object : TypeToken<T>() {}.type
-    private inline fun <reified T> typeIdentifierOf(): TypeIdentifier = TypeIdentifier.forGenericType(typeOf<T>())
-    private inline fun <reified T> remoteType(): RemoteTypeInformation = remoteType(typeIdentifierOf<T>())
+    private inline fun <reified T : Any> typeOf(): Type = object : TypeToken<T>() {}.type
+    private inline fun <reified T : Any> typeIdentifierOf(): TypeIdentifier = TypeIdentifier.forGenericType(typeOf<T>())
+    private inline fun <reified T : Any> remoteType(): RemoteTypeInformation = remoteType(typeIdentifierOf<T>())
 
     private fun remoteType(typeIdentifier: TypeIdentifier): RemoteTypeInformation =
         when (typeIdentifier) {
