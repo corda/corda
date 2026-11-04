@@ -18,7 +18,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     /** The JDBC type used for [java.util.UUID]s that have no explicit mapping. See "hibernate.type.preferred_uuid_jdbc_type". */
-    protected open val preferredUuidJdbcType: String = "BINARY"
+    protected open val preferredUuidJdbcType: String = HibernateCompatibility.DEFAULT_UUID_JDBC_TYPE
 
     open fun buildHibernateConfig(metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
@@ -29,29 +29,17 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 }
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("jakarta.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
-                // The remaining properties retain the behaviour of Hibernate 5, so that existing databases (and CorDapps' tables) continue to
-                // work without any changes. Hibernate 6 and later changed these defaults.
-                //
-                // Entities with a plain @GeneratedValue used a single sequence called "hibernate_sequence" with an increment of 1. Hibernate 6+
-                // gives each entity its own sequence (e.g. node_infos_SEQ) with an increment of 50.
-                .setProperty("hibernate.id.db_structure_naming_strategy", "legacy")
-                .setProperty("hibernate.id.sequence.increment_size_mismatch_strategy", "FIX")
-                // Instants were stored as a plain TIMESTAMP, normalised to UTC using the "hibernate.jdbc.time_zone" above. Hibernate 6+
-                // uses TIMESTAMP WITH TIME ZONE, which is read and written using the session time zone of the database.
-                .setProperty("hibernate.type.preferred_instant_jdbc_type", "TIMESTAMP")
-                // UUIDs (without an explicit mapping) were stored as BINARY(16) apart from on PostgreSQL, where they were stored as a uuid.
-                // Hibernate 6+ uses the database's native uuid type where there is one.
-                .setProperty("hibernate.type.preferred_uuid_jdbc_type", preferredUuidJdbcType)
-                // Doubles and floats on Oracle were stored as FLOAT. Hibernate 6+ uses BINARY_FLOAT and BINARY_DOUBLE.
-                .setProperty("hibernate.dialect.oracle.use_binary_floats", "false")
-                // Hibernate 6+ alters existing columns in "update" mode. Only create what is missing as before.
-                .setProperty("hibernate.schema_management_tool", CordaSchemaManagementTool::class.java.name)
+
+        // Retain the behaviour of Hibernate 5, so that existing databases continue to work without any changes.
+        HibernateCompatibility.settings(preferredUuidJdbcType).forEach { (name, value) -> config.setProperty(name, value) }
+
+        return config
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
