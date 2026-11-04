@@ -1,0 +1,82 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'corda.common-publishing'
+
+description 'Java agent that converts CorDapps built against javax.persistence for Hibernate 7 in in-process tests'
+
+dependencies {
+    // The agent itself is Java only (so that it can run before anything else is loaded); the transformer and ASM are bundled, relocated.
+    implementation project(':common-javax-persistence-transformer')
+
+    testImplementation project(':core')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
+    testImplementation project(':node-driver')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    // The javax.persistence fixture (classes compiled at test time against a stub of the API).
+    testImplementation project(path: ':node-api', configuration: 'testArtifacts')
+    // A CorDapp built against javax.persistence and Corda 4.12, on the test classpath as a CorDapp's own tests have it.
+    testImplementation project(':testing:cordapps:javax-persistence')
+    testImplementation "jakarta.persistence:jakarta.persistence-api:$jakarta_persistence_version"
+    testImplementation "org.hibernate.orm:hibernate-core:$hibernate_version"
+    testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+}
+
+jar {
+    // Only the self-contained jar is published and used; the plain one is kept out of the way.
+    archiveClassifier = 'thin'
+}
+
+shadowJar {
+    archiveBaseName = 'corda-javax-persistence-test-agent'
+    archiveClassifier = ''
+    dependencies {
+        include(project(':common-javax-persistence-transformer'))
+        include(dependency('org.ow2.asm:asm'))
+        include(dependency('org.ow2.asm:asm-commons'))
+        include(dependency('org.ow2.asm:asm-tree'))
+    }
+    // Nothing the agent brings may collide with what the test classpath has: a different ASM, or the node's copy of the transformer.
+    relocate 'org.objectweb.asm', 'net.corda.testing.javaxpersistence.shaded.asm'
+    relocate 'net.corda.common.javaxpersistence', 'net.corda.testing.javaxpersistence.shaded.transformer'
+    exclude 'META-INF/maven/**'
+    exclude 'module-info.class'
+    manifest {
+        attributes(
+                'Premain-Class': 'net.corda.testing.javaxpersistence.JavaxPersistenceTestAgent',
+                'Agent-Class': 'net.corda.testing.javaxpersistence.JavaxPersistenceTestAgent',
+                'Implementation-Title': 'Corda javax.persistence test agent',
+                'Implementation-Version': rootProject.version
+        )
+    }
+}
+
+assemble.dependsOn shadowJar
+
+tasks.named('test', Test) {
+    dependsOn shadowJar
+    // The tests run the agent from the self-contained jar, as a CorDapp's tests do, not from the main output of this module.
+    classpath = sourceSets.test.runtimeClasspath - sourceSets.main.output
+    doFirst {
+        // Listed before Quasar's agent (which the quasar-utils plugin adds), so that Quasar instruments converted classes, as in the node.
+        jvmArgs = ["-javaagent:${shadowJar.archiveFile.get().asFile}"] + jvmArgs
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            artifactId 'corda-javax-persistence-test-agent'
+            artifact shadowJar
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}

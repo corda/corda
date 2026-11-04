@@ -58,9 +58,8 @@ dependencies {
     implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "jakarta.persistence:jakarta.persistence-api:$jakarta_persistence_version"
     implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
-    // Converts CorDapps built against javax.persistence for Hibernate 7 as their classes are loaded (JavaxPersistenceTransformer).
-    implementation "org.ow2.asm:asm:$asm_version"
-    implementation "org.ow2.asm:asm-commons:$asm_version"
+    // Converts CorDapps built against javax.persistence for Hibernate 7 as their classes are loaded (CordappClassLoader).
+    implementation project(':common-javax-persistence-transformer')
     implementation "net.bytebuddy:byte-buddy:1.18.8"
     implementation "javax.transaction:javax.transaction-api:1.3"
     implementation "co.paralleluniverse:quasar-osgi-annotations:$quasar_version"

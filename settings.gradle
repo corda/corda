@@ -110,6 +110,9 @@ include 'testing:cordapps:sleeping'
 include 'testing:cordapps:cashobservers'
 include 'testing:cordapps:4.11-workflows'
 include 'testing:cordapps:dummystateworkflows'
+include 'testing:cordapps:javax-persistence'
+include 'javax-persistence-agent'
+project(":javax-persistence-agent").projectDir = new File("$settingsDir/testing/javax-persistence-agent")
 
 // Common libraries - start
 include 'common-validation'
@@ -121,6 +124,9 @@ project(":common-configuration-parsing").projectDir = new File("$settingsDir/com
 
 include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
+
+include 'common-javax-persistence-transformer'
+project(":common-javax-persistence-transformer").projectDir = new File("$settingsDir/common/javax-persistence-transformer")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'

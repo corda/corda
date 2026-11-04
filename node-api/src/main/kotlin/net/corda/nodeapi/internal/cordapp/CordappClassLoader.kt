@@ -1,7 +1,8 @@
 package net.corda.nodeapi.internal.cordapp
 
+import net.corda.common.javaxpersistence.JavaxPersistenceTransformer
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
+import net.corda.core.utilities.debug
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -16,7 +17,8 @@ import kotlin.io.path.toPath
  * The class loader of a node's CorDapps: a [URLClassLoader] over the CorDapp jars which converts the classes that were built against
  * `javax.persistence` (CorDapps built for Corda 4.14 or earlier) to `jakarta.persistence`, which is what the node's Hibernate 7 reads, as
  * it defines them (see [JavaxPersistenceTransformer]). The jars themselves are not touched, so their hashes and signatures are unaffected,
- * and a class that is not built for `javax.persistence` alone is defined from its original bytes.
+ * and a class that is not built for `javax.persistence` alone, or that belongs to a bundled copy of the `javax.persistence` API, is defined
+ * from its original bytes.
  *
  * Classes are defined with the same code source (jar location and signers) and package definition as [URLClassLoader] would give them,
  * because the node maps classes to CorDapps by their code source location. URLs that are not jar files on disk are served by
@@ -50,12 +52,15 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
         for (jar in jars) {
             val entry = jar.file.getJarEntry(entryName) ?: continue
             val originalBytes = jar.file.getInputStream(entry).use { it.readBytes() }
-            val bytes = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(originalBytes)) {
+            val bytes = if (JavaxPersistenceTransformer.needsConversion(name, originalBytes)) {
                 if (announcedJars.add(jar.path)) {
                     logger.info("CorDapp ${jar.path} was built for Corda 4.14 or earlier (javax.persistence); its classes are converted " +
                             "to jakarta.persistence for Hibernate 7 as they are loaded")
                 }
-                JavaxPersistenceTransformer.transform(originalBytes, name).also { _convertedClassNames += name }
+                JavaxPersistenceTransformer.transform(originalBytes, name).also {
+                    _convertedClassNames += name
+                    logger.debug { "Converted $name from javax.persistence to jakarta.persistence" }
+                }
             } else {
                 originalBytes
             }

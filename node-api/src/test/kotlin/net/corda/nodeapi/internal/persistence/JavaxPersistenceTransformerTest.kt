@@ -11,11 +11,14 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import net.corda.common.javaxpersistence.JavaxPersistenceConversionError
+import net.corda.common.javaxpersistence.JavaxPersistenceTransformer
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.CONVERTER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.PLAIN
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.REPOSITORY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.STUB_ENTITY_ANNOTATION
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.TYPE_DEF_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.UNKNOWN_TYPE_ENTITY
 import org.assertj.core.api.Assertions.assertThat
@@ -53,7 +56,7 @@ class JavaxPersistenceTransformerTest {
             } catch (e: java.nio.file.NoSuchFileException) {
                 throw ClassNotFoundException(name, e)
             }
-            val converted = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(bytes)) JavaxPersistenceTransformer.transform(bytes, name) else bytes
+            val converted = if (JavaxPersistenceTransformer.needsConversion(name, bytes)) JavaxPersistenceTransformer.transform(bytes, name) else bytes
             return defineClass(name, converted, 0, converted.size)
         }
     }
@@ -137,6 +140,28 @@ class JavaxPersistenceTransformerTest {
     @Test(timeout = 300_000)
     fun `a class that does not refer to the persistence API is not converted`() {
         assertThat(JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(fixture.classBytes(PLAIN))).isFalse()
+        assertThat(JavaxPersistenceTransformer.needsConversion(PLAIN, fixture.classBytes(PLAIN))).isFalse()
+    }
+
+    @Test(timeout = 300_000)
+    fun `a class of the javax persistence API itself is not converted although it refers to its own package`() {
+        val apiClassBytes = fixture.stubClassBytes(STUB_ENTITY_ANNOTATION)
+        assertThat(JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(apiClassBytes)).isTrue()
+        assertThat(JavaxPersistenceTransformer.isPersistenceApiClass(STUB_ENTITY_ANNOTATION)).isTrue()
+        assertThat(JavaxPersistenceTransformer.isPersistenceApiClass(STUB_ENTITY_ANNOTATION.replace('.', '/'))).isTrue()
+        assertThat(JavaxPersistenceTransformer.isPersistenceApiClass(ENTITY)).isFalse()
+        assertThat(JavaxPersistenceTransformer.needsConversion(STUB_ENTITY_ANNOTATION, apiClassBytes)).isFalse()
+        assertThat(JavaxPersistenceTransformer.needsConversion(STUB_ENTITY_ANNOTATION.replace('.', '/'), apiClassBytes)).isFalse()
+        assertThat(JavaxPersistenceTransformer.needsConversion(ENTITY, fixture.classBytes(ENTITY))).isTrue()
+    }
+
+    @Test(timeout = 300_000)
+    fun `the class name is accepted in internal form as a class file transformer receives it`() {
+        val converted = JavaxPersistenceTransformer.transform(fixture.classBytes(ENTITY), ENTITY.replace('.', '/'))
+        assertThat(JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(converted)).isFalse()
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(UNKNOWN_TYPE_ENTITY), UNKNOWN_TYPE_ENTITY.replace('.', '/')) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining("The class $UNKNOWN_TYPE_ENTITY uses")
     }
 
     @Test(timeout = 300_000)

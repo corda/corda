@@ -16,10 +16,12 @@ import kotlin.io.path.writeText
  * Classes built against `javax.persistence` the way a CorDapp for Corda 4.14 or earlier is built: Java sources compiled at test time
  * (with the JDK's compiler) against a stub of the `javax.persistence` API that declares just what the sources use, since the real API is
  * not on the classpath of a Corda 4.15 build. The result is a directory of class files and a jar of them, both referring to
- * `javax.persistence` only.
+ * `javax.persistence` only, and a second jar that also bundles the stub API, as a CorDapp that packages the API jar does.
  */
 class JavaxPersistenceFixture(root: Path) {
     companion object {
+        /** The `@Entity` annotation of the stub API, which a CorDapp bundling the API would carry under this name. */
+        const val STUB_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val ENTITY = "legacy.LegacyEntity"
         const val CONVERTER = "legacy.UuidConverter"
         const val REPOSITORY = "legacy.LegacyRepository"
@@ -175,16 +177,23 @@ class JavaxPersistenceFixture(root: Path) {
     /** The CorDapp-like classes as a jar. */
     val jar: Path = root / "legacy-cordapp.jar"
 
+    /** The CorDapp-like classes together with the stub `javax.persistence` API, as a CorDapp that bundles the API jar is packaged. */
+    val jarWithBundledApi: Path = root / "legacy-cordapp-with-api.jar"
+
     init {
         compile(stubSources, stubClassesDir, classpath = emptyList())
         val quasarJar = co.paralleluniverse.fibers.Fiber::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(cordappSources, classesDir, classpath = listOf(stubClassesDir, quasarJar))
         val jakartaApiJar = jakarta.persistence.Entity::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(dualSources, classesDir, classpath = listOf(stubClassesDir, jakartaApiJar))
-        writeJar()
+        writeJar(jar, listOf(classesDir))
+        writeJar(jarWithBundledApi, listOf(classesDir, stubClassesDir))
     }
 
     fun classBytes(className: String): ByteArray = (classesDir / (className.replace('.', '/') + ".class")).readBytes()
+
+    /** The bytes of a class of the stub `javax.persistence` API (or of the stub Hibernate 5 annotations). */
+    fun stubClassBytes(className: String): ByteArray = (stubClassesDir / (className.replace('.', '/') + ".class")).readBytes()
 
     private fun compile(sources: Map<String, String>, outputDir: Path, classpath: List<Path>) {
         val files = sources.map { (path, source) ->
@@ -198,13 +207,15 @@ class JavaxPersistenceFixture(root: Path) {
         check(compiler.run(null, null, null, *(options + files).toTypedArray()) == 0) { "Compilation of the fixture failed" }
     }
 
-    private fun writeJar() {
+    private fun writeJar(jar: Path, directories: List<Path>) {
         val manifest = Manifest().apply { mainAttributes.putValue("Manifest-Version", "1.0") }
         JarOutputStream(jar.outputStream(), manifest).use { out ->
-            Files.walk(classesDir).filter { Files.isRegularFile(it) }.forEach { file ->
-                out.putNextEntry(JarEntry(classesDir.relativize(file).joinToString("/")))
-                out.write(file.readBytes())
-                out.closeEntry()
+            for (directory in directories) {
+                Files.walk(directory).filter { Files.isRegularFile(it) }.forEach { file ->
+                    out.putNextEntry(JarEntry(directory.relativize(file).joinToString("/")))
+                    out.write(file.readBytes())
+                    out.closeEntry()
+                }
             }
         }
     }

@@ -1,0 +1,24 @@
+apply plugin: 'java-library'
+apply plugin: 'corda.common-publishing'
+
+description 'Converts classes built against javax.persistence to jakarta.persistence as they are loaded (Hibernate 7)'
+
+// A plain Java module with no dependency other than ASM, so that the javax persistence test agent can bundle it and run on
+// any test JVM, before anything else is loaded.
+dependencies {
+    implementation "org.ow2.asm:asm:$asm_version"
+    implementation "org.ow2.asm:asm-commons:$asm_version"
+}
+
+jar {
+    archiveBaseName = 'corda-common-javax-persistence-transformer'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.archiveBaseName.get()
+            from components.java
+        }
+    }
+}
