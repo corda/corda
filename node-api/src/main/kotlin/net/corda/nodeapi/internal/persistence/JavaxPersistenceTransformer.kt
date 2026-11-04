@@ -82,6 +82,20 @@ object JavaxPersistenceTransformer {
     const val REBUILD_ADVICE = "The CorDapp that contains the class needs to be rebuilt for Corda 4.15 - see the " +
             "\"Upgrading to Hibernate 7\" documentation."
 
+    /**
+     * System property the javax persistence test agent (`corda-javax-persistence-test-agent`, a class file transformer that runs this
+     * conversion on a test JVM, where a CorDapp's classes are on the test classpath rather than in a CorDapp jar) sets to `true` once it
+     * is installed, so that the node can tell, when it finds an unconverted class, whether the agent is there at all.
+     */
+    const val TEST_AGENT_INSTALLED_PROPERTY = "net.corda.javaxpersistence.agent"
+
+    /**
+     * Prefix of the system properties (one per class, suffixed with the binary name of the class) in which the javax persistence test
+     * agent records the message of a conversion that failed. The JVM ignores an exception thrown by a class file transformer and loads
+     * the class unconverted, so this is how the node learns why it finds an unconverted class.
+     */
+    const val TEST_AGENT_FAILURE_PROPERTY_PREFIX = "net.corda.javaxpersistence.agent.failure."
+
     private const val JAVAX_PERSISTENCE = "javax/persistence/"
     private const val JAKARTA_PERSISTENCE = "jakarta/persistence/"
     private const val HIBERNATE = "org/hibernate/"

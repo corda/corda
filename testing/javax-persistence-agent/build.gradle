@@ -1,0 +1,64 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'corda.common-publishing'
+
+description 'Java agent that converts CorDapps built against javax.persistence for Hibernate 7 in in-process tests'
+
+dependencies {
+    // The agent is a single Java class with no dependency of its own: it finds the node's converter (node-api) at run time through the
+    // class loader that is loading the CorDapp's classes, so it is compiled against node-api for its constants only.
+    compileOnly project(':node-api')
+
+    testImplementation project(':core')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
+    testImplementation project(':node-driver')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    // The javax.persistence fixture (classes compiled at test time against a stub of the API).
+    testImplementation project(path: ':node-api', configuration: 'testArtifacts')
+    // A CorDapp built against javax.persistence and Corda 4.12, on the test classpath as a CorDapp's own tests have it.
+    testImplementation project(':testing:cordapps:javax-persistence')
+    testImplementation "jakarta.persistence:jakarta.persistence-api:$jakarta_persistence_version"
+    testImplementation "org.hibernate.orm:hibernate-core:$hibernate_version"
+    testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+}
+
+jar {
+    archiveBaseName = 'corda-javax-persistence-test-agent'
+    manifest {
+        attributes(
+                'Premain-Class': 'net.corda.testing.javaxpersistence.JavaxPersistenceTestAgent',
+                'Agent-Class': 'net.corda.testing.javaxpersistence.JavaxPersistenceTestAgent',
+                'Implementation-Title': 'Corda javax.persistence test agent',
+                'Implementation-Version': rootProject.version
+        )
+    }
+}
+
+tasks.named('test', Test) {
+    dependsOn jar
+    // The tests run the agent from its jar, as a CorDapp's tests do, not from the main output of this module.
+    classpath = sourceSets.test.runtimeClasspath - sourceSets.main.output
+    doFirst {
+        // Listed before Quasar's agent (which the quasar-utils plugin adds), so that Quasar instruments converted classes, as in the node.
+        jvmArgs = ["-javaagent:${jar.archiveFile.get().asFile}"] + jvmArgs
+    }
+}
+
+publishing {
+    publications {
+        // The jar alone, without dependencies: the Kotlin plugin's standard library is only for the tests of this module.
+        agent(MavenPublication) {
+            artifactId 'corda-javax-persistence-test-agent'
+            artifact jar
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
