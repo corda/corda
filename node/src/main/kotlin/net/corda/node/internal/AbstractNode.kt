@@ -840,7 +840,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             flowLogicRefFactory,
             nodeProperties,
             configuration.drainingModePollPeriod,
-            unfinishedSchedules = busyNodeLatch
+            unfinishedSchedules = busyNodeLatch,
+            metricRegistry = metricRegistry
     ).tokenize()
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo, rotatedKeys: RotatedKeys): CordappLoader {

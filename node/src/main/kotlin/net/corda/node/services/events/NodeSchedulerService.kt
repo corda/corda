@@ -1,6 +1,9 @@
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.Counter
+import com.codahale.metrics.Gauge
+import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.concurrent.CordaFuture
@@ -66,11 +69,17 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val drainingModePollPeriod: Duration,
                            private val log: Logger = staticLog,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database))
+                           private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database),
+                           private val metricRegistry: MetricRegistry)
     : SchedulerService, AutoCloseable, SingletonSerializeAsToken() {
 
     companion object {
         private val staticLog get() = contextLogger()
+
+        private const val METRIC_PREFIX = "NodeSchedulerService"
+        internal const val DATABASE_FAILURES_METRIC_NAME = "$METRIC_PREFIX.DatabaseFailures"
+        internal const val CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME = "$METRIC_PREFIX.ConsecutiveDatabaseFailures"
+        internal const val MILLIS_STALLED_METRIC_NAME = "$METRIC_PREFIX.MillisStalled"
 
         /**
          * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
@@ -156,9 +165,36 @@ class NodeSchedulerService(private val clock: CordaClock,
     // this to usually trigger anything.
     private val idleWaitSeconds = 60.seconds
 
+    // how long to wait before retrying if the next scheduled state could not be loaded from the database.
+    private val errorRetrySeconds = 10.seconds
+
+    // Number of consecutive failures to load the next scheduled state from the database, reset to zero on the first
+    // subsequent success. Exposed as a metric (see [registerMetrics]) so operators can be alerted to an ongoing
+    // problem reaching the database that is silently preventing scheduled flows from running.
+    @Volatile
+    private var consecutiveLoadFailures = 0
+
+    // The clock instant by which the scheduler loop expects to have resumed and begun its next iteration: the deadline
+    // it is currently waiting on, whether that is a scheduled activity's due time, the idle poll interval, or the error
+    // back-off. [NodeSchedulerService.MillisStalled] reports how far the current time is past this, which stays at zero for a
+    // healthy scheduler however long it is legitimately waiting, and climbs only when the loop stops making progress.
+    @Volatile
+    private var nextIterationDeadline: Instant = clock.instant()
+
+    // Running total of failures to load the next scheduled state from the database, exposed as a metric.
+    private lateinit var loadFailures: Counter
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
+        registerMetrics()
         schedulerTimerExecutor.execute { runLoopFunction() }
+    }
+
+    private fun registerMetrics() {
+        loadFailures = metricRegistry.counter(DATABASE_FAILURES_METRIC_NAME)
+        metricRegistry.register(CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME, Gauge { consecutiveLoadFailures })
+        metricRegistry.register(MILLIS_STALLED_METRIC_NAME,
+                Gauge { Duration.between(nextIterationDeadline, clock.instant()).toMillis().coerceAtLeast(0) })
     }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
@@ -195,17 +231,38 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     private fun runLoopFunction() {
         while (mutex.locked { running }) {
+            var failedToLoad = false
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
                 rescheduled = GuavaSettableFuture.create()
                 //get the next scheduled action that isn't currently running
                 val deduplicate = HashSet(startingStateRefs) // Take an immutable copy to remove races with afterDatabaseCommit.
-                nextScheduledAction = schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
+                nextScheduledAction = try {
+                    schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
+                } catch (e: Exception) {
+                    // Never swallow an interrupt (e.g. from cancelAndWait), otherwise the thread would not shut down.
+                    if (Thread.currentThread().isInterrupted || generateSequence<Throwable>(e) { it.cause }.any { it is InterruptedException }) {
+                        throw e
+                    }
+                    // A failure here (e.g. a transient database connection error) must not kill the scheduler thread, as nothing
+                    // would ever restart it. Instead wait for a short while and try again.
+                    consecutiveLoadFailures++
+                    loadFailures.inc()
+                    log.error("Failed to load the next scheduled state (consecutive failures: $consecutiveLoadFailures), " +
+                            "will retry in $errorRetrySeconds", e)
+                    failedToLoad = true
+                    null
+                }
+                if (!failedToLoad && consecutiveLoadFailures > 0) {
+                    log.info("Loading scheduled states has recovered after $consecutiveLoadFailures consecutive failure(s)")
+                    consecutiveLoadFailures = 0
+                }
                 Pair(nextScheduledAction, rescheduled!!)
             }
             log.trace(schedulingAsNextFormat, scheduledState)
             // This will block the scheduler single thread until the scheduled time (returns false) OR
             // the Future is cancelled due to rescheduling (returns true).
             if (scheduledState != null) {
+                nextIterationDeadline = scheduledState.scheduledAt
                 if (!awaitWithDeadline(clock, scheduledState.scheduledAt, ourRescheduledFuture)) {
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
@@ -213,7 +270,9 @@ class NodeSchedulerService(private val clock: CordaClock,
                     log.trace { "Rescheduled $scheduledState" }
                 }
             } else {
-                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds, ourRescheduledFuture)
+                val deadline = clock.instant() + if (failedToLoad) errorRetrySeconds else idleWaitSeconds
+                nextIterationDeadline = deadline
+                awaitWithDeadline(clock, deadline, ourRescheduledFuture)
             }
 
         }

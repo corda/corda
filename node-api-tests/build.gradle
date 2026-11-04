@@ -19,6 +19,7 @@ dependencies {
     testImplementation "io.dropwizard.metrics:metrics-core:$metrics_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     testImplementation "io.netty:netty-transport-native-unix-common:$netty_version"
     testImplementation "io.netty:netty-handler-proxy:$netty_version"

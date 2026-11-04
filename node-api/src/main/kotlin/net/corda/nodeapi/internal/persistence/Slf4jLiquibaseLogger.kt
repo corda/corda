@@ -17,6 +17,11 @@ class Slf4jLiquibaseLogger(private val logger: Logger) : liquibase.logging.core.
     }
 
     override fun log(level: Level, message: String?, e: Throwable?) {
+        // Liquibase logs messages that should only be seen when explicitly enabled (e.g. analytics) at Level.OFF.
+        // OFF has the highest intValue, so without this check it would be reported as an error.
+        if (level == Level.OFF) {
+            return
+        }
         val levelValue = level.intValue()
         if (levelValue <= TRACE_THRESHOLD) {
             logger.trace(message, e)

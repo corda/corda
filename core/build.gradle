@@ -33,6 +33,7 @@ dependencies {
     implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
     // Guava: Google utilities library.
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"

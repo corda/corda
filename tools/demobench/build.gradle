@@ -68,6 +68,7 @@ dependencies {
     implementation "com.h2database:h2:$h2_version"
     implementation "net.java.dev.jna:jna-platform:$jna_version"
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     implementation "io.reactivex:rxjava:$rxjava_version"
 
     implementation "org.slf4j:log4j-over-slf4j:$slf4j_version"

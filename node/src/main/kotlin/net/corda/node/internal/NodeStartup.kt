@@ -42,6 +42,7 @@ import net.corda.node.internal.subcommands.ValidateConfigurationCli
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
@@ -249,6 +250,8 @@ open class NodeStartup : NodeStartupLogging {
         if (HashAttachmentConstraint.disableHashConstraints) {
             Node.printWarning("Hash constraints checking has been disabled by the node operator.")
         }
+
+        rpcTlsDisabledWarning(node.configuration.rpcOptions)?.let(Node::printWarning)
 
         val nodeInfo = node.start()
         val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
@@ -462,6 +465,25 @@ open class NodeStartup : NodeStartupLogging {
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -------------------------------------------------------------").newline().newline().reset())
 
         }
+    }
+}
+
+/**
+ * Returns a warning message if this node will accept RPC connections without TLS, or `null` if no warning is needed. With TLS disabled
+ * RPC usernames and passwords are sent over the network in clear text.
+ *
+ * A node using a stand alone RPC broker does not host the RPC acceptor itself, so TLS is configured on the broker instead.
+ */
+internal fun rpcTlsDisabledWarning(rpcOptions: NodeRpcOptions): String? {
+    if (rpcOptions.useSsl || rpcOptions.standAloneBroker) return null
+    val docsPointer = "See 'Configuring wire security' in the Client RPC documentation to enable TLS."
+    // An 'ssl' block without 'useSsl = true' is not rejected by config validation and is silently ignored, so call it out specifically.
+    return if (rpcOptions.sslConfig != null) {
+        "RPC is running without TLS: an 'rpcSettings.ssl' block is configured but 'rpcSettings.useSsl' is not true, so it is ignored and " +
+                "RPC usernames and passwords are sent over the network in clear text. $docsPointer"
+    } else {
+        "RPC is running without TLS ('rpcSettings.useSsl' is false), so RPC usernames and passwords are sent over the network in " +
+                "clear text. $docsPointer"
     }
 }
 

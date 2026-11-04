@@ -192,7 +192,10 @@ class ArtemisMessagingServer(
                     remotingThreads = remotingThreads
             ))
             if (rpcAddresses != null) {
-                addAcceptorConfiguration(rpcAcceptorTcpTransport(rpcAddresses.primary, config.rpcOptions.sslConfig, maxMessageSize, enableSSL = config.rpcOptions.useSsl, threadPoolName = "RPCServer"))
+                val rpcSslConfig = with(config.rpcOptions) {
+                    if (useSsl) requireNotNull(sslConfig) { "'rpcSettings.ssl' is mandatory when 'rpcSettings.useSsl' is specified" } else null
+                }
+                addAcceptorConfiguration(rpcAcceptorTcpTransport(rpcAddresses.primary, rpcSslConfig, maxMessageSize, threadPoolName = "RPCServer"))
                 if (rpcAddresses.admin != rpcAddresses.primary) {
                     addAcceptorConfiguration(rpcInternalAcceptorTcpTransport(rpcAddresses.admin, rpcSslOptions!!, maxMessageSize, threadPoolName = "RPCServerAdmin"))
                 }
