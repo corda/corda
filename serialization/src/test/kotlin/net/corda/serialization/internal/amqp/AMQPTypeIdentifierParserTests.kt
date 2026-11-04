@@ -166,19 +166,19 @@ class AMQPTypeIdentifierParserTests {
         verifyInvalid(nested)
     }
 
-    private inline fun <reified T> assertParseResult(typeString: String) {
+    private inline fun <reified T : Any> assertParseResult(typeString: String) {
         assertEquals(TypeIdentifier.forGenericType(typeOf<T>()), AMQPTypeIdentifierParser.parse(typeString))
     }
 
-    private inline fun <reified T> typeOf() = object : TypeToken<T>() {}.type
+    private inline fun <reified T : Any> typeOf() = object : TypeToken<T>() {}.type
 
-    private inline fun <reified T> assertParsesCompatibly() = assertParsesCompatibly(typeOf<T>())
+    private inline fun <reified T : Any> assertParsesCompatibly() = assertParsesCompatibly(typeOf<T>())
 
     private fun assertParsesCompatibly(type: Type) {
         assertParsesTo(type, TypeIdentifier.forGenericType(type).prettyPrint())
     }
 
-    private inline fun <reified T> assertParsesTo(expectedIdentifierPrettyPrint: String) {
+    private inline fun <reified T : Any> assertParsesTo(expectedIdentifierPrettyPrint: String) {
         assertParsesTo(typeOf<T>(), expectedIdentifierPrettyPrint)
     }
 
