@@ -255,7 +255,7 @@ allprojects {
     targetCompatibility = VERSION_17
 
     jacoco {
-        toolVersion = "0.8.7"
+        toolVersion = "0.8.16"
     }
 
     java {
