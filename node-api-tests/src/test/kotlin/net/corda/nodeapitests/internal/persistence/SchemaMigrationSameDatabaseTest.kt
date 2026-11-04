@@ -11,9 +11,9 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 
 class SchemaMigrationSameDatabaseTest {
     object TestSchemaFamily
