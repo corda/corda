@@ -96,6 +96,7 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
                     value
                 } else null
             }
+            @Deprecated("TextMapGetter.keys() is deprecated as of OpenTelemetry 1.67.0")
             override fun keys(carrier: ContextCarrier?): MutableIterable<String> {
                 return carrier?.context?.keys ?: mutableListOf()
             }
