@@ -28,6 +28,9 @@ class JavaxPersistenceFixture(root: Path) {
         const val TYPE_DEF_ENTITY = "legacy.TypeDefEntity"
         const val SUSPENDING_REPOSITORY = "legacy.SuspendingRepository"
         const val SUSPENDING_CALLER = "legacy.SuspendingCaller"
+        const val HIBERNATE_SESSION_USER = "legacy.HibernateSessionUser"
+        const val INTRUDER = "legacy.Intruder"
+        const val JAVAX_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val DUAL_ENTITY = "dual.DualEntity"
 
         /** A class annotated for both persistence APIs, as a CorDapp built to run on Corda 4.14 and 4.15 alike carries them. */
@@ -55,7 +58,8 @@ class JavaxPersistenceFixture(root: Path) {
                 "javax/persistence/PersistenceException.java" to "package javax.persistence; public class PersistenceException extends RuntimeException { public PersistenceException(String message) { super(message); } }",
                 "javax/persistence/EntityExistsException.java" to "package javax.persistence; public class EntityExistsException extends PersistenceException { public EntityExistsException(String message) { super(message); } }",
                 "javax/persistence/Query.java" to "package javax.persistence; import java.util.List; public interface Query { Query setParameter(String name, Object value); List getResultList(); }",
-                "javax/persistence/EntityManager.java" to "package javax.persistence; public interface EntityManager { void persist(Object entity); <T> T find(Class<T> entityClass, Object primaryKey); Query createQuery(String qlString); }",
+                "javax/persistence/EntityManager.java" to "package javax.persistence; public interface EntityManager { void persist(Object entity); <T> T find(Class<T> entityClass, Object primaryKey); Query createQuery(String qlString); <T> T unwrap(Class<T> cls); }",
+                "org/hibernate/Session.java" to "package org.hibernate; public interface Session { java.io.Serializable save(Object entity); }",
                 "org/hibernate/annotations/Type.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Type { String type(); }",
                 "org/hibernate/annotations/TypeDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface TypeDef { String name(); Class typeClass(); }"
         )
@@ -75,7 +79,22 @@ class JavaxPersistenceFixture(root: Path) {
                         @Column(name = "converted") @Convert(converter = UuidConverter.class) public UUID converted;
                         @Column(name = "typed") @org.hibernate.annotations.Type(type = "uuid-char") public UUID typed;
                         @Column(name = "bytes") @org.hibernate.annotations.Type(type = "corda-wrapper-binary") public byte[] bytes;
+                        @Column(name = "blob") @org.hibernate.annotations.Type(type = "corda-blob") public byte[] blob;
+                        @Column(name = "materialized") @org.hibernate.annotations.Type(type = "materialized_blob") public byte[] materialized;
+                        @Column(name = "binary_uuid") @org.hibernate.annotations.Type(type = "uuid-binary") public UUID binaryUuid;
+                        @Column(name = "raw") @org.hibernate.annotations.Type(type = "binary") public byte[] raw;
+                        @Column(name = "text") @org.hibernate.annotations.Type(type = "text") public String text;
                         public LegacyEntity() {}
+                    }
+                """.trimIndent(),
+                "legacy/HibernateSessionUser.java" to """
+                    package legacy;
+                    import javax.persistence.EntityManager;
+                    /** Uses the Hibernate 5 Session API directly, which the conversion cannot cover. */
+                    public class HibernateSessionUser {
+                        public static Object save(EntityManager em, Object entity) {
+                            return em.unwrap(org.hibernate.Session.class).save(entity);
+                        }
                     }
                 """.trimIndent(),
                 "legacy/UuidConverter.java" to """
@@ -109,6 +128,7 @@ class JavaxPersistenceFixture(root: Path) {
                     }
                 """.trimIndent(),
                 "legacy/Plain.java" to "package legacy; public class Plain { public static String hello() { return \"hello\"; } }",
+                "legacy/Intruder.java" to "package legacy; public class Intruder {}",
                 "legacy/UnknownTypeEntity.java" to """
                     package legacy;
                     @javax.persistence.Entity
@@ -175,13 +195,26 @@ class JavaxPersistenceFixture(root: Path) {
     /** The CorDapp-like classes as a jar. */
     val jar: Path = root / "legacy-cordapp.jar"
 
+    /** The same classes except [INTRUDER], in a jar whose manifest seals every package. */
+    val sealedJar: Path = root / "sealed-cordapp.jar"
+
+    /** Just [INTRUDER], in the `legacy` package that [sealedJar] seals. */
+    val intruderJar: Path = root / "intruder.jar"
+
+    /** The CorDapp-like classes together with the stub `javax.persistence` API, as a CorDapp that bundles the API ships them. */
+    val fatJar: Path = root / "fat-legacy-cordapp.jar"
+
     init {
         compile(stubSources, stubClassesDir, classpath = emptyList())
         val quasarJar = co.paralleluniverse.fibers.Fiber::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(cordappSources, classesDir, classpath = listOf(stubClassesDir, quasarJar))
         val jakartaApiJar = jakarta.persistence.Entity::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(dualSources, classesDir, classpath = listOf(stubClassesDir, jakartaApiJar))
-        writeJar()
+        val intruderEntry = INTRUDER.replace('.', '/') + ".class"
+        writeJar(jar, classesDir)
+        writeJar(sealedJar, classesDir, sealed = true) { it != intruderEntry }
+        writeJar(intruderJar, classesDir) { it == intruderEntry }
+        writeJar(fatJar, classesDir, stubClassesDir) { !it.startsWith("org/hibernate/") }
     }
 
     fun classBytes(className: String): ByteArray = (classesDir / (className.replace('.', '/') + ".class")).readBytes()
@@ -198,14 +231,33 @@ class JavaxPersistenceFixture(root: Path) {
         check(compiler.run(null, null, null, *(options + files).toTypedArray()) == 0) { "Compilation of the fixture failed" }
     }
 
-    private fun writeJar() {
-        val manifest = Manifest().apply { mainAttributes.putValue("Manifest-Version", "1.0") }
+    private fun writeJar(jar: Path, vararg roots: Path, sealed: Boolean = false, include: (String) -> Boolean = { true }) {
+        val manifest = Manifest().apply {
+            mainAttributes.putValue("Manifest-Version", "1.0")
+            if (sealed) mainAttributes.putValue("Sealed", "true")
+        }
         JarOutputStream(jar.outputStream(), manifest).use { out ->
-            Files.walk(classesDir).filter { Files.isRegularFile(it) }.forEach { file ->
-                out.putNextEntry(JarEntry(classesDir.relativize(file).joinToString("/")))
-                out.write(file.readBytes())
-                out.closeEntry()
+            for (root in roots) {
+                Files.walk(root).filter { Files.isRegularFile(it) }.forEach { file ->
+                    val entryName = root.relativize(file).joinToString("/")
+                    if (!include(entryName)) return@forEach
+                    out.putNextEntry(JarEntry(entryName))
+                    out.write(file.readBytes())
+                    out.closeEntry()
+                }
             }
         }
+    }
+}
+
+/**
+ * A Kotlin class typed on the persistence API. The tests rename its references to `javax.persistence` (metadata included, as the Kotlin
+ * compiler would have written it for Corda 4.14) to get a Kotlin class built for `javax.persistence`, which the fixture cannot compile.
+ */
+@Suppress("unused")
+class KotlinPersistenceUser(val query: jakarta.persistence.Query?) {
+    fun persist(em: jakarta.persistence.EntityManager, entity: Any): String {
+        em.persist(entity)
+        return "persisted $entity"
     }
 }

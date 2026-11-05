@@ -14,10 +14,12 @@ import jakarta.persistence.Table
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.CONVERTER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_SESSION_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.PLAIN
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.REPOSITORY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.TYPE_DEF_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.UNKNOWN_TYPE_ENTITY
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.annotations.JdbcTypeCode
@@ -29,6 +31,10 @@ import java.lang.reflect.Proxy
 import java.sql.Types
 import java.util.UUID
 import java.util.function.Function
+import kotlin.reflect.full.memberFunctions
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.jvmErasure
 
 class JavaxPersistenceTransformerTest {
     companion object {
@@ -104,6 +110,29 @@ class JavaxPersistenceTransformerTest {
         val bytes = entity.getDeclaredField("bytes")
         assertThat(bytes.getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(Types.VARBINARY)
         assertThat(bytes.getAnnotation(org.hibernate.annotations.Type::class.java)).isNull()
+        // The remaining names Corda 4.14 registered, and the standard Hibernate 5 names with a fixed JDBC type.
+        val expected = mapOf(
+                "blob" to CordaSqlTypes.CORDA_BLOB,
+                "materialized" to Types.BLOB,
+                "binaryUuid" to Types.BINARY,
+                "raw" to Types.VARBINARY,
+                "text" to Types.LONGVARCHAR
+        )
+        for ((field, code) in expected) {
+            assertThat(entity.getDeclaredField(field).getAnnotation(JdbcTypeCode::class.java)!!.value).describedAs(field).isEqualTo(code)
+            assertThat(entity.getDeclaredField(field).getAnnotation(org.hibernate.annotations.Type::class.java)).describedAs(field).isNull()
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a class that uses Hibernate classes beyond its annotations is reported, one that only uses the annotations is not`() {
+        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(HIBERNATE_SESSION_USER))).isTrue()
+        // The entity uses @Type, @Convert etc.: annotations only.
+        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(ENTITY))).isFalse()
+        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(REPOSITORY))).isFalse()
+        // Such a class is still converted (the Session reference is left alone), so it loads and fails only when the code runs.
+        val user = loader.loadClass(HIBERNATE_SESSION_USER)
+        assertThat(user.getMethod("save", EntityManager::class.java, Any::class.java)).isNotNull
     }
 
     @Test(timeout = 300_000)
@@ -132,6 +161,34 @@ class JavaxPersistenceTransformerTest {
         @Suppress("UNCHECKED_CAST")
         val finder = repository.getMethod("finder", String::class.java).invoke(null, "42") as Function<Any, Any?>
         assertThat(finder.apply(entityManager)).isEqualTo("found 42")
+    }
+
+    @Test(timeout = 300_000)
+    fun `the Kotlin metadata of a converted Kotlin class names the renamed types, so Kotlin reflection works on it`() {
+        val className = KotlinPersistenceUser::class.java.name
+        val jakartaBytes = javaClass.classLoader.getResourceAsStream(className.replace('.', '/') + ".class")!!.use { it.readBytes() }
+        // A Kotlin class built for javax.persistence, metadata included, as the Kotlin compiler would have produced for Corda 4.14.
+        val javaxBytes = JavaxPersistenceTransformer.rename(jakartaBytes, "jakarta/persistence/", "javax/persistence/")
+        assertThat(JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(javaxBytes)).isTrue()
+
+        val converted = JavaxPersistenceTransformer.transform(javaxBytes, className)
+        assertThat(String(converted, Charsets.ISO_8859_1)).doesNotContain("javax/persistence")
+        val loader = object : ClassLoader(javaClass.classLoader) {
+            override fun loadClass(name: String, resolve: Boolean): Class<*> {
+                if (name != className) return super.loadClass(name, resolve)
+                return findLoadedClass(name) ?: defineClass(name, converted, 0, converted.size)
+            }
+        }
+        val kotlinClass = loader.loadClass(className).kotlin
+        // Kotlin reflection resolves members through the metadata: a stale javax type there fails with KotlinReflectionInternalError.
+        val persist = kotlinClass.memberFunctions.single { it.name == "persist" }
+        assertThat(persist.parameters.map { it.type.jvmErasure }).containsExactly(kotlinClass, EntityManager::class, Any::class)
+        assertThat(kotlinClass.memberProperties.single().returnType.jvmErasure).isEqualTo(jakarta.persistence.Query::class)
+        val persisted = ArrayList<Any?>()
+        val entityManager = entityManager { method, args -> if (method.name == "persist") persisted += args!![0]; null }
+        val instance = kotlinClass.primaryConstructor!!.call(null)
+        assertThat(persist.call(instance, entityManager, "x")).isEqualTo("persisted x")
+        assertThat(persisted).containsExactly("x")
     }
 
     @Test(timeout = 300_000)

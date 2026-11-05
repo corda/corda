@@ -5,6 +5,9 @@ import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_SESSION_USER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.INTRUDER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.JAVAX_ENTITY_ANNOTATION
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.PLAIN
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.UNKNOWN_TYPE_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
@@ -14,6 +17,7 @@ import org.junit.BeforeClass
 import org.junit.ClassRule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.net.URLClassLoader
 
 class CordappClassLoaderTest {
     companion object {
@@ -63,6 +67,53 @@ class CordappClassLoaderTest {
             assertThatThrownBy { loader.loadClass(UNKNOWN_TYPE_ENTITY) }
                     .isInstanceOf(JavaxPersistenceConversionError::class.java)
                     .hasMessageContaining("my-custom-type")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a class that uses Hibernate classes directly is still converted and loads`() {
+        // The loader warns about it (once per jar); the code fails only when it runs, as a node built for Hibernate 5 would.
+        loader().use { loader ->
+            loader.loadClass(HIBERNATE_SESSION_USER)
+            assertThat(loader.convertedClassNames).containsExactly(HIBERNATE_SESSION_USER)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a sealed package accepts classes from its own jar only, as in a URLClassLoader`() {
+        val sealedFirst = CordappClassLoader(arrayOf(fixture.sealedJar.toUri().toURL(), fixture.intruderJar.toUri().toURL()), javaClass.classLoader)
+        sealedFirst.use { loader ->
+            assertThat(loader.loadClass(PLAIN).`package`.isSealed).isTrue()
+            assertThatThrownBy { loader.loadClass(INTRUDER) }
+                    .isInstanceOf(SecurityException::class.java)
+                    .hasMessageContaining("package legacy is sealed")
+        }
+        val intruderFirst = CordappClassLoader(arrayOf(fixture.intruderJar.toUri().toURL(), fixture.sealedJar.toUri().toURL()), javaClass.classLoader)
+        intruderFirst.use { loader ->
+            assertThat(loader.loadClass(INTRUDER).`package`.isSealed).isFalse()
+            assertThatThrownBy { loader.loadClass(PLAIN) }
+                    .isInstanceOf(SecurityException::class.java)
+                    .hasMessageContaining("can't seal package legacy")
+        }
+        // The same checks URLClassLoader applies.
+        URLClassLoader(arrayOf(fixture.sealedJar.toUri().toURL(), fixture.intruderJar.toUri().toURL()), javaClass.classLoader).use { loader ->
+            loader.loadClass(PLAIN)
+            assertThatThrownBy { loader.loadClass(INTRUDER) }.isInstanceOf(SecurityException::class.java)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a bundled javax persistence API class is defined as it is, not renamed`() {
+        CordappClassLoader(arrayOf(fixture.fatJar.toUri().toURL()), javaClass.classLoader).use { loader ->
+            val javaxEntity = loader.loadClass(JAVAX_ENTITY_ANNOTATION)
+            assertThat(javaxEntity.name).isEqualTo(JAVAX_ENTITY_ANNOTATION)
+            assertThat(javaxEntity.classLoader).isSameAs(loader)
+            assertThat(loader.convertedClassNames).isEmpty()
+            // With the API present, a dual-annotated class now carries both annotations; a javax-only one is still converted.
+            assertThat(loader.loadClass(DUAL_ENTITY).annotations.map { it.annotationClass.java.name })
+                    .containsExactlyInAnyOrder(JAVAX_ENTITY_ANNOTATION, Entity::class.java.name)
+            assertThat(loader.loadClass(ENTITY).isAnnotationPresent(Entity::class.java)).isTrue()
+            assertThat(loader.convertedClassNames).containsExactly(ENTITY)
         }
     }
 

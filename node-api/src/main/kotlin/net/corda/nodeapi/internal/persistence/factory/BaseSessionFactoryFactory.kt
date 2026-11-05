@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.persistence.factory
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.cordapp.CordappClassLoader
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
@@ -108,29 +109,45 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     /**
      * Hibernate 7 only understands the annotations of Jakarta Persistence. A class that was built against the `javax.persistence`
      * annotations only (i.e. a CorDapp built for Corda 4.14 or earlier) is converted to `jakarta.persistence` by the node's CorDapp class
-     * loader as it is loaded ([JavaxPersistenceTransformer]), which shows in the annotations of the loaded class. A class whose class file
-     * is built for `javax.persistence` but whose loaded form is not converted did not come through that class loader, which happens when
-     * the CorDapp's classes are on the node's own classpath (MockNetwork and driver tests); Hibernate would silently ignore such a class
-     * and then fail in obscure ways, so fail early with a message that explains what to do.
+     * loader as it is loaded ([JavaxPersistenceTransformer]), and the loader records it ([CordappClassLoader.convertedClassNames]). A class
+     * whose class file is built for `javax.persistence` but which the loader did not convert did not come through it, which happens
+     * when the CorDapp's classes are on the node's own classpath (MockNetwork, MockServices, in-process driver nodes, and CorDapps
+     * supplied from class directories); Hibernate would silently ignore such a class and then fail in obscure ways, so fail early with
+     * a message that explains what to do. The loader is asked first, because a mapped type need not carry a class-level annotation at all
+     * (Hibernate ignores such an entry, as it did on Corda 4.14); a class converted by other means (a class file transformer in a test
+     * JVM) shows its conversion in the `jakarta.persistence` annotations of the class or its members, which is accepted too.
      *
      * A class that carries both sets of annotations (a CorDapp built to run on Corda 4.14 and 4.15 alike) is left alone by the class
      * loader and accepted here: Hibernate reads the `jakarta.persistence` annotations and the JVM ignores the `javax.persistence` ones,
      * whose classes are not on the classpath.
      */
     private fun checkConvertedIfBuiltForJavaxPersistence(schema: MappedSchema, type: Class<*>) {
-        val classBytes = type.classLoader
-                ?.getResourceAsStream(type.name.replace('.', '/') + ".class")
+        val classLoader = type.classLoader ?: return
+        val classBytes = classLoader
+                .getResourceAsStream(type.name.replace('.', '/') + ".class")
                 ?.use { it.readBytes() }
                 ?: return
         if (!JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(classBytes)) return
-        check(type.annotations.any { it.annotationClass.java.name.startsWith("jakarta.persistence.") }) {
+        val convertedByLoader = classLoader is CordappClassLoader && type.name in classLoader.convertedClassNames
+        check(convertedByLoader || hasJakartaPersistenceAnnotations(type)) {
             "The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier, as it uses the " +
                     "javax.persistence annotations, and was not loaded through the node's CorDapp class loader, which converts such " +
-                    "classes for Hibernate 7 (Corda 4.15). This happens when the CorDapp's classes are on the node's own classpath, " +
-                    "for example in a MockNetwork or driver test. Build the CorDapp for Corda 4.15 to test it there - see the " +
-                    "\"Upgrading to Hibernate 7\" documentation."
+                    "classes for Hibernate 7 (Corda 4.15). This happens when the CorDapp's classes are on the node's own classpath: in a " +
+                    "MockNetwork or MockServices test, on an in-process driver node, or when the CorDapp comes from a class directory " +
+                    "(cordappsForPackages) rather than a jar. Build the CorDapp for Corda 4.15 to test it there, or test the unported " +
+                    "jar on an out-of-process driver node or a real node, which convert it - see the \"Upgrading to Hibernate 7\" " +
+                    "documentation."
         }
         logger.info("The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier " +
-                "(javax.persistence) and has been converted for Hibernate 7 by the CorDapp class loader")
+                "(javax.persistence) and has been converted for Hibernate 7" + if (convertedByLoader) " by the CorDapp class loader" else "")
+    }
+
+    /** Whether the loaded class, or any of its declared members, carries a `jakarta.persistence` annotation. */
+    private fun hasJakartaPersistenceAnnotations(type: Class<*>): Boolean {
+        val annotated = sequenceOf(type.annotations.asSequence(),
+                type.declaredFields.asSequence().flatMap { it.annotations.asSequence() },
+                type.declaredMethods.asSequence().flatMap { it.annotations.asSequence() },
+                type.declaredConstructors.asSequence().flatMap { it.annotations.asSequence() }).flatten()
+        return annotated.any { it.annotationClass.java.name.startsWith("jakarta.persistence.") }
     }
 }
