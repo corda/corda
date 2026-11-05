@@ -600,4 +600,84 @@ ignore:
           Recommended : Upgrade to Corda 4.12
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-10-13T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20186768:
+    - '*':
+        reason: >-
+          CVE-2026-49362: This is a missing-authentication issue in the Artemis
+          CORE protocol handler, allowing a client that has opened a connection
+          to a CORE acceptor to create durable queues before authenticating.
+          The impact is limited to availability (resource consumption on the
+          broker); it does not allow messages, transactions or vault data to be
+          read or modified. In Corda, the P2P broker acceptor requires mutual TLS
+          with a certificate issued by the network root CA, and the RPC admin
+          acceptor requires mutual TLS with the node's own certificate, so an
+          unauthenticated attacker cannot establish a connection to either of
+          them. The RPC acceptor is intended to be reachable only from trusted
+          internal networks; operators must restrict network access to the RPC
+          port, as enabling RPC TLS (rpcSettings.useSsl) does not require client
+          certificates and does not mitigate this issue on its own.
+          Where a node is configured to use an external Artemis broker
+          (messagingServerExternal), that broker is deployed and managed by
+          the operator, who must restrict network access to its acceptors.
+          This issue is fixed in newer versions (2.57.0), but those versions
+          are not compatible with Java 8 and Kotlin 1.2.71.
+          Fix : org.apache.artemis:artemis-server@2.57.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-11-05T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20159299:
+    - '*':
+        reason: >-
+          CVE-2026-49364: This is a missing-authentication issue in Artemis
+          cluster discovery, where a broker trusts unauthenticated UDP
+          multicast/JGroups discovery announcements and sends the cluster
+          user's credentials to an attacker-advertised peer. It is only
+          exploitable when a cluster connection uses a broadcast/discovery
+          group. Corda's embedded P2P and RPC brokers do not configure any
+          broadcast groups, discovery groups or cluster connections, the
+          cluster password is set to a random 128-bit value as clustering is
+          not used, and JGroups is excluded from the classpath. Corda clients
+          connect to statically configured addresses and never use discovery.
+          Where a node is configured to use an external Artemis broker
+          (messagingServerExternal), that broker is deployed and managed by
+          the operator, who must not enable discovery on untrusted networks.
+          As the vulnerable functionality is never used, Corda is not
+          impacted by this vulnerability.
+          This issue is fixed in newer versions (2.57.0), but those versions
+          are not compatible with Java 8 and Kotlin 1.2.71.
+          Fix : org.apache.artemis:artemis-server@2.57.0,
+          org.apache.artemis:artemis-core-client@2.57.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-11-05T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20260798:
+    - '*':
+        reason: >-
+          CVE-2026-49363: This is a missing-authentication issue in the Artemis
+          CORE protocol handler, allowing a client that has opened a connection
+          to a CORE acceptor to subscribe to the cluster topology before
+          authenticating and learn cluster member node IDs and connector
+          details. The impact is limited to information disclosure; it does not
+          allow messages to be read or broker state to be modified. Corda's
+          embedded P2P and RPC brokers are not clustered, so the only
+          information exposed is the broker's own randomly generated internal
+          node ID, which is not a Corda identity or key. In addition, the P2P
+          broker acceptor requires mutual TLS with a certificate issued by the
+          network root CA, and the RPC admin acceptor requires mutual TLS with
+          the node's own certificate, so an unauthenticated attacker cannot
+          establish a connection to either of them. The RPC acceptor is
+          intended to be reachable only from trusted internal networks;
+          operators must restrict network access to the RPC port.
+          Where a node is configured to use an external Artemis broker
+          (messagingServerExternal), that broker is deployed and managed by
+          the operator, who must restrict network access to its acceptors.
+          This issue is fixed in newer versions (2.57.0), but those versions
+          are not compatible with Java 8 and Kotlin 1.2.71.
+          Fix : org.apache.artemis:artemis-server@2.57.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-11-05T00:00:00.000Z
 patch: {}
