@@ -1,13 +1,14 @@
 package net.corda.nodeapi.internal.cordapp
 
 import jakarta.persistence.Entity
-import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
+import net.corda.common.javaxpersistence.JavaxPersistenceConversionError
+import net.corda.common.javaxpersistence.JavaxPersistenceTransformer
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.PLAIN
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.STUB_ENTITY_ANNOTATION
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.UNKNOWN_TYPE_ENTITY
-import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.BeforeClass
@@ -63,6 +64,22 @@ class CordappClassLoaderTest {
             assertThatThrownBy { loader.loadClass(UNKNOWN_TYPE_ENTITY) }
                     .isInstanceOf(JavaxPersistenceConversionError::class.java)
                     .hasMessageContaining("my-custom-type")
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a CorDapp that bundles the javax persistence API keeps the API classes under their own names`() {
+        CordappClassLoader(arrayOf(fixture.jarWithBundledApi.toUri().toURL()), CordappClassLoaderTest::class.java.classLoader).use { loader ->
+            // The bundled API class refers to its own package, so it looks built for javax.persistence, but renaming it would give it a
+            // name other than the one it is loaded under.
+            val apiClass = loader.loadClass(STUB_ENTITY_ANNOTATION)
+            assertThat(apiClass.name).isEqualTo(STUB_ENTITY_ANNOTATION)
+            assertThat(apiClass.classLoader).isSameAs(loader)
+            assertThat(loader.convertedClassNames).isEmpty()
+            // The CorDapp's own classes are still converted, and refer to the node's jakarta.persistence rather than the bundled API.
+            val entity = loader.loadClass(ENTITY)
+            assertThat(entity.isAnnotationPresent(Entity::class.java)).isTrue()
+            assertThat(loader.convertedClassNames).containsExactly(ENTITY)
         }
     }
 

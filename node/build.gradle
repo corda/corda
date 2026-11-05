@@ -255,6 +255,9 @@ dependencies {
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "com.google.jimfs:jimfs:1.1"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    // A CorDapp built against javax.persistence (Corda 4.12), refused by the node in the tests of this module, which run without the
+    // javax persistence test agent (JavaxPersistenceWithoutAgentTest); the tests with the agent are in testing/javax-persistence-agent.
+    testImplementation project(':testing:cordapps:javax-persistence')
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
     // Jersey for JAX-RS implementation for use in Jetty
     testImplementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"

@@ -13,8 +13,8 @@ CorDapps use for their vault schemas move from the `javax.persistence` package t
 | You are...                                    | What you need to do                                                                                              |
 |-----------------------------------------------|------------------------------------------------------------------------------------------------------------------|
 | **A node operator**                           | Nothing to your node configuration or database. Check your database version is supported. CorDapps built for Corda 4.14 or earlier keep working: the node converts their `javax.persistence` classes to `jakarta.persistence` as it loads them (see [CorDapps built for Corda 4.14 or earlier](#2-cordapps-built-for-corda-414-or-earlier)). |
-| **A CorDapp developer** (with a custom schema)| Nothing to run on 4.15. When you next rebuild, port your schema classes to `jakarta.persistence`; a script helps with most of it. A CorDapp that uses a custom Hibernate `@Type` must be ported before it can run on 4.15. |
-| **A CorDapp developer** (no custom schema)    | Nothing. Code that calls `ServiceHub.withEntityManager` or uses JPA classes directly is converted like the schemas; port it when you next rebuild. |
+| **A CorDapp developer** (with a custom schema)| Nothing to run on 4.15. When you next rebuild, port your schema classes to `jakarta.persistence`; a script helps with most of it. A CorDapp that uses a custom Hibernate `@Type` must be ported before it can run on 4.15. To run `MockNetwork`, `MockServices` or in-process driver tests of the CorDapp *before* porting it, add the test agent to the test JVM (see [Testing](#5-testing)). |
+| **A CorDapp developer** (no custom schema)    | Nothing. Code that calls `ServiceHub.withEntityManager` or uses JPA classes directly is converted like the schemas; port it when you next rebuild. In-process tests of it need the test agent, as above. |
 
 **There is no database migration.** Corda 4.15 does not add, change or remove any table, column, index or sequence as part of this
 upgrade, and Liquibase has no new changesets for it. Hibernate 7 has been configured to read and write the formats that existing
@@ -83,7 +83,8 @@ example through `Session.unwrap`), which fails when that code runs rather than a
   It is harmless. Quasar instruments the converted classes as the node loads them, but for a class that has not been loaded yet it reads
   the method list from the jar, where the method still has its `javax.persistence` signature; a call through the converted signature is
   then not found and Quasar treats it as it treats any unknown method, as possibly suspending, which is the safe assumption. The line
-  appears only for a method whose signature names a `javax.persistence` type and only when its caller is loaded first.
+  appears only for a method whose signature names a `javax.persistence` type and only when its caller is loaded first. The same line
+  can appear in an in-process test that runs the test agent (see [Testing](#5-testing)).
 
 ### Rolling back
 
@@ -169,16 +170,77 @@ result as a new CorDapp version:
 Test your CorDapp against **every database you support**. If you can, run your integration tests against PostgreSQL, SQL Server and
 Oracle: Hibernate's mapping of some Java types differs between databases.
 
-The conversion of `javax.persistence` classes only happens in the node's CorDapp class loader. In a `MockNetwork`, `MockServices` or
-driver test the CorDapp's classes are on the test's own classpath, from which they are loaded unchanged, so a CorDapp still built against
-`javax.persistence` cannot be tested in-process on 4.15: the node fails fast with a message that says so. Port the CorDapp to
-`jakarta.persistence` to test it on 4.15, or test the unported jar on a real node.
+#### Testing a CorDapp that is still built against `javax.persistence`
+
+A node converts such a CorDapp as its CorDapp class loader loads it (see [CorDapps built for Corda 4.14 or earlier](#2-cordapps-built-for-corda-414-or-earlier)).
+In a `MockNetwork`, `MockServices` or in-process driver test, however, the CorDapp's classes are on the test's own classpath, from which
+the JVM serves them before the node's class loader is asked, so they arrive unconverted and the node refuses the schema rather than let
+Hibernate ignore it:
+
+```
+The class com.example.MyState$PersistentMyState of the schema com.example.MySchemaV1 was built for Corda 4.14 or earlier, as it uses the
+javax.persistence annotations, and was not loaded through the node's CorDapp class loader, which converts such classes for Hibernate 7
+(Corda 4.15). This happens when the CorDapp's classes are on the node's own classpath, for example in a MockNetwork, MockServices or
+in-process driver test. Run such a test with the javax persistence test agent (-javaagent:corda-javax-persistence-test-agent.jar), ...
+```
+
+To run such tests on 4.15 without porting the CorDapp first, run the test JVM with the **javax persistence test agent**,
+`net.corda:corda-javax-persistence-test-agent`. It is a Java agent that applies the node's conversion to every class the test JVM loads,
+wherever it is loaded from: the CorDapp's schema, its `withEntityManager` code and its test code alike. In Gradle:
+
+```groovy
+configurations {
+    javaxPersistenceAgent
+}
+
+dependencies {
+    javaxPersistenceAgent "net.corda:corda-javax-persistence-test-agent:$corda_release_version"
+}
+
+tasks.withType(Test).configureEach {
+    doFirst {
+        // Listed before Quasar's agent (added by the quasar-utils plugin), so that Quasar instruments converted classes, as on a node.
+        jvmArgs = ["-javaagent:${configurations.javaxPersistenceAgent.singleFile}"] + jvmArgs
+    }
+}
+```
+
+For a run configuration in an IDE, add the same `-javaagent:<path to the jar>` to the VM options, before Quasar's. The jar is
+self-contained (it carries its own copy of the bytecode library it uses, under a private package name), so it works with any test runner
+and does not change what is on the test classpath. A future version of the `quasar-utils` Gradle plugin may add the agent for you.
+
+What to know about it:
+
+* **It is for test JVMs only.** A node never needs it: the node's class loader converts the CorDapp. A driver test that starts its nodes
+  *out of process* needs it neither, as those nodes load the CorDapp through that class loader. Tests of a CorDapp already built for
+  `jakarta.persistence`, or for both APIs, do not need it, and it leaves their classes alone.
+* **Start the JVM with it.** The agent must be on the command line (`-javaagent`); a class loaded before the agent is installed stays
+  unconverted. The jar can also be attached to a running JVM, but that form is not supported for tests: the node then reports the class
+  as loaded before the agent was.
+* **The same limits as on a node.** A Hibernate 5 `@Type` the node cannot substitute, and `@TypeDef`, cannot be converted here either.
+  Because the JVM ignores a class file transformer that fails, the agent prints the reason on the console (`[corda-javax-persistence-test-agent]
+  The class ... was left as built for javax.persistence ...`) and the node's message then names the class and that reason:
+
+  ```
+  The class com.example.MyState$PersistentMyState of the schema com.example.MySchemaV1 was built for Corda 4.14 or earlier, as it uses the
+  javax.persistence annotations, and the javax persistence test agent could not convert it for Hibernate 7 (Corda 4.15): The class
+  com.example.MyState$PersistentMyState uses the Hibernate 5 annotation @TypeDef, which no longer exists in Hibernate 7. The CorDapp that
+  contains the class needs to be rebuilt for Corda 4.15 ...
+  ```
+* **Quasar.** The agent is listed before Quasar's so that Quasar instruments the converted classes, as it does on a node. (The agent
+  registers its transformer in a way that the JVM runs before Quasar's whatever the order, so a wrong order does not break a test, but
+  keep the documented one.) The Quasar warning described in [Things you may notice](#3-things-you-may-notice) can appear in tests too.
+* **A CorDapp that bundles the `javax.persistence` API jar** is handled: the API classes keep their names, and the CorDapp's classes are
+  converted to refer to `jakarta.persistence` instead.
+
+Alternatively, port the CorDapp to `jakarta.persistence` (sections 1 to 4), or test the unported jar on a real node or with
+out-of-process driver nodes.
 
 ### 6. A CorDapp you cannot rebuild
 
 Nothing needs to be done: the node converts it as described above. If it uses a Hibernate `@Type` the node cannot substitute, the
 [Eclipse Transformer](https://github.com/eclipse/transformer) does not help either (it only renames the package); ask the vendor for a
-4.15 build.
+4.15 build. To run in-process tests against it, use the test agent described in [Testing](#5-testing).
 
 ### 7. A CorDapp that must run on 4.14 and 4.15
 
@@ -237,6 +299,18 @@ its signature are unchanged, so contract constraints, attachments and the CorDap
 **Does my CorDapp need Hibernate 7 on its classpath?** Only if it uses Hibernate classes directly (for example `@JdbcTypeCode`).
 The node provides Hibernate; declare it `cordaProvided`/compile-only in your build, as you did for Hibernate 5.
 
+**My unported CorDapp runs on a 4.15 node but its `MockNetwork` tests fail with "was not loaded through the node's CorDapp class
+loader". Why?** In an in-process test the CorDapp's classes are on the test classpath, where the node's converting class loader does not
+see them. Add the javax persistence test agent to the test JVM, which converts them there (see [Testing](#5-testing)). Driver tests with
+out-of-process nodes, and real nodes, do not need it.
+
+**Does the test agent change my CorDapp, or does a node need it?** No. Like the node's class loader, the agent converts classes in
+memory as the test JVM loads them; nothing on disk changes, and a node converts the CorDapp itself.
+
+**Can I keep using the test agent instead of porting?** It lets the existing tests of a CorDapp built for Corda 4.14 or earlier run on
+4.15, including code that is still typed on `javax.persistence`, so a CorDapp that is not being rebuilt can stay tested. Code you write
+*for* 4.15 should use `jakarta.persistence`, as 4.14's test-time API (`javax.persistence-api`) is not part of a 4.15 build.
+
 ---
 
 ## Testing status (remove before publishing)
@@ -257,13 +331,14 @@ Verified by the engineer who made the change (branch `adel/ENT-15178`):
 * The "built for Corda 4.14" start-up check was verified against the genuine Corda 4.12 `finance-contracts` jar.
 * The migration script was run on unmodified Hibernate 5 sources and produced the same result as the hand conversion in this change.
 
-Load-time conversion of `javax.persistence` CorDapps (`CordappClassLoader`, `JavaxPersistenceTransformer`):
+Load-time conversion of `javax.persistence` CorDapps (`CordappClassLoader`, `JavaxPersistenceTransformer` in
+`common/javax-persistence-transformer`):
 
 * Unit tests in `node-api` compile Java sources against a stub of the `javax.persistence` API at test time (the real one is not on the
   classpath of a 4.15 build) and check the converted classes against the real `jakarta.persistence` API: annotations with nested
   annotations and enum values, an `AttributeConverter`, a method taking an `EntityManager`, a lambda typed on it, a `catch` of a JPA
-  exception, the `@Type` substitutions, the refusal of an unknown `@Type` and of `@TypeDef`, a dual-annotated class left alone, and the
-  code source and package of classes loaded from a jar.
+  exception, the `@Type` substitutions, the refusal of an unknown `@Type` and of `@TypeDef`, a dual-annotated class left alone, a bundled
+  copy of the `javax.persistence` API left under its own names, and the code source and package of classes loaded from a jar.
 * Quasar: the conversion runs before Quasar's agent sees a class, so Quasar instruments the converted bytes, and the node's class loader
   exclusion (`net.corda.core.serialization.internal.**`, the attachments class loader) does not cover the CorDapp class loader, so its
   classes are instrumented as before. `CordappClassLoaderQuasarTest` runs, under the agent with instrumentation verification on, a fiber
@@ -277,6 +352,22 @@ Load-time conversion of `javax.persistence` CorDapps (`CordappClassLoader`, `Jav
   (transaction zip, manifest and 280 queryable-state rows to CSV) and `delete-vault` ran to completion and emptied the vault and
   model tables. Multi-schema mode (the CorDapp's own Hibernate 5 session factory for a PostgreSQL backup schema) was not run; it uses
   Hibernate 5 classes directly and is outside what the conversion covers.
+
+The javax persistence test agent (`testing/javax-persistence-agent`, published as `corda-javax-persistence-test-agent`), whose tests run
+in that module's `test` task under the agent's own self-contained jar and Quasar's agent (with instrumentation verification on):
+
+* A test CorDapp built against Corda 4.12, `javax.persistence-api` 2.2 and Hibernate 5 (`testing/cordapps/javax-persistence`), none of
+  which is on the test runtime classpath: a `QueryableState` with a `@Type(type = "uuid-char")` column, a flow that records it and one
+  that counts it through `withEntityManager` with a `@Suspendable` helper typed on `javax.persistence.EntityManager`, and test code with
+  a `withEntityManager` block typed on the javax API. Run through `MockServices` (vault queries on the label and on the UUID column),
+  a `MockNetwork` node (both flows, a vault query and the test-code block) and an in-process driver node (both flows over RPC and a vault
+  query over RPC).
+* The `node-api` fixture loaded through a plain `URLClassLoader` under the agent: the conversion, the bundled-API case, a dual-annotated
+  class left alone, the console message and the recorded reason for an unknown `@Type` and for `@TypeDef`, and the fiber test of
+  `CordappClassLoaderQuasarTest` repeated with the agent doing the conversion, in both load orders.
+* A second test CorDapp whose schema uses `@TypeDef`: `MockServices` fails with the node's message carrying the agent's reason.
+* Without the agent (`node` module, `JavaxPersistenceWithoutAgentTest`): the same test CorDapp is refused with the message that names the
+  agent.
 
 **Not tested** (no environment available): Microsoft SQL Server, Azure SQL, Oracle, and PostgreSQL versions other than 16. Hibernate 7
 maps some Java types differently on these databases, and it is where an unnoticed difference is most likely. These need to be run by QA, against
