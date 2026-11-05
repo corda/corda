@@ -51,7 +51,8 @@ needs to be rebuilt for Corda 4.15 ...
 ```
 
 Nothing is changed in the database when this happens. Obtain updated CorDapps from their vendors (or see the next section if you build
-them yourself) **before** starting the node on 4.15. CorDapps that have no custom schema are not affected by this check.
+them yourself) **before** starting the node on 4.15. CorDapps that have no custom schema pass this check. A flow built for 4.14 that
+calls `serviceHub.withEntityManager` is not detected, and fails when it runs (see "Changes the script cannot make for you").
 
 ### 3. Things you may notice
 
@@ -97,6 +98,11 @@ tools/scripts/migrate-cordapp-to-hibernate7.sh path/to/your/cordapp             
 
 It is safe to run twice. Always review the diff and run your tests.
 
+The script changes the Hibernate dependencies that your build files declare. It also lists the entries in your build files that are
+likely to bring in Hibernate 5 through another dependency: Corda 4.14 or earlier, and Spring Data JPA. Gradle cannot put Hibernate 5 on
+the same classpath as Corda 4.15 (see "Gradle reports a capability conflict" below). The script does not resolve your dependencies, so
+it cannot find every case. If Gradle reports the conflict, the script's report tells you how to find the cause.
+
 ### 3. Changes the script cannot make for you
 
 **HQL and JPQL are validated strictly.** Hibernate 5 passed anything it did not recognise straight through to the database; Hibernate 7
@@ -129,6 +135,72 @@ mark the transaction for rollback.
 **Constraint violations.** A duplicate-key violation that was reported as a `PersistenceException` wrapping a
 `ConstraintViolationException` is now reported as the `ConstraintViolationException` itself (which is itself a
 `PersistenceException`). Code that catches `PersistenceException` is unaffected.
+
+**Gradle reports a capability conflict on `hibernate-core`.** Hibernate 5 was published as `org.hibernate:hibernate-core`, and
+Hibernate 6 and later as `org.hibernate.orm:hibernate-core`. Hibernate 7's Gradle metadata says that it provides both, so that Gradle
+never puts two versions of Hibernate on one classpath. Corda 4.15 brings in Hibernate 7 through `corda-core`. If anything else in the
+same configuration (for example the compile, runtime or test classpath) depends on Hibernate 5, Gradle refuses to resolve it:
+
+```
+> Could not resolve all files for configuration ':compileClasspath'.
+   > Could not resolve org.hibernate.orm:hibernate-core:7.4.12.Final.
+      > Module 'org.hibernate.orm:hibernate-core' has been rejected:
+           Cannot select module with conflict on capability 'org.hibernate:hibernate-core:7.4.12.Final' also provided by [org.hibernate:hibernate-core:7.4.12.Final(compile)]
+```
+
+To find the dependency that brings in Hibernate 5, run `dependencyInsight` for the module and configuration that failed:
+
+```bash
+./gradlew <module>:dependencyInsight --dependency org.hibernate:hibernate-core --configuration compileClasspath
+```
+
+The path under the failed Hibernate 5 entry leads to it, for example:
+
+```
+org.hibernate:hibernate-core:5.6.14.Final FAILED
+\--- net.corda:corda-core:4.11
+     \--- compileClasspath
+```
+
+The usual causes are:
+
+* A module that still depends on a Corda 4.14 or earlier artifact, for example a test CorDapp deliberately built against an older Corda,
+  in the same configuration as Corda 4.15. Different versions of the *same* Corda artifact are not a problem, because Gradle picks the
+  newest one.
+* A library that depends on Hibernate 5, for example Spring Data JPA in a Spring Boot 2 web server that is in the same Gradle module as
+  `corda-rpc`.
+
+To fix it, in order of preference:
+
+1. Upgrade or remove the dependency that brings in Hibernate 5.
+2. If that dependency does not use Hibernate itself (for example an older Corda artifact that is only needed at compile time), exclude
+   Hibernate 5 from it. Corda's own test CorDapps built against 4.11 and 4.12 do this:
+
+   ```groovy
+   cordaProvided("net.corda:corda-core:4.11") {
+       exclude group: 'org.hibernate', module: 'hibernate-core'
+   }
+   ```
+
+3. To fix every path at once, replace the old coordinate with Hibernate 7 throughout the build:
+
+   ```groovy
+   configurations.configureEach {
+       resolutionStrategy.dependencySubstitution {
+           substitute module('org.hibernate:hibernate-core') using module('org.hibernate.orm:hibernate-core:7.4.12.Final') because 'Corda 4.15 uses Hibernate 7'
+       }
+   }
+   ```
+
+A capability rule with `selectHighestVersion()` does **not** help: Hibernate 7's platform also moves the old coordinate to 7.4.12, so
+both candidates have the same version. Only exclude or replace Hibernate 5 for code that does not use it. A library that calls
+Hibernate 5 is likely to fail at run time against Hibernate 7.
+
+**`withEntityManager` code built for 4.14 fails when it runs, not when the node starts.** The block passed to
+`serviceHub.withEntityManager` receives a `jakarta.persistence.EntityManager` in 4.15. A flow compiled against 4.14 expects a
+`javax.persistence.EntityManager` and fails when it reaches the call, for example with a `NoClassDefFoundError` or a
+`ClassCastException`. The node's start-up check only looks at schema classes, so it does not find this. Rebuild the CorDapp, and run
+the tests of every flow that uses `withEntityManager`.
 
 ### 4. Rebuilding, signing and versioning
 
@@ -172,6 +244,7 @@ databases and CorDapps do **not** change. You do not need to set or change any o
 | `Instant` is stored as `TIMESTAMP WITH TIME ZONE` and read using the database session's time zone | `hibernate.type.preferred_instant_jdbc_type=TIMESTAMP`: stored as a UTC `TIMESTAMP`, independent of the database server's time zone |
 | `UUID` is stored in the database's native type (`uuid`, `uniqueidentifier`, `raw(16)`) | `hibernate.type.preferred_uuid_jdbc_type=BINARY` (PostgreSQL: `UUID`): as in Hibernate 5    |
 | Oracle `double`/`float` are `BINARY_DOUBLE`/`BINARY_FLOAT`                              | `hibernate.dialect.oracle.use_binary_floats=false`                                        |
+| From Oracle 23, `Boolean` is the native `boolean` type                                   | `hibernate.type.preferred_boolean_jdbc_type=BIT` on Oracle: `number(1,0)`, as in Hibernate 5 |
 | `hbm2ddl=update` also alters existing columns                                          | A Corda schema-management tool that only creates what is missing                          |
 
 Corda's own `@Type` mappings are preserved:
@@ -216,6 +289,17 @@ Verified by the engineer who made the change (branch `adel/ENT-15178`):
   behave as before.
 * The "built for Corda 4.14" start-up check was verified against the genuine Corda 4.12 `finance-contracts` jar.
 * The migration script was run on unmodified Hibernate 5 sources and produced the same result as the hand conversion in this change.
+* The capability conflict and its fixes were reproduced with Gradle 7.6.4, using `net.corda:corda-core:4.11` next to Hibernate 7.4.12. The
+  conflict, the `exclude` and the substitution behave as described above, and `selectHighestVersion()` does not resolve the conflict.
+  `dependencyInsight` shows the path to `corda-core:4.11` as above.
+* The migration script's dependency checks were run on a sample build. It reported Corda 4.11 to 4.14 in Groovy and Kotlin build files,
+  `gradle.properties` and a version catalog, and Spring Data JPA. It did not report Corda 4.15 versions, the Corda Gradle plugins'
+  versions, a CorDapp's own version or the platform version.
+
+**Not visible to the API checker:** `.ci/api-current.txt` records `withEntityManager(kotlin.jvm.functions.Function1)` and
+`withEntityManager(java.util.function.Consumer)` without their type parameters, and records no annotations. The move from
+`javax.persistence` to `jakarta.persistence` therefore leaves it unchanged, and no tool reports this break. The release notes must list
+it as a breaking API change.
 
 **Not tested** (no environment available): Microsoft SQL Server, Azure SQL, Oracle, and PostgreSQL versions other than 16. Hibernate 7
 maps some Java types differently on these databases, and it is where an unnoticed difference is most likely. These need to be run by QA, against

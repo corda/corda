@@ -12,12 +12,17 @@ object HibernateCompatibility {
     /** The JDBC type that Hibernate 5 used for [java.util.UUID]s on PostgreSQL, i.e. its native uuid type. */
     const val POSTGRESQL_UUID_JDBC_TYPE = "UUID"
 
+    /** The JDBC type that Hibernate 5 used for [Boolean]s on Oracle, which Hibernate renders as `number(1,0)`. */
+    const val ORACLE_BOOLEAN_JDBC_TYPE = "BIT"
+
     /**
      * @param preferredUuidJdbcType the JDBC type used to store [java.util.UUID]s that have no explicit mapping, as a `SqlTypes` constant
      * name. See [uuidJdbcTypeFor].
+     * @param preferredBooleanJdbcType the JDBC type used to store [Boolean]s, as a `SqlTypes` constant name, or null to use the dialect's
+     * default. See [booleanJdbcTypeFor].
      */
-    fun settings(preferredUuidJdbcType: String): Map<String, String> {
-        return mapOf(
+    fun settings(preferredUuidJdbcType: String, preferredBooleanJdbcType: String? = null): Map<String, String> {
+        val settings = mapOf(
                 // Entities with a plain @GeneratedValue used a single sequence called "hibernate_sequence" with an increment of 1.
                 // Hibernate 6+ gives each entity its own sequence (e.g. node_infos_SEQ) with an increment of 50. The "legacy" naming
                 // strategy restores both the single sequence and the increment of 1. "FIX" only matters if the increment of a sequence
@@ -35,7 +40,19 @@ object HibernateCompatibility {
                 // Hibernate 6+ alters existing columns in "update" mode. Only create what is missing as before.
                 "hibernate.schema_management_tool" to CordaSchemaManagementTool::class.java.name
         )
+        // Booleans on Oracle were stored as number(1,0). From Oracle 23, Hibernate 7 uses the native boolean type instead, and the node
+        // would then fail to validate the existing NUMBER(1) columns. Before Oracle 23, number(1,0) is still Hibernate 7's default.
+        return if (preferredBooleanJdbcType != null) {
+            settings + ("hibernate.type.preferred_boolean_jdbc_type" to preferredBooleanJdbcType)
+        } else {
+            settings
+        }
     }
+
+    /**
+     * The settings for the database with the given JDBC URL. This is for the places that do not go through a [CordaSessionFactoryFactory].
+     */
+    fun settingsFor(jdbcUrl: String): Map<String, String> = settings(uuidJdbcTypeFor(jdbcUrl), booleanJdbcTypeFor(jdbcUrl))
 
     /**
      * The JDBC type that Hibernate 5 used for [java.util.UUID]s on the database with the given JDBC URL. This is for the places that do
@@ -44,4 +61,13 @@ object HibernateCompatibility {
     fun uuidJdbcTypeFor(jdbcUrl: String): String {
         return if (PostgresSessionFactoryFactory.isPostgreSql(jdbcUrl)) POSTGRESQL_UUID_JDBC_TYPE else DEFAULT_UUID_JDBC_TYPE
     }
+
+    /**
+     * The JDBC type that Hibernate 5 used for [Boolean]s on the database with the given JDBC URL, if Hibernate 7 might use a different one.
+     * The Oracle session factory factory of Corda Enterprise uses the same value.
+     */
+    fun booleanJdbcTypeFor(jdbcUrl: String): String? = if (isOracle(jdbcUrl)) ORACLE_BOOLEAN_JDBC_TYPE else null
+
+    /** Whether the JDBC URL is for Oracle. */
+    fun isOracle(jdbcUrl: String): Boolean = jdbcUrl.contains(":oracle")
 }

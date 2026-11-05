@@ -20,6 +20,9 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     /** The JDBC type used for [java.util.UUID]s that have no explicit mapping. See "hibernate.type.preferred_uuid_jdbc_type". */
     protected open val preferredUuidJdbcType: String = HibernateCompatibility.DEFAULT_UUID_JDBC_TYPE
 
+    /** The JDBC type used for [Boolean]s, or null for the dialect's default. See "hibernate.type.preferred_boolean_jdbc_type". */
+    protected open val preferredBooleanJdbcType: String? = null
+
     open fun buildHibernateConfig(metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
                 if (allowHibernateToManageAppSchema) {
@@ -37,7 +40,9 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
 
         // Retain the behaviour of Hibernate 5, so that existing databases continue to work without any changes.
-        HibernateCompatibility.settings(preferredUuidJdbcType).forEach { (name, value) -> config.setProperty(name, value) }
+        HibernateCompatibility.settings(preferredUuidJdbcType, preferredBooleanJdbcType).forEach { (name, value) ->
+            config.setProperty(name, value)
+        }
 
         return config
     }

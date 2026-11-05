@@ -15,6 +15,9 @@
 #   * @Type(type = "uuid-char")          -> @JdbcTypeCode(SqlTypes.VARCHAR)
 #   * @Type(type = "corda-wrapper-binary") -> @JdbcTypeCode(SqlTypes.VARBINARY)
 #
+# It also lists the dependencies in the build files (*.gradle, *.kts, *.properties and *.toml) that are likely to bring in Hibernate 5,
+# which Gradle cannot put on the same classpath as Corda 4.15's Hibernate 7.
+#
 # See the "Upgrading to Hibernate 7" guide for the details, and for what has to be reviewed by hand.
 #
 
@@ -78,15 +81,25 @@ fi
 
 echo
 echo "Please review the following by hand (see the \"Upgrading to Hibernate 7\" guide):"
-review() {
-    local pattern="$1" message="$2" exclude="${3:-^$}"
-    local hits
-    hits=$(grep -rnE "$pattern" "$root" --include='*.kt' --include='*.java' --include='*.gradle' --include='*.kts' 2>/dev/null | grep -v '/build/' | grep -vE "$exclude")
+print_hits() {
+    local message="$1" hits="$2"
     if [[ -n "$hits" ]]; then
         echo
         echo "* $message"
         echo "$hits" | sed 's/^/    /'
     fi
+}
+review() {
+    local pattern="$1" message="$2" exclude="${3:-^$}"
+    print_hits "$message" "$(grep -rnE "$pattern" "$root" --include='*.kt' --include='*.java' --include='*.gradle' --include='*.kts' 2>/dev/null \
+        | grep -v '/build/' | grep -vE "$exclude")"
+}
+# The same, for the files in which builds declare their dependencies and versions. The exclusion is only matched against the content of a
+# line, not its file name.
+review_build() {
+    local pattern="$1" message="$2" exclude="${3:-^$}"
+    print_hits "$message" "$(grep -rnE "$pattern" "$root" --include='*.gradle' --include='*.kts' --include='*.properties' --include='*.toml' 2>/dev/null \
+        | grep -vE '/build/|/\.gradle/|/\.git/' | grep -vE ":[0-9]+:.*($exclude)")"
 }
 review '@Type\(' "@Type(type = \"...\") no longer exists. Use @JdbcTypeCode, @JdbcType or an AttributeConverter instead."
 review '\.(save|update|saveOrUpdate|delete)\(' "Session.save/update/saveOrUpdate/delete were removed. Use persist/merge/remove."
@@ -94,4 +107,23 @@ review 'org\.hibernate\.type\.|org\.hibernate\.query\.criteria\.internal|TypeDes
 review 'createQuery\(|createNativeQuery\(|@NamedQuery' "HQL/JPQL is validated strictly: use attribute names (not column names), and compare an association with an entity (not its id)."
 review '@OrderColumn' "@OrderColumn is only supported on a java.util.List."
 review 'hibernate-java8|org\.hibernate:' "Hibernate dependencies: the group is now org.hibernate.orm, and hibernate-java8 no longer exists."
+
+# Dependencies that bring in Hibernate 5. Hibernate 7 declares that it also provides the old org.hibernate:hibernate-core, so Gradle fails
+# with a capability conflict rather than put both on one classpath.
+# A Corda version up to 4.14 in a dependency ("net.corda:corda-core:4.14"), a version catalog entry ({ module = "net.corda:corda-core",
+# version = "4.14" }) or a version property (corda_release_version=4.14, or corda = "4.14" in a catalog). The versions of the Corda
+# Gradle plugins and of the CorDapp itself are not Corda versions.
+corda_4_14_or_earlier='4\.([0-9]|1[0-4])([^0-9]|$)'
+corda_artifact='(net\.corda|com\.r3\.corda):[A-Za-z0-9._-]+'
+review_build "$corda_artifact:$corda_4_14_or_earlier|$corda_artifact\".*version[[:space:]]*=[[:space:]]*\"$corda_4_14_or_earlier|corda[A-Za-z_-]*[\"']?[[:space:]]*[=:][[:space:]]*[\"']?$corda_4_14_or_earlier" \
+    "Corda 4.14 or earlier, which depends on Hibernate 5. Move to Corda 4.15. Anything that has to stay on an older Corda (for example a test CorDapp) must exclude org.hibernate:hibernate-core, or Gradle reports a capability conflict on hibernate-core." \
+    "[Pp]lugin|cordapp[A-Za-z_-]*[\"']?[[:space:]]*[=:]"
+review_build 'spring-boot-starter-data-jpa|spring-data-jpa|hibernate-types-5|hypersistence-utils-hibernate-5' \
+    "Libraries that bring in their own Hibernate (Spring Data JPA in Spring Boot 2 brings in Hibernate 5). Only one Hibernate can be on a classpath, so keep them out of the Gradle modules that depend on Corda 4.15, or upgrade them."
+
+echo
+echo "If Gradle reports \"Cannot select module with conflict on capability 'org.hibernate:hibernate-core'\", a dependency still brings in"
+echo "Hibernate 5. To find it, run:"
+echo "    ./gradlew <module>:dependencyInsight --dependency org.hibernate:hibernate-core --configuration <configuration>"
+echo "Then upgrade that dependency, or exclude org.hibernate:hibernate-core from it (see the guide)."
 exit 0
