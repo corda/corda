@@ -600,4 +600,30 @@ ignore:
           Recommended : Upgrade to Corda 4.12
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-10-13T00:00:00.000Z
+  SNYK-JAVA-ORGAPACHEACTIVEMQ-20186768:
+    - '*':
+        reason: >-
+          CVE-2026-49362: This is a missing-authentication issue in the Artemis
+          CORE protocol handler, allowing a client that has opened a connection
+          to a CORE acceptor to create durable queues before authenticating.
+          The impact is limited to availability (resource consumption on the
+          broker); it does not allow messages, transactions or vault data to be
+          read or modified. In Corda, the P2P broker acceptor requires mutual TLS
+          with a certificate issued by the network root CA, and the RPC admin
+          acceptor requires mutual TLS with the node's own certificate, so an
+          unauthenticated attacker cannot establish a connection to either of
+          them. The RPC acceptor is intended to be reachable only from trusted
+          internal networks; operators must restrict network access to the RPC
+          port, as enabling RPC TLS (rpcSettings.useSsl) does not require client
+          certificates and does not mitigate this issue on its own.
+          Where a node is configured to use an external Artemis broker
+          (messagingServerExternal), that broker is deployed and managed by
+          the operator, who must restrict network access to its acceptors.
+          This issue is fixed in newer versions (2.57.0), but those versions
+          are not compatible with Java 8 and Kotlin 1.2.71.
+          Fix : org.apache.artemis:artemis-server@2.57.0
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-11-05T00:00:00.000Z
 patch: {}
