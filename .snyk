@@ -45,8 +45,6 @@ ignore:
           is available.
           Fix : jakarta.validation:jakarta.validation-api@4.0.0-M1
           Compatibility : Jakarta EE 12 (milestone), java 17+
-          Recommended : Upgrade when a final Jakarta Validation release
-          containing the fix is supported by Jersey
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-11-06T00:00:00.000Z
 patch: {}
