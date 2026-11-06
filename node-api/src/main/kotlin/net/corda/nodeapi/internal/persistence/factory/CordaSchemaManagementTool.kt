@@ -32,6 +32,10 @@ import org.hibernate.tool.schema.spi.SchemaMigrator
  * columns to 255 characters.
  *
  * This tool restores the Hibernate 5 behaviour: only missing tables and columns are created, and existing columns are never altered.
+ *
+ * It extends classes in `org.hibernate.tool.schema.internal`, which are not part of Hibernate's public API and can change in any
+ * Hibernate release, including a patch release. When `hibernateVersion` in constants.properties changes, check that this class still
+ * overrides the methods that Hibernate calls, and run the tests that start a node with `--allow-hibernate-to-manage-app-schema`.
  */
 class CordaSchemaManagementTool : HibernateSchemaManagementTool() {
     override fun getSchemaMigrator(options: MutableMap<String, Any>?): SchemaMigrator {

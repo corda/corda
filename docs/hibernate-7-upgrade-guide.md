@@ -59,7 +59,14 @@ calls `serviceHub.withEntityManager` is not detected, and fails when it runs (se
 * The log shows messages such as `HHH90006001: Setting 'hibernate.id.db_structure_naming_strategy' is still incubating`
   once per Hibernate session factory at start-up. They are informational. **[VERIFY]** whether these should be silenced by default.
 * If your database does not match what Corda expects, start-up fails with `HibernateSchemaChangeException` and the reason, exactly as
-  before. Run the node with the `run-migration-scripts` sub-command, or contact support.
+  before. Run the node with the `run-migration-scripts` sub-command, or contact support. The reason now starts `Schema validation:`
+  rather than `Schema-validation:`; update any log alert that matches the old text.
+* If a flow ends up in the flow hospital with `Attempted to commit database transaction marked for rollback`, shortly after an
+  `EntityExistsException` for the same entity, see "Recognising a failure caused by the `save` to `persist` change" in the CorDapp
+  developer section below.
+* With `exportHibernateJMXStatistics` (on by default in dev mode), the `org.hibernate:type=statistics` MBean has the same attributes as
+  before, and some new ones (for example `QueryPlanCacheHitCount` and `SlowQueries`). Its `getSecondLevelCacheStatistics` and
+  `getNaturalIdCacheStatistics` operations are gone. Corda does not use Hibernate's second-level cache, so they had nothing to report.
 * The `--allow-hibernate-to-manage-app-schema` option (development only) still creates *missing* tables and columns, but, as before,
   does **not** alter existing ones. (Hibernate 7's own `update` mode would alter existing columns; Corda deliberately turns that off.)
 
@@ -123,18 +130,87 @@ rejects it with `SemanticException`.
 **Custom Hibernate types.** `@Type(type = "...")`, `@TypeDef` and the `org.hibernate.type.*TypeDescriptor` classes no longer exist.
 Use `@JdbcTypeCode`, `@JdbcType` / `@JavaType`, or a JPA `AttributeConverter`.
 
-**Stricter mappings.** For example `@OrderColumn` is only allowed on a `java.util.List`, not a `Set`.
+**Stricter mappings.** For example `@OrderColumn` is only allowed on a `java.util.List`, not a `Set`. An association to an entity
+that was never persisted (for example a `@OneToOne` with `@PrimaryKeyJoinColumn`) is reported when the session is flushed; persist the
+associated entity as well.
 
 **Result order.** A query with no `ORDER BY` has no defined order. Hibernate 7 renders some queries differently (for example an
 `IN` over a composite key), so a database may now return rows in a different order. Add an explicit sort.
 
-**Duplicate `persist`.** Persisting a second entity with the same id in the same session now fails immediately with
-`EntityExistsException`, and marks the transaction for rollback. Previously `save` threw `NonUniqueObjectException`, which did not
-mark the transaction for rollback.
+**Duplicate `persist`.** If the session already holds a different instance with the same id, `persist` fails immediately with
+`EntityExistsException` and marks the transaction for rollback, so the transaction cannot be committed even if you catch the exception.
+`EntityManager.persist` already behaved like this with Hibernate 5, so code that uses `withEntityManager` is unaffected. Code that used
+Hibernate's `Session.save` (for example in a service, through `AppServiceHub.database.transaction { session.save(...) }`) has to change
+to `persist`, and is affected: `save` threw `NonUniqueObjectException` and did not mark the transaction for rollback, so code that caught
+it and carried on now fails when the transaction commits. Check for the existing entity first instead (for example with `session.find`).
+The node's own code also uses `persist` where it used `save`, so the same is true inside the node. Nothing in the node is known to rely on
+the old behaviour; see "Recognising a failure caused by the `save` to `persist` change" below if you suspect it.
 
 **Constraint violations.** A duplicate-key violation that was reported as a `PersistenceException` wrapping a
 `ConstraintViolationException` is now reported as the `ConstraintViolationException` itself (which is itself a
-`PersistenceException`). Code that catches `PersistenceException` is unaffected.
+`PersistenceException`). The same applies to Hibernate's other JDBC exceptions, such as `SQLGrammarException` and `DataException`.
+Code that catches `PersistenceException` is unaffected. Code that tests `e.cause is ConstraintViolationException` has to test the
+exception itself as well, for example by walking the cause chain. Corda cannot restore the old wrapping, because Hibernate creates these
+exceptions.
+
+**Recognising a failure caused by the `save` to `persist` change.** Code that relied on catching a duplicate and carrying on in the same
+transaction (in a CorDapp, or in the node itself) fails in two steps:
+
+1. The duplicate is reported where it happens:
+   `jakarta.persistence.EntityExistsException: A different object with the same identifier value was already associated with this
+   persistence context for entity [<entity class>#<id>]`, caused by `org.hibernate.NonUniqueObjectException` with the same message. With
+   Corda 4.14 the same situation logged `org.hibernate.NonUniqueObjectException: A different object with the same identifier value was
+   already associated with the session : [<entity class>#<id>]`. The entity class and id say which entity was persisted twice.
+2. If the code catches that exception and carries on, the transaction can no longer commit, and none of its changes are saved:
+   `net.corda.nodeapi.internal.persistence.RolledBackDatabaseSessionException: Attempted to commit database transaction marked for rollback`.
+   * **In a flow**, the commit happens at the flow's next checkpoint: its next suspension (for example `send`, `receive`, `sleep` or a
+     subflow that suspends) or the end of the flow. The node log shows `Flow [<flow id>] admitted to hospital`, then `Error 1 of 1:` with
+     `net.corda.node.services.statemachine.StateTransitionException: Attempted to commit database transaction marked for rollback` (caused
+     by `RolledBackDatabaseSessionException`), then `Flow error discharged from hospital ... (error was Attempted to commit database
+     transaction marked for rollback)`. The flow is retried from its last checkpoint. If the duplicate happens again every time, it is
+     retried three times, and then the log shows `Flow error kept for overnight observation ...` and the flow stays in the hospital.
+   * **Outside a flow**, for example in a service using `AppServiceHub.database.transaction { ... }`, the `transaction` call itself throws
+     `RolledBackDatabaseSessionException`.
+
+With Corda 4.14 the same code would have logged only the `NonUniqueObjectException`, and the rest of the transaction would have been
+committed. The fix is to check for the existing entity before persisting it (or to use `merge` if updating it is what was meant), rather
+than catching the exception.
+
+**Native SQL result types.** A native query (`createNativeQuery`) returns a `BIGINT` column, or `count(*)`, as a `Long` where Hibernate 5
+returned a `BigInteger`. Code that casts the result (`result as BigInteger`) now fails with `ClassCastException: class java.lang.Long
+cannot be cast to class java.math.BigInteger`. Use `(result as Number).toLong()`. Date and time columns still come back as
+`java.sql.Timestamp`, `Date` and `Time`, because Corda sets `hibernate.query.native.prefer_jdbc_datetime_types`.
+
+**`LIKE` patterns on H2, PostgreSQL and CockroachDB.** Hibernate 7 adds `escape ''` to a `LIKE` with no escape character on these databases,
+so a backslash in a pattern is now an ordinary character. For example the pattern `a\_b` used to match only the value `a_b`; it now matches
+values such as `a\xb` (a backslash, any one character, then `b`) and no longer matches `a_b`. Oracle and SQL Server never treated the
+backslash specially and are unchanged. If you escape `_` or `%`, give the escape character explicitly, for example with the JPA criteria
+API's `like(path, pattern, '\\')` in Kotlin. Vault `Builder.like` and `notLike` patterns behave in the same new way.
+
+**Tables generated from your entities now get `CHECK` constraints.** When Hibernate generates the DDL for a CorDapp table (the database
+management tool's "create migration SQL for CorDapp", or `--allow-hibernate-to-manage-app-schema` in development), an enum column gets
+`check (col between 0 and N)` (ordinal) or `check (col in (...))` (string), and on Oracle a boolean gets `check (col in (0,1))`. Ordinal
+enum columns also get a narrower type (`tinyint`, `smallint`, `number(3,0)`). Tables that already exist are not changed. If you later add
+a constant to the enum, inserting it fails with a check-constraint violation (for example `ORA-02290: check constraint ... violated`,
+`violates check constraint` on PostgreSQL, `The INSERT statement conflicted with the CHECK constraint` on SQL Server). Review generated
+scripts and remove the `CHECK` clauses you do not want before you apply them.
+
+**Arrays.** An `IntArray`, `LongArray`, `Array<String>` or similar attribute was stored as a serialised binary value with Hibernate 5.
+Hibernate 7 maps it to the database's array type (or XML on SQL Server), so a table created before 4.15 fails validation with
+`wrong column type ... expecting [... array ...]`. An `Array<Byte>` (`Byte[]`) or `Array<Char>` (`Character[]`) attribute, which Hibernate 5
+stored as binary or character data, is now refused when the node starts (`MappingException`). Hibernate's
+`hibernate.type.wrapper_array_handling=LEGACY` would restore those two, but it stops the node from starting on PostgreSQL, so Corda does
+not set it. Use `ByteArray` or `String` instead, or an `AttributeConverter` that stores the value as before.
+
+**Smaller differences.**
+* `NOT IN` an empty list now matches every row on every database. With Hibernate 5 it matched no rows on PostgreSQL and SQL Server, every
+  row on H2, and failed on Oracle.
+* On SQL Server, `avg` of an integer column is no longer truncated to an integer (Hibernate 7 casts the argument to `float`), so it now
+  returns the same value as on the other databases.
+* On SQL Server, an `IN` list of more than 2,100 numeric values fails with `The incoming request has too many parameters`, because
+  Hibernate 7 binds each value as a parameter where Hibernate 5 inlined numbers. Split such lists.
+* `persist` and `merge` mark the transaction for rollback on any failure, not only a duplicate id (for example a `null` in a non-nullable
+  property). Hibernate 5's `save` and `update` did not.
 
 **Gradle reports a capability conflict on `hibernate-core`.** Hibernate 5 was published as `org.hibernate:hibernate-core`, and
 Hibernate 6 and later as `org.hibernate.orm:hibernate-core`. Hibernate 7's Gradle metadata says that it provides both, so that Gradle
@@ -240,12 +316,16 @@ databases and CorDapps do **not** change. You do not need to set or change any o
 
 | Behaviour that changed in Hibernate 6+                                                 | How Corda keeps the Hibernate 5 behaviour                                                |
 |----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `@GeneratedValue` uses a sequence per entity (`foo_SEQ`), incrementing by 50           | `hibernate.id.db_structure_naming_strategy=legacy` and `hibernate.id.sequence.increment_size_mismatch_strategy=FIX`: the single `hibernate_sequence` with an increment of 1 is still used |
+| `@GeneratedValue` uses a sequence per entity (`foo_SEQ`), incrementing by 50           | `hibernate.id.db_structure_naming_strategy=legacy`: the single `hibernate_sequence`, with an increment of 1, is still used. (`hibernate.id.sequence.increment_size_mismatch_strategy=FIX` only matters for a `@SequenceGenerator` whose `allocationSize` differs from the database sequence.) |
 | `Instant` is stored as `TIMESTAMP WITH TIME ZONE` and read using the database session's time zone | `hibernate.type.preferred_instant_jdbc_type=TIMESTAMP`: stored as a UTC `TIMESTAMP`, independent of the database server's time zone |
 | `UUID` is stored in the database's native type (`uuid`, `uniqueidentifier`, `raw(16)`) | `hibernate.type.preferred_uuid_jdbc_type=BINARY` (PostgreSQL: `UUID`): as in Hibernate 5    |
 | Oracle `double`/`float` are `BINARY_DOUBLE`/`BINARY_FLOAT`                              | `hibernate.dialect.oracle.use_binary_floats=false`                                        |
 | From Oracle 23, `Boolean` is the native `boolean` type                                   | `hibernate.type.preferred_boolean_jdbc_type=BIT` on Oracle: `number(1,0)`, as in Hibernate 5 |
 | `hbm2ddl=update` also alters existing columns                                          | A Corda schema-management tool that only creates what is missing                          |
+| `Duration` is stored as `NUMERIC(21)` (or an interval)                                  | `hibernate.type.preferred_duration_jdbc_type=BIGINT`: a `BIGINT` number of nanoseconds, as in Hibernate 5 |
+| `OffsetDateTime` / `ZonedDateTime` keep their offset (`TIMESTAMP WITH TIME ZONE` where available) | `hibernate.timezone.default_storage=NORMALIZE`: a plain `TIMESTAMP`, normalised to UTC, as in Hibernate 5 |
+| Native SQL queries return `java.time` types for date and time columns                   | `hibernate.query.native.prefer_jdbc_datetime_types=true`: `java.sql.Timestamp`, `Date` and `Time`, as in Hibernate 5 |
+| A bulk HQL `update` of an `@Immutable` entity throws an exception                       | `hibernate.query.immutable_entity_update_query_handling_mode=warning`: allowed, with a warning, as in Hibernate 5 |
 
 Corda's own `@Type` mappings are preserved:
 

@@ -7,8 +7,12 @@ import jakarta.persistence.Table
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
+import org.hibernate.dialect.H2Dialect
 import org.hibernate.dialect.OracleDialect
 import org.junit.Test
+import java.time.Duration
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 
 class HibernateCompatibilityTest {
     private companion object {
@@ -74,9 +78,54 @@ class HibernateCompatibilityTest {
                 "hibernate.type.preferred_instant_jdbc_type" to "TIMESTAMP",
                 "hibernate.type.preferred_uuid_jdbc_type" to "BINARY",
                 "hibernate.dialect.oracle.use_binary_floats" to "false",
+                "hibernate.type.preferred_duration_jdbc_type" to "BIGINT",
+                "hibernate.timezone.default_storage" to "NORMALIZE",
+                "hibernate.query.native.prefer_jdbc_datetime_types" to "true",
+                "hibernate.query.immutable_entity_update_query_handling_mode" to "warning",
                 "hibernate.schema_management_tool" to CordaSchemaManagementTool::class.java.name
         ))
     }
+
+    @Test(timeout = 300_000)
+    fun `CorDapp attribute types keep the column types that Hibernate 5 gave them`() {
+        val withSettings = columnTypes(HibernateCompatibility.settings("BINARY"))
+        assertThat(withSettings["duration"]).isEqualTo("bigint")
+        assertThat(withSettings["offsetTime"]).isEqualTo("timestamp(6)")
+        assertThat(withSettings["zonedTime"]).isEqualTo("timestamp(6)")
+        // Without the settings, Hibernate 7 maps them differently.
+        assertThat(columnTypes(emptyMap())["duration"]).isNotEqualTo("bigint")
+        assertThat(columnTypes(emptyMap())["offsetTime"]).contains("time zone")
+    }
+
+    /** The column types that Hibernate expects for [EntityWithCordappTypes] on H2. No database is needed for this. */
+    private fun columnTypes(settings: Map<String, String>): Map<String, String> {
+        val registry = StandardServiceRegistryBuilder()
+                .applySettings(settings)
+                .applySetting("hibernate.dialect", H2Dialect::class.java.name)
+                .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
+                .build()
+        try {
+            val metadata = MetadataSources(registry).addAnnotatedClass(EntityWithCordappTypes::class.java).buildMetadata()
+            val binding = metadata.getEntityBinding(EntityWithCordappTypes::class.java.name)
+            return listOf("duration", "offsetTime", "zonedTime").associateWith { binding.getProperty(it).columns.single().getSqlType(metadata) }
+        } finally {
+            StandardServiceRegistryBuilder.destroy(registry)
+        }
+    }
+
+    @Entity
+    @Table(name = "entity_with_cordapp_types")
+    class EntityWithCordappTypes(
+            @Id
+            @Column(name = "id")
+            val id: String = "",
+            @Column(name = "duration")
+            val duration: Duration? = null,
+            @Column(name = "offset_time")
+            val offsetTime: OffsetDateTime? = null,
+            @Column(name = "zoned_time")
+            val zonedTime: ZonedDateTime? = null
+    )
 
     /** The column type that Hibernate expects for a [Boolean] on the given major version of Oracle. No database is needed for this. */
     private fun oracleBooleanColumnType(oracleMajorVersion: Int, settings: Map<String, String>): String {

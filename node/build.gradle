@@ -343,6 +343,7 @@ quasar {
     )
     excludePackages.addAll(
             "antlr**",
+            "org.antlr**", // ANTLR 4, which Hibernate 7 uses to parse HQL (Hibernate 5 used ANTLR 2, in antlr.*)
             "com.codahale**",
             "com.fasterxml.**",
             "com.github.benmanes.caffeine.**",

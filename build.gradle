@@ -88,6 +88,8 @@ buildscript {
     ext.jansi_version = constants.getProperty("jansiVersion")
     ext.hibernate_version = constants.getProperty("hibernateVersion")
     ext.jakarta_persistence_version = constants.getProperty("jakartaPersistenceVersion")
+    ext.byte_buddy_version = constants.getProperty("byteBuddyVersion")
+    ext.javax_transaction_version = constants.getProperty("javaxTransactionVersion")
     ext.h2_version = constants.getProperty("h2Version")
     ext.rxjava_version = constants.getProperty("rxjavaVersion")
     ext.dokka_version = constants.getProperty("dokkaVersion")

@@ -405,7 +405,13 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 column as Path<Long?>?
                 val aggregateExpression =
                         when (columnPredicate.type) {
-                            AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                            // sum() gives the result the type of its argument since Hibernate 6, so the sum of an Int column was an Int
+                            // (and failed or wrapped around when it did not fit). sumAsLong() leaves the type to Hibernate, which picks
+                            // what JPA and Hibernate 5 did: Long for integral types, Double for floating point, BigDecimal or BigInteger.
+                            AggregateFunctionType.SUM -> {
+                                @Suppress("UNCHECKED_CAST")
+                                criteriaBuilder.sumAsLong(column as Expression<Int>)
+                            }
                             AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
                             AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
