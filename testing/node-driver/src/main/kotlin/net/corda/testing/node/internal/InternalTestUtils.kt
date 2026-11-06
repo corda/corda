@@ -314,7 +314,13 @@ private class DriverSerializationEnvironment(classLoader: ClassLoader?)
                   : SerializationEnvironment by createTestSerializationEnv(classLoader), AutoCloseable {
     fun enable() = apply { _driverSerializationEnv.set(this) }
     override fun close() {
-        _driverSerializationEnv.set(null)
+        // Only clear the environment if it is still ours. A driver whose test has timed out keeps shutting down on the
+        // abandoned test thread after JUnit has moved on, and must not clear the environment a later test has installed.
+        if (_driverSerializationEnv.get() === this) {
+            _driverSerializationEnv.set(null)
+        } else {
+            log.warn("Driver serialization environment was replaced before the driver shut down; leaving the current one in place.")
+        }
         inVMExecutors.remove(this)
     }
 }
