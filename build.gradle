@@ -55,6 +55,7 @@ buildscript {
     ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
     ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
     ext.asm_version = constants.getProperty("asmVersion")
+    ext.objenesis_version = constants.getProperty("objenesisVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
     ext.jackson_kotlin_version = constants.getProperty("jacksonKotlinVersion")
@@ -543,6 +544,17 @@ allprojects {
                     // Review when Artemis is upgraded
                     if (details.requested.group == 'io.micrometer' && details.requested.name == "micrometer-core") {
                         details.useVersion micrometer_core_version
+                    }
+
+                    // SNYK-JAVA-ORGOBJENESIS-21755439 / CVE-2026-116486
+                    // vulnerability in org.objenesis:objenesis < 3.6, a transitive dependency of
+                    // com.esotericsoftware:kryo@5.5.0, co.paralleluniverse:quasar-core@0.9.3_r3
+                    // and org.mockito:mockito-core@5.5.0
+                    // fixed in org.objenesis:objenesis@3.6
+                    // force-upgrade to org.objenesis:objenesis@3.6
+                    // Review when Kryo, Quasar or Mockito are upgraded
+                    if (details.requested.group == 'org.objenesis' && details.requested.name == 'objenesis') {
+                        details.useVersion objenesis_version
                     }
                 }
 
