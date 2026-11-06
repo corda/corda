@@ -24,7 +24,7 @@ import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 import java.util.function.Consumer
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up

@@ -14,11 +14,12 @@ import net.corda.core.schemas.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Immutable
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.io.Serializable
 import java.time.Instant
 import java.util.*
-import javax.persistence.*
+import jakarta.persistence.*
 
 /**
  * JPA representation of the core Vault Schema
@@ -90,7 +91,7 @@ object VaultSchemaV1 : MappedSchema(
 
             /** associated constraint type data (if any) */
             @Column(name = "constraint_data", length = MAX_CONSTRAINT_DATA_SIZE, nullable = true)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var constraintData: ByteArray? = null,
 
             /** consuming transaction */
@@ -110,7 +111,7 @@ object VaultSchemaV1 : MappedSchema(
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            @Type(type = "uuid-char")
+            @JdbcTypeCode(SqlTypes.VARCHAR)
             var uuid: UUID
     ) : PersistentState() {
         constructor(uid: UniqueIdentifier) : this(externalId = uid.externalId, uuid = uid.id)
@@ -142,7 +143,7 @@ object VaultSchemaV1 : MappedSchema(
             var issuer: AbstractParty?,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = true)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuerRef: ByteArray?
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes) :
@@ -193,7 +194,7 @@ object VaultSchemaV1 : MappedSchema(
             override val compositeKey: PersistentStateRefAndKey,
 
             @Column(name = "external_id")
-            @Type(type = "uuid-char")
+            @JdbcTypeCode(SqlTypes.VARCHAR)
             val externalId: UUID
     ) : IndirectStatePersistable<PersistentStateRefAndKey>
 }

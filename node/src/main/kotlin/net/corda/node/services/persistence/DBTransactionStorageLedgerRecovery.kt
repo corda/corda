@@ -21,13 +21,13 @@ import java.io.Serializable
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
-import javax.persistence.Column
-import javax.persistence.Embeddable
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Embeddable
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                          cacheFactory: NamedCacheFactory,
@@ -157,7 +157,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                 senderRecordingTimestamp, timeDiscriminator)),
                         distributionList.senderStatesToRecord,
                         peerStatesToRecord)
-                session.save(senderDistributionRecord)
+                session.persist(senderDistributionRecord)
             }
             val hashedPeersToStatesToRecord = distributionList.peersToStatesToRecord.mapKeys { (peer) ->
                 partyInfoCache.getPartyIdByCordaX500Name(peer)
@@ -184,7 +184,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                             distributionList.opaqueData,
                             distributionList.receiverStatesToRecord
                     )
-                    session.saveOrUpdate(receiverDistributionRecord)
+                    session.merge(receiverDistributionRecord)
                 }
             }
             else -> throw IllegalStateException("Expecting ReceiverDistributionList")
@@ -199,12 +199,12 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val rootSender = deleteSenderDistributionRecords.from(DBSenderDistributionRecord::class.java)
             val compositeKeySender = rootSender.get<PersistentKey>("compositeKey")
             deleteSenderDistributionRecords.where(criteriaBuilder.equal(compositeKeySender.get<String>(PersistentKey::txId.name), id.toString()))
-            val deletedSenderDistributionRecords = session.createQuery(deleteSenderDistributionRecords).executeUpdate() != 0
+            val deletedSenderDistributionRecords = session.createMutationQuery(deleteSenderDistributionRecords).executeUpdate() != 0
             val deleteReceiverDistributionRecords = criteriaBuilder.createCriteriaDelete(DBReceiverDistributionRecord::class.java)
             val rootReceiver = deleteReceiverDistributionRecords.from(DBReceiverDistributionRecord::class.java)
             val compositeKeyReceiver = rootReceiver.get<PersistentKey>("compositeKey")
             deleteReceiverDistributionRecords.where(criteriaBuilder.equal(compositeKeyReceiver.get<String>(PersistentKey::txId.name), id.toString()))
-            val deletedReceiverDistributionRecords = session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
+            val deletedReceiverDistributionRecords = session.createMutationQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
             deletedSenderDistributionRecords || deletedReceiverDistributionRecords
         }
     }

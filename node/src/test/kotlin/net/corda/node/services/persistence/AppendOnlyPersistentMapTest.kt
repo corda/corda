@@ -15,10 +15,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.util.concurrent.CountDownLatch
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.PersistenceException
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.PersistenceException
 
 @RunWith(Parameterized::class)
 class AppendOnlyPersistentMapTest(var scenario: Scenario) {
@@ -114,6 +114,9 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         } catch (t: PersistenceException) {
             // This only helps if thrown on commit, otherwise other latches not counted down.
             assertEquals(t.message, Outcome.SuccessButErrorOnCommit, a.outcome)
+        } catch (t: RolledBackDatabaseSessionException) {
+            // Persisting a duplicate in the same session fails immediately and marks the (shared) transaction for rollback.
+            assertEquals(t.message, Outcome.SuccessButErrorOnCommit, b.outcome)
         }
         a.await(a::phase4)
         b.await(b::phase4)
@@ -182,7 +185,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
             // This only helps if thrown on commit, otherwise other latches not counted down.
             assertEquals(t.message, Outcome.SuccessButErrorOnCommit, a.outcome)
         } catch (t: RolledBackDatabaseSessionException) {
-            assertEquals(t.message, Outcome.SuccessButErrorOnCommit, a.outcome)
+            // Persisting a duplicate in the same session fails immediately and marks the (shared) transaction for rollback.
+            assertEquals(t.message, Outcome.SuccessButErrorOnCommit, b.outcome)
         }
         a.await(a::phase4)
         b.await(b::phase4)
@@ -263,7 +267,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     }
 
     @Entity
-    @javax.persistence.Table(name = "persist_map_test")
+    @jakarta.persistence.Table(name = "persist_map_test")
     class PersistentMapEntry(
             @Id
             @Column(name = "key")

@@ -963,7 +963,7 @@ class DriverDSLImpl(
             systemProperties += overriddenSystemProperties
 
             // See experimental/quasar-hook/README.md for how to generate.
-            val excludePackagePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
+            val excludePackagePattern = "x(antlr**;org.antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
                     "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
                     "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
                     "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;org.apache**;" +

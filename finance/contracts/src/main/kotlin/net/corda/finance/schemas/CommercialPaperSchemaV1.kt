@@ -5,12 +5,13 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.Instant
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Index
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Index
+import jakarta.persistence.Table
 
 /**
  * An object used to fully qualify the [CommercialPaperSchema] family name (i.e. independent of version).
@@ -34,7 +35,7 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
             var issuancePartyHash: String,
 
             @Column(name = "issuance_ref", nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuanceRef: ByteArray,
 
             @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -53,7 +54,7 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
             var faceValueIssuerPartyHash: String,
 
             @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var faceValueIssuerRef: ByteArray
     ) : PersistentState()
 }

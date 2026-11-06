@@ -144,7 +144,7 @@ class AttachmentTests : WithMockNet {
                     .andRunNetwork()
 
     private fun TestStartedNode.updateAttachment(attachment: NodeAttachmentService.DBAttachment) = database.transaction {
-        session.update(attachment)
+        session.merge(attachment)
     }.andRunNetwork()
 
     private fun TestStartedNode.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(

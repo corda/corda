@@ -29,10 +29,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.function.Supplier
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 import kotlin.test.assertEquals
 
 abstract class AbstractFlowExternalOperationTest {
@@ -211,7 +211,7 @@ abstract class AbstractFlowExternalOperationTest {
         }
 
         fun saveToDatabaseWithDatabaseTransaction(entity: CustomTableEntity): Unit = services.database.transaction {
-            session.save(entity)
+            session.persist(entity)
         }
 
         fun throwExceptionInsideOfDatabaseTransaction(): Nothing = services.database.transaction {

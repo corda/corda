@@ -122,7 +122,7 @@ dependencies {
     testImplementation "com.google.code.findbugs:jsr305:$jsr305_version"
     testImplementation "com.esotericsoftware:kryo:$kryo_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
-    testImplementation "org.hibernate:hibernate-core:$hibernate_version"
+    testImplementation "org.hibernate.orm:hibernate-core:$hibernate_version"
     testImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     testImplementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
     testImplementation "io.netty:netty-common:$netty_version"
@@ -200,6 +200,7 @@ idea {
 quasar {
     excludePackages.addAll(
             "antlr**",
+            "org.antlr**", // ANTLR 4, which Hibernate 7 uses to parse HQL (Hibernate 5 used ANTLR 2, in antlr.*)
             "com.codahale**",
             "com.fasterxml.**",
             "com.github.benmanes.caffeine.**",

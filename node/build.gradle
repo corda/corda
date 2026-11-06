@@ -197,8 +197,7 @@ dependencies {
     // SQL connection pooling library
     implementation "com.zaxxer:HikariCP:${hikari_version}"
     // Hibernate: an object relational mapper for writing state objects to the database automatically.
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
-    implementation "org.hibernate:hibernate-java8:$hibernate_version"
+    implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
     // OkHTTP: Simple HTTP library.
     implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
     // Apache Shiro: authentication, authorization and session management.
@@ -344,6 +343,7 @@ quasar {
     )
     excludePackages.addAll(
             "antlr**",
+            "org.antlr**", // ANTLR 4, which Hibernate 7 uses to parse HQL (Hibernate 5 used ANTLR 2, in antlr.*)
             "com.codahale**",
             "com.fasterxml.**",
             "com.github.benmanes.caffeine.**",

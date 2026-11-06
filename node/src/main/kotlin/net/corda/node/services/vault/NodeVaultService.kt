@@ -74,13 +74,13 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.stream.Stream
-import javax.persistence.PersistenceException
-import javax.persistence.Tuple
-import javax.persistence.criteria.CriteriaBuilder
-import javax.persistence.criteria.CriteriaQuery
-import javax.persistence.criteria.CriteriaUpdate
-import javax.persistence.criteria.Predicate
-import javax.persistence.criteria.Root
+import jakarta.persistence.PersistenceException
+import jakarta.persistence.Tuple
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.CriteriaUpdate
+import jakarta.persistence.criteria.Predicate
+import jakarta.persistence.criteria.Root
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -196,7 +196,7 @@ class NodeVaultService(
             // TODO: Perhaps these can be stored in a batch?
             stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
                 val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
-                session.save(persistentParty)
+                session.persist(persistentParty)
             }
             val stateToAdd = VaultSchemaV1.VaultStates(
                     notary = stateAndRef.value.state.notary,
@@ -208,7 +208,7 @@ class NodeVaultService(
                     constraintData = constraintInfo.data()
             )
             stateToAdd.stateRef = persistentStateRef
-            session.save(stateToAdd)
+            session.persist(stateToAdd)
         }
     }
 
@@ -230,7 +230,7 @@ class NodeVaultService(
 
             // Persist the consumed inputs.
             consumedStateRefs.forEach { stateRef ->
-                val state = session.get(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
+                val state = session.find(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     // Only update the state if it has not previously been consumed (this could have happened if the transaction is being
                     // re-recorded.
@@ -244,7 +244,7 @@ class NodeVaultService(
                             lockUpdateTime = clock.instant()
                             log.trace { "Releasing soft lock on consumed state: $stateRef" }
                         }
-                        session.save(state)
+                        session.persist(state)
                     }
                 }
             }
@@ -504,7 +504,7 @@ class NodeVaultService(
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
         database.transaction {
             val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
-            currentDBSession().save(txnNoteEntity)
+            currentDBSession().persist(txnNoteEntity)
         }
     }
 
@@ -949,7 +949,7 @@ private fun CriteriaBuilder.executeUpdate(
     fun doUpdate(persistentStateRefs: List<PersistentStateRef>?): Int {
         createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
             update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
-            return session.createQuery(update).executeUpdate()
+            return session.createMutationQuery(update).executeUpdate()
         }
     }
     return stateRefs?.let {

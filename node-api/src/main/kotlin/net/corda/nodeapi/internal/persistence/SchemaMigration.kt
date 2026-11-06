@@ -12,6 +12,7 @@ import liquibase.ThreadLocalScopeManager
 import liquibase.analytics.configuration.AnalyticsArgs
 import liquibase.changelog.FastCheckService
 import liquibase.database.jvm.JdbcConnection
+import liquibase.exception.CommandExecutionException
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
 import liquibase.resource.Resource
@@ -92,7 +93,8 @@ open class SchemaMigration(
                     Scope.getCurrentScope().getSingleton(FastCheckService::class.java).clearCache()
                     runner.update(Contexts().toString())
                 } catch (exp: LiquibaseException) {
-                    throw DatabaseMigrationException(exp.message, exp)
+                    val reported = exp.withoutCommandWrapper()
+                    throw DatabaseMigrationException(reported.message, reported)
                 }
             }
         }
@@ -157,7 +159,8 @@ open class SchemaMigration(
                 try {
                     runner.changeLogSync(Contexts().toString())
                 } catch (exp: LiquibaseException) {
-                    throw DatabaseMigrationException(exp.message, exp)
+                    val reported = exp.withoutCommandWrapper()
+                    throw DatabaseMigrationException(reported.message, reported)
                 }
             }
         }
@@ -280,3 +283,13 @@ class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") pr
         fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run schema migration scripts (node with sub-command run-migration-scripts). Reason: $reason"
     }
 }
+
+/**
+ * The exception that Liquibase 4.20 (Corda 4.14) threw. Liquibase 4.33 wraps it in a [CommandExecutionException] whose message repeats
+ * the wrapped exception's class name, which changed the message the node logs for a failed migration (for example
+ * `liquibase.exception.LiquibaseException: liquibase.exception.MigrationFailedException: ...` instead of
+ * `liquibase.exception.MigrationFailedException: ...`). Reporting the wrapped exception keeps the logged message, and the cause used to
+ * pick the error code, the same as before.
+ */
+internal fun LiquibaseException.withoutCommandWrapper(): LiquibaseException =
+        ((this as? CommandExecutionException)?.cause as? LiquibaseException) ?: this

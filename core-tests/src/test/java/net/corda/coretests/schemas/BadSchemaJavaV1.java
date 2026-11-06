@@ -3,7 +3,7 @@ package net.corda.coretests.schemas;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.schemas.PersistentState;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.Arrays;
 
 public class BadSchemaJavaV1 extends MappedSchema {

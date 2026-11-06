@@ -63,16 +63,17 @@ class CordaPersistenceServiceTests {
                 val now = Instant.now()
                 services.database.transaction {
                     val flowId = it.toString()
-                    session.save(
+                    val blob = DBCheckpointStorage.DBFlowCheckpointBlob(
+                        flowId = flowId,
+                        checkpoint = ByteArray(8192),
+                        flowStack = ByteArray(8192),
+                        hmac = ByteArray(16),
+                        persistedInstant = now
+                    )
+                    session.persist(
                         DBCheckpointStorage.DBFlowCheckpoint(
                             flowId = flowId,
-                            blob = DBCheckpointStorage.DBFlowCheckpointBlob(
-                                flowId = flowId,
-                                checkpoint = ByteArray(8192),
-                                flowStack = ByteArray(8192),
-                                hmac = ByteArray(16),
-                                persistedInstant = now
-                            ),
+                            blob = blob,
                             result = null,
                             exceptionDetails = null,
                             status = FlowStatus.RUNNABLE,
@@ -83,6 +84,8 @@ class CordaPersistenceServiceTests {
                             flowMetadata = createMetadataRecord(flowId, now)
                         )
                     )
+                    // The blob has to be persisted too (as DBCheckpointStorage does), as the checkpoint refers to it.
+                    session.persist(blob)
                 }
             }
 
@@ -103,7 +106,7 @@ class CordaPersistenceServiceTests {
                 startInstant = timestamp,
                 finishInstant = null
             )
-            session.save(metadata)
+            session.persist(metadata)
             return metadata
         }
     }

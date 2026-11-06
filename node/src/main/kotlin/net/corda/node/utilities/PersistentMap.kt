@@ -107,7 +107,7 @@ class PersistentMap<K : Any, V : Any, E, out EK>(
             session.merge(toPersistentEntity(key, value))
             fromPersistentEntity(existingEntry).second
         } else {
-            session.save(toPersistentEntity(key, value))
+            session.persist(toPersistentEntity(key, value))
             null
         }
     }

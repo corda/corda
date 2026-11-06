@@ -12,9 +12,13 @@ import org.junit.runners.model.Statement
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import javax.persistence.EntityManager
-import javax.persistence.EntityTransaction
-import javax.persistence.LockModeType
+import jakarta.persistence.ConnectionConsumer
+import jakarta.persistence.ConnectionFunction
+import jakarta.persistence.EntityManager
+import jakarta.persistence.EntityTransaction
+import jakarta.persistence.LockModeType
+import jakarta.persistence.PessimisticLockScope
+import java.sql.Connection
 import kotlin.test.assertTrue
 
 class RestrictedEntityManagerTest {
@@ -95,6 +99,24 @@ class RestrictedEntityManagerTest {
     fun `setProperty with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedEntityManager.setProperty("number", 12)
+    }
+
+    @Test(timeout = 300_000)
+    fun `lock with lock options with target platform version of current corda version throws unsupported exception`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
+        restrictedEntityManager.lock(Object(), LockModeType.PESSIMISTIC_WRITE, PessimisticLockScope.NORMAL)
+    }
+
+    @Test(timeout = 300_000)
+    fun `runWithConnection with target platform version of current corda version throws unsupported exception`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
+        restrictedEntityManager.runWithConnection(ConnectionConsumer<Connection> { })
+    }
+
+    @Test(timeout = 300_000)
+    fun `callWithConnection with target platform version of current corda version throws unsupported exception`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
+        restrictedEntityManager.callWithConnection(ConnectionFunction<Connection, Any?> { null })
     }
 
     @Test(timeout = 300_000)
@@ -195,5 +217,23 @@ class RestrictedEntityManagerTest {
     fun `setProperty with target platform version of 6 executes successfully`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(6)
         restrictedEntityManager.setProperty("number", 12)
+    }
+
+    @Test(timeout = 300_000)
+    fun `lock with lock options with target platform version of 6 executes successfully`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(6)
+        restrictedEntityManager.lock(Object(), LockModeType.PESSIMISTIC_WRITE, PessimisticLockScope.NORMAL)
+    }
+
+    @Test(timeout = 300_000)
+    fun `runWithConnection with target platform version of 6 executes successfully`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(6)
+        restrictedEntityManager.runWithConnection(ConnectionConsumer<Connection> { })
+    }
+
+    @Test(timeout = 300_000)
+    fun `callWithConnection with target platform version of 6 executes successfully`() {
+        whenever(cordapp.targetPlatformVersion).thenReturn(6)
+        restrictedEntityManager.callWithConnection(ConnectionFunction<Connection, Any?> { null })
     }
 }

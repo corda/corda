@@ -18,9 +18,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Test
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Table
 import javax.sql.DataSource
 
 class MigrationSchemaSyncTest{
