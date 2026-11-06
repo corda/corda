@@ -312,8 +312,8 @@ allprojects {
     targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
 
     jacoco {
-        // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
-        toolVersion = "0.8.3"
+        // JaCoCo 0.8.16 uses org.ow2.asm@9.11.x, required for SNYK-JAVA-ORGOW2ASM-21715452 / CVE-2026-110260
+        toolVersion = "0.8.16"
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -579,6 +579,16 @@ allprojects {
                     // Review when Azure Identity is upgraded
                     if (details.requested.group == 'io.projectreactor.netty' && details.requested.name == "reactor-netty-http") {
                         details.useVersion reactor_netty_version
+                    }
+
+                    // SNYK-JAVA-ORGOW2ASM-21715452 / CVE-2026-110260
+                    // vulnerability in org.ow2.asm:asm@7.1, a transitive dependency of
+                    // co.paralleluniverse:quasar-core@0.7.16_r3 / 0.8.1_r3 and org.jacoco:org.jacoco.ant
+                    // fixed in org.ow2.asm:asm@9.11
+                    // force-upgrade all org.ow2.asm modules to the same version (asm@9.11)
+                    // Review when Quasar is upgraded
+                    if (details.requested.group == 'org.ow2.asm') {
+                        details.useVersion asm_version
                     }
 
                     // Force all transitive junit:junit references to the same pinned version,
