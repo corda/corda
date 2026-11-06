@@ -13,8 +13,12 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.CONVERTER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.BUNDLED_HIBERNATE_CLASS
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_BUNDLED_USER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_COMPATIBLE_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_SESSION_USER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_TYPE_CLASS_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.PLAIN
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.REPOSITORY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.TYPE_DEF_ENTITY
@@ -51,7 +55,10 @@ class JavaxPersistenceTransformerTest {
         }
     }
 
-    /** Defines the fixture's classes from their converted bytes; everything else comes from the test classpath (which has jakarta.persistence). */
+    /**
+     * Defines the fixture's classes from their converted bytes; everything else comes from the test classpath, which has
+     * jakarta.persistence and Hibernate 7, against which the Hibernate references of the converted classes are resolved.
+     */
     private class ConvertingLoader(private val fixture: JavaxPersistenceFixture) : ClassLoader(JavaxPersistenceTransformerTest::class.java.classLoader) {
         override fun findClass(name: String): Class<*> {
             val bytes = try {
@@ -59,7 +66,7 @@ class JavaxPersistenceTransformerTest {
             } catch (e: java.nio.file.NoSuchFileException) {
                 throw ClassNotFoundException(name, e)
             }
-            val converted = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(bytes)) JavaxPersistenceTransformer.transform(bytes, name) else bytes
+            val converted = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(bytes)) JavaxPersistenceTransformer.transform(bytes, name, parent) else bytes
             return defineClass(name, converted, 0, converted.size)
         }
     }
@@ -125,14 +132,61 @@ class JavaxPersistenceTransformerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `a class that uses Hibernate classes beyond its annotations is reported, one that only uses the annotations is not`() {
-        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(HIBERNATE_SESSION_USER))).isTrue()
-        // The entity uses @Type, @Convert etc.: annotations only.
-        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(ENTITY))).isFalse()
-        assertThat(JavaxPersistenceTransformer.referencesHibernateBeyondAnnotations(fixture.classBytes(REPOSITORY))).isFalse()
-        // Such a class is still converted (the Session reference is left alone), so it loads and fails only when the code runs.
-        val user = loader.loadClass(HIBERNATE_SESSION_USER)
-        assertThat(user.getMethod("save", EntityManager::class.java, Any::class.java)).isNotNull
+    fun `a class that refers to a Hibernate member or class that no longer exists fails the conversion naming it`() {
+        val hibernate7 = javaClass.classLoader
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_SESSION_USER), HIBERNATE_SESSION_USER, hibernate7) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining(HIBERNATE_SESSION_USER)
+                .hasMessageContaining("method org.hibernate.Session.save(java.lang.Object)")
+                .hasMessageContaining("rebuilt for Corda 4.15")
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_TYPE_CLASS_USER), HIBERNATE_TYPE_CLASS_USER, hibernate7) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining("class org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor")
+        // Without a class loader to resolve against, the references are left alone and the class converts (the loader always passes one).
+        assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_SESSION_USER), HIBERNATE_SESSION_USER)).isNotEmpty()
+    }
+
+    @Test(timeout = 300_000)
+    fun `a Hibernate class the CorDapp bundles itself is not resolved against the node's Hibernate`() {
+        val hibernate7 = javaClass.classLoader
+        val bundled = BUNDLED_HIBERNATE_CLASS.replace('.', '/')
+        // The node does not have it, so without the CorDapp's own copy it would be missing.
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_BUNDLED_USER), HIBERNATE_BUNDLED_USER, hibernate7) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining("class $BUNDLED_HIBERNATE_CLASS")
+        assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_BUNDLED_USER), HIBERNATE_BUNDLED_USER, hibernate7) { it == bundled })
+                .isNotEmpty()
+    }
+
+    @Test(timeout = 300_000)
+    fun `a class that uses Hibernate classes and members that still exist converts and runs against Hibernate 7`() {
+        val user = loader.loadClass(HIBERNATE_COMPATIBLE_USER)
+        val persist = user.getMethod("persist", EntityManager::class.java, Any::class.java)
+        val query = Proxy.newProxyInstance(loader, arrayOf(org.hibernate.query.Query::class.java)) { _, method, _ ->
+            if (method.name == "list") listOf("row") else throw UnsupportedOperationException(method.name)
+        }
+        val flushed = ArrayList<String>()
+        val session = Proxy.newProxyInstance(loader, arrayOf(org.hibernate.Session::class.java)) { _, method, args ->
+            when (method.name) {
+                "flush" -> { flushed += "flush"; null }
+                "createQuery" -> if (args?.size == 1) query else throw UnsupportedOperationException("createQuery${args?.toList()}")
+                "toString" -> "session"
+                "hashCode" -> 42
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        }
+        val entityManager = entityManager { method, _ ->
+            when (method.name) {
+                "persist" -> null
+                "unwrap" -> session
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        }
+        assertThat(persist.invoke(null, entityManager, "x")).isEqualTo("persisted, 1 rows")
+        assertThat(flushed).containsExactly("flush")
+        // The catch clause names Hibernate 7's exception type, which still exists.
+        val duplicate = entityManager { _, _ -> throw org.hibernate.exception.ConstraintViolationException("duplicate", java.sql.SQLException("duplicate"), "pk") }
+        assertThat(persist.invoke(null, duplicate, "x")).isEqualTo("duplicate")
     }
 
     @Test(timeout = 300_000)

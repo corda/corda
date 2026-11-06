@@ -125,6 +125,12 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
     override fun close() = appClassLoader.close()
 
     private inner class InternalHolder {
+        init {
+            // A CorDapp built for Corda 4.14 or earlier that cannot be converted for Hibernate 7 is refused here, with a message that
+            // names the class, rather than when a flow first uses the class.
+            appClassLoader.checkConvertible()
+        }
+
         val nonLegacyCordapps = cordappJars.mapTo(ArrayList(), ::scanCordapp)
         val legacyContractCordapps = legacyContractJars.map(::scanCordapp)
 

@@ -29,6 +29,10 @@ class JavaxPersistenceFixture(root: Path) {
         const val SUSPENDING_REPOSITORY = "legacy.SuspendingRepository"
         const val SUSPENDING_CALLER = "legacy.SuspendingCaller"
         const val HIBERNATE_SESSION_USER = "legacy.HibernateSessionUser"
+        const val HIBERNATE_TYPE_CLASS_USER = "legacy.HibernateTypeClassUser"
+        const val HIBERNATE_COMPATIBLE_USER = "legacy.HibernateCompatibleUser"
+        const val HIBERNATE_BUNDLED_USER = "legacy.HibernateBundledUser"
+        const val BUNDLED_HIBERNATE_CLASS = "org.hibernate.validator.BundledValidator"
         const val INTRUDER = "legacy.Intruder"
         const val JAVAX_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val DUAL_ENTITY = "dual.DualEntity"
@@ -59,7 +63,12 @@ class JavaxPersistenceFixture(root: Path) {
                 "javax/persistence/EntityExistsException.java" to "package javax.persistence; public class EntityExistsException extends PersistenceException { public EntityExistsException(String message) { super(message); } }",
                 "javax/persistence/Query.java" to "package javax.persistence; import java.util.List; public interface Query { Query setParameter(String name, Object value); List getResultList(); }",
                 "javax/persistence/EntityManager.java" to "package javax.persistence; public interface EntityManager { void persist(Object entity); <T> T find(Class<T> entityClass, Object primaryKey); Query createQuery(String qlString); <T> T unwrap(Class<T> cls); }",
-                "org/hibernate/Session.java" to "package org.hibernate; public interface Session { java.io.Serializable save(Object entity); }",
+                // The Hibernate 5 shapes of classes a CorDapp built for Corda 4.14 may use: save and the type descriptor are gone in Hibernate 7,
+                // flush, createQuery, Query.list and the exception type still exist.
+                "org/hibernate/Session.java" to "package org.hibernate; public interface Session { java.io.Serializable save(Object entity); void flush(); org.hibernate.query.Query createQuery(String hql); }",
+                "org/hibernate/query/Query.java" to "package org.hibernate.query; public interface Query { java.util.List list(); }",
+                "org/hibernate/exception/ConstraintViolationException.java" to "package org.hibernate.exception; public class ConstraintViolationException extends RuntimeException { public ConstraintViolationException(String message) { super(message); } }",
+                "org/hibernate/type/descriptor/sql/VarbinaryTypeDescriptor.java" to "package org.hibernate.type.descriptor.sql; public class VarbinaryTypeDescriptor { public static final VarbinaryTypeDescriptor INSTANCE = new VarbinaryTypeDescriptor(); }",
                 "org/hibernate/annotations/Type.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Type { String type(); }",
                 "org/hibernate/annotations/TypeDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface TypeDef { String name(); Class typeClass(); }"
         )
@@ -90,10 +99,50 @@ class JavaxPersistenceFixture(root: Path) {
                 "legacy/HibernateSessionUser.java" to """
                     package legacy;
                     import javax.persistence.EntityManager;
-                    /** Uses the Hibernate 5 Session API directly, which the conversion cannot cover. */
+                    /** Uses a Hibernate 5 Session method that no longer exists in Hibernate 7, which the conversion cannot cover. */
                     public class HibernateSessionUser {
                         public static Object save(EntityManager em, Object entity) {
                             return em.unwrap(org.hibernate.Session.class).save(entity);
+                        }
+                    }
+                """.trimIndent(),
+                "legacy/HibernateTypeClassUser.java" to """
+                    package legacy;
+                    /** Uses a Hibernate 5 class that no longer exists in Hibernate 7. */
+                    public class HibernateTypeClassUser {
+                        public static Object descriptor(javax.persistence.EntityManager em) {
+                            return org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor.INSTANCE;
+                        }
+                    }
+                """.trimIndent(),
+                "legacy/HibernateCompatibleUser.java" to """
+                    package legacy;
+                    import javax.persistence.EntityManager;
+                    import org.hibernate.Session;
+                    import org.hibernate.exception.ConstraintViolationException;
+                    /** Uses Hibernate classes and members that still exist in Hibernate 7: the conversion leaves them alone and the node accepts them. */
+                    public class HibernateCompatibleUser {
+                        public static String persist(EntityManager em, Object entity) {
+                            try {
+                                em.persist(entity);
+                                Session session = em.unwrap(Session.class);
+                                session.flush();
+                                // An Object method on an interface-typed receiver: compiled with the interface as the owner.
+                                String description = session.toString() + session.hashCode();
+                                return "persisted, " + session.createQuery("from LegacyEntity").list().size() + " rows" + (description.isEmpty() ? "?" : "");
+                            } catch (ConstraintViolationException e) {
+                                return "duplicate";
+                            }
+                        }
+                    }
+                """.trimIndent(),
+                // A Hibernate library the CorDapp ships itself (as Hibernate Validator would be): not the node's Hibernate, so not checked.
+                "org/hibernate/validator/BundledValidator.java" to "package org.hibernate.validator; public class BundledValidator { public static boolean valid(Object o) { return o != null; } }",
+                "legacy/HibernateBundledUser.java" to """
+                    package legacy;
+                    public class HibernateBundledUser {
+                        public static boolean validate(javax.persistence.EntityManager em, Object entity) {
+                            return org.hibernate.validator.BundledValidator.valid(entity);
                         }
                     }
                 """.trimIndent(),
@@ -204,18 +253,29 @@ class JavaxPersistenceFixture(root: Path) {
     /** The CorDapp-like classes together with the stub `javax.persistence` API, as a CorDapp that bundles the API ships them. */
     val fatJar: Path = root / "fat-legacy-cordapp.jar"
 
+    /** The CorDapp-like classes that convert: without the ones that use a Hibernate 5 `@Type` or `@TypeDef`, class or member with no Hibernate 7 equivalent. */
+    val cleanJar: Path = root / "clean-legacy-cordapp.jar"
+
+    /** [HIBERNATE_SESSION_USER] (which cannot be converted) and [PLAIN] only. */
+    val sessionUserJar: Path = root / "session-user-cordapp.jar"
+
     init {
         compile(stubSources, stubClassesDir, classpath = emptyList())
         val quasarJar = co.paralleluniverse.fibers.Fiber::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(cordappSources, classesDir, classpath = listOf(stubClassesDir, quasarJar))
         val jakartaApiJar = jakarta.persistence.Entity::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(dualSources, classesDir, classpath = listOf(stubClassesDir, jakartaApiJar))
-        val intruderEntry = INTRUDER.replace('.', '/') + ".class"
+        val intruderEntry = entryOf(INTRUDER)
+        val unconvertible = setOf(HIBERNATE_SESSION_USER, HIBERNATE_TYPE_CLASS_USER, UNKNOWN_TYPE_ENTITY, TYPE_DEF_ENTITY).map(::entryOf)
         writeJar(jar, classesDir)
         writeJar(sealedJar, classesDir, sealed = true) { it != intruderEntry }
         writeJar(intruderJar, classesDir) { it == intruderEntry }
         writeJar(fatJar, classesDir, stubClassesDir) { !it.startsWith("org/hibernate/") }
+        writeJar(cleanJar, classesDir) { it !in unconvertible }
+        writeJar(sessionUserJar, classesDir) { it == entryOf(HIBERNATE_SESSION_USER) || it == entryOf(PLAIN) }
     }
+
+    private fun entryOf(className: String) = className.replace('.', '/') + ".class"
 
     fun classBytes(className: String): ByteArray = (classesDir / (className.replace('.', '/') + ".class")).readBytes()
 

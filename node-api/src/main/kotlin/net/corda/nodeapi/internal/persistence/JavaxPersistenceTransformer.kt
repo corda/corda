@@ -8,8 +8,11 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 import org.objectweb.asm.commons.ClassRemapper
 import org.objectweb.asm.commons.Remapper
 import java.sql.Types
@@ -34,8 +37,12 @@ import java.sql.Types
  * Hibernate 5 names with a fixed JDBC type (`uuid-binary`, `binary`, `text`) are replaced by the `@JdbcTypeCode` Corda's own schemas use
  * on Hibernate 7 (see [substitutedHibernate5Types]); any other one makes the conversion fail with a message naming the class and the
  * member (such a CorDapp has to be rebuilt). Hibernate classes other than annotations (the `Session` API, the type classes) are not
- * converted either, and most of them changed between Hibernate 5 and 7; a converted class that refers to them is reported by
- * [referencesHibernateBeyondAnnotations] so that the class loader can warn about it, as such code fails when it runs.
+ * converted either, and many of them changed between Hibernate 5 and 7. Given the class loader of the node's Hibernate, [transform]
+ * resolves every Hibernate class and member the converted class refers to (supertypes, field and method types, calls, field accesses,
+ * casts, `catch` clauses, method handles) and fails, naming them, if any does not exist in Hibernate 7: such code would fail with a
+ * `NoSuchMethodError` or `NoClassDefFoundError` when it runs, and the node refuses to start instead. References to classes and members
+ * that still exist (the exception types, `Session.flush`) pass, as the code runs against them unchanged. Annotations are not resolved:
+ * the JVM drops an annotation whose class is missing, as it does for a CorDapp built for 4.15.
  */
 object JavaxPersistenceTransformer {
     private val logger = loggerFor<JavaxPersistenceTransformer>()
@@ -43,7 +50,6 @@ object JavaxPersistenceTransformer {
     private const val JAVAX_PERSISTENCE = "javax/persistence/"
     private const val JAKARTA_PERSISTENCE = "jakarta/persistence/"
     private const val HIBERNATE = "org/hibernate/"
-    private const val HIBERNATE_ANNOTATIONS = "org/hibernate/annotations/"
     private const val HIBERNATE_TYPE = "Lorg/hibernate/annotations/Type;"
     private const val HIBERNATE_TYPE_DEF = "Lorg/hibernate/annotations/TypeDef;"
     private const val HIBERNATE_TYPE_DEFS = "Lorg/hibernate/annotations/TypeDefs;"
@@ -79,28 +85,29 @@ object JavaxPersistenceTransformer {
     }
 
     /**
-     * Whether the bytes of a class file refer to a Hibernate class that is not an annotation, such as `org.hibernate.Session` or a
-     * Hibernate 5 type class. The conversion leaves such references alone, and a class built for Hibernate 5 that uses them fails when
-     * that code runs on Hibernate 7 (`Session.save` no longer exists, the type classes moved), so the class loader warns about it.
-     */
-    fun referencesHibernateBeyondAnnotations(classBytes: ByteArray): Boolean {
-        val text = String(classBytes, Charsets.ISO_8859_1)
-        var index = text.indexOf(HIBERNATE)
-        while (index >= 0) {
-            if (!text.startsWith(HIBERNATE_ANNOTATIONS, index)) return true
-            index = text.indexOf(HIBERNATE, index + HIBERNATE.length)
-        }
-        return false
-    }
-
-    /**
      * The bytes of the class with every reference to `javax.persistence` renamed to `jakarta.persistence` and the Hibernate 5 type
-     * annotations substituted. [className] is only used in log and error messages.
+     * annotations substituted. [className] is only used in log and error messages. With [hibernateClassLoader], the class loader that
+     * has the node's Hibernate 7 on its classpath, every Hibernate class and member the converted class refers to is resolved there,
+     * except classes for which [bundledClass] is true (given their internal name): those the CorDapp ships itself, such as a Hibernate
+     * library the node does not have (Hibernate Validator), and they are converted and checked on their own when they are loaded.
      *
-     * @throws JavaxPersistenceConversionError if the class uses a Hibernate 5 annotation that has no substitute.
+     * @throws JavaxPersistenceConversionError if the class uses a Hibernate 5 annotation that has no substitute, or refers to a Hibernate
+     * class or member that does not exist in Hibernate 7.
      */
-    fun transform(classBytes: ByteArray, className: String): ByteArray {
-        val converted = rename(classBytes, JAVAX_PERSISTENCE, JAKARTA_PERSISTENCE) { HibernateTypeRewriter(className, it) }
+    fun transform(
+            classBytes: ByteArray,
+            className: String,
+            hibernateClassLoader: ClassLoader? = null,
+            bundledClass: (internalName: String) -> Boolean = { false }
+    ): ByteArray {
+        val resolver = hibernateClassLoader?.let { HibernateResolver(it, bundledClass) }
+        val converted = rename(classBytes, JAVAX_PERSISTENCE, JAKARTA_PERSISTENCE,
+                decorate = { HibernateTypeRewriter(className, it) },
+                decorateOutput = { if (resolver != null) HibernateReferenceChecker(resolver, it) else it })
+        if (resolver != null && resolver.missing.isNotEmpty()) {
+            throw JavaxPersistenceConversionError("The class $className uses Hibernate classes or members that do not exist in Hibernate 7 " +
+                    "(Corda 4.15), so it would fail when that code runs: ${resolver.missing.joinToString("; ")}. $REBUILD_ADVICE")
+        }
         logger.debug { "Converted $className from javax.persistence to jakarta.persistence" }
         return converted
     }
@@ -108,15 +115,177 @@ object JavaxPersistenceTransformer {
     /**
      * The bytes of the class with every reference to the package [from] renamed to [to] (both in internal form, with a trailing slash):
      * types, descriptors, signatures, annotation values, invokedynamic arguments and the Kotlin metadata string table. [decorate] wraps
-     * the visitor chain with any further rewriting. Exposed for tests, which use it in the opposite direction to produce classes built
-     * for `javax.persistence` from classes built for `jakarta.persistence`.
+     * the visitor chain with any further rewriting of the original class; [decorateOutput] wraps the writer, so sees the renamed class.
+     * Exposed for tests, which use it in the opposite direction to produce classes built for `javax.persistence` from classes built for
+     * `jakarta.persistence`.
      */
-    internal fun rename(classBytes: ByteArray, from: String, to: String, decorate: (ClassVisitor) -> ClassVisitor = { it }): ByteArray {
+    internal fun rename(
+            classBytes: ByteArray,
+            from: String,
+            to: String,
+            decorate: (ClassVisitor) -> ClassVisitor = { it },
+            decorateOutput: (ClassVisitor) -> ClassVisitor = { it }
+    ): ByteArray {
         val reader = ClassReader(classBytes)
         // A fresh writer, so that the constant pool of the result does not keep the entries of the original.
         val writer = ClassWriter(0)
-        reader.accept(decorate(KotlinMetadataRenamer(from, to, ClassRemapper(writer, PackageRemapper(from, to)))), 0)
+        reader.accept(decorate(KotlinMetadataRenamer(from, to, ClassRemapper(decorateOutput(writer), PackageRemapper(from, to)))), 0)
         return writer.toByteArray()
+    }
+
+    /**
+     * Resolves Hibernate classes and members against a class loader that has Hibernate 7, remembering what is missing. Only a class that
+     * the class loader reports as not found counts as missing: a class that exists but cannot be loaded there (an optional dependency of
+     * Hibernate's that the node does not have), and a reflection failure while looking into an existing class, count as "exists", so that
+     * the check never refuses more than it can prove. Members are looked up the way the JVM resolves them: in the class, its superclasses
+     * and all their interfaces, and, for an interface, in `Object` too (an `Object` method called on an interface-typed receiver names the
+     * interface as its owner).
+     */
+    private class HibernateResolver(private val classLoader: ClassLoader, private val bundledClass: (String) -> Boolean) {
+        /** Descriptions of the missing classes and members, in the order found. */
+        val missing = LinkedHashSet<String>()
+        private val classes = HashMap<String, Class<*>?>()
+        private val members = HashMap<String, Boolean>()
+
+        fun checkType(type: Type) {
+            when (type.sort) {
+                Type.ARRAY -> checkType(type.elementType)
+                Type.OBJECT -> checkClass(type.internalName)
+                Type.METHOD -> {
+                    type.argumentTypes.forEach(::checkType)
+                    checkType(type.returnType)
+                }
+            }
+        }
+
+        fun checkMethod(owner: String, name: String, descriptor: String) {
+            val clazz = classOf(owner) ?: return
+            val exists = members.getOrPut("$owner.$name$descriptor") {
+                runCatching {
+                    if (name == "<init>") {
+                        clazz.declaredConstructors.any { Type.getConstructorDescriptor(it) == descriptor }
+                    } else {
+                        hierarchy(clazz).any { type -> type.declaredMethods.any { it.name == name && Type.getMethodDescriptor(it) == descriptor } }
+                    }
+                }.getOrDefault(true)
+            }
+            if (!exists) {
+                val arguments = Type.getArgumentTypes(descriptor).joinToString { it.className }
+                missing += "method ${clazz.name}.${if (name == "<init>") "<init>" else name}($arguments)"
+            }
+        }
+
+        fun checkField(owner: String, name: String) {
+            val clazz = classOf(owner) ?: return
+            val exists = members.getOrPut("$owner.$name") {
+                runCatching { hierarchy(clazz).any { type -> type.declaredFields.any { it.name == name } } }.getOrDefault(true)
+            }
+            if (!exists) missing += "field ${clazz.name}.$name"
+        }
+
+        private fun checkClass(internalName: String) {
+            if (internalName.startsWith(HIBERNATE)) classOf(internalName)
+        }
+
+        /**
+         * The Hibernate class with the given internal name, or null if there is nothing to check: not a Hibernate class, bundled by the
+         * CorDapp, missing (recorded once), or present but not loadable here.
+         */
+        private fun classOf(internalName: String): Class<*>? {
+            if (!internalName.startsWith(HIBERNATE) || bundledClass(internalName)) return null
+            return classes.getOrPut(internalName) {
+                try {
+                    Class.forName(internalName.replace('/', '.'), false, classLoader)
+                } catch (e: ClassNotFoundException) {
+                    missing += "class ${internalName.replace('/', '.')}"
+                    null
+                } catch (e: LinkageError) {
+                    // The class is there but something it depends on is not; the CorDapp's use of it may still be fine.
+                    null
+                }
+            }
+        }
+
+        /**
+         * The class, its superclasses and every interface any of them implements, which is where the JVM resolves members; for an
+         * interface, `Object` as well (JVMS 5.4.3.4).
+         */
+        private fun hierarchy(clazz: Class<*>): Sequence<Class<*>> = sequence {
+            val seen = HashSet<Class<*>>()
+            val queue = ArrayDeque<Class<*>>()
+            queue += clazz
+            if (clazz.isInterface) queue += Any::class.java
+            while (queue.isNotEmpty()) {
+                val next = queue.removeFirst()
+                if (!seen.add(next)) continue
+                yield(next)
+                next.superclass?.let { queue += it }
+                queue += next.interfaces
+            }
+        }
+    }
+
+    /** Resolves, through [resolver], every reference to a Hibernate class or member in the class it visits (the renamed class). */
+    private class HibernateReferenceChecker(private val resolver: HibernateResolver, next: ClassVisitor) : ClassVisitor(Opcodes.ASM9, next) {
+        override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String?, interfaces: Array<out String>?) {
+            superName?.let { resolver.checkType(Type.getObjectType(it)) }
+            interfaces?.forEach { resolver.checkType(Type.getObjectType(it)) }
+            super.visit(version, access, name, signature, superName, interfaces)
+        }
+
+        override fun visitField(access: Int, name: String, descriptor: String, signature: String?, value: Any?): FieldVisitor? {
+            resolver.checkType(Type.getType(descriptor))
+            return super.visitField(access, name, descriptor, signature, value)
+        }
+
+        override fun visitMethod(access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<out String>?): MethodVisitor? {
+            resolver.checkType(Type.getMethodType(descriptor))
+            exceptions?.forEach { resolver.checkType(Type.getObjectType(it)) }
+            val methodVisitor = super.visitMethod(access, name, descriptor, signature, exceptions) ?: return null
+            return object : MethodVisitor(Opcodes.ASM9, methodVisitor) {
+                override fun visitTypeInsn(opcode: Int, type: String) {
+                    resolver.checkType(Type.getObjectType(type))
+                    super.visitTypeInsn(opcode, type)
+                }
+
+                override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
+                    resolver.checkField(owner, name)
+                    resolver.checkType(Type.getType(descriptor))
+                    super.visitFieldInsn(opcode, owner, name, descriptor)
+                }
+
+                override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
+                    checkHandle(owner, name, descriptor)
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                }
+
+                override fun visitInvokeDynamicInsn(name: String, descriptor: String, handle: Handle, vararg arguments: Any) {
+                    arguments.forEach { if (it is Handle) checkHandle(it.owner, it.name, it.desc) }
+                    super.visitInvokeDynamicInsn(name, descriptor, handle, *arguments)
+                }
+
+                override fun visitLdcInsn(value: Any) {
+                    if (value is Type) resolver.checkType(value)
+                    super.visitLdcInsn(value)
+                }
+
+                override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
+                    resolver.checkType(Type.getType(descriptor))
+                    super.visitMultiANewArrayInsn(descriptor, numDimensions)
+                }
+
+                override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+                    type?.let { resolver.checkType(Type.getObjectType(it)) }
+                    super.visitTryCatchBlock(start, end, handler, type)
+                }
+
+                private fun checkHandle(owner: String, name: String, descriptor: String) {
+                    if (owner.startsWith("[")) return
+                    resolver.checkType(Type.getMethodType(descriptor))
+                    resolver.checkMethod(owner, name, descriptor)
+                }
+            }
+        }
     }
 
     private class PackageRemapper(private val from: String, private val to: String) : Remapper(Opcodes.ASM9) {

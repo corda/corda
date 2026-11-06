@@ -5,6 +5,8 @@ import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_BUNDLED_USER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_COMPATIBLE_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_SESSION_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.INTRUDER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.JAVAX_ENTITY_ANNOTATION
@@ -71,11 +73,35 @@ class CordappClassLoaderTest {
     }
 
     @Test(timeout = 300_000)
-    fun `a class that uses Hibernate classes directly is still converted and loads`() {
-        // The loader warns about it (once per jar); the code fails only when it runs, as a node built for Hibernate 5 would.
+    fun `a class that uses a Hibernate member that no longer exists fails to load with the conversion error`() {
         loader().use { loader ->
-            loader.loadClass(HIBERNATE_SESSION_USER)
-            assertThat(loader.convertedClassNames).containsExactly(HIBERNATE_SESSION_USER)
+            assertThatThrownBy { loader.loadClass(HIBERNATE_SESSION_USER) }
+                    .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                    .hasMessageContaining("method org.hibernate.Session.save(java.lang.Object)")
+            assertThat(loader.convertedClassNames).isEmpty()
+            // One that only uses what Hibernate 7 still has converts.
+            loader.loadClass(HIBERNATE_COMPATIBLE_USER)
+            assertThat(loader.convertedClassNames).containsExactly(HIBERNATE_COMPATIBLE_USER)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `the start-up check finds a class that cannot be converted without defining anything`() {
+        CordappClassLoader(arrayOf(fixture.sessionUserJar.toUri().toURL()), javaClass.classLoader).use { loader ->
+            assertThatThrownBy { loader.checkConvertible() }
+                    .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                    .hasMessageContaining(HIBERNATE_SESSION_USER)
+                    .hasMessageContaining("org.hibernate.Session.save")
+            assertThat(loader.convertedClassNames).isEmpty()
+        }
+        CordappClassLoader(arrayOf(fixture.cleanJar.toUri().toURL()), javaClass.classLoader).use { loader ->
+            // The clean jar also has a class using a bundled Hibernate library (org.hibernate.validator), which the jar provides itself.
+            loader.checkConvertible()
+            assertThat(loader.convertedClassNames).isEmpty()
+            assertThat(loader.loadClass(ENTITY).isAnnotationPresent(Entity::class.java)).isTrue()
+            assertThat(loader.convertedClassNames).containsExactly(ENTITY)
+            assertThat(loader.loadClass(HIBERNATE_BUNDLED_USER).getMethod("validate", jakarta.persistence.EntityManager::class.java, Any::class.java)
+                    .invoke(null, null, "x")).isEqualTo(true)
         }
     }
 

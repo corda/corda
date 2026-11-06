@@ -12,9 +12,9 @@ CorDapps use for their vault schemas move from the `javax.persistence` package t
 
 | You are...                                    | What you need to do                                                                                              |
 |-----------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| **A node operator**                           | Nothing to your node configuration or database. Check your database version is supported. CorDapps built for Corda 4.14 or earlier keep working: the node converts their `javax.persistence` classes to `jakarta.persistence` as it loads them (see [CorDapps built for Corda 4.14 or earlier](#2-cordapps-built-for-corda-414-or-earlier)). |
+| **A node operator**                           | Nothing to your node configuration or database. Check your database version is supported. CorDapps built for Corda 4.14 or earlier load without a rebuild: the node converts their `javax.persistence` classes to `jakarta.persistence` as it loads them, and refuses to start if a CorDapp uses something Hibernate 7 no longer has (see [CorDapps built for Corda 4.14 or earlier](#2-cordapps-built-for-corda-414-or-earlier)). Hibernate 7's behaviour changes apply to converted CorDapps as they do to rebuilt ones, so test them on a 4.15 node first. |
 | **A CorDapp developer** (with a custom schema)| Nothing to run on 4.15. When you next rebuild, port your schema classes to `jakarta.persistence`; a script helps with most of it. A CorDapp that uses a Hibernate `@Type` other than the ones the node substitutes (listed below) must be ported before it can run on 4.15. |
-| **A CorDapp developer** (no custom schema)    | Nothing. Code that calls `ServiceHub.withEntityManager` or uses JPA classes directly is converted like the schemas; port it when you next rebuild. Code that uses Hibernate classes directly (`Session`, the type classes) is not converted and must be ported. |
+| **A CorDapp developer** (no custom schema)    | Nothing. Code that calls `ServiceHub.withEntityManager` or uses JPA classes directly is converted like the schemas; port it when you next rebuild. Code that uses Hibernate classes directly is not converted: if it uses a class or member Hibernate 7 no longer has (`Session.save`), the node refuses the CorDapp at start-up and it must be ported. |
 
 **There is no database migration.** Corda 4.15 does not add, change or remove any table, column, index or sequence as part of this
 upgrade, and Liquibase has no new changesets for it. Hibernate 7 has been configured to read and write the formats that existing
@@ -84,19 +84,28 @@ Nothing is changed in the database when this happens. Obtain an updated CorDapp 
 build it yourself) **before** starting the node on 4.15.
 
 The conversion also leaves alone Hibernate classes other than annotations, such as the `Session` API reached through
-`EntityManager.unwrap` or the Hibernate 5 type classes. Many of them changed between Hibernate 5 and 7 (`Session.save`, `update` and
-`delete` are gone, the type classes moved), so a CorDapp built for 4.14 that uses them starts but **may fail when that code runs**. The
-node warns about it at start-up, once per CorDapp, when it converts the first class that refers to such a Hibernate class:
+`EntityManager.unwrap`. When it starts, the node goes through every class of every CorDapp jar built for `javax.persistence` and
+resolves each Hibernate class and member the class refers to (supertypes, field and method types, calls, field accesses, casts, `catch`
+clauses) against its Hibernate 7. A reference to something that no longer exists (`Session.save`, `update` and `delete`, the Hibernate 5
+type classes) would fail with a `NoSuchMethodError` or `NoClassDefFoundError` when that code ran, so the node **refuses to start**
+instead, naming the class and what is missing:
 
 ```
-The class com.example.Repo of CorDapp /opt/corda/cordapps/my-cordapp-1.0.jar, which was built for Corda 4.14 or earlier, uses Hibernate
-classes directly (not only its annotations). ... that code may fail when it runs. Check the CorDapp on a test node, or obtain a build
-for Corda 4.15 ...
+The class com.example.Repo uses Hibernate classes or members that do not exist in Hibernate 7 (Corda 4.15), so it would fail when that
+code runs: method org.hibernate.Session.save(java.lang.Object). The CorDapp that contains the class needs to be rebuilt for Corda 4.15 ...
 ```
 
-The warning is a heuristic: a class that only catches a Hibernate exception type, which still exists, triggers it too. Treat it as a
-prompt to run the CorDapp's flows on a test node, or to obtain a 4.15 build. Note that the node no longer proves at start-up that every
-CorDapp can run on Hibernate 7; the warning is the signal to act on.
+References to Hibernate classes and members that still exist (the exception types, `Session.flush`, `createQuery`) pass, and that code
+runs against Hibernate 7 unchanged. The check covers every class in the jar, whether or not anything uses it, so a CorDapp either
+starts or is refused.
+
+**What the conversion does not change is Hibernate itself.** A converted CorDapp runs on Hibernate 7 with Corda's compatibility
+settings, exactly as a CorDapp rebuilt for 4.15 does, so every behaviour change listed under
+[Changes the script cannot make for you](#3-changes-the-script-cannot-make-for-you) applies to it too: HQL and JPQL are validated
+strictly, `persist` of a duplicate marks the transaction for rollback, native queries return `Long` where they returned `BigInteger`,
+`LIKE` patterns no longer treat a backslash as an escape on H2 and PostgreSQL, `NOT IN` an empty list matches every row, and an entity
+attribute of an array type is refused when the node starts. A 4.14 CorDapp that relies on any of these needs the same change a rebuilt
+one would, so run its flows on a 4.15 test node before relying on the conversion in production.
 
 ### 3. Things you may notice
 
@@ -369,7 +378,7 @@ Nothing needs to be done: the node converts it as described above. If it uses a 
 
 A CorDapp built for Corda 4.14 (`javax.persistence`) runs on both: natively on 4.14, converted on 4.15. That is the simplest way to serve
 both node generations with one jar, and the only things it cannot use are a Hibernate `@Type` other than the ones the node substitutes and
-Hibernate classes other than annotations.
+Hibernate classes or members that no longer exist in Hibernate 7. The Hibernate 7 behaviour changes above apply to it on 4.15.
 
 A CorDapp that wants to be built for `jakarta.persistence` while still running on 4.14 can carry **both** sets of annotations on every
 mapped class, with the same attributes on each twin, and declare both API jars as compile-only dependencies (`javax.persistence-api:2.2`
