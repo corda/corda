@@ -48,11 +48,11 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
+import net.corda.nodeapi.internal.cordapp.CordappClassLoader
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import java.lang.reflect.Modifier
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.ServiceLoader
 import java.util.TreeSet
@@ -112,7 +112,7 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         logger.debug { "legacyContractJars: $legacyContractJars" }
     }
 
-    override val appClassLoader = URLClassLoader(cordappJars.stream().map { it.toUri().toURL() }.toTypedArray(), javaClass.classLoader)
+    override val appClassLoader = CordappClassLoader(cordappJars.map { it.toUri().toURL() }.toTypedArray(), javaClass.classLoader)
 
     private val internal by lazy(::InternalHolder)
 
