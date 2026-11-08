@@ -1125,12 +1125,16 @@ class DriverDSLImpl(
         }
 
         private fun shutdownAndDeleteDatabase(config: NodeConfiguration) {
-            DataSourceFactory.createDataSource(config.dataSourceProperties).also { dataSource ->
+            // The data source is a HikariDataSource; its pool threads outlive the driver unless it is closed.
+            val dataSource = DataSourceFactory.createDataSource(config.dataSourceProperties)
+            try {
                 dataSource.connection.use { connection ->
                     connection.createStatement().use { statement ->
                         statement.execute("SHUTDOWN")
                     }
                 }
+            } finally {
+                (dataSource as? AutoCloseable)?.close()
             }
             DatabaseSnapshot.databaseFilename(config.baseDirectory).deleteIfExists()
         }
