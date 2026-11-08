@@ -142,12 +142,18 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 "(javax.persistence) and has been converted for Hibernate 7" + if (convertedByLoader) " by the CorDapp class loader" else "")
     }
 
-    /** Whether the loaded class, or any of its declared members, carries a `jakarta.persistence` annotation. */
+    /**
+     * Whether the loaded class, or any of its declared members, carries a `jakarta.persistence` annotation. Reflecting on an unconverted
+     * class can fail (a member typed on `javax.persistence`, which is not on the classpath); that counts as "no", so that the caller's
+     * message is the one reported.
+     */
     private fun hasJakartaPersistenceAnnotations(type: Class<*>): Boolean {
-        val annotated = sequenceOf(type.annotations.asSequence(),
-                type.declaredFields.asSequence().flatMap { it.annotations.asSequence() },
-                type.declaredMethods.asSequence().flatMap { it.annotations.asSequence() },
-                type.declaredConstructors.asSequence().flatMap { it.annotations.asSequence() }).flatten()
-        return annotated.any { it.annotationClass.java.name.startsWith("jakarta.persistence.") }
+        return runCatching {
+            val annotated = sequenceOf(type.annotations.asSequence(),
+                    type.declaredFields.asSequence().flatMap { it.annotations.asSequence() },
+                    type.declaredMethods.asSequence().flatMap { it.annotations.asSequence() },
+                    type.declaredConstructors.asSequence().flatMap { it.annotations.asSequence() }).flatten()
+            annotated.any { it.annotationClass.java.name.startsWith("jakarta.persistence.") }
+        }.getOrDefault(false)
     }
 }

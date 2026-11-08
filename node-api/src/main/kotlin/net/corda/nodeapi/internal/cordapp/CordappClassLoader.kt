@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.cordapp
 
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.persistence.CordappConversionException
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
 import java.net.URL
@@ -22,13 +23,14 @@ import kotlin.io.path.toPath
  *
  * Classes are defined with the same code source (jar location and signers) and package definition as [URLClassLoader] would give them,
  * because the node maps classes to CorDapps by their code source location, and package sealing (the `Sealed` manifest attribute) is
- * verified as [URLClassLoader] verifies it. URLs that are not jar files on disk are served by [URLClassLoader] as they are, without
- * conversion. A CorDapp that bundles the `javax.persistence` API itself has those classes defined as they are too: renaming them would
- * give them the wrong name.
+ * verified as [URLClassLoader] verifies it. The jar files among the URLs are searched first, in their order, and only then the other URLs
+ * (directories, remote URLs), which [URLClassLoader] serves as they are, without conversion; the node only ever passes jars. A CorDapp
+ * that bundles the `javax.persistence` API itself has those classes defined as they are too: renaming them would give them the wrong name.
  *
- * A class that cannot be converted (a Hibernate 5 `@Type` with no substitute, or a reference to a Hibernate class or member that does not
- * exist in Hibernate 7) fails to load with a [JavaxPersistenceConversionError]. [checkConvertible] finds such classes ahead of time, over
- * every class of every jar, so that the node refuses to start rather than failing in a flow when the class is first used.
+ * A class that cannot be converted (a Hibernate annotation Hibernate 7 cannot read, or a reference to a Hibernate class or member that
+ * does not exist in Hibernate 7) fails to load with a [JavaxPersistenceConversionError]. [checkConvertible] finds such classes ahead of
+ * time, over every class built for `javax.persistence` in every jar, so that the node refuses to start, naming all of them, rather than
+ * failing in a flow when one is first used.
  */
 class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoader(urls, parent) {
     companion object {
@@ -41,7 +43,14 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
     }
 
     private class Jar(val url: URL, val path: Path) {
-        val file: JarFile by lazy { JarFile(path.toFile(), true, ZipFile.OPEN_READ, JarFile.runtimeVersion()) }
+        private val lazyFile = lazy { JarFile(path.toFile(), true, ZipFile.OPEN_READ, JarFile.runtimeVersion()) }
+
+        /** The jar, opened (and its signatures read) on first use. */
+        val file: JarFile get() = lazyFile.value
+
+        fun closeIfOpen() {
+            if (lazyFile.isInitialized()) runCatching { lazyFile.value.close() }
+        }
     }
 
     private val jars: List<Jar> = urls.mapNotNull { url ->
@@ -76,30 +85,52 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
     }
 
     /**
-     * Converts, without defining, every class of every jar that is built for `javax.persistence` alone, so that a class that cannot be
-     * converted is found now, whether or not anything loads it later: a CorDapp that would fail in a flow fails the node's start-up
-     * instead, with the message that names the class.
+     * Converts, without defining, every class of every jar that is built for `javax.persistence` alone, so that every class that cannot
+     * be converted is found now, whether or not anything loads it later: a CorDapp that would fail in a flow fails the node's start-up
+     * instead, with a message that names each such class and what is wrong with it.
      *
      * The classes are read without signature verification: nothing is defined from these bytes, and verifying here would make a jar
      * with a bad signature fail at this point rather than when one of its classes is loaded, as it does in a [URLClassLoader].
      *
-     * @throws JavaxPersistenceConversionError for the first class that cannot be converted.
+     * @throws CordappConversionException listing every class that cannot be converted.
      */
     fun checkConvertible() {
-        for (jar in jars) {
-            JarFile(jar.path.toFile(), false, ZipFile.OPEN_READ, JarFile.runtimeVersion()).use { unverified ->
-                for (listed in unverified.entries()) {
-                    val entryName = listed.name
-                    if (!entryName.endsWith(".class") || entryName.startsWith("META-INF/") || entryName == "module-info.class") continue
-                    val name = entryName.removeSuffix(".class").replace('/', '.')
-                    // Looked up by name so that a multi-release jar's versioned entry is read, as it is when the class is loaded.
-                    val entry = unverified.getJarEntry(entryName) ?: listed
-                    val bytes = unverified.getInputStream(entry).use { it.readBytes() }
-                    if (!isConverted(name, bytes)) continue
-                    announce(jar)
-                    JavaxPersistenceTransformer.transform(bytes, name, hibernateClassLoader, ::isBundled)
-                }
+        val failures = ArrayList<String>()
+        jars.forEach { checkJar(it, failures) }
+        if (failures.isNotEmpty()) {
+            throw CordappConversionException("${failures.size} class(es) of the CorDapps built for Corda 4.14 or earlier cannot be converted " +
+                    "for Hibernate 7 (Corda 4.15):\n" + failures.joinToString("\n") { "  - $it" } + "\nThe CorDapps that contain them need " +
+                    "to be rebuilt for Corda 4.15 - see the \"Upgrading to Hibernate 7\" documentation.")
+        }
+    }
+
+    private fun checkJar(jar: Jar, failures: MutableList<String>) {
+        JarFile(jar.path.toFile(), false, ZipFile.OPEN_READ, JarFile.runtimeVersion()).use { unverified ->
+            for (listed in unverified.entries()) {
+                val name = classNameOf(listed.name) ?: continue
+                // Looked up by name so that a multi-release jar's versioned entry is read, as it is when the class is loaded.
+                val entry = unverified.getJarEntry(listed.name) ?: listed
+                val bytes = unverified.getInputStream(entry).use { it.readBytes() }
+                if (!isConverted(name, bytes)) continue
+                announce(jar)
+                conversionFailure(jar, name, bytes)?.let { failures += it }
             }
+        }
+    }
+
+    /** The name of the class in a jar entry, or null for an entry that is not a class to check (a resource, a versioned copy, module-info). */
+    private fun classNameOf(entryName: String): String? {
+        if (!entryName.endsWith(".class") || entryName.startsWith("META-INF/") || entryName == "module-info.class") return null
+        return entryName.removeSuffix(".class").replace('/', '.')
+    }
+
+    /** Why the class cannot be converted, or null if it can. */
+    private fun conversionFailure(jar: Jar, name: String, bytes: ByteArray): String? {
+        return try {
+            JavaxPersistenceTransformer.transform(bytes, name, hibernateClassLoader, ::isBundled)
+            null
+        } catch (e: JavaxPersistenceConversionError) {
+            "${jar.path}: ${e.message?.removeSuffix(" ${JavaxPersistenceTransformer.REBUILD_ADVICE}")}"
         }
     }
 
@@ -107,7 +138,10 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
         return !name.startsWith(JAVAX_PERSISTENCE_PACKAGE) && JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(classBytes)
     }
 
-    /** Whether a class (by internal name) comes with the CorDapps: a Hibernate library a CorDapp ships itself is not the node's to check. */
+    /**
+     * Whether a class (by internal name) comes with the CorDapps: a Hibernate library a CorDapp ships itself is not the node's to check.
+     * Only consulted for a class the node does not have, as the node's copy is the one that runs otherwise (parent-first delegation).
+     */
     private fun isBundled(internalName: String): Boolean = findResource("$internalName.class") != null
 
     private fun announce(jar: Jar) {
@@ -156,7 +190,7 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
 
     override fun close() {
         try {
-            jars.forEach { jar -> runCatching { jar.file.close() } }
+            jars.forEach { it.closeIfOpen() }
         } finally {
             super.close()
         }

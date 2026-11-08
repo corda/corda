@@ -19,8 +19,12 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.internal.ConfigHolder
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.core.utilities.Try
 import net.corda.node.VersionInfo
+import net.corda.node.internal.NodeStartupLogging
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
+import net.corda.nodeapi.internal.persistence.CordappConversionException
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
@@ -82,6 +86,18 @@ class JarScanningCordappLoaderTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
+
+    @Test(timeout=300_000)
+    fun `a CorDapp that cannot be converted for Hibernate 7 fails start-up as an expected exception that names the class`() {
+        val fixture = JavaxPersistenceFixture(tempFolder.newFolder("javax").toPath())
+        val loader = JarScanningCordappLoader(setOf(fixture.sessionUserJar))
+        val exception = assertFailsWith<CordappConversionException> { loader.cordapps }
+        assertThat(exception.message).contains(JavaxPersistenceFixture.HIBERNATE_SESSION_USER).contains("org.hibernate.Session.save")
+        // NodeStartup.attempt rethrows every Error as fatal, so the start-up handler only sees exceptions; this one is listed as
+        // expected, so the node logs its message and stops instead of dying with an uncaught error.
+        assertThat(Try.on { loader.cordapps }.throwError().isFailure).isTrue()
+        assertThat(NodeStartupLogging.startupErrors.any { it.isInstance(exception) }).isTrue()
+    }
 
     @Test(timeout=300_000)
 	fun `classes that aren't in cordapps aren't loaded`() {

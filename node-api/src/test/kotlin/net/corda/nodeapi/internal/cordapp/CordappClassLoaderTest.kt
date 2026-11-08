@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.cordapp
 
 import jakarta.persistence.Entity
+import net.corda.nodeapi.internal.persistence.CordappConversionException
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
@@ -86,13 +87,28 @@ class CordappClassLoaderTest {
     }
 
     @Test(timeout = 300_000)
-    fun `the start-up check finds a class that cannot be converted without defining anything`() {
+    fun `the start-up check reports every class that cannot be converted, as an exception, without defining anything`() {
         CordappClassLoader(arrayOf(fixture.sessionUserJar.toUri().toURL()), javaClass.classLoader).use { loader ->
             assertThatThrownBy { loader.checkConvertible() }
-                    .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                    .isInstanceOf(CordappConversionException::class.java)
+                    .hasMessageContaining("1 class(es)")
                     .hasMessageContaining(HIBERNATE_SESSION_USER)
                     .hasMessageContaining("org.hibernate.Session.save")
             assertThat(loader.convertedClassNames).isEmpty()
+        }
+        // Every unconvertible class of the jar is named in the one message, so that an operator does not find them one restart at a time.
+        loader().use { loader ->
+            val thrown = assertThatThrownBy { loader.checkConvertible() }
+                    .isInstanceOf(CordappConversionException::class.java)
+                    .hasMessageContaining("${JavaxPersistenceFixture.unconvertibleClasses.size} class(es)")
+            JavaxPersistenceFixture.unconvertibleClasses.forEach { thrown.hasMessageContaining(it) }
+            assertThat(loader.convertedClassNames).isEmpty()
+        }
+        // A Hibernate class the CorDapp bundles but the node also has is resolved against the node's copy, which is the one that runs.
+        CordappClassLoader(arrayOf(fixture.bundledSessionJar.toUri().toURL()), javaClass.classLoader).use { loader ->
+            assertThatThrownBy { loader.checkConvertible() }
+                    .isInstanceOf(CordappConversionException::class.java)
+                    .hasMessageContaining("org.hibernate.Session.save")
         }
         CordappClassLoader(arrayOf(fixture.cleanJar.toUri().toURL()), javaClass.classLoader).use { loader ->
             // The clean jar also has a class using a bundled Hibernate library (org.hibernate.validator), which the jar provides itself.

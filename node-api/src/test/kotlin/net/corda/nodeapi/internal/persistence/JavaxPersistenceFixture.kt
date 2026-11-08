@@ -33,9 +33,19 @@ class JavaxPersistenceFixture(root: Path) {
         const val HIBERNATE_COMPATIBLE_USER = "legacy.HibernateCompatibleUser"
         const val HIBERNATE_BUNDLED_USER = "legacy.HibernateBundledUser"
         const val BUNDLED_HIBERNATE_CLASS = "org.hibernate.validator.BundledValidator"
+        const val HIBERNATE_FIELD_USER = "legacy.HibernateFieldUser"
+        const val ANNOTATED_ENTITY = "legacy.AnnotatedEntity"
+        const val PARAM_DEF_ENTITY = "legacy.ParamDefEntity"
+        const val DYNAMIC_UPDATE_FALSE_ENTITY = "legacy.DynamicUpdateFalseEntity"
         const val INTRUDER = "legacy.Intruder"
         const val JAVAX_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val DUAL_ENTITY = "dual.DualEntity"
+
+        /** The classes of the fixture that the node refuses to convert, each for a different reason. */
+        val unconvertibleClasses: Set<String> = setOf(
+                HIBERNATE_SESSION_USER, HIBERNATE_TYPE_CLASS_USER, HIBERNATE_FIELD_USER, UNKNOWN_TYPE_ENTITY, TYPE_DEF_ENTITY,
+                PARAM_DEF_ENTITY, DYNAMIC_UPDATE_FALSE_ENTITY
+        )
 
         /** A class annotated for both persistence APIs, as a CorDapp built to run on Corda 4.14 and 4.15 alike carries them. */
         private val dualSources = mapOf(
@@ -70,7 +80,18 @@ class JavaxPersistenceFixture(root: Path) {
                 "org/hibernate/exception/ConstraintViolationException.java" to "package org.hibernate.exception; public class ConstraintViolationException extends RuntimeException { public ConstraintViolationException(String message) { super(message); } }",
                 "org/hibernate/type/descriptor/sql/VarbinaryTypeDescriptor.java" to "package org.hibernate.type.descriptor.sql; public class VarbinaryTypeDescriptor { public static final VarbinaryTypeDescriptor INSTANCE = new VarbinaryTypeDescriptor(); }",
                 "org/hibernate/annotations/Type.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Type { String type(); }",
-                "org/hibernate/annotations/TypeDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface TypeDef { String name(); Class typeClass(); }"
+                "org/hibernate/annotations/TypeDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface TypeDef { String name(); Class typeClass(); }",
+                // The Hibernate 5 shapes of annotations Hibernate 7 renamed (Where, OrderBy), changed (DynamicUpdate lost its member, ParamDef.type
+                // became a Class), dropped (Index) or kept (Immutable).
+                "org/hibernate/annotations/Where.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface Where { String clause(); }",
+                "org/hibernate/annotations/OrderBy.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface OrderBy { String clause(); }",
+                "org/hibernate/annotations/DynamicUpdate.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface DynamicUpdate { boolean value() default true; }",
+                "org/hibernate/annotations/Index.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Index { String name(); String[] columnNames() default {}; }",
+                "org/hibernate/annotations/Immutable.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface Immutable {}",
+                "org/hibernate/annotations/FilterDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface FilterDef { String name(); String defaultCondition() default \"\"; ParamDef[] parameters() default {}; }",
+                "org/hibernate/annotations/ParamDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({}) public @interface ParamDef { String name(); String type(); }",
+                // A static field whose type differs from Hibernate 7's (there it is a String constant): the JVM resolves fields by name and type.
+                "org/hibernate/cfg/Environment.java" to "package org.hibernate.cfg; public class Environment { public static Object DIALECT = \"hibernate.dialect\"; }"
         )
 
         private val cordappSources = mapOf(
@@ -93,7 +114,55 @@ class JavaxPersistenceFixture(root: Path) {
                         @Column(name = "binary_uuid") @org.hibernate.annotations.Type(type = "uuid-binary") public UUID binaryUuid;
                         @Column(name = "raw") @org.hibernate.annotations.Type(type = "binary") public byte[] raw;
                         @Column(name = "text") @org.hibernate.annotations.Type(type = "text") public String text;
+                        @Column(name = "fqcn_uuid") @org.hibernate.annotations.Type(type = "org.hibernate.type.UUIDCharType") public UUID fqcnUuid;
+                        @Column(name = "yes_no") @org.hibernate.annotations.Type(type = "yes_no") public Boolean yesNo;
                         public LegacyEntity() {}
+                    }
+                """.trimIndent(),
+                "legacy/AnnotatedEntity.java" to """
+                    package legacy;
+                    import javax.persistence.*;
+                    import org.hibernate.annotations.DynamicUpdate;
+                    import org.hibernate.annotations.Immutable;
+                    import org.hibernate.annotations.Index;
+                    import org.hibernate.annotations.Where;
+                    /** Hibernate 5 annotations Hibernate 7 renamed (@Where, @OrderBy), kept without its member (@DynamicUpdate), dropped (@Index) or kept (@Immutable). */
+                    @Entity
+                    @Where(clause = "deleted = false")
+                    @DynamicUpdate(true)
+                    @Immutable
+                    public class AnnotatedEntity {
+                        @Id public String id;
+                        @Index(name = "idx_name") @Column(name = "name") public String name;
+                        @org.hibernate.annotations.OrderBy(clause = "name asc") public java.util.List<String> names;
+                    }
+                """.trimIndent(),
+                "legacy/ParamDefEntity.java" to """
+                    package legacy;
+                    import org.hibernate.annotations.FilterDef;
+                    import org.hibernate.annotations.ParamDef;
+                    /** A nested Hibernate annotation whose member Hibernate 7 declares with another type (ParamDef.type: String in 5, Class in 7). */
+                    @javax.persistence.Entity
+                    @FilterDef(name = "live", defaultCondition = "deleted = false", parameters = @ParamDef(name = "flag", type = "string"))
+                    public class ParamDefEntity {
+                        @javax.persistence.Id public String id;
+                    }
+                """.trimIndent(),
+                "legacy/DynamicUpdateFalseEntity.java" to """
+                    package legacy;
+                    @javax.persistence.Entity
+                    @org.hibernate.annotations.DynamicUpdate(false)
+                    public class DynamicUpdateFalseEntity {
+                        @javax.persistence.Id public String id;
+                    }
+                """.trimIndent(),
+                "legacy/HibernateFieldUser.java" to """
+                    package legacy;
+                    /** Reads a Hibernate field whose type differs in Hibernate 7. */
+                    public class HibernateFieldUser {
+                        public static Object dialect(javax.persistence.EntityManager em) {
+                            return org.hibernate.cfg.Environment.DIALECT;
+                        }
                     }
                 """.trimIndent(),
                 "legacy/HibernateSessionUser.java" to """
@@ -259,6 +328,9 @@ class JavaxPersistenceFixture(root: Path) {
     /** [HIBERNATE_SESSION_USER] (which cannot be converted) and [PLAIN] only. */
     val sessionUserJar: Path = root / "session-user-cordapp.jar"
 
+    /** [HIBERNATE_SESSION_USER] together with the Hibernate 5 stub of `org.hibernate.Session` it was built against, as a fat CorDapp might bundle it. */
+    val bundledSessionJar: Path = root / "bundled-session-cordapp.jar"
+
     init {
         compile(stubSources, stubClassesDir, classpath = emptyList())
         val quasarJar = co.paralleluniverse.fibers.Fiber::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
@@ -266,19 +338,21 @@ class JavaxPersistenceFixture(root: Path) {
         val jakartaApiJar = jakarta.persistence.Entity::class.java.protectionDomain.codeSource.location.toURI().let(Path::of)
         compile(dualSources, classesDir, classpath = listOf(stubClassesDir, jakartaApiJar))
         val intruderEntry = entryOf(INTRUDER)
-        val unconvertible = setOf(HIBERNATE_SESSION_USER, HIBERNATE_TYPE_CLASS_USER, UNKNOWN_TYPE_ENTITY, TYPE_DEF_ENTITY).map(::entryOf)
+        val unconvertible = unconvertibleClasses.map(::entryOf)
         writeJar(jar, classesDir)
         writeJar(sealedJar, classesDir, sealed = true) { it != intruderEntry }
         writeJar(intruderJar, classesDir) { it == intruderEntry }
         writeJar(fatJar, classesDir, stubClassesDir) { !it.startsWith("org/hibernate/") }
         writeJar(cleanJar, classesDir) { it !in unconvertible }
         writeJar(sessionUserJar, classesDir) { it == entryOf(HIBERNATE_SESSION_USER) || it == entryOf(PLAIN) }
+        writeJar(bundledSessionJar, classesDir, stubClassesDir) { it == entryOf(HIBERNATE_SESSION_USER) || it == "org/hibernate/Session.class" }
     }
 
     private fun entryOf(className: String) = className.replace('.', '/') + ".class"
 
     fun classBytes(className: String): ByteArray = (classesDir / (className.replace('.', '/') + ".class")).readBytes()
 
+    @Suppress("SpreadOperator") // The compiler's API takes its arguments as varargs.
     private fun compile(sources: Map<String, String>, outputDir: Path, classpath: List<Path>) {
         val files = sources.map { (path, source) ->
             val file = sourceDir / path
@@ -297,14 +371,17 @@ class JavaxPersistenceFixture(root: Path) {
             if (sealed) mainAttributes.putValue("Sealed", "true")
         }
         JarOutputStream(jar.outputStream(), manifest).use { out ->
-            for (root in roots) {
-                Files.walk(root).filter { Files.isRegularFile(it) }.forEach { file ->
-                    val entryName = root.relativize(file).joinToString("/")
-                    if (!include(entryName)) return@forEach
-                    out.putNextEntry(JarEntry(entryName))
-                    out.write(file.readBytes())
-                    out.closeEntry()
-                }
+            roots.forEach { root -> addClasses(out, root, include) }
+        }
+    }
+
+    private fun addClasses(out: JarOutputStream, root: Path, include: (String) -> Boolean) {
+        Files.walk(root).filter { Files.isRegularFile(it) }.forEach { file ->
+            val entryName = root.relativize(file).joinToString("/")
+            if (include(entryName)) {
+                out.putNextEntry(JarEntry(entryName))
+                out.write(file.readBytes())
+                out.closeEntry()
             }
         }
     }
