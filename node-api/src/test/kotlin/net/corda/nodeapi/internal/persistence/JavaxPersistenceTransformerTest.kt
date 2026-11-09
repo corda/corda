@@ -166,8 +166,24 @@ class JavaxPersistenceTransformerTest {
             assertThat(converter.convertToEntityAttribute(yes.lowercase())).isTrue()
             assertThat(converter.convertToEntityAttribute("$no ")).isFalse()
             assertThat(converter.convertToEntityAttribute(null)).isNull()
-            assertThat(converter.convertToEntityAttribute("   ")).isNull()
+            // A blank, which Hibernate 5 never wrote but a SQL default may have, was false to Hibernate 5, not null.
+            assertThat(converter.convertToEntityAttribute("   ")).isFalse()
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `the single character converter stores one character and reads the first one back, a space included, as Hibernate 5 did`() {
+        val converter = SingleCharacterConverter()
+        assertThat(converter.convertToDatabaseColumn('Z')).isEqualTo("Z")
+        assertThat(converter.convertToDatabaseColumn(' ')).isEqualTo(" ")
+        assertThat(converter.convertToDatabaseColumn(null)).isNull()
+        assertThat(converter.convertToEntityAttribute("Q")).isEqualTo('Q')
+        // A CHAR(n) column comes back space-padded: the first character is the value, the rest padding, so a stored space is a space.
+        assertThat(converter.convertToEntityAttribute("Q      ")).isEqualTo('Q')
+        assertThat(converter.convertToEntityAttribute(" ")).isEqualTo(' ')
+        assertThat(converter.convertToEntityAttribute("       ")).isEqualTo(' ')
+        assertThat(converter.convertToEntityAttribute(null)).isNull()
+        assertThat(converter.convertToEntityAttribute("")).isNull()
     }
 
     @Test(timeout = 300_000)

@@ -278,13 +278,18 @@ class JavaxPersistenceFixture(root: Path) {
                     package legacy;
                     import javax.persistence.Column;
                     import org.hibernate.annotations.Type;
-                    /** Character columns as a 4.14 CorDapp mapped them: an explicit character type, a yes_no boolean and an explicit string type. */
+                    /**
+                     * Character columns as a 4.14 CorDapp mapped them: an explicit character type and a yes_no boolean, boxed and primitive,
+                     * and an explicit string type.
+                     */
                     @javax.persistence.Entity
                     @javax.persistence.Table(name = "char_entity")
                     public class CharEntity {
                         @javax.persistence.Id @Column(name = "id") public String id;
                         @Column(name = "ch") @Type(type = "character") public Character ch;
+                        @Column(name = "chp") @Type(type = "character") public char chp;
                         @Column(name = "yn") @Type(type = "yes_no") public Boolean yn;
+                        @Column(name = "ynp") @Type(type = "yes_no") public boolean ynp;
                         @Column(name = "st") @Type(type = "string") public String st;
                         public CharEntity() {}
                     }

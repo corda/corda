@@ -79,7 +79,7 @@ converts or checks each one:
 | `yes_no`, `true_false` (and their type classes)                      | `@Convert(converter = YesNoBooleanConverter / TrueFalseBooleanConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: Corda's converters store 'Y'/'N' and 'T'/'F' in a `CHAR` column and read it as Hibernate 5 did (padded or not, either case), so the column a 4.14 node used passes validation on every database |
 | `numeric_boolean` (and its type class)                               | `@Convert(converter = NumericBooleanConverter)`: Hibernate 7's own converter, 1/0 |
 | `string` (and `org.hibernate.type.StringType`), on a `String`      | `@JdbcTypeCode(SqlTypes.VARCHAR)`: the explicit type opted the column out of nationalised character data on SQL Server (`varchar`, not `nvarchar`), and the explicit JDBC type keeps it so |
-| `character` (and `org.hibernate.type.CharacterType`), on a `Character` or `char` | `@Convert(converter = SingleCharacterConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: a `CHAR` column as before, read by its first non-blank character, so a `CHAR(255)` column that Hibernate 5's DDL made on H2 reads as it did |
+| `character` (and `org.hibernate.type.CharacterType`), on a `Character` or `char` | `@Convert(converter = SingleCharacterConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: a `CHAR` column as before, read by its first character (the rest is padding, and a stored space is a space), so a `CHAR(255)` column that Hibernate 5's DDL made on H2 reads as it did |
 | `long`, `integer`, `short`, `byte`, `boolean`, `double`, `float`, `big_decimal`, `big_integer`, `timestamp`, `date`, `time`, `instant` (and their type classes) | Nothing, on a member of the Java type the name was the default mapping for (`@Type(type = "long")` on a `Long`): Hibernate 7's default mapping of the member is the same. For these, as for `string` and `character`, a `@Type` on a member of another type was a choice, and the class is refused |
 
 * `@Where`, `@WhereJoinTable` and `@OrderBy`, which Hibernate 7 renamed, become `@SQLRestriction`, `@SQLJoinTableRestriction` and
@@ -89,9 +89,11 @@ converts or checks each one:
 * Members Hibernate 7 reads differently but which mean the same are rewritten: the `@Cascade` constants it removed, `DELETE` to
   `REMOVE`, `EVICT` to `DETACH` and `SAVE_UPDATE` to `PERSIST`. Hibernate 5's save-update cascade saved new children reachable from a
   managed parent when the session flushed, and never fired for `merge`; Hibernate 7's `PERSIST` cascade does the same at flush and
-  leaves `merge` alone too (verified on H2, PostgreSQL and SQL Server), which is why `MERGE` is not added. One difference remains: a
-  *detached* child reachable from a managed parent at flush was re-attached and updated by Hibernate 5, and is not by Hibernate 7, so
-  code that relied on that must `merge` the child itself. `@ParamDef(type = "boolean")` and the other basic type names above become the
+  leaves `merge` alone too (verified on H2, PostgreSQL, SQL Server and Oracle), which is why `MERGE` is not added. One difference
+  remains: a *detached* child reachable from a managed parent at flush was re-attached and updated by Hibernate 5. Hibernate 7 treats it
+  as new and inserts it, so the flush fails with a duplicate-key error (or `detached entity passed to persist` for a generated id) and the
+  transaction rolls back. Code that relied on it must `merge` the child and add the managed copy the merge returns instead; nothing
+  Hibernate 7 cascades at flush reproduces the old behaviour. `@ParamDef(type = "boolean")` and the other basic type names above become the
   Java class Hibernate 7 wants; `@Cache(include = "non-lazy")` becomes `includeLazy = false`; `CacheModeType` in `@NamedQuery` and
   `@NamedNativeQuery` becomes `CacheMode`.
 * `@Index` and `@ForeignKey` only affected the DDL Hibernate generated, which a node does not use (Liquibase creates its tables); they
@@ -316,7 +318,8 @@ scripts and remove the `CHECK` clauses you do not want before you apply them.
 column `CHAR(255)` on H2, and Hibernate 5 read the space-padded value it got back. Hibernate 7 rejects it (`CoercionException: value
 contains more than one character`). This affects H2 schemas that Hibernate generated, for example dev nodes and scripts from the 4.14
 migration exporter; a hand-written `CHAR(1)` column is fine. A rebuilt CorDapp should either change the column to `CHAR(1)` or map the
-attribute through its own `AttributeConverter<Character, String>` that trims what it reads, declared with `@JdbcTypeCode(SqlTypes.CHAR)`;
+attribute through its own `AttributeConverter<Character, String>` that takes the first character of what it reads (not one that trims it,
+which would turn a stored space into null; Hibernate 5 read a space), declared with `@JdbcTypeCode(SqlTypes.CHAR)`;
 the node does the latter for a converted CorDapp (see the `character` row in the operators' table above).
 
 **Arrays.** An `IntArray`, `LongArray`, `Array<String>` or similar attribute was stored as a serialised binary value with Hibernate 5.

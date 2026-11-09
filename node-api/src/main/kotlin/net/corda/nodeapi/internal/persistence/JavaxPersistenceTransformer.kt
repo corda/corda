@@ -953,7 +953,8 @@ object JavaxPersistenceTransformer {
         /**
          * Consumes a `@Type` annotation and, once its `type` is known, emits the substitute through [emit] (descriptor, visible): a
          * `@JdbcTypeCode` for [substitutedHibernate5Types], a `@Convert` (with the `@JdbcTypeCode` that pins the column type, where there
-         * is one) for [convertedHibernate5Types], nothing for a basic type that was the default of the member's type ([memberDescriptor]).
+         * is one) for [convertedHibernate5Types], and for a basic type on a member of the type it was the default for ([memberDescriptor])
+         * whatever the type pins (`string` a `@JdbcTypeCode`, `character` a `@Convert`), or nothing where Hibernate 7's default is the same.
          */
         private fun typeSubstitution(site: String, memberDescriptor: String?, emit: (String, Boolean) -> AnnotationVisitor?): AnnotationVisitor {
             return object : AnnotationVisitor(Opcodes.ASM9) {
@@ -971,7 +972,7 @@ object JavaxPersistenceTransformer {
                         in hibernate5BasicTypesByName -> basicType(name)
                         else -> refuse("the Hibernate 5 annotation @Type(type = \"$name\") on $site, which has no equivalent in Hibernate 7 " +
                                 "that the node can substitute (it substitutes ${substitutedHibernate5Types.keys + convertedHibernate5Types.keys}, " +
-                                "and drops the basic types ${hibernate5BasicTypes.map { it.names.first() }} on a member of their own type)")
+                                "and converts or drops the basic types ${hibernate5BasicTypes.map { it.names.first() }} on a member of their own type)")
                     }
                     logger.debug { "Replaced @Type(type = \"$name\") on $className.$site by $replacement" }
                 }

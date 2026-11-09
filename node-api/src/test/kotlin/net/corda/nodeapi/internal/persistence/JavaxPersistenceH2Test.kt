@@ -38,29 +38,43 @@ class JavaxPersistenceH2Test {
     private val loader = ConvertingFixtureLoader(fixture, JavaxPersistenceH2Test::class.java.classLoader)
 
     @Test(timeout = 300_000)
-    fun `converted character, yes_no and string columns read what Hibernate 5 wrote, padded CHAR columns included, and write it back`() {
-        // Hibernate 5's own DDL made a Character or yes_no column CHAR(255) on H2, which comes back space-padded.
-        val url = database("create table char_entity (id varchar(64) primary key, ch char(255), yn char(255), st varchar(255))",
-                "insert into char_entity (id, ch, yn, st) values ('a', 'Q', 'Y', 'plain')")
+    fun `converted character, yes_no and string columns read what Hibernate 5 wrote, padded CHAR columns and blanks included, and write it back`() {
+        // Hibernate 5's own DDL made a Character or yes_no column CHAR(255) on H2, which comes back space-padded. A stored space (a Kotlin
+        // `var code: Char = ' '`, say, or a SQL default in a yes_no column) was a space, or false, to Hibernate 5; a primitive field cannot hold
+        // anything else.
+        val url = database("create table char_entity (id varchar(64) primary key, ch char(255), chp char(255), yn char(255), ynp char(255), st varchar(255))",
+                "insert into char_entity (id, ch, chp, yn, ynp, st) values ('a', 'Q', ' ', 'Y', ' ', 'plain')")
         val entityClass = loader.loadClass(CHAR_ENTITY)
         sessionFactory(url, entityClass).use { factory ->
             factory.inTransaction { session ->
                 val entity = session.find(entityClass, "a")
                 assertThat(entityClass.getField("ch").get(entity)).isEqualTo('Q')
+                assertThat(entityClass.getField("chp").get(entity)).isEqualTo(' ')
                 assertThat(entityClass.getField("yn").get(entity)).isEqualTo(true)
+                assertThat(entityClass.getField("ynp").get(entity)).isEqualTo(false)
                 assertThat(entityClass.getField("st").get(entity)).isEqualTo("plain")
             }
             factory.inTransaction { session ->
                 val entity = entityClass.getDeclaredConstructor().newInstance()
                 entityClass.getField("id").set(entity, "b")
                 entityClass.getField("ch").set(entity, 'Z')
+                entityClass.getField("chp").set(entity, ' ')
                 entityClass.getField("yn").set(entity, false)
+                entityClass.getField("ynp").set(entity, true)
                 entityClass.getField("st").set(entity, "written")
                 session.persist(entity)
             }
+            // What was written reads back, the space included.
+            factory.inTransaction { session ->
+                val entity = session.find(entityClass, "b")
+                assertThat(entityClass.getField("ch").get(entity)).isEqualTo('Z')
+                assertThat(entityClass.getField("chp").get(entity)).isEqualTo(' ')
+                assertThat(entityClass.getField("yn").get(entity)).isEqualTo(false)
+                assertThat(entityClass.getField("ynp").get(entity)).isEqualTo(true)
+            }
         }
-        assertThat(rows(url, "select id, trim(ch), trim(yn), st from char_entity order by id"))
-                .containsExactly(listOf("a", "Q", "Y", "plain"), listOf("b", "Z", "N", "written"))
+        assertThat(rows(url, "select id, trim(ch), trim(chp), trim(yn), trim(ynp), st from char_entity order by id"))
+                .containsExactly(listOf("a", "Q", "", "Y", "", "plain"), listOf("b", "Z", "", "N", "Y", "written"))
     }
 
     @Test(timeout = 300_000)
