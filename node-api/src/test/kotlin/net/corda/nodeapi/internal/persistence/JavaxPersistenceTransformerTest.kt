@@ -13,10 +13,16 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ANNOTATED_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.BUNDLED_HIBERNATE_CLASS
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.COLLECTION_TYPE_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.CONVERTER
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.CUSTOM_SQL_TABLE_ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DDL_TABLE_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DUAL_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.DYNAMIC_UPDATE_FALSE_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.IDIOMS_ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.JOIN_COLUMN_OR_FORMULA_ENTITY
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.MISMATCHED_TYPE_ENTITY
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_BUNDLED_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_COMPATIBLE_USER
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.HIBERNATE_FIELD_USER
@@ -30,11 +36,20 @@ import net.corda.nodeapi.internal.persistence.JavaxPersistenceFixture.Companion.
 import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hibernate.CacheMode
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.DynamicInsert
 import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.FilterDef
+import org.hibernate.annotations.Generated
 import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.JoinColumnsOrFormulas
+import org.hibernate.annotations.NamedQuery
 import org.hibernate.annotations.SQLOrder
 import org.hibernate.annotations.SQLRestriction
+import org.hibernate.generator.EventType
+import org.hibernate.type.SqlTypes
 import org.junit.BeforeClass
 import org.junit.ClassRule
 import org.junit.Test
@@ -138,10 +153,86 @@ class JavaxPersistenceTransformerTest {
             assertThat(entity.getDeclaredField(field).getAnnotation(JdbcTypeCode::class.java)!!.value).describedAs(field).isEqualTo(code)
             assertThat(entity.getDeclaredField(field).getAnnotation(org.hibernate.annotations.Type::class.java)).describedAs(field).isNull()
         }
-        // The name of the Hibernate 5 type class, which @Type also accepted, and a boolean type, replaced by Hibernate 7's converter.
+        // The name of the Hibernate 5 type class, which @Type also accepted.
         assertThat(entity.getDeclaredField("fqcnUuid").getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(Types.VARCHAR)
-        assertThat(entity.getDeclaredField("yesNo").getAnnotation(Convert::class.java)!!.converter.java).isEqualTo(org.hibernate.type.YesNoConverter::class.java)
-        assertThat(entity.getDeclaredField("yesNo").getAnnotation(org.hibernate.annotations.Type::class.java)).isNull()
+        // The character boolean types: Corda's converters in a column pinned to CHAR, so that the 4.14 column type passes validation everywhere.
+        val yesNo = entity.getDeclaredField("yesNo")
+        assertThat(yesNo.getAnnotation(Convert::class.java)!!.converter.java).isEqualTo(YesNoBooleanConverter::class.java)
+        assertThat(yesNo.getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(Types.CHAR)
+        assertThat(yesNo.getAnnotation(org.hibernate.annotations.Type::class.java)).isNull()
+        val trueFalse = entity.getDeclaredField("trueFalse")
+        assertThat(trueFalse.getAnnotation(Convert::class.java)!!.converter.java).isEqualTo(TrueFalseBooleanConverter::class.java)
+        assertThat(trueFalse.getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(Types.CHAR)
+        // The numeric one round-trips exactly through Hibernate 7's own converter, so the column type is left to it.
+        val numeric = entity.getDeclaredField("numeric")
+        assertThat(numeric.getAnnotation(Convert::class.java)!!.converter.java).isEqualTo(org.hibernate.type.NumericBooleanConverter::class.java)
+        assertThat(numeric.getAnnotation(JdbcTypeCode::class.java)).isNull()
+    }
+
+    @Test(timeout = 300_000)
+    fun `the character boolean converters store one character and read it back as Hibernate 5 did`() {
+        for ((converter, yes, no) in listOf(Triple(YesNoBooleanConverter(), "Y", "N"), Triple(TrueFalseBooleanConverter(), "T", "F"))) {
+            assertThat(converter.convertToDatabaseColumn(true)).isEqualTo(yes)
+            assertThat(converter.convertToDatabaseColumn(false)).isEqualTo(no)
+            assertThat(converter.convertToDatabaseColumn(null)).isNull()
+            assertThat(converter.convertToEntityAttribute(yes)).isTrue()
+            assertThat(converter.convertToEntityAttribute(no)).isFalse()
+            // A CHAR(n) column comes back space-padded, and Hibernate 5 accepted either case.
+            assertThat(converter.convertToEntityAttribute("$yes      ")).isTrue()
+            assertThat(converter.convertToEntityAttribute(yes.lowercase())).isTrue()
+            assertThat(converter.convertToEntityAttribute("$no ")).isFalse()
+            assertThat(converter.convertToEntityAttribute(null)).isNull()
+            assertThat(converter.convertToEntityAttribute("   ")).isNull()
+        }
+    }
+
+    @Test(timeout = 300_000)
+    @Suppress("DEPRECATION") // Hibernate 7 deprecates @Cascade in favour of the JPA cascade, but still reads it; a 4.14 CorDapp carries it.
+    fun `Hibernate 5 idioms that Hibernate 7 reads differently are rewritten to what they meant`() {
+        val entity = loader.loadClass(IDIOMS_ENTITY)
+        // @Cache(include = "non-lazy") became includeLazy = false; @DynamicInsert(false) said what its absence says.
+        assertThat(entity.getAnnotation(Cache::class.java)!!.includeLazy).isFalse()
+        assertThat(entity.isAnnotationPresent(DynamicInsert::class.java)).isFalse()
+        // @ParamDef(type = "boolean") names the class Hibernate 7 wants; CacheModeType moved to CacheMode.
+        assertThat(entity.getAnnotation(FilterDef::class.java)!!.parameters.single().type.java).isEqualTo(java.lang.Boolean::class.java)
+        assertThat(entity.getAnnotation(NamedQuery::class.java)!!.cacheMode).isEqualTo(CacheMode.IGNORE)
+        // @Generated(GenerationTime) became @Generated(event = ...); NEVER meant not generated.
+        assertThat(entity.getDeclaredField("created").getAnnotation(Generated::class.java)!!.event).containsExactly(EventType.INSERT)
+        assertThat(entity.getDeclaredField("updated").getAnnotation(Generated::class.java)!!.event).containsExactly(EventType.INSERT, EventType.UPDATE)
+        assertThat(entity.getDeclaredField("never").annotations).isEmpty()
+        // The CascadeType constants Hibernate 7 removed, each resulting constant once.
+        val cascade = org.hibernate.annotations.Cascade::class.java
+        assertThat(entity.getDeclaredField("children").getAnnotation(cascade)!!.value).containsExactly(
+                org.hibernate.annotations.CascadeType.PERSIST, org.hibernate.annotations.CascadeType.MERGE, org.hibernate.annotations.CascadeType.REMOVE)
+        assertThat(entity.getDeclaredField("other").getAnnotation(cascade)!!.value).containsExactly(org.hibernate.annotations.CascadeType.DETACH)
+        // A basic type that was the default mapping of the member's type is dropped; pg-uuid is Hibernate 7's UUID type code.
+        assertThat(entity.getDeclaredField("count").annotations.map { it.annotationClass.java }).containsExactly(Column::class.java)
+        assertThat(entity.getDeclaredField("label").annotations.map { it.annotationClass.java }).containsExactly(Column::class.java)
+        assertThat(entity.getDeclaredField("pg").getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(SqlTypes.UUID)
+        // On a member of another type the basic type was a choice, which the node cannot express.
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(MISMATCHED_TYPE_ENTITY), MISMATCHED_TYPE_ENTITY, javaClass.classLoader) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining("@Type(type = \"long\") on label")
+                .hasMessageContaining("java.lang.String")
+    }
+
+    @Test(timeout = 300_000)
+    fun `a Hibernate 5 Table is dropped when it only affected DDL and refused when it changed how the table was written`() {
+        val entity = loader.loadClass(DDL_TABLE_ENTITY)
+        assertThat(entity.annotations.map { it.annotationClass.java }).containsExactly(Entity::class.java)
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(CUSTOM_SQL_TABLE_ENTITY), CUSTOM_SQL_TABLE_ENTITY, javaClass.classLoader) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining(CUSTOM_SQL_TABLE_ENTITY)
+                .hasMessageContaining("@Table on the class with `optional`, `sqlInsert`")
+                .hasMessageContaining("@SecondaryRow")
+    }
+
+    @Test(timeout = 300_000)
+    fun `a Hibernate annotation member typed on a JPA annotation is compared as the rename writes it`() {
+        val entity = loader.loadClass(JOIN_COLUMN_OR_FORMULA_ENTITY)
+        val joinColumn = entity.getDeclaredField("ref").getAnnotation(JoinColumnsOrFormulas::class.java)!!.value.single().column
+        assertThat(joinColumn.name).isEqualTo("ref_id")
+        assertThat(joinColumn.referencedColumnName).isEqualTo("id")
     }
 
     @Test(timeout = 300_000)
@@ -161,18 +252,24 @@ class JavaxPersistenceTransformerTest {
     @Test(timeout = 300_000)
     fun `a Hibernate annotation member that Hibernate 7 does not have, or declares with another type, fails the conversion naming it`() {
         val hibernate7 = javaClass.classLoader
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(COLLECTION_TYPE_ENTITY), COLLECTION_TYPE_ENTITY, hibernate7) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+                .hasMessageContaining(COLLECTION_TYPE_ENTITY)
+                .hasMessageContaining("`type`")
+                .hasMessageContaining("@CollectionType")
+                .hasMessageContaining("String")
+                .hasMessageContaining("Class")
+        // A Hibernate 5 type name the node knows no Java class for, where Hibernate 7 wants a class.
         assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(PARAM_DEF_ENTITY), PARAM_DEF_ENTITY, hibernate7) }
                 .isInstanceOf(JavaxPersistenceConversionError::class.java)
                 .hasMessageContaining(PARAM_DEF_ENTITY)
                 .hasMessageContaining("`type`")
                 .hasMessageContaining("@ParamDef")
-                .hasMessageContaining("String")
-                .hasMessageContaining("Class")
-        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(DYNAMIC_UPDATE_FALSE_ENTITY), DYNAMIC_UPDATE_FALSE_ENTITY, hibernate7) }
-                .isInstanceOf(JavaxPersistenceConversionError::class.java)
-                .hasMessageContaining("@DynamicUpdate(false)")
-        // Without a class loader to resolve against, the members of kept annotations are not checked, but renames and drops still apply.
-        assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(PARAM_DEF_ENTITY), PARAM_DEF_ENTITY)).isNotEmpty()
+                .hasMessageContaining("my-type")
+        // @DynamicUpdate(false) only said what the absence of the annotation says, so it is dropped rather than refused.
+        assertThat(loader.loadClass(DYNAMIC_UPDATE_FALSE_ENTITY).isAnnotationPresent(DynamicUpdate::class.java)).isFalse()
+        // Without a class loader to resolve against, the members of kept annotations are not checked, but renames, drops and rewrites still apply.
+        assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(COLLECTION_TYPE_ENTITY), COLLECTION_TYPE_ENTITY)).isNotEmpty()
     }
 
     @Test(timeout = 300_000)
@@ -197,15 +294,13 @@ class JavaxPersistenceTransformerTest {
     @Test(timeout = 300_000)
     fun `missing Hibernate references are only logged when the node is configured to warn about them`() {
         val hibernate7 = javaClass.classLoader
-        System.setProperty(JavaxPersistenceTransformer.MISSING_HIBERNATE_REFERENCES_PROPERTY, JavaxPersistenceTransformer.MISSING_HIBERNATE_REFERENCES_WARN)
-        try {
-            assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_SESSION_USER), HIBERNATE_SESSION_USER, hibernate7)).isNotEmpty()
-            // Annotations Hibernate 7 cannot read are refused in either mode: the mapping would change silently.
-            assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(PARAM_DEF_ENTITY), PARAM_DEF_ENTITY, hibernate7) }
-                    .isInstanceOf(JavaxPersistenceConversionError::class.java)
-        } finally {
-            System.clearProperty(JavaxPersistenceTransformer.MISSING_HIBERNATE_REFERENCES_PROPERTY)
-        }
+        val warn = JavaxPersistenceTransformer.Options(refuseMissingReferences = false)
+        assertThat(JavaxPersistenceTransformer.transform(fixture.classBytes(HIBERNATE_SESSION_USER), HIBERNATE_SESSION_USER, hibernate7, warn)).isNotEmpty()
+        // Annotations Hibernate 7 cannot read are refused in either mode: the mapping would change silently.
+        assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(PARAM_DEF_ENTITY), PARAM_DEF_ENTITY, hibernate7, warn) }
+                .isInstanceOf(JavaxPersistenceConversionError::class.java)
+        // The node takes the setting from the system property once, when it creates its CorDapp class loader.
+        assertThat(JavaxPersistenceTransformer.refuseMissingReferencesByDefault()).isTrue()
     }
 
     @Test(timeout = 300_000)

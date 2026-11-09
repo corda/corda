@@ -37,6 +37,12 @@ class JavaxPersistenceFixture(root: Path) {
         const val ANNOTATED_ENTITY = "legacy.AnnotatedEntity"
         const val PARAM_DEF_ENTITY = "legacy.ParamDefEntity"
         const val DYNAMIC_UPDATE_FALSE_ENTITY = "legacy.DynamicUpdateFalseEntity"
+        const val DDL_TABLE_ENTITY = "legacy.DdlTableEntity"
+        const val CUSTOM_SQL_TABLE_ENTITY = "legacy.CustomSqlTableEntity"
+        const val JOIN_COLUMN_OR_FORMULA_ENTITY = "legacy.JoinColumnOrFormulaEntity"
+        const val IDIOMS_ENTITY = "legacy.IdiomsEntity"
+        const val MISMATCHED_TYPE_ENTITY = "legacy.MismatchedTypeEntity"
+        const val COLLECTION_TYPE_ENTITY = "legacy.CollectionTypeEntity"
         const val INTRUDER = "legacy.Intruder"
         const val JAVAX_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val DUAL_ENTITY = "dual.DualEntity"
@@ -44,7 +50,7 @@ class JavaxPersistenceFixture(root: Path) {
         /** The classes of the fixture that the node refuses to convert, each for a different reason. */
         val unconvertibleClasses: Set<String> = setOf(
                 HIBERNATE_SESSION_USER, HIBERNATE_TYPE_CLASS_USER, HIBERNATE_FIELD_USER, UNKNOWN_TYPE_ENTITY, TYPE_DEF_ENTITY,
-                PARAM_DEF_ENTITY, DYNAMIC_UPDATE_FALSE_ENTITY
+                PARAM_DEF_ENTITY, CUSTOM_SQL_TABLE_ENTITY, MISMATCHED_TYPE_ENTITY, COLLECTION_TYPE_ENTITY
         )
 
         /** A class annotated for both persistence APIs, as a CorDapp built to run on Corda 4.14 and 4.15 alike carries them. */
@@ -66,6 +72,7 @@ class JavaxPersistenceFixture(root: Path) {
                 "javax/persistence/Column.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Column { String name() default \"\"; boolean nullable() default true; }",
                 "javax/persistence/EnumType.java" to "package javax.persistence; public enum EnumType { ORDINAL, STRING }",
                 "javax/persistence/Enumerated.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Enumerated { EnumType value() default EnumType.ORDINAL; }",
+                "javax/persistence/JoinColumn.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface JoinColumn { String name() default \"\"; String referencedColumnName() default \"\"; }",
                 "javax/persistence/Convert.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD, ElementType.TYPE}) public @interface Convert { Class converter() default void.class; }",
                 "javax/persistence/Converter.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface Converter { boolean autoApply() default false; }",
                 "javax/persistence/AttributeConverter.java" to "package javax.persistence; public interface AttributeConverter<X, Y> { Y convertToDatabaseColumn(X attribute); X convertToEntityAttribute(Y dbData); }",
@@ -90,6 +97,30 @@ class JavaxPersistenceFixture(root: Path) {
                 "org/hibernate/annotations/Immutable.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface Immutable {}",
                 "org/hibernate/annotations/FilterDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface FilterDef { String name(); String defaultCondition() default \"\"; ParamDef[] parameters() default {}; }",
                 "org/hibernate/annotations/ParamDef.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({}) public @interface ParamDef { String name(); String type(); }",
+                "org/hibernate/annotations/DynamicInsert.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface DynamicInsert { boolean value() default true; }",
+                // The Hibernate 5 shape of @Table (and @Tables), which Hibernate 7 no longer has: DDL members and members that changed how the table was read and written.
+                "org/hibernate/annotations/ForeignKey.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({}) public @interface ForeignKey { String name(); String inverseName() default \"\"; }",
+                "org/hibernate/annotations/ResultCheckStyle.java" to "package org.hibernate.annotations; public enum ResultCheckStyle { NONE, COUNT, PARAM }",
+                "org/hibernate/annotations/FetchMode.java" to "package org.hibernate.annotations; public enum FetchMode { SELECT, JOIN, SUBSELECT }",
+                "org/hibernate/annotations/SQLInsert.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface SQLInsert { String sql(); boolean callable() default false; ResultCheckStyle check() default ResultCheckStyle.NONE; }",
+                "org/hibernate/annotations/SQLUpdate.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface SQLUpdate { String sql(); boolean callable() default false; ResultCheckStyle check() default ResultCheckStyle.NONE; }",
+                "org/hibernate/annotations/SQLDelete.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface SQLDelete { String sql(); boolean callable() default false; ResultCheckStyle check() default ResultCheckStyle.NONE; }",
+                "org/hibernate/annotations/Table.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface Table { String appliesTo(); Index[] indexes() default {}; String comment() default \"\"; ForeignKey foreignKey() default @ForeignKey(name = \"\"); FetchMode fetch() default FetchMode.JOIN; boolean inverse() default false; boolean optional() default true; SQLInsert sqlInsert() default @SQLInsert(sql = \"\"); SQLUpdate sqlUpdate() default @SQLUpdate(sql = \"\"); SQLDelete sqlDelete() default @SQLDelete(sql = \"\"); }",
+                "org/hibernate/annotations/Tables.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface Tables { Table[] value(); }",
+                // The Hibernate 5 shapes of annotations whose members Hibernate 7 reads differently but which mean the same, and of ones typed on a JPA annotation.
+                "org/hibernate/annotations/CascadeType.java" to "package org.hibernate.annotations; public enum CascadeType { ALL, PERSIST, MERGE, REMOVE, REFRESH, DELETE, SAVE_UPDATE, REPLICATE, DELETE_ORPHAN, LOCK, EVICT, DETACH }",
+                "org/hibernate/annotations/Cascade.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Cascade { CascadeType[] value(); }",
+                "org/hibernate/annotations/GenerationTime.java" to "package org.hibernate.annotations; public enum GenerationTime { NEVER, INSERT, ALWAYS }",
+                "org/hibernate/annotations/Generated.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Generated { GenerationTime value(); }",
+                "org/hibernate/annotations/CacheConcurrencyStrategy.java" to "package org.hibernate.annotations; public enum CacheConcurrencyStrategy { NONE, READ_ONLY, NONSTRICT_READ_WRITE, READ_WRITE, TRANSACTIONAL }",
+                "org/hibernate/annotations/Cache.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD}) public @interface Cache { CacheConcurrencyStrategy usage(); String region() default \"\"; String include() default \"all\"; }",
+                "org/hibernate/annotations/CacheModeType.java" to "package org.hibernate.annotations; public enum CacheModeType { GET, IGNORE, NORMAL, PUT, REFRESH }",
+                "org/hibernate/annotations/NamedQuery.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.TYPE, ElementType.PACKAGE}) public @interface NamedQuery { String name(); String query(); CacheModeType cacheMode() default CacheModeType.NORMAL; }",
+                "org/hibernate/annotations/JoinFormula.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface JoinFormula { String value(); String referencedColumnName() default \"\"; }",
+                "org/hibernate/annotations/JoinColumnOrFormula.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface JoinColumnOrFormula { JoinFormula formula() default @JoinFormula(value = \"\"); javax.persistence.JoinColumn column() default @javax.persistence.JoinColumn(); }",
+                "org/hibernate/annotations/JoinColumnsOrFormulas.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface JoinColumnsOrFormulas { JoinColumnOrFormula[] value(); }",
+                "org/hibernate/annotations/Parameter.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({}) public @interface Parameter { String name(); String value(); }",
+                "org/hibernate/annotations/CollectionType.java" to "package org.hibernate.annotations; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface CollectionType { String type(); Parameter[] parameters() default {}; }",
                 // A static field whose type differs from Hibernate 7's (there it is a String constant): the JVM resolves fields by name and type.
                 "org/hibernate/cfg/Environment.java" to "package org.hibernate.cfg; public class Environment { public static Object DIALECT = \"hibernate.dialect\"; }"
         )
@@ -116,6 +147,8 @@ class JavaxPersistenceFixture(root: Path) {
                         @Column(name = "text") @org.hibernate.annotations.Type(type = "text") public String text;
                         @Column(name = "fqcn_uuid") @org.hibernate.annotations.Type(type = "org.hibernate.type.UUIDCharType") public UUID fqcnUuid;
                         @Column(name = "yes_no") @org.hibernate.annotations.Type(type = "yes_no") public Boolean yesNo;
+                        @Column(name = "true_false") @org.hibernate.annotations.Type(type = "true_false") public Boolean trueFalse;
+                        @Column(name = "numeric") @org.hibernate.annotations.Type(type = "numeric_boolean") public Boolean numeric;
                         public LegacyEntity() {}
                     }
                 """.trimIndent(),
@@ -141,19 +174,107 @@ class JavaxPersistenceFixture(root: Path) {
                     package legacy;
                     import org.hibernate.annotations.FilterDef;
                     import org.hibernate.annotations.ParamDef;
-                    /** A nested Hibernate annotation whose member Hibernate 7 declares with another type (ParamDef.type: String in 5, Class in 7). */
+                    /** A nested Hibernate annotation whose member Hibernate 7 declares as a Class (ParamDef.type), naming a Hibernate 5 type the node knows no class for. */
                     @javax.persistence.Entity
-                    @FilterDef(name = "live", defaultCondition = "deleted = false", parameters = @ParamDef(name = "flag", type = "string"))
+                    @FilterDef(name = "live", defaultCondition = "deleted = false", parameters = @ParamDef(name = "flag", type = "my-type"))
                     public class ParamDefEntity {
                         @javax.persistence.Id public String id;
                     }
                 """.trimIndent(),
+                "legacy/CollectionTypeEntity.java" to """
+                    package legacy;
+                    /** A Hibernate annotation member Hibernate 7 declares with another type (CollectionType.type: String in 5, Class in 7). */
+                    @javax.persistence.Entity
+                    public class CollectionTypeEntity {
+                        @javax.persistence.Id public String id;
+                        @org.hibernate.annotations.CollectionType(type = "legacy.MyListType") public java.util.List<String> items;
+                    }
+                """.trimIndent(),
                 "legacy/DynamicUpdateFalseEntity.java" to """
                     package legacy;
+                    /** Hibernate 5's way of saying what the absence of the annotation says: dropped. */
                     @javax.persistence.Entity
                     @org.hibernate.annotations.DynamicUpdate(false)
                     public class DynamicUpdateFalseEntity {
                         @javax.persistence.Id public String id;
+                    }
+                """.trimIndent(),
+                "legacy/DdlTableEntity.java" to """
+                    package legacy;
+                    import org.hibernate.annotations.Index;
+                    /** Hibernate 5's @Table with members that only affected generated DDL, which Hibernate 7 no longer has: dropped. */
+                    @javax.persistence.Entity
+                    @org.hibernate.annotations.Table(appliesTo = "ddl_table_entity", comment = "legacy", indexes = @Index(name = "ddl_idx", columnNames = "id"))
+                    public class DdlTableEntity {
+                        @javax.persistence.Id public String id;
+                    }
+                """.trimIndent(),
+                "legacy/CustomSqlTableEntity.java" to """
+                    package legacy;
+                    import org.hibernate.annotations.SQLInsert;
+                    import org.hibernate.annotations.Table;
+                    import org.hibernate.annotations.Tables;
+                    /** Hibernate 5's @Table with members that changed how Hibernate wrote the table: refused rather than dropped. */
+                    @javax.persistence.Entity
+                    @Tables(@Table(appliesTo = "custom_sql_extra", optional = false, sqlInsert = @SQLInsert(sql = "insert into custom_sql_extra (id) values (?)")))
+                    public class CustomSqlTableEntity {
+                        @javax.persistence.Id public String id;
+                    }
+                """.trimIndent(),
+                "legacy/JoinColumnOrFormulaEntity.java" to """
+                    package legacy;
+                    import javax.persistence.JoinColumn;
+                    import org.hibernate.annotations.JoinColumnOrFormula;
+                    import org.hibernate.annotations.JoinColumnsOrFormulas;
+                    /** A Hibernate annotation whose member is typed on a JPA annotation, which the rename turns into the jakarta one Hibernate 7 declares. */
+                    @javax.persistence.Entity
+                    public class JoinColumnOrFormulaEntity {
+                        @javax.persistence.Id public String id;
+                        @JoinColumnsOrFormulas({@JoinColumnOrFormula(column = @JoinColumn(name = "ref_id", referencedColumnName = "id"))}) public Object ref;
+                    }
+                """.trimIndent(),
+                "legacy/IdiomsEntity.java" to """
+                    package legacy;
+                    import java.util.List;
+                    import java.util.UUID;
+                    import javax.persistence.Column;
+                    import org.hibernate.annotations.Cache;
+                    import org.hibernate.annotations.CacheConcurrencyStrategy;
+                    import org.hibernate.annotations.CacheModeType;
+                    import org.hibernate.annotations.Cascade;
+                    import org.hibernate.annotations.CascadeType;
+                    import org.hibernate.annotations.DynamicInsert;
+                    import org.hibernate.annotations.FilterDef;
+                    import org.hibernate.annotations.Generated;
+                    import org.hibernate.annotations.GenerationTime;
+                    import org.hibernate.annotations.NamedQuery;
+                    import org.hibernate.annotations.ParamDef;
+                    import org.hibernate.annotations.Type;
+                    /** Common Hibernate 5 idioms that Hibernate 7 reads differently but which mean the same: each is rewritten rather than refused. */
+                    @javax.persistence.Entity
+                    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+                    @DynamicInsert(false)
+                    @FilterDef(name = "live", parameters = @ParamDef(name = "flag", type = "boolean"))
+                    @NamedQuery(name = "IdiomsEntity.all", query = "from IdiomsEntity", cacheMode = CacheModeType.IGNORE)
+                    public class IdiomsEntity {
+                        @javax.persistence.Id public String id;
+                        @Generated(GenerationTime.INSERT) public java.sql.Timestamp created;
+                        @Generated(GenerationTime.ALWAYS) public java.sql.Timestamp updated;
+                        @Generated(GenerationTime.NEVER) public String never;
+                        @Cascade({CascadeType.SAVE_UPDATE, CascadeType.DELETE, CascadeType.PERSIST}) public List<String> children;
+                        @Cascade(CascadeType.EVICT) public Object other;
+                        @Column(name = "count") @Type(type = "long") public Long count;
+                        @Column(name = "label") @Type(type = "org.hibernate.type.StringType") public String label;
+                        @Column(name = "pg") @Type(type = "pg-uuid") public UUID pg;
+                    }
+                """.trimIndent(),
+                "legacy/MismatchedTypeEntity.java" to """
+                    package legacy;
+                    /** A Hibernate 5 basic type named on a member of another type: a choice the node cannot express in Hibernate 7. */
+                    @javax.persistence.Entity
+                    public class MismatchedTypeEntity {
+                        @javax.persistence.Id public String id;
+                        @org.hibernate.annotations.Type(type = "long") public String label;
                     }
                 """.trimIndent(),
                 "legacy/HibernateFieldUser.java" to """
@@ -376,12 +497,14 @@ class JavaxPersistenceFixture(root: Path) {
     }
 
     private fun addClasses(out: JarOutputStream, root: Path, include: (String) -> Boolean) {
-        Files.walk(root).filter { Files.isRegularFile(it) }.forEach { file ->
-            val entryName = root.relativize(file).joinToString("/")
-            if (include(entryName)) {
-                out.putNextEntry(JarEntry(entryName))
-                out.write(file.readBytes())
-                out.closeEntry()
+        Files.walk(root).use { files ->
+            files.filter { Files.isRegularFile(it) }.forEach { file ->
+                val entryName = root.relativize(file).joinToString("/")
+                if (include(entryName)) {
+                    out.putNextEntry(JarEntry(entryName))
+                    out.write(file.readBytes())
+                    out.closeEntry()
+                }
             }
         }
     }

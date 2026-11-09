@@ -30,9 +30,17 @@ import kotlin.io.path.toPath
  * A class that cannot be converted (a Hibernate annotation Hibernate 7 cannot read, or a reference to a Hibernate class or member that
  * does not exist in Hibernate 7) fails to load with a [JavaxPersistenceConversionError]. [checkConvertible] finds such classes ahead of
  * time, over every class built for `javax.persistence` in every jar, so that the node refuses to start, naming all of them, rather than
- * failing in a flow when one is first used.
+ * failing in a flow when one is first used. Once that pass has run, the warnings a conversion gives (dropped annotations, missing Hibernate
+ * references the node is configured to warn about) are not repeated when the class is loaded.
+ *
+ * @param refuseMissingReferences Whether a class that refers to Hibernate classes or members missing from Hibernate 7 is refused (the
+ * default) or only warned about; the node's setting, [JavaxPersistenceTransformer.MISSING_HIBERNATE_REFERENCES_PROPERTY], is read once here.
  */
-class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoader(urls, parent) {
+class CordappClassLoader(
+        urls: Array<URL>,
+        parent: ClassLoader?,
+        private val refuseMissingReferences: Boolean = JavaxPersistenceTransformer.refuseMissingReferencesByDefault()
+) : URLClassLoader(urls, parent) {
     companion object {
         private val logger = contextLogger()
         private const val JAVAX_PERSISTENCE_PACKAGE = "javax.persistence."
@@ -63,6 +71,10 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
     /** Where the node's Hibernate 7 is: the Hibernate references of a converted class are resolved against it. */
     private val hibernateClassLoader: ClassLoader = parent ?: ClassLoader.getSystemClassLoader()
 
+    /** Whether [checkConvertible] has run, so that every class's conversion has been reported once already. */
+    @Volatile
+    private var checked = false
+
     /** The names of the classes converted from `javax.persistence` to `jakarta.persistence` so far. */
     val convertedClassNames: Set<String> get() = _convertedClassNames
 
@@ -73,7 +85,8 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
             val originalBytes = jar.file.getInputStream(entry).use { it.readBytes() }
             val bytes = if (isConverted(name, originalBytes)) {
                 announce(jar)
-                JavaxPersistenceTransformer.transform(originalBytes, name, hibernateClassLoader, ::isBundled).also { _convertedClassNames += name }
+                JavaxPersistenceTransformer.transform(originalBytes, name, hibernateClassLoader, options(quiet = checked), ::isBundled)
+                        .also { _convertedClassNames += name }
             } else {
                 originalBytes
             }
@@ -97,6 +110,7 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
     fun checkConvertible() {
         val failures = ArrayList<String>()
         jars.forEach { checkJar(it, failures) }
+        checked = true
         if (failures.isNotEmpty()) {
             throw CordappConversionException("${failures.size} class(es) of the CorDapps built for Corda 4.14 or earlier cannot be converted " +
                     "for Hibernate 7 (Corda 4.15):\n" + failures.joinToString("\n") { "  - $it" } + "\nThe CorDapps that contain them need " +
@@ -127,12 +141,14 @@ class CordappClassLoader(urls: Array<URL>, parent: ClassLoader?) : URLClassLoade
     /** Why the class cannot be converted, or null if it can. */
     private fun conversionFailure(jar: Jar, name: String, bytes: ByteArray): String? {
         return try {
-            JavaxPersistenceTransformer.transform(bytes, name, hibernateClassLoader, ::isBundled)
+            JavaxPersistenceTransformer.transform(bytes, name, hibernateClassLoader, options(), ::isBundled)
             null
         } catch (e: JavaxPersistenceConversionError) {
             "${jar.path}: ${e.message?.removeSuffix(" ${JavaxPersistenceTransformer.REBUILD_ADVICE}")}"
         }
     }
+
+    private fun options(quiet: Boolean = false) = JavaxPersistenceTransformer.Options(refuseMissingReferences, quiet)
 
     private fun isConverted(name: String, classBytes: ByteArray): Boolean {
         return !name.startsWith(JAVAX_PERSISTENCE_PACKAGE) && JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(classBytes)

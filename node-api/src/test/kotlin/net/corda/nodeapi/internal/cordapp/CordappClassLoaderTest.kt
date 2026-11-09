@@ -87,6 +87,15 @@ class CordappClassLoaderTest {
     }
 
     @Test(timeout = 300_000)
+    fun `a loader configured to warn about missing Hibernate references loads such a class after reporting it once`() {
+        CordappClassLoader(arrayOf(fixture.sessionUserJar.toUri().toURL()), javaClass.classLoader, refuseMissingReferences = false).use { loader ->
+            loader.checkConvertible()
+            assertThat(loader.loadClass(HIBERNATE_SESSION_USER).name).isEqualTo(HIBERNATE_SESSION_USER)
+            assertThat(loader.convertedClassNames).containsExactly(HIBERNATE_SESSION_USER)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `the start-up check reports every class that cannot be converted, as an exception, without defining anything`() {
         CordappClassLoader(arrayOf(fixture.sessionUserJar.toUri().toURL()), javaClass.classLoader).use { loader ->
             assertThatThrownBy { loader.checkConvertible() }

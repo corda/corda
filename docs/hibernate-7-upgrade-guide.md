@@ -62,8 +62,8 @@ Hibernate's own annotations are not renamed, and several of them changed between
 converts or checks each one:
 
 * `@Type(type = "...")`, whose members changed in Hibernate 6, is replaced by the `@JdbcTypeCode` Corda's own schemas use, or by a
-  `@Convert` to the converter Hibernate 7 ships, for the names below (each also by the name of its Hibernate 5 type class, which `@Type`
-  accepted too); the stored formats are unchanged:
+  `@Convert` to a converter that stores the same format, for the names below (each also by the name of its Hibernate 5 type class, which
+  `@Type` accepted too); the stored formats are unchanged:
 
 | `@Type(type = "...")` on 4.14                                       | Replaced by                                                                 |
 |---------------------------------------------------------------------|-----------------------------------------------------------------------------|
@@ -75,19 +75,44 @@ converts or checks each one:
 | `uuid-binary`, `org.hibernate.type.UUIDBinaryType`                   | `@JdbcTypeCode(SqlTypes.BINARY)`                                            |
 | `binary`, `org.hibernate.type.BinaryType`                            | `@JdbcTypeCode(SqlTypes.VARBINARY)`                                         |
 | `text`, `org.hibernate.type.TextType`                                | `@JdbcTypeCode(SqlTypes.LONGVARCHAR)`                                       |
-| `yes_no`, `true_false`, `numeric_boolean` (and their type classes)  | `@Convert(converter = YesNoConverter / TrueFalseConverter / NumericBooleanConverter)` |
+| `pg-uuid`, `org.hibernate.type.PostgresUUIDType`                     | `@JdbcTypeCode(SqlTypes.UUID)`: PostgreSQL's native `uuid`                  |
+| `yes_no`, `true_false` (and their type classes)                      | `@Convert(converter = YesNoBooleanConverter / TrueFalseBooleanConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: Corda's converters store 'Y'/'N' and 'T'/'F' in a `CHAR` column and read it as Hibernate 5 did (padded or not, either case), so the column a 4.14 node used passes validation on every database |
+| `numeric_boolean` (and its type class)                               | `@Convert(converter = NumericBooleanConverter)`: Hibernate 7's own converter, 1/0 |
+| `string`, `long`, `integer`, `short`, `byte`, `boolean`, `double`, `float`, `character`, `big_decimal`, `big_integer`, `timestamp`, `date`, `time`, `instant` (and their type classes) | Nothing, on a member of the Java type the name was the default mapping for (`@Type(type = "long")` on a `Long`): Hibernate 7's default mapping of the member is the same. On a member of another type the name was a choice, and the class is refused |
 
 * `@Where`, `@WhereJoinTable` and `@OrderBy`, which Hibernate 7 renamed, become `@SQLRestriction`, `@SQLJoinTableRestriction` and
-  `@SQLOrder`; `@DynamicInsert(true)` and `@DynamicUpdate(true)` lose the member Hibernate 7 no longer has.
-* `@Index`, `@ForeignKey`, `@Table` and `@Tables` only affected the DDL Hibernate generated, which a node does not use (Liquibase
-  creates its tables); they are dropped, with a warning in the log that names the class and member.
+  `@SQLOrder`. `@DynamicInsert(true)` and `@DynamicUpdate(true)` lose the member Hibernate 7 no longer has, and `@DynamicInsert(false)`
+  and `@DynamicUpdate(false)`, which only said what the absence of the annotation says, are dropped. `@Generated(GenerationTime.INSERT)`
+  becomes `@Generated(event = INSERT)`, `ALWAYS` becomes `{INSERT, UPDATE}`, and `NEVER`, which meant not generated, drops the annotation.
+* Members Hibernate 7 reads differently but which mean the same are rewritten: the `@Cascade` constants it removed, `DELETE` to
+  `REMOVE`, `EVICT` to `DETACH` and `SAVE_UPDATE` to `PERSIST, MERGE` (Hibernate's documented replacement: Hibernate 7 cascades the
+  persist at flush as Hibernate 5's save-update did; this substitution has not been exercised against a database, so run the flows that
+  rely on it on a test node); `@ParamDef(type = "boolean")` and the other basic type names above to the Java class Hibernate 7 wants;
+  `@Cache(include = "non-lazy")` to `includeLazy = false`; `CacheModeType` in `@NamedQuery` and `@NamedNativeQuery` to `CacheMode`.
+* `@Index` and `@ForeignKey` only affected the DDL Hibernate generated, which a node does not use (Liquibase creates its tables); they
+  are dropped, with a warning in the log that names the class and member, and so is a `@Table` (or each `@Table` of a `@Tables`) that
+  sets only `appliesTo`, `indexes`, `comment` or `foreignKey`. A `@Table` that sets `fetch`, `inverse`, `optional`, `sqlInsert`,
+  `sqlUpdate` or `sqlDelete` changed how Hibernate read and wrote the secondary table, so it is **refused**: Hibernate 7 expresses those
+  through `@SecondaryRow` and the `table` member of `@SQLInsert`, `@SQLUpdate` and `@SQLDelete`, which the rebuilt CorDapp uses instead.
 * Every other Hibernate annotation is checked against Hibernate 7, member by member. The JVM would silently drop an annotation
-  Hibernate 7 no longer has (`@Loader`, `@Polymorphism`, `@LazyCollection`, `@Proxy`, `@GeneratorType`, ...) or a member it no longer
-  has or declares differently (`@ParamDef(type = "string")`, `@DynamicUpdate(false)`, `@Generated(GenerationTime.INSERT)`), and the
-  mapping would change without a trace; the node **refuses to start** instead, with a message naming the class, the annotation and the
-  member.
+  Hibernate 7 no longer has, or a member it no longer has or declares differently, and the mapping would change without a trace; the
+  node **refuses to start** instead, with a message naming the class, the annotation and the member.
 
-Any other `@Type`, and `@TypeDef`, are refused the same way, for example:
+**Hibernate 5 annotations that make the node refuse a CorDapp.** Check the schema classes of each CorDapp built for 4.14 or earlier for
+these before upgrading, or start a 4.15 test node with the CorDapps in its `cordapps` directory: the start-up pass goes through every
+class of every jar and reports all of them at once, so a test node is the pre-upgrade check.
+
+* `@TypeDef` and `@TypeDefs`, and a `@Type` other than the names in the table above (a custom type, or a basic type on a member of
+  another type).
+* `@Table` with any of the members above.
+* Annotations Hibernate 7 removed, for which it has no equivalent: `@Loader`, `@Polymorphism`, `@LazyCollection`, `@Proxy`,
+  `@SelectBeforeUpdate`, `@Columns`, `@AccessType`, `@GeneratorType`, `@Target`, `@Persister`, `@Tuplizer`, `@IndexColumn`, `@Sort`.
+* Members Hibernate 7 removed or declares differently, without an equivalent the node can write: `@Any` and `@ManyToAny` with
+  `metaColumn` or `metaDef`, `@CollectionId` with `columns` or `type`, `@CollectionType(type = "...")` (a class in Hibernate 7),
+  `@ParamDef(type = "...")` naming anything but the basic types above, `@Cache(include = ...)` with a value other than `all` or
+  `non-lazy`.
+
+The message names the class and the member in every case, for example:
 
 ```
 The class com.example.MyState$PersistentMyState uses the Hibernate 5 annotation @Type(type = "my-type") on amount, which has no equivalent
@@ -119,8 +144,9 @@ example) is not checked against the node's Hibernate.
 
 The check is stricter than the JVM, which links lazily: a class is refused for a reference in a method that may never run, whether in
 the CorDapp's own code or in a library it bundles. If you cannot get a rebuilt CorDapp and accept that such code fails only when it runs,
-start the node with `-Dnet.corda.cordapp.missingHibernateReferences=warn`: the references are then logged as warnings at start-up and the
-classes are loaded anyway. The annotation checks above are not affected by this setting, as those failures would be silent.
+start the node with `-Dnet.corda.cordapp.missingHibernateReferences=warn` (on the `java` command line, or through `custom.jvmArgs` in
+`node.conf`, like any JVM option): the references are then logged as warnings at start-up and the classes are loaded anyway. The node
+reads the setting once, when it starts. The annotation checks above are not affected by it, as those failures would be silent.
 
 Two limits of the check. It only looks at classes that refer to `javax.persistence`, because those are the ones the node converts; a
 class that uses a removed Hibernate class without touching JPA (a Hibernate 5 custom type, say) is loaded as it is and fails when it runs,
