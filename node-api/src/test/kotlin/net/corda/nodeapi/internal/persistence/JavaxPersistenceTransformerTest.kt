@@ -166,8 +166,10 @@ class JavaxPersistenceTransformerTest {
             assertThat(converter.convertToEntityAttribute(yes.lowercase())).isTrue()
             assertThat(converter.convertToEntityAttribute("$no ")).isFalse()
             assertThat(converter.convertToEntityAttribute(null)).isNull()
-            // A blank, which Hibernate 5 never wrote but a SQL default may have, was false to Hibernate 5, not null.
+            // A blank, which Hibernate 5 never wrote but a SQL default may have, was false to Hibernate 5, not null; so was an empty string,
+            // which only a VARCHAR column can hold.
             assertThat(converter.convertToEntityAttribute("   ")).isFalse()
+            assertThat(converter.convertToEntityAttribute("")).isFalse()
         }
     }
 
@@ -183,6 +185,7 @@ class JavaxPersistenceTransformerTest {
         assertThat(converter.convertToEntityAttribute(" ")).isEqualTo(' ')
         assertThat(converter.convertToEntityAttribute("       ")).isEqualTo(' ')
         assertThat(converter.convertToEntityAttribute(null)).isNull()
+        // An empty string, which only a VARCHAR column can hold, made Hibernate 5 fail; null is the nearest a Character can hold.
         assertThat(converter.convertToEntityAttribute("")).isNull()
     }
 
