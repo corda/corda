@@ -520,4 +520,7 @@ interface ServiceHub : ServicesForResolution {
      * See [CordappProvider.getAppContext]
      */
     fun getAppContext(): CordappContext = cordappProvider.getAppContext()
+
+    /** Provides metric registration and access to the metrics registry. */
+    fun <T> getMetricsRegistry(type: Class<T>): T
 }

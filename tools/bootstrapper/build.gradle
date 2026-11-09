@@ -25,6 +25,7 @@ dependencies {
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.mockito:mockito-core:$mockito_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 processResources {

@@ -253,7 +253,7 @@ public class NioSslServer extends NioSslPeer {
     }
 
     /**
-     * Determines if the the server is active or not.
+     * Determines if the server is active or not.
      *
      * @return if the server is active or not.
      */

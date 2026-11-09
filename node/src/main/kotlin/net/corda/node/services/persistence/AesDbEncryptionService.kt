@@ -123,7 +123,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
     }
 
     /**
-     * Derive the key-encryption-key (KEK) from the the node's identity and the persisted key's ID.
+     * Derive the key-encryption-key (KEK) from the node's identity and the persisted key's ID.
      */
     private fun createKEK(ourIdentity: Party, keyId: UUID): Key {
         val digest = MessageDigest.getInstance("SHA-256")

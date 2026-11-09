@@ -19,5 +19,8 @@ object AlwaysAcceptEncodingWhitelist : EncodingWhitelist {
 }
 
 object QuasarWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = true
+    private val packageBlackList = listOf(
+            "com.codahale.metrics"
+    )
+    override fun hasListed(type: Class<*>): Boolean = packageBlackList.none { type.packageName.startsWith(it) }
 }

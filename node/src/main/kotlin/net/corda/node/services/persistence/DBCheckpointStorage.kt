@@ -107,7 +107,7 @@ class DBCheckpointStorage(
     }
 
     enum class StartReason {
-        RPC, SERVICE, SCHEDULED, INITIATED
+        RPC, SERVICE, SCHEDULED, INITIATED, SYSTEM
     }
 
     @Entity
@@ -703,6 +703,7 @@ class DBCheckpointStorage(
             is InvocationOrigin.Peer -> StartReason.INITIATED
             is InvocationOrigin.Service -> StartReason.SERVICE
             is InvocationOrigin.Scheduled -> StartReason.SCHEDULED
+            is InvocationOrigin.System -> StartReason.SYSTEM
         }
     }
 

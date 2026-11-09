@@ -24,6 +24,30 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
                                       useSsl: Boolean, nodeConfiguration: MutualSslConfiguration, shouldStartLocalShell: Boolean) : SecureArtemisConfiguration() {
     val loginListener: (String) -> Unit
 
+    companion object {
+        fun queueConfigurations(): List<QueueConfiguration> {
+            return listOf(
+                    queueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME, durable = false),
+                    queueConfiguration(
+                            name = RPCApi.RPC_CLIENT_BINDING_REMOVALS,
+                            address = ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS,
+                            filter = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION,
+                            durable = false
+                    ),
+                    queueConfiguration(
+                            name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS,
+                            address = ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS,
+                            filter = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION,
+                            durable = false
+                    )
+            )
+        }
+
+        private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): QueueConfiguration {
+            return QueueConfiguration.of(name).setAddress(address).setFilterString(filter).setDurable(durable)
+        }
+    }
+
     init {
         name = "RPC"
 
@@ -101,33 +125,11 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         journalFileSize = maxMessageSize // The size of each journal file in bytes. Artemis default is 10 MB.
     }
 
-    private fun queueConfigurations(): List<QueueConfiguration> {
-        return listOf(
-                queueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME, durable = false),
-                queueConfiguration(
-                        name = RPCApi.RPC_CLIENT_BINDING_REMOVALS,
-                        address = ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS,
-                        filter = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION,
-                        durable = false
-                ),
-                queueConfiguration(
-                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS,
-                        address = ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS,
-                        filter = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION,
-                        durable = false
-                )
-        )
-    }
-
     private fun setDirectories(baseDirectory: Path) {
         bindingsDirectory = (baseDirectory / "bindings").toString()
         journalDirectory = (baseDirectory / "journal").toString()
         largeMessagesDirectory = (baseDirectory / "large-messages").toString()
         pagingDirectory = (baseDirectory / "paging").toString()
-    }
-
-    private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): QueueConfiguration {
-        return QueueConfiguration.of(name).setAddress(address).setFilterString(filter).setDurable(durable)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,

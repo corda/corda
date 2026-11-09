@@ -58,6 +58,30 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param externalTrace external [Trace] for correlation.
  * @param impersonatedActor the actor on behalf of which all the invocations will be made.
  * @param targetLegalIdentity in case of multi-identity RPC endpoint specific legal identity to which the calls must be addressed.
+ * @param useGlobalThreadPools If `true`, Artemis global thread pools are used for all RPC clients.
+ * This allows multiple connections to share a bounded set of scheduler and worker threads, rather
+ * than creating dedicated pools per client.
+ *
+ * The global pool sizes can be controlled in two ways:
+ *
+ * 1. **System properties** (evaluated when global executors are first created):
+ *    - `activemq.artemis.client.global.thread.pool.max.size` — maximum number of worker threads
+ *    - `activemq.artemis.client.global.scheduled.thread.pool.core.size` — core scheduled threads
+ *
+ * 2. **Programmatic configuration via static methods on
+ *    [org.apache.activemq.artemis.api.core.client.ActiveMQClient](https://activemq.apache.org/components/artemis/documentation/javadocs/javadoc-latest/org/apache/activemq/artemis/api/core/client/ActiveMQClient.html):**
+ *    - [ActiveMQClient.initializeGlobalThreadPoolProperties] — initialises the global thread pools
+ *      properties from System properties.
+ *    - [ActiveMQClient.setGlobalThreadPoolProperties] — allows programmatical configuration of
+ *      global thread pools properties, such as `globalThreadMaxPoolSize`.
+ *    - [ActiveMQClient.injectPools] — allows supplying custom `ExecutorService` and
+ *      `ScheduledExecutorService` instances to override the global pools entirely.
+ *
+ * To check or update the currently configured pools, follow the static methods in
+ * ActiveMQClient that manage the global executors. These are consulted whenever
+ * `useGlobalThreadPools = true` is set.
+ *
+ * Defaults to `false`, meaning each client creates and manages its own dedicated pools.
  */
 class MultiRPCClient<I : RPCOps> private constructor(
         private val hostAndPort: NetworkHostAndPort?,
@@ -71,7 +95,8 @@ class MultiRPCClient<I : RPCOps> private constructor(
         private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null,
         private val externalTrace: Trace? = null,
         private val impersonatedActor: Actor? = null,
-        private val targetLegalIdentity: CordaX500Name? = null
+        private val targetLegalIdentity: CordaX500Name? = null,
+        private val useGlobalThreadPools: Boolean = false
 ) : AutoCloseable {
 
     private companion object {
@@ -198,6 +223,36 @@ class MultiRPCClient<I : RPCOps> private constructor(
 
     @JvmOverloads
     constructor(
+            hostAndPort: NetworkHostAndPort,
+            rpcOpsClass: Class<I>,
+            username: String,
+            password: String,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            targetLegalIdentity: CordaX500Name? = null,
+            useGlobalThreadPools: Boolean
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            rpcOpsClass = rpcOpsClass,
+            username = username,
+            password = password,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers,
+            externalTrace = externalTrace,
+            impersonatedActor = impersonatedActor,
+            targetLegalIdentity = targetLegalIdentity,
+            useGlobalThreadPools =  useGlobalThreadPools
+    )
+
+    @JvmOverloads
+    constructor(
             haAddressPool: List<NetworkHostAndPort>,
             rpcOpsClass: Class<I>,
             username: String,
@@ -225,6 +280,37 @@ class MultiRPCClient<I : RPCOps> private constructor(
             targetLegalIdentity = targetLegalIdentity
     )
 
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            rpcOpsClass: Class<I>,
+            username: String,
+            password: String,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            targetLegalIdentity: CordaX500Name? = null,
+            useGlobalThreadPools: Boolean
+
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            rpcOpsClass = rpcOpsClass,
+            username = username,
+            password = password,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers,
+            externalTrace = externalTrace,
+            impersonatedActor = impersonatedActor,
+            targetLegalIdentity = targetLegalIdentity,
+            useGlobalThreadPools = useGlobalThreadPools
+    )
+
     init {
         SerializationEnvironmentHelper.ensureEffectiveSerializationEnvSet(classLoader, customSerializers)
     }
@@ -248,9 +334,11 @@ class MultiRPCClient<I : RPCOps> private constructor(
             haAddressPool.isEmpty() -> RPCClient(
                     ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
                     configuration,
-                    serializationContext)
+                    serializationContext,
+                    useGlobalThreadPools = useGlobalThreadPools
+            )
             else -> {
-                RPCClient(haAddressPool, sslConfiguration, configuration, serializationContext)
+                RPCClient(haAddressPool, sslConfiguration, configuration, serializationContext, useGlobalThreadPools)
             }
         }
     }

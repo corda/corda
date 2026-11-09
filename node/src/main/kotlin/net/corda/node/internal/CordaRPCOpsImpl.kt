@@ -6,6 +6,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.context.SystemContextType
 import net.corda.core.contracts.ContractState
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappInfo
@@ -472,6 +473,7 @@ internal class CordaRPCOpsImpl(
             is InvocationOrigin.Service -> FlowInitiator.Service(principal)
             InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
+            is InvocationOrigin.System -> FlowInitiator.System(SystemContextType.valueOf(principal))
         }
     }
 

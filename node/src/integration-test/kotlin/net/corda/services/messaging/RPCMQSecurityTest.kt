@@ -2,7 +2,6 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toStringShort
-import net.corda.core.utilities.toBase58String
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
@@ -17,30 +16,30 @@ import org.junit.Test
 abstract class RPCMQSecurityTest : MQSecurityTest() {
     @Test(timeout=300_000)
 	fun `consume message from P2P queue`() {
-        assertConsumeAttackFailsNonexistent("$P2P_PREFIX${alice.info.singleIdentity().owningKey.toStringShort()}")
+        assertConsumeAttackFails("$P2P_PREFIX${alice.info.singleIdentity().owningKey.toStringShort()}")
     }
 
     @Test(timeout=300_000)
 	fun `consume message from peer queue`() {
         val bobParty = startBobAndCommunicateWithAlice()
-        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
     }
 
     @Test(timeout=300_000)
 	fun `send message to address of peer which has been communicated with`() {
         val bobParty = startBobAndCommunicateWithAlice()
-        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
     }
 
     @Test(timeout=300_000)
 	fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB_NAME)
-        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bob.info.singleIdentity().owningKey.toBase58String()}")
+        assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bob.info.singleIdentity().owningKey.toStringShort()}")
     }
 
     @Test(timeout=300_000)
 	fun `create queue for unknown peer`() {
-        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
+        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toStringShort()}"
         assertConsumeAttackFailsNonexistent(invalidPeerQueue)
     }
 

@@ -4,6 +4,7 @@ import net.corda.contracts.serialization.whitelist.WhitelistData
 import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.flows.serialization.whitelist.WhitelistFlow
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.internal.assertNotCordaSerializable
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.cordappWithPackages

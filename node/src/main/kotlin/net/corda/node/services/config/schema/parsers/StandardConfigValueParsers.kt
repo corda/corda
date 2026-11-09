@@ -10,11 +10,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.Valid
 import java.net.MalformedURLException
+import java.net.URI
+import java.net.URISyntaxException
 import java.net.URL
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
+import java.util.Properties
+import java.util.UUID
 import javax.security.auth.x500.X500Principal
 
 internal fun toProperties(rawValue: ConfigObject): Properties = rawValue.toConfig().toProperties()
@@ -24,6 +27,8 @@ private fun Config.toProperties() = entrySet().associateByTo(Properties(), { Con
 internal fun toCordaX500Name(rawValue: String) = attempt<CordaX500Name, IllegalArgumentException> { CordaX500Name.parse(rawValue) }
 
 internal fun toURL(rawValue: String) = attempt<URL, MalformedURLException> { URL(rawValue) }
+
+internal fun toURI(rawValue: String): Valid<URI> = attempt<URI, URISyntaxException> { URI(rawValue) }
 
 internal fun toUUID(rawValue: String) = attempt<UUID, IllegalArgumentException> { UUID.fromString(rawValue) }
 
@@ -44,7 +49,9 @@ private inline fun <RESULT, reified ERROR : Exception> attempt(action: () -> RES
     }
 }
 
-internal inline fun <reified RESULT, reified ERROR : Exception> attempt(action: () -> RESULT) = attempt(action, { e: ERROR -> "value does not comply with ${RESULT::class.java.simpleName} specification (${e.message})" })
+internal inline fun <reified RESULT, reified ERROR : Exception> attempt(action: () -> RESULT) = attempt(action) { e: ERROR ->
+    "value does not comply with ${RESULT::class.java.simpleName} specification (${e.message})"
+}
 
 internal fun <RESULT> validValue(result: RESULT) = valid<RESULT, Configuration.Validation.Error>(result)
 

@@ -89,7 +89,7 @@ class HardRestartTest {
                 startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
-                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 1).returnValue
+                val returnValue = it.proxy.startFlow(HardRestartTest::Ping, b.nodeInfo.singleIdentity(), 1).returnValue
                 latch.countDown()
                 // No matter the kill
                 returnValue.getOrThrow()
@@ -128,7 +128,7 @@ class HardRestartTest {
                 startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
-                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
+                val returnValue = it.proxy.startFlow(HardRestartTest::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
                 latch.countDown()
                 // No matter the kill
                 returnValue.getOrThrow()
@@ -166,7 +166,7 @@ class HardRestartTest {
                 startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
-                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
+                val returnValue = it.proxy.startFlow(HardRestartTest::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
                 latch.countDown()
                 // No matter the kill
                 returnValue.getOrThrow()
@@ -255,7 +255,7 @@ class HardRestartTest {
                 (1 .. 10).map { num ->
                     executor.fork {
                         val rpc = tlRpc.get() ?: CordaRPCClient(a.rpcAddress).start(demoUser.username, demoUser.password).proxy.also { tlRpc.set(it) }
-                        val string = rpc.startFlow(::RecursiveA, b.nodeInfo.singleIdentity(), 10).returnValue.getOrThrow()
+                        val string = rpc.startFlow(HardRestartTest::RecursiveA, b.nodeInfo.singleIdentity(), 10).returnValue.getOrThrow()
                         latch.countDown()
                         println("$num: $string")
                     }

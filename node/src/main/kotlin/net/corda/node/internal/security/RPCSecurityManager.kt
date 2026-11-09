@@ -2,6 +2,7 @@ package net.corda.node.internal.security
 
 import net.corda.core.context.AuthServiceId
 import javax.security.auth.login.FailedLoginException
+import javax.security.auth.login.LoginException
 
 /**
  * Manage security of RPC users, providing logic for user authentication and authorization.
@@ -33,7 +34,7 @@ fun RPCSecurityManager.tryAuthenticate(principal: String, password: Password): A
     password.use {
         return try {
             authenticate(principal, password)
-        } catch (e: FailedLoginException) {
+        } catch (e: LoginException) {
             null
         }
     }
