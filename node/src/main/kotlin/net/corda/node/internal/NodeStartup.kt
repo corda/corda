@@ -48,6 +48,7 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.CordappConversionException
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
 import org.fusesource.jansi.Ansi
@@ -491,7 +492,7 @@ internal fun rpcTlsDisabledWarning(rpcOptions: NodeRpcOptions): String? {
 interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
-        val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+        val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class, CordappConversionException::class)
         val PRINT_ERRORS_TO_STD_ERR = try {
             System.getProperty("net.corda.node.printErrorsToStdErr") == "true"
         } catch (e: NullPointerException) {

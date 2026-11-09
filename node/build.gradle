@@ -241,6 +241,8 @@ dependencies {
     testImplementation project(':testing:cordapps:dummystateworkflows')
     // sample test schemas
     testImplementation project(path: ':finance:contracts', configuration: 'testArtifacts')
+    // CorDapp classes built against javax.persistence (JavaxPersistenceFixture), for the start-up conversion check
+    testImplementation project(path: ':node-api', configuration: 'testArtifacts')
     testImplementation project(':testing:cordapps:dbfailure:dbfworkflows')
     testImplementation "org.assertj:assertj-core:${assertj_version}"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"

@@ -124,6 +124,7 @@ see changes to this list.
 * Klaus Apolinario (Bradesco)
 * Koen Vingerhoets (KBC)
 * Kostas Chalkias (R3)
+* Lajos Veres (R3)
 * Lars Stage Thomsen (Danske Bank)
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
