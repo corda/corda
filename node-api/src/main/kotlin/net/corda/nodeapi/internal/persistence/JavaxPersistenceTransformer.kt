@@ -43,8 +43,9 @@ import java.time.Instant
  * - `@Type(type = "...")`, whose members changed in Hibernate 6, is replaced by the `@JdbcTypeCode` Corda's own schemas use for the
  *   type names Corda registered or documented and the standard Hibernate 5 names with a fixed JDBC type ([substitutedHibernate5Types]),
  *   or by a `@Convert` to a converter that stores the same format for the boolean types ([convertedHibernate5Types]); one that names
- *   the default mapping of the member's own type (`@Type(type = "long")` on a `Long`) is dropped ([hibernate5BasicTypeClasses]); any
- *   other name fails the conversion, naming the class and the member.
+ *   the default mapping of the member's own type (`@Type(type = "long")` on a `Long`) is dropped, except that `string` and `character`
+ *   keep an explicit `@JdbcTypeCode`, as the explicit type opted the column out of nationalised character data on SQL Server
+ *   ([hibernate5BasicTypeClasses]); any other name fails the conversion, naming the class and the member.
  * - `@Where`, `@WhereJoinTable` and `@OrderBy`, which Hibernate 7 renamed, become `@SQLRestriction`, `@SQLJoinTableRestriction` and
  *   `@SQLOrder`; `@DynamicInsert(true)` and `@DynamicUpdate(true)` lose the member Hibernate 7 no longer has, and `(false)`, which only
  *   said what the absence of the annotation says, is dropped; `@Generated(GenerationTime)` becomes `@Generated(event = ...)`.
@@ -148,19 +149,31 @@ object JavaxPersistenceTransformer {
             "org.hibernate.type.NumericBooleanType" to "org.hibernate.type.NumericBooleanConverter"
     )
 
-    /** The JDBC type code emitted next to the `@Convert` of a converter in [convertedHibernate5Types], where the column type must be pinned. */
+    /** The JDBC type code emitted next to the `@Convert` of a converter the node substitutes, where the column type must be pinned. */
     private val converterJdbcTypeCodes: Map<String, Int> = mapOf(
             YesNoBooleanConverter::class.java.name to Types.CHAR,
-            TrueFalseBooleanConverter::class.java.name to Types.CHAR
+            TrueFalseBooleanConverter::class.java.name to Types.CHAR,
+            SingleCharacterConverter::class.java.name to Types.CHAR
     )
 
-    /** A Hibernate 5 basic type that was the default mapping of its Java type: by name and by type class name, with the field types it was the default for. */
-    private class Hibernate5BasicType(val javaClass: Class<*>, vararg val names: String, alsoDefaultFor: Set<Class<*>> = emptySet()) {
+    /**
+     * A Hibernate 5 basic type that was the default mapping of its Java type: by name and by type class name, with the member types it
+     * was the default for. A `@Type` naming it on such a member is dropped, unless the type pins a [jdbcTypeCode] or a [converter]: an
+     * explicit character type opted the column out of nationalised character data on SQL Server (`varchar` where the default gives
+     * `nvarchar`), so `string` and `character` keep an explicit mapping, and `character` reads a padded column as Hibernate 5 did.
+     */
+    private class Hibernate5BasicType(
+            val javaClass: Class<*>,
+            vararg val names: String,
+            alsoDefaultFor: Set<Class<*>> = emptySet(),
+            val jdbcTypeCode: Int? = null,
+            val converter: String? = null
+    ) {
         val defaultFor: Set<String> = (setOf(javaClass) + alsoDefaultFor).map { Type.getDescriptor(it) }.toSet()
     }
 
     private val hibernate5BasicTypes: List<Hibernate5BasicType> = listOf(
-            Hibernate5BasicType(String::class.java, "string", "org.hibernate.type.StringType"),
+            Hibernate5BasicType(String::class.java, "string", "org.hibernate.type.StringType", jdbcTypeCode = Types.VARCHAR),
             Hibernate5BasicType(java.lang.Long::class.java, "long", "org.hibernate.type.LongType", alsoDefaultFor = setOf(java.lang.Long.TYPE)),
             Hibernate5BasicType(Integer::class.java, "integer", "int", "org.hibernate.type.IntegerType", alsoDefaultFor = setOf(Integer.TYPE)),
             Hibernate5BasicType(java.lang.Short::class.java, "short", "org.hibernate.type.ShortType", alsoDefaultFor = setOf(java.lang.Short.TYPE)),
@@ -168,7 +181,8 @@ object JavaxPersistenceTransformer {
             Hibernate5BasicType(java.lang.Boolean::class.java, "boolean", "org.hibernate.type.BooleanType", alsoDefaultFor = setOf(java.lang.Boolean.TYPE)),
             Hibernate5BasicType(java.lang.Double::class.java, "double", "org.hibernate.type.DoubleType", alsoDefaultFor = setOf(java.lang.Double.TYPE)),
             Hibernate5BasicType(java.lang.Float::class.java, "float", "org.hibernate.type.FloatType", alsoDefaultFor = setOf(java.lang.Float.TYPE)),
-            Hibernate5BasicType(Character::class.java, "character", "org.hibernate.type.CharacterType", alsoDefaultFor = setOf(Character.TYPE)),
+            Hibernate5BasicType(Character::class.java, "character", "org.hibernate.type.CharacterType", alsoDefaultFor = setOf(Character.TYPE),
+                    converter = SingleCharacterConverter::class.java.name),
             Hibernate5BasicType(BigDecimal::class.java, "big_decimal", "org.hibernate.type.BigDecimalType"),
             Hibernate5BasicType(BigInteger::class.java, "big_integer", "org.hibernate.type.BigIntegerType"),
             Hibernate5BasicType(java.util.Date::class.java, "timestamp", "org.hibernate.type.TimestampType", alsoDefaultFor = setOf(java.sql.Timestamp::class.java)),
@@ -186,8 +200,8 @@ object JavaxPersistenceTransformer {
         (type.names.toList() + type.javaClass.name).map { it to type.javaClass }
     }.toMap()
 
-    /** By Hibernate 5 name, the descriptors of the member types the basic type was the default for. */
-    private val hibernate5BasicTypeDefaults: Map<String, Set<String>> = hibernate5BasicTypes.flatMap { type -> type.names.map { it to type.defaultFor } }.toMap()
+    /** The basic types by each of their Hibernate 5 names. */
+    private val hibernate5BasicTypesByName: Map<String, Hibernate5BasicType> = hibernate5BasicTypes.flatMap { type -> type.names.map { it to type } }.toMap()
 
     private class AnnotationSubstitute(val descriptor: String, val members: Map<String, String>)
 
@@ -221,14 +235,16 @@ object JavaxPersistenceTransformer {
     )
 
     /**
-     * The `CascadeType` constants Hibernate 7 removed, with the constants that mean the same under its unified (JPA) cascade model:
-     * `SAVE_UPDATE`, Hibernate 5's cascade of its `save`, `update` and flush-time saves, is what `PERSIST` and `MERGE` do there, and
-     * `DELETE` and `EVICT` were the native names of `REMOVE` and `DETACH`.
+     * The `CascadeType` constants Hibernate 7 removed, with the constants that mean the same under its unified (JPA) cascade model.
+     * `DELETE` and `EVICT` were the native names of `REMOVE` and `DETACH`. `SAVE_UPDATE` cascaded Hibernate 5's `save`, `update` and
+     * `saveOrUpdate`, and its flush, which saved new children reachable from a managed parent; Hibernate 7's flush cascades `PERSIST`,
+     * which does the same, and a converted CorDapp cannot call `save` or `update` (they no longer exist). `MERGE` is deliberately not
+     * added: Hibernate 5's save-update cascade never fired for `merge`, so adding it would make `merge` overwrite children it left alone.
      */
     private val substitutedCascadeTypes: Map<String, List<String>> = mapOf(
             "DELETE" to listOf("REMOVE"),
             "EVICT" to listOf("DETACH"),
-            "SAVE_UPDATE" to listOf("PERSIST", "MERGE")
+            "SAVE_UPDATE" to listOf("PERSIST")
     )
 
     /** Enum types Hibernate 7 replaced by another enum with the same constant names. */
@@ -952,7 +968,7 @@ object JavaxPersistenceTransformer {
                     val replacement = when (name) {
                         in substitutedHibernate5Types -> jdbcTypeCode(substitutedHibernate5Types.getValue(name))
                         in convertedHibernate5Types -> convert(convertedHibernate5Types.getValue(name))
-                        in hibernate5BasicTypeDefaults -> defaultType(name)
+                        in hibernate5BasicTypesByName -> basicType(name)
                         else -> refuse("the Hibernate 5 annotation @Type(type = \"$name\") on $site, which has no equivalent in Hibernate 7 " +
                                 "that the node can substitute (it substitutes ${substitutedHibernate5Types.keys + convertedHibernate5Types.keys}, " +
                                 "and drops the basic types ${hibernate5BasicTypes.map { it.names.first() }} on a member of their own type)")
@@ -979,16 +995,23 @@ object JavaxPersistenceTransformer {
                     return "@Convert($converter)" + (code?.let { " ${jdbcTypeCode(it)}" } ?: "")
                 }
 
-                /** A basic type that was the default mapping of the member's type is dropped; on a member of another type it was a choice the node cannot express. */
-                private fun defaultType(name: String): String {
-                    val defaultFor = hibernate5BasicTypeDefaults.getValue(name)
-                    if (memberDescriptor !in defaultFor) {
+                /**
+                 * A basic type on a member of the type it was the default mapping for is dropped, or replaced by the explicit mapping the
+                 * type pins; on a member of another type it was a choice the node cannot express.
+                 */
+                private fun basicType(name: String): String {
+                    val type = hibernate5BasicTypesByName.getValue(name)
+                    if (memberDescriptor !in type.defaultFor) {
                         refuse("the Hibernate 5 annotation @Type(type = \"$name\") on $site, whose type is " +
-                                "${memberDescriptor?.let { Type.getType(it).className } ?: "not known"}; the node only drops it on a " +
-                                "${defaultFor.joinToString(" or ") { Type.getType(it).className }}, for which it was the default mapping anyway, and " +
+                                "${memberDescriptor?.let { Type.getType(it).className } ?: "not known"}; the node only converts it on a " +
+                                "${type.defaultFor.joinToString(" or ") { Type.getType(it).className }}, for which it was the default mapping anyway, and " +
                                 "Hibernate 7 has no @Type by name")
                     }
-                    return "nothing: it was the default mapping of the member's type"
+                    return when {
+                        type.converter != null -> convert(type.converter)
+                        type.jdbcTypeCode != null -> jdbcTypeCode(type.jdbcTypeCode)
+                        else -> "nothing: it was the default mapping of the member's type"
+                    }
                 }
             }
         }

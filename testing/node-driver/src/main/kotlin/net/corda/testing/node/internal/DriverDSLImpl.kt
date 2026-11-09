@@ -1134,7 +1134,8 @@ class DriverDSLImpl(
                     }
                 }
             } finally {
-                (dataSource as? AutoCloseable)?.close()
+                // A failure to close the pool must not mask the shutdown's own outcome.
+                runCatching { (dataSource as? AutoCloseable)?.close() }
             }
             DatabaseSnapshot.databaseFilename(config.baseDirectory).deleteIfExists()
         }

@@ -79,23 +79,7 @@ class JavaxPersistenceTransformerTest {
         }
     }
 
-    /**
-     * Defines the fixture's classes from their converted bytes; everything else comes from the test classpath, which has
-     * jakarta.persistence and Hibernate 7, against which the Hibernate references of the converted classes are resolved.
-     */
-    private class ConvertingLoader(private val fixture: JavaxPersistenceFixture) : ClassLoader(JavaxPersistenceTransformerTest::class.java.classLoader) {
-        override fun findClass(name: String): Class<*> {
-            val bytes = try {
-                fixture.classBytes(name)
-            } catch (e: java.nio.file.NoSuchFileException) {
-                throw ClassNotFoundException(name, e)
-            }
-            val converted = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(bytes)) JavaxPersistenceTransformer.transform(bytes, name, parent) else bytes
-            return defineClass(name, converted, 0, converted.size)
-        }
-    }
-
-    private val loader = ConvertingLoader(fixture)
+    private val loader = ConvertingFixtureLoader(fixture, JavaxPersistenceTransformerTest::class.java.classLoader)
 
     @Test(timeout = 300_000)
     fun `the persistence annotations become jakarta persistence annotations, nested annotations and enum values included`() {
@@ -200,14 +184,16 @@ class JavaxPersistenceTransformerTest {
         assertThat(entity.getDeclaredField("created").getAnnotation(Generated::class.java)!!.event).containsExactly(EventType.INSERT)
         assertThat(entity.getDeclaredField("updated").getAnnotation(Generated::class.java)!!.event).containsExactly(EventType.INSERT, EventType.UPDATE)
         assertThat(entity.getDeclaredField("never").annotations).isEmpty()
-        // The CascadeType constants Hibernate 7 removed, each resulting constant once.
+        // The CascadeType constants Hibernate 7 removed, each resulting constant once; SAVE_UPDATE never cascaded merge, so it is PERSIST alone.
         val cascade = org.hibernate.annotations.Cascade::class.java
-        assertThat(entity.getDeclaredField("children").getAnnotation(cascade)!!.value).containsExactly(
-                org.hibernate.annotations.CascadeType.PERSIST, org.hibernate.annotations.CascadeType.MERGE, org.hibernate.annotations.CascadeType.REMOVE)
+        assertThat(entity.getDeclaredField("children").getAnnotation(cascade)!!.value)
+                .containsExactly(org.hibernate.annotations.CascadeType.PERSIST, org.hibernate.annotations.CascadeType.REMOVE)
         assertThat(entity.getDeclaredField("other").getAnnotation(cascade)!!.value).containsExactly(org.hibernate.annotations.CascadeType.DETACH)
-        // A basic type that was the default mapping of the member's type is dropped; pg-uuid is Hibernate 7's UUID type code.
+        // A basic type that was the default mapping of the member's type is dropped, except that an explicit string type keeps its JDBC type
+        // (it opted the column out of nationalised character data on SQL Server); pg-uuid is Hibernate 7's UUID type code.
         assertThat(entity.getDeclaredField("count").annotations.map { it.annotationClass.java }).containsExactly(Column::class.java)
-        assertThat(entity.getDeclaredField("label").annotations.map { it.annotationClass.java }).containsExactly(Column::class.java)
+        assertThat(entity.getDeclaredField("label").annotations.map { it.annotationClass.java }).containsExactlyInAnyOrder(Column::class.java, JdbcTypeCode::class.java)
+        assertThat(entity.getDeclaredField("label").getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(Types.VARCHAR)
         assertThat(entity.getDeclaredField("pg").getAnnotation(JdbcTypeCode::class.java)!!.value).isEqualTo(SqlTypes.UUID)
         // On a member of another type the basic type was a choice, which the node cannot express.
         assertThatThrownBy { JavaxPersistenceTransformer.transform(fixture.classBytes(MISMATCHED_TYPE_ENTITY), MISMATCHED_TYPE_ENTITY, javaClass.classLoader) }

@@ -43,6 +43,9 @@ class JavaxPersistenceFixture(root: Path) {
         const val IDIOMS_ENTITY = "legacy.IdiomsEntity"
         const val MISMATCHED_TYPE_ENTITY = "legacy.MismatchedTypeEntity"
         const val COLLECTION_TYPE_ENTITY = "legacy.CollectionTypeEntity"
+        const val CHAR_ENTITY = "legacy.CharEntity"
+        const val CASCADE_PARENT = "legacy.CascadeParent"
+        const val CASCADE_CHILD = "legacy.CascadeChild"
         const val INTRUDER = "legacy.Intruder"
         const val JAVAX_ENTITY_ANNOTATION = "javax.persistence.Entity"
         const val DUAL_ENTITY = "dual.DualEntity"
@@ -73,6 +76,9 @@ class JavaxPersistenceFixture(root: Path) {
                 "javax/persistence/EnumType.java" to "package javax.persistence; public enum EnumType { ORDINAL, STRING }",
                 "javax/persistence/Enumerated.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface Enumerated { EnumType value() default EnumType.ORDINAL; }",
                 "javax/persistence/JoinColumn.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface JoinColumn { String name() default \"\"; String referencedColumnName() default \"\"; }",
+                "javax/persistence/FetchType.java" to "package javax.persistence; public enum FetchType { LAZY, EAGER }",
+                "javax/persistence/OneToMany.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface OneToMany { String mappedBy() default \"\"; FetchType fetch() default FetchType.LAZY; }",
+                "javax/persistence/ManyToOne.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD}) public @interface ManyToOne { FetchType fetch() default FetchType.EAGER; }",
                 "javax/persistence/Convert.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target({ElementType.FIELD, ElementType.METHOD, ElementType.TYPE}) public @interface Convert { Class converter() default void.class; }",
                 "javax/persistence/Converter.java" to "package javax.persistence; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.TYPE) public @interface Converter { boolean autoApply() default false; }",
                 "javax/persistence/AttributeConverter.java" to "package javax.persistence; public interface AttributeConverter<X, Y> { Y convertToDatabaseColumn(X attribute); X convertToEntityAttribute(Y dbData); }",
@@ -266,6 +272,53 @@ class JavaxPersistenceFixture(root: Path) {
                         @Column(name = "count") @Type(type = "long") public Long count;
                         @Column(name = "label") @Type(type = "org.hibernate.type.StringType") public String label;
                         @Column(name = "pg") @Type(type = "pg-uuid") public UUID pg;
+                    }
+                """.trimIndent(),
+                "legacy/CharEntity.java" to """
+                    package legacy;
+                    import javax.persistence.Column;
+                    import org.hibernate.annotations.Type;
+                    /** Character columns as a 4.14 CorDapp mapped them: an explicit character type, a yes_no boolean and an explicit string type. */
+                    @javax.persistence.Entity
+                    @javax.persistence.Table(name = "char_entity")
+                    public class CharEntity {
+                        @javax.persistence.Id @Column(name = "id") public String id;
+                        @Column(name = "ch") @Type(type = "character") public Character ch;
+                        @Column(name = "yn") @Type(type = "yes_no") public Boolean yn;
+                        @Column(name = "st") @Type(type = "string") public String st;
+                        public CharEntity() {}
+                    }
+                """.trimIndent(),
+                "legacy/CascadeParent.java" to """
+                    package legacy;
+                    import java.util.ArrayList;
+                    import java.util.List;
+                    import javax.persistence.Column;
+                    import javax.persistence.OneToMany;
+                    import org.hibernate.annotations.Cascade;
+                    import org.hibernate.annotations.CascadeType;
+                    /** A parent whose children carry Hibernate 5's save-update cascade. */
+                    @javax.persistence.Entity
+                    @javax.persistence.Table(name = "cascade_parent")
+                    public class CascadeParent {
+                        @javax.persistence.Id @Column(name = "id") public String id;
+                        @Column(name = "name") public String name;
+                        @OneToMany(mappedBy = "parent") @Cascade(CascadeType.SAVE_UPDATE) public List<CascadeChild> children = new ArrayList<>();
+                        public CascadeParent() {}
+                    }
+                """.trimIndent(),
+                "legacy/CascadeChild.java" to """
+                    package legacy;
+                    import javax.persistence.Column;
+                    import javax.persistence.JoinColumn;
+                    import javax.persistence.ManyToOne;
+                    @javax.persistence.Entity
+                    @javax.persistence.Table(name = "cascade_child")
+                    public class CascadeChild {
+                        @javax.persistence.Id @Column(name = "id") public String id;
+                        @Column(name = "name") public String name;
+                        @ManyToOne @JoinColumn(name = "parent_id") public CascadeParent parent;
+                        public CascadeChild() {}
                     }
                 """.trimIndent(),
                 "legacy/MismatchedTypeEntity.java" to """
@@ -507,6 +560,22 @@ class JavaxPersistenceFixture(root: Path) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Defines the fixture's classes from their converted bytes; everything else comes from [parent], the test classpath, which has
+ * `jakarta.persistence` and Hibernate 7, against which the Hibernate references of the converted classes are resolved.
+ */
+class ConvertingFixtureLoader(private val fixture: JavaxPersistenceFixture, parent: ClassLoader) : ClassLoader(parent) {
+    override fun findClass(name: String): Class<*> {
+        val bytes = try {
+            fixture.classBytes(name)
+        } catch (e: java.nio.file.NoSuchFileException) {
+            throw ClassNotFoundException(name, e)
+        }
+        val converted = if (JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(bytes)) JavaxPersistenceTransformer.transform(bytes, name, parent) else bytes
+        return defineClass(name, converted, 0, converted.size)
     }
 }
 
