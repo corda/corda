@@ -237,8 +237,10 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
 
     @CordaInternal
     fun setCurrentTelemetryId(telemetryIds: ComponentTelemetryIds) {
-        telemetryComponents.values.forEach {
-            it.setCurrentTelemetryId(telemetryIds.componentTelemetryIds[it.name()]!!)
+        telemetryComponents.values.forEach { component ->
+            // There is no ID for a component that was not enabled when the IDs were saved: for example, a flow restored from a
+            // checkpoint written before the node was restarted with that component enabled. That component has nothing to restore.
+            telemetryIds.componentTelemetryIds[component.name()]?.let { component.setCurrentTelemetryId(it) }
         }
     }
     
