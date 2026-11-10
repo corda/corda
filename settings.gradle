@@ -110,6 +110,9 @@ include 'testing:cordapps:sleeping'
 include 'testing:cordapps:cashobservers'
 include 'testing:cordapps:4.11-workflows'
 include 'testing:cordapps:dummystateworkflows'
+include 'testing:cordapps:javax-persistence'
+include 'javax-persistence-agent'
+project(":javax-persistence-agent").projectDir = new File("$settingsDir/testing/javax-persistence-agent")
 
 // Common libraries - start
 include 'common-validation'

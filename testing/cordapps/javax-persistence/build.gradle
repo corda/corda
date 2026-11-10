@@ -1,0 +1,27 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+description 'A CorDapp built against javax.persistence and Corda 4.12, as one for Corda 4.14 or earlier is, for the javax persistence test agent tests'
+
+dependencies {
+    // Built against the last javax.persistence generation of Corda, so that its withEntityManager blocks are typed on the javax API, as
+    // a CorDapp built for Corda 4.14 or earlier has them. None of this is on the runtime classpath: the tests run it on Corda 4.15.
+    compileOnly "net.corda:corda-core:4.12.+"
+    compileOnly "javax.persistence:javax.persistence-api:2.2"
+    // Hibernate 5, for the @Type and @TypeDef annotations such a CorDapp may use.
+    compileOnly "org.hibernate:hibernate-core:5.6.15.Final"
+    compileOnly "co.paralleluniverse:quasar-core:$quasar_version"
+}
+
+allOpen {
+    // The kotlin-jpa plugin of a CorDapp built for Corda 4.14 opens the classes with the javax.persistence annotations.
+    annotation 'javax.persistence.Entity'
+}
+
+jar {
+    archiveBaseName = 'testing-javax-persistence-cordapp'
+    manifest {
+        // This JAR is part of Corda's testing framework.
+        // Driver will not include it as part of an out-of-process node.
+        attributes('Corda-Testing': true)
+    }
+}
