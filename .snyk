@@ -600,4 +600,31 @@ ignore:
           Recommended : Upgrade to Corda 4.12
         expires: 2029-08-01T00:00:00.000Z
         created: 2026-10-13T00:00:00.000Z
+  SNYK-JAVA-JAKARTAVALIDATION-20936881:
+    - '*':
+        reason: >-
+          CVE-NOT-ASSIGNED: This is an improper input validation issue in
+          Validation.byProvider(), where ProviderSpecificBootstrapImpl uses
+          the single-argument AccessController.doPrivileged, allowing code
+          running in a restricted ProtectionDomain to instantiate an arbitrary
+          class's no-arg constructor with the library's permissions.
+          Exploitation requires the JVM to run with a Java SecurityManager
+          enabled, the library to be granted more permissions than the
+          caller, and the attacker to already be able to run code in-process.
+          Corda does not run with a Java SecurityManager, so no privilege
+          elevation can occur. In addition, jakarta.validation-api is only
+          pulled in transitively by Jersey (jersey-server), which Corda uses
+          only in test tooling (node-driver), the demo webserver
+          (testing/testserver) and sample applications, it is not part of the
+          released Corda node. Hence Corda is not impacted by this
+          vulnerability.
+          This issue is fixed in jakarta.validation-api@4.0.0-M1 (a milestone
+          release), which uses the jakarta.validation namespace and is not
+          compatible with Jersey 2.x (javax.validation), Java 8 and Kotlin
+          1.2.71.
+          Fix : jakarta.validation:jakarta.validation-api@4.0.0-M1
+          Compatibility : java 17 , kotlin 1.9.20
+          Recommended : Upgrade to Corda 4.12
+        expires: 2029-08-01T00:00:00.000Z
+        created: 2026-11-06T00:00:00.000Z
 patch: {}
