@@ -257,6 +257,8 @@ dependencies {
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "com.google.jimfs:jimfs:1.1"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    // OpenTelemetry SDK, so the tests can record the spans OpenTelemetryComponent creates.
+    testImplementation "io.opentelemetry:opentelemetry-sdk:${open_telemetry_version}"
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
     // Jersey for JAX-RS implementation for use in Jetty
     testImplementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
