@@ -61,6 +61,7 @@ buildscript {
     ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
     ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
     ext.asm_version = constants.getProperty("asmVersion")
+    ext.objenesis_version = constants.getProperty("objenesisVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
     ext.jackson_kotlin_version = constants.getProperty("jacksonKotlinVersion")
@@ -579,6 +580,17 @@ allprojects {
                     // Review when Azure Identity is upgraded
                     if (details.requested.group == 'io.projectreactor.netty' && details.requested.name == "reactor-netty-http") {
                         details.useVersion reactor_netty_version
+                    }
+
+                    // SNYK-JAVA-ORGOBJENESIS-21755439 / CVE-2026-116486
+                    // vulnerability in org.objenesis:objenesis@2.6, a transitive dependency of
+                    // co.paralleluniverse:quasar-core@0.7.16_r3 / 0.8.1_r3, com.esotericsoftware:kryo@4.0.2
+                    // and org.mockito:mockito-core@2.28.2
+                    // fixed in org.objenesis:objenesis@3.6
+                    // force-upgrade to org.objenesis:objenesis@3.6
+                    // Review when Quasar, Kryo or Mockito are upgraded
+                    if (details.requested.group == 'org.objenesis' && details.requested.name == 'objenesis') {
+                        details.useVersion objenesis_version
                     }
 
                     // Force all transitive junit:junit references to the same pinned version,
