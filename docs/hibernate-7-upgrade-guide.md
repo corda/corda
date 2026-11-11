@@ -27,17 +27,20 @@ databases already use (see [What stays the same](#what-stays-the-same-in-the-dat
 
 ### 1. Check your database version
 
-Hibernate 7 raised the minimum database versions it supports. **[VERIFY]** against the Corda 4.15 supported-platforms list.
+Hibernate 7.4 raised the minimum database versions it supports. Every database in the Corda 4.15 platform support matrix is at or above
+the minimum.
 
-| Database                | Minimum version supported by Hibernate 7 |
+| Database                | Minimum version supported by Hibernate 7.4 |
 |-------------------------|------------------------------------------|
-| PostgreSQL              | 13                                       |
+| PostgreSQL              | 14                                       |
 | Oracle                  | 19c                                      |
-| Microsoft SQL Server    | 2012 (11.0); Azure SQL supported         |
+| Microsoft SQL Server    | 2014 (12.0); Azure SQL supported         |
 | H2 (development only)   | 2.1.214                                  |
 
-Older versions may start, but Hibernate no longer tests against them and may generate SQL they do not support. If you run an older
-version, upgrade the database *before* upgrading the node. Use a current JDBC driver for your database.
+Hibernate does not refuse an older database. It logs a warning at start-up, for example `HHH000511: The 13.0 version for [PostgreSQL] is
+no longer supported, hence certain features may not work properly.`, and carries on; Hibernate no longer tests against such a version and
+may generate SQL it does not support. If you see this message, upgrade the database *before* upgrading the node. Use a current JDBC driver
+for your database.
 
 ### 2. CorDapps built for Corda 4.14 or earlier
 
@@ -300,7 +303,7 @@ returned a `BigInteger`. Code that casts the result (`result as BigInteger`) now
 cannot be cast to class java.math.BigInteger`. Use `(result as Number).toLong()`. Date and time columns still come back as
 `java.sql.Timestamp`, `Date` and `Time`, because Corda sets `hibernate.query.native.prefer_jdbc_datetime_types`.
 
-**`LIKE` patterns on H2, PostgreSQL and CockroachDB.** Hibernate 7 adds `escape ''` to a `LIKE` with no escape character on these databases,
+**`LIKE` patterns on H2 and PostgreSQL.** Hibernate 7 adds `escape ''` to a `LIKE` with no escape character on these databases,
 so a backslash in a pattern is now an ordinary character. For example the pattern `a\_b` used to match only the value `a_b`; it now matches
 values such as `a\xb` (a backslash, any one character, then `b`) and no longer matches `a_b`. Oracle and SQL Server never treated the
 backslash specially and are unchanged. If you escape `_` or `%`, give the escape character explicitly, for example with the JPA criteria
