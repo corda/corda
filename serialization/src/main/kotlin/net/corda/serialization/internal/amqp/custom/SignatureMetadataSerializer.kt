@@ -51,6 +51,9 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
 
     override val schemaForDocumentation: Schema = Schema(listOf(extendedTypeNotation))
 
+    // writeObject uses these descriptors rather than typeDescriptor, so register them for deserialization.
+    override val deserializationAliases: Set<Symbol> = listOf(legacyDescriptor, extendedDescriptor).mapNotNull { it.name }.toSet()
+
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         val metadata = obj as SignatureMetadata
         val typeNotation = if (metadata.proofChain == null) legacyTypeNotation else extendedTypeNotation

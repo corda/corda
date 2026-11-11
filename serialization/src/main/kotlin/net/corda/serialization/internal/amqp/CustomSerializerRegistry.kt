@@ -112,6 +112,9 @@ class CachingCustomSerializerRegistry(
 
             customSerializer
         }
+        for (alias in customSerializer.deserializationAliases) {
+            descriptorBasedSerializerRegistry.getOrBuild(alias.toString()) { customSerializer }
+        }
     }
 
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {
