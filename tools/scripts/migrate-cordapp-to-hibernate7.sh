@@ -49,13 +49,14 @@ for f in "${files[@]}"; do
         s/javax\.persistence:javax\.persistence-api:[0-9A-Za-z.\-]+/jakarta.persistence:jakarta.persistence-api:3.2.0/g;
         s/org\.hibernate:hibernate-core:[0-9A-Za-z.\-\$\{\}_]+/org.hibernate.orm:hibernate-core:7.4.12.Final/g;
         s/javax\.persistence/jakarta.persistence/g;
-        my $uuid = s/\@Type\(\s*type\s*=\s*"uuid-char"\s*\)/\@JdbcTypeCode(SqlTypes.VARCHAR)/g;
-        my $bin  = s/\@Type\(\s*type\s*=\s*"corda-wrapper-binary"\s*\)/\@JdbcTypeCode(SqlTypes.VARBINARY)/g;
+        # Java code is often written "@Type (type = ...)", with a space before the parenthesis.
+        my $uuid = s/\@Type\s*\(\s*type\s*=\s*"uuid-char"\s*\)/\@JdbcTypeCode(SqlTypes.VARCHAR)/g;
+        my $bin  = s/\@Type\s*\(\s*type\s*=\s*"corda-wrapper-binary"\s*\)/\@JdbcTypeCode(SqlTypes.VARBINARY)/g;
         if ($uuid || $bin) {
             my $semi = /import org\.hibernate\.annotations\.Type;/ ? ";" : "";
             my $imports = "import org.hibernate.annotations.JdbcTypeCode$semi\nimport org.hibernate.type.SqlTypes$semi\n";
             # Replace the old import if nothing else uses @Type, otherwise add to it.
-            if (/\@Type\(/) {
+            if (/\@Type\s*\(/) {
                 s/(import org\.hibernate\.annotations\.Type;?\n)/$1$imports/;
             } else {
                 s/import org\.hibernate\.annotations\.Type;?\n/$imports/;
@@ -101,7 +102,7 @@ review_build() {
     print_hits "$message" "$(grep -rnE "$pattern" "$root" --include='*.gradle' --include='*.kts' --include='*.properties' --include='*.toml' 2>/dev/null \
         | grep -vE '/build/|/\.gradle/|/\.git/' | grep -vE ":[0-9]+:.*($exclude)")"
 }
-review '@Type\(' "@Type(type = \"...\") no longer exists. Use @JdbcTypeCode, @JdbcType or an AttributeConverter instead."
+review '@Type\s*\(' "@Type(type = \"...\") no longer exists. Use @JdbcTypeCode, @JdbcType or an AttributeConverter instead."
 review '\.(save|update|saveOrUpdate|delete)\(' "Session.save/update/saveOrUpdate/delete were removed. Use persist/merge/remove."
 review 'org\.hibernate\.type\.|org\.hibernate\.query\.criteria\.internal|TypeDescriptor' "Hibernate's internal type and criteria classes were rewritten." 'org\.hibernate\.type\.SqlTypes'
 review 'createQuery\(|createNativeQuery\(|@NamedQuery' "HQL/JPQL is validated strictly: use attribute names (not column names), and compare an association with an entity (not its id)."
