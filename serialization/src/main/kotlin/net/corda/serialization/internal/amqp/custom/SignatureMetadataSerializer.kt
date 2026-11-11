@@ -23,9 +23,21 @@ import java.lang.reflect.Type
  * When proofChain is present, an extended three-field form is written under a separate descriptor.
  */
 object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(SignatureMetadata::class.java) {
+    // The fingerprint SignatureMetadata had as a plain composable type, before proofChain was added.
+    private const val LEGACY_DESCRIPTOR = "net.corda:IzFt8cRKytsJq3vQ+yjsGg=="
+
+    /**
+     * The legacy form is what gets written whenever there is no proofChain, so report its descriptor rather than the
+     * default derived from the class name. This keeps the descriptor deserialization compares against equal to the one
+     * on the wire, for data written both by this version and by versions before the custom serializer existed.
+     *
+     * A getter, because the superclass constructor reads it to build [descriptor].
+     */
+    override val typeDescriptor: Symbol get() = Symbol.valueOf(LEGACY_DESCRIPTOR)
+
     private val legacyFieldTypes = listOf(Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
     private val extendedFieldTypes = legacyFieldTypes + KeyRotationProofChain::class.java
-    private val legacyDescriptor = Descriptor(Symbol.valueOf("net.corda:IzFt8cRKytsJq3vQ+yjsGg=="))
+    private val legacyDescriptor = Descriptor(typeDescriptor)
     private val extendedDescriptor = Descriptor(Symbol.valueOf("net.corda:${AMQPTypeIdentifiers.nameForType(type)}:extended"))
     private val legacyTypeNotation = CompositeType(
             AMQPTypeIdentifiers.nameForType(type),
@@ -50,6 +62,9 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
     )
 
     override val schemaForDocumentation: Schema = Schema(listOf(extendedTypeNotation))
+
+    // The extended form needs its own descriptor, as its schema has a third field; register it for deserialization too.
+    override val deserializationAliases: Set<Symbol> = setOf(requireNotNull(extendedDescriptor.name))
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         val metadata = obj as SignatureMetadata
