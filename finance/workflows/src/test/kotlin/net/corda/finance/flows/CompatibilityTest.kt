@@ -13,6 +13,7 @@ import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -31,8 +32,8 @@ class CompatibilityTest {
     }
 
     @Test(timeout=300_000)
-	fun issueCashTansactionReadTest() {
-        val inputStream = javaClass.classLoader.getResourceAsStream("compatibilityData/v3/node_transaction.dat")
+	fun issueCashTransactionReadTest() {
+        val inputStream = javaClass.classLoader.getResourceAsStream("compatibilityData/v4/node_transaction.dat")
         assertNotNull(inputStream)
 
         val inByteArray: ByteArray = inputStream.readBytes()
@@ -55,6 +56,33 @@ class CompatibilityTest {
         assertSchemasMatch(envelope.schema, schema)
 
         assertTrue(inByteArray.contentEquals(serializedBytes.bytes))
+    }
+
+    @Test(timeout=300_000)
+	fun issueCashTransactionV3ReadTest() {
+        // This test verifies that the current schema and serialization logic remain compatible with the format used in version 3 of the node.
+        // Although the old and current schemas differ slightly, they represent the same logical content.
+        // The test conditions are relaxed to allow for these differences, while still ensuring that the generated signatures match those from the older version.
+        // This test is important as it demonstrates that earlier versions of the node can talk with the current version.
+        val inputStream = javaClass.classLoader.getResourceAsStream("compatibilityData/v3/node_transaction.dat")
+        assertNotNull(inputStream)
+
+        val inByteArray: ByteArray = inputStream.readBytes()
+        val input = DeserializationInput(serializerFactory)
+
+        val (transaction, _) = input.deserializeAndReturnEnvelope(
+                SerializedBytes(inByteArray),
+                SignedTransaction::class.java,
+                SerializationDefaults.STORAGE_CONTEXT)
+        assertNotNull(transaction)
+
+        val commands = transaction.tx.commands
+        assertEquals(1, commands.size)
+        assertTrue(commands.first().value is Cash.Commands.Issue)
+
+        for (signature in transaction.sigs) {
+           assertDoesNotThrow { signature.verify(transaction.coreTransaction.id) }
+        }
     }
 
     @Test(timeout = 300_000)

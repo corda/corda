@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
 import org.hibernate.stat.*
+import java.time.Instant
 import javax.management.MXBean
 
 /**
@@ -14,23 +15,23 @@ interface StatisticsService : Statistics
  * session factory.
  */
 class DelegatingStatisticsService(private val delegate: Statistics) : StatisticsService {
-    override fun getNaturalIdStatistics(entityName: String?): NaturalIdStatistics {
+    override fun getNaturalIdStatistics(entityName: String): NaturalIdStatistics {
         return delegate.getNaturalIdStatistics(entityName)
     }
 
-    override fun getDomainDataRegionStatistics(regionName: String?): CacheRegionStatistics {
+    override fun getDomainDataRegionStatistics(regionName: String): CacheRegionStatistics {
         return delegate.getDomainDataRegionStatistics(regionName)
     }
 
-    override fun getQueryRegionStatistics(regionName: String?): CacheRegionStatistics {
+    override fun getQueryRegionStatistics(regionName: String): CacheRegionStatistics? {
         return delegate.getQueryRegionStatistics(regionName)
     }
 
-    override fun getNaturalIdQueryExecutionMaxTimeEntity(): String {
+    override fun getNaturalIdQueryExecutionMaxTimeEntity(): String? {
         return delegate.getNaturalIdQueryExecutionMaxTimeEntity()
     }
 
-    override fun getCacheRegionStatistics(regionName: String?): CacheRegionStatistics {
+    override fun getCacheRegionStatistics(regionName: String): CacheRegionStatistics? {
         return delegate.getCacheRegionStatistics(regionName)
     }
 
@@ -118,10 +119,6 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.naturalIdCachePutCount
     }
 
-    @Suppress("DEPRECATION")
-    override fun getNaturalIdCacheStatistics(arg0: String): NaturalIdCacheStatistics {
-        return delegate.getNaturalIdCacheStatistics(arg0)
-    }
 
     override fun getNaturalIdQueryExecutionCount(): Long {
         return delegate.naturalIdQueryExecutionCount
@@ -131,7 +128,7 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.naturalIdQueryExecutionMaxTime
     }
 
-    override fun getNaturalIdQueryExecutionMaxTimeRegion(): String {
+    override fun getNaturalIdQueryExecutionMaxTimeRegion(): String? {
         return delegate.naturalIdQueryExecutionMaxTimeRegion
     }
 
@@ -167,7 +164,7 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.queryExecutionMaxTime
     }
 
-    override fun getQueryExecutionMaxTimeQueryString(): String {
+    override fun getQueryExecutionMaxTimeQueryString(): String? {
         return delegate.queryExecutionMaxTimeQueryString
     }
 
@@ -191,10 +188,6 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.secondLevelCacheRegionNames
     }
 
-    @Suppress("DEPRECATION")
-    override fun getSecondLevelCacheStatistics(arg0: String): SecondLevelCacheStatistics {
-        return delegate.getSecondLevelCacheStatistics(arg0)
-    }
 
     override fun getSessionCloseCount(): Long {
         return delegate.sessionCloseCount
@@ -204,8 +197,9 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
         return delegate.sessionOpenCount
     }
 
+    @Deprecated("Deprecated in Java")
     override fun getStartTime(): Long {
-        return delegate.startTime
+        return delegate.start.toEpochMilli()
     }
 
     override fun getSuccessfulTransactionCount(): Long {
@@ -238,5 +232,29 @@ class DelegatingStatisticsService(private val delegate: Statistics) : Statistics
 
     override fun setStatisticsEnabled(arg0: Boolean) {
         delegate.isStatisticsEnabled = arg0
+    }
+
+    override fun getEntityUpsertCount(): Long {
+        return delegate.entityUpsertCount
+    }
+
+    override fun getFailedTransactionCount(): Long {
+        return delegate.failedTransactionCount
+    }
+
+    override fun getQueryPlanCacheHitCount(): Long {
+        return delegate.queryPlanCacheHitCount
+    }
+
+    override fun getQueryPlanCacheMissCount(): Long {
+        return delegate.queryPlanCacheMissCount
+    }
+
+    override fun getSlowQueries(): Map<String, Long> {
+        return delegate.slowQueries
+    }
+
+    override fun getStart(): Instant {
+        return delegate.start
     }
 }

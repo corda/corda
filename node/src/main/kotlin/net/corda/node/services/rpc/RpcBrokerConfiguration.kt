@@ -53,8 +53,9 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         setDirectories(baseDirectory)
 
+        val rpcSslOptions = if (useSsl) requireNotNull(sslOptions) { "'rpcSettings.ssl' is mandatory when 'rpcSettings.useSsl' is specified" } else null
         val acceptorConfigurationsSet = mutableSetOf(
-                rpcAcceptorTcpTransport(address, sslOptions, maxMessageSize, enableSSL = useSsl, threadPoolName = "RPCServer")
+                rpcAcceptorTcpTransport(address, rpcSslOptions, maxMessageSize, threadPoolName = "RPCServer")
         )
         adminAddress?.let {
             acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration, maxMessageSize, threadPoolName = "RPCServerAdmin")

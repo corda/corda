@@ -1,3 +1,6 @@
+// Liquibase deprecated ThreadLocalScopeManager. It is still needed to keep the scope of concurrent in-process migrations separate.
+@file:Suppress("DEPRECATION")
+
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -6,7 +9,10 @@ import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.Scope
 import liquibase.ThreadLocalScopeManager
+import liquibase.analytics.configuration.AnalyticsArgs
+import liquibase.changelog.FastCheckService
 import liquibase.database.jvm.JdbcConnection
+import liquibase.exception.CommandExecutionException
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
 import liquibase.resource.Resource
@@ -56,6 +62,12 @@ open class SchemaMigration(
 
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
+    // Liquibase analytics are switched off so that nodes never contact config.liquibase.com or report usage data.
+    private val liquibaseScopeValues = mapOf(
+            Scope.Attr.classLoader.name to classLoader,
+            AnalyticsArgs.ENABLED.key to false
+    )
+
     /**
      * Will run the Liquibase migration on the actual database.
      * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
@@ -65,7 +77,7 @@ open class SchemaMigration(
      */
     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
-        Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
+        Scope.enter(liquibaseScopeValues)
         // current version of Liquibase appears to be non-threadsafe
         // this is apparent when multiple in-process nodes are all running migrations simultaneously
         mutex.withLock {
@@ -74,9 +86,15 @@ open class SchemaMigration(
                 if (shouldBlockOnCheckpoints && existingCheckpoints)
                     throw CheckpointsException()
                 try {
+                    // Liquibase remembers, for the lifetime of the JVM, that a database is up to date for a given database URL and change log
+                    // path, and skips the update if it sees them again. The change log path is the same for every migration, so a migration
+                    // with nothing to run (such as the core schemas) would stop the next one (such as the CorDapp schemas) from running its
+                    // change sets.
+                    Scope.getCurrentScope().getSingleton(FastCheckService::class.java).clearCache()
                     runner.update(Contexts().toString())
                 } catch (exp: LiquibaseException) {
-                    throw DatabaseMigrationException(exp.message, exp)
+                    val reported = exp.withoutCommandWrapper()
+                    throw DatabaseMigrationException(reported.message, reported)
                 }
             }
         }
@@ -141,7 +159,8 @@ open class SchemaMigration(
                 try {
                     runner.changeLogSync(Contexts().toString())
                 } catch (exp: LiquibaseException) {
-                    throw DatabaseMigrationException(exp.message, exp)
+                    val reported = exp.withoutCommandWrapper()
+                    throw DatabaseMigrationException(reported.message, reported)
                 }
             }
         }
@@ -215,7 +234,7 @@ open class SchemaMigration(
         if (ourName != null) {
             System.setProperty(NODE_X500_NAME, ourName.toString())
         }
-        Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
+        Scope.enter(liquibaseScopeValues)
         val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
         checkResourcesInClassPath(changelogList)
         return listOf(Pair(customResourceAccessor, ""))
@@ -264,3 +283,13 @@ class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") pr
         fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run schema migration scripts (node with sub-command run-migration-scripts). Reason: $reason"
     }
 }
+
+/**
+ * The exception that Liquibase 4.20 (Corda 4.14) threw. Liquibase 4.33 wraps it in a [CommandExecutionException] whose message repeats
+ * the wrapped exception's class name, which changed the message the node logs for a failed migration (for example
+ * `liquibase.exception.LiquibaseException: liquibase.exception.MigrationFailedException: ...` instead of
+ * `liquibase.exception.MigrationFailedException: ...`). Reporting the wrapped exception keeps the logged message, and the cause used to
+ * pick the error code, the same as before.
+ */
+internal fun LiquibaseException.withoutCommandWrapper(): LiquibaseException =
+        ((this as? CommandExecutionException)?.cause as? LiquibaseException) ?: this

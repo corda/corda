@@ -40,8 +40,14 @@ dependencies {
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
-    // required to use @Type annotation
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    // Hibernate annotations used by the schemas (e.g. @JdbcTypeCode) and org.hibernate.Session in SessionScope.
+    implementation "org.hibernate.orm:hibernate-core:$hibernate_version"
+    // NodeVerificationSupport uses the ASM that byte-buddy repackages (net.bytebuddy.jar.asm). Hibernate 5 put byte-buddy on the
+    // compile classpath; Hibernate 7 only puts it on the runtime classpath.
+    implementation "net.bytebuddy:byte-buddy:$byte_buddy_version"
+    // IdentityService throws javax.transaction.NotSupportedException. Hibernate 5 supplied the javax.transaction package
+    // (jboss-transaction-api_1.2_spec); Hibernate 7 depends on jakarta.transaction instead.
+    implementation "javax.transaction:javax.transaction-api:$javax_transaction_version"
     // FastThreadLocal
     implementation "io.netty:netty-common:$netty_version"
     implementation "io.github.classgraph:classgraph:$class_graph_version"
@@ -107,6 +113,7 @@ tasks.register('testJar', Jar) {
 quasar {
     excludePackages.addAll(
             "antlr**",
+            "org.antlr**", // ANTLR 4, which Hibernate 7 uses to parse HQL (Hibernate 5 used ANTLR 2, in antlr.*)
             "com.codahale**",
             "com.fasterxml.**",
             "com.github.benmanes.caffeine.**",

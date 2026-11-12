@@ -69,6 +69,22 @@ interface KeyManagementService {
     fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey>
 
     /**
+     * Returns true if the key has been rotated, otherwise false.
+     */
+    fun isKeyRotated(candidateKey: PublicKey): Boolean { return false }
+
+    /**
+     * Returns true if the node has any rotated keys, otherwise false.
+     */
+    fun hasRotatedKeys(): Boolean { return false }
+
+    /**
+     * Returns the node's identity keys that have been rotated, as recorded by its key rotation proofs, or an empty set if no key has
+     * been rotated.
+     */
+    fun rotatedKeys(): Set<PublicKey> { return emptySet() }
+
+    /**
      * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
      * @param bytes The data to sign over using the chosen key.
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,

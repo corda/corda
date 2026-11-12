@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.keyrotation.crossprovider.getOriginalKey
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -97,6 +98,10 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // One of the signatures collected so far MUST be from the initiator of this flow.
         require(partiallySignedTx.sigs.any { it.by in myKeys }) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
+        }
+
+        require(partiallySignedTx.sigs.all { it.signatureMetadata.proofChain == null || it.signatureMetadata.proofChain.isEmpty() }) {
+            "Cross-provider key rotation is not supported by Corda OS."
         }
 
         // The signatures must be valid and the transaction must be valid.
@@ -209,9 +214,15 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
         // for us to check we have the expected signature returned.
         session.send(signingKeys)
         return session.receive<List<TransactionSignature>>().unwrap { signatures ->
-            require(signatures.size == signingKeys.size) { "Need signature for each signing key" }
-            signatures.forEachIndexed { index, signature ->
-                require(signingKeys[index].isFulfilledBy(signature.by)) { "Not signed by the required signing key." }
+
+            // Some signing keys might have different versions due to key rotation, so we need to get the original keys for comparison
+            // The signatures are always created with the latest version of the key but the required signing keys might still be the old version
+            // so we need to check the original keys of the signatures against the required signing keys.
+            val signaturesKey = signatures.map { it.getOriginalKey() }
+
+            require(signaturesKey.size == signingKeys.size) { "Need signature for each signing key" }
+            signaturesKey.forEachIndexed { index, signatureKey ->
+                require(signingKeys[index].isFulfilledBy(signatureKey)) { "Not signed by the required signing key." }
             }
             signatures
         }

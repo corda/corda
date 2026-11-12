@@ -44,6 +44,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
+import jakarta.persistence.OptimisticLockException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -102,7 +103,7 @@ class DBCheckpointStorageTests {
                 checkpoint,
                 checkpointStorage.checkpoints().single().deserialize()
             )
-            session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).also {
+            session.find(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).also {
                 assertNotNull(it)
                 assertNotNull(it.blob)
             }
@@ -179,6 +180,31 @@ class DBCheckpointStorageTests {
                     pausedCheckpoint.copy(flowState = FlowState.Paused),
                     checkpointStorage.checkpoints().single().deserialize()
             )
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `updating a checkpoint that has been removed fails and does not recreate it`() {
+        val (id, checkpoint) = newCheckpoint()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, checkpoint.serializeFlowState(), checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.removeCheckpoint(id)
+        }
+        // This is what happens when a flow is killed while one of its transitions is being executed. Hibernate 5's Session.update()
+        // failed with an OptimisticLockException; Session.merge() would have inserted the checkpoint again.
+        val updatedCheckpoint = checkpoint.copy(progressStep = "I have made progress")
+        assertThatThrownBy {
+            database.transaction {
+                checkpointStorage.updateCheckpoint(
+                    id, updatedCheckpoint, updatedCheckpoint.serializeFlowState(), updatedCheckpoint.serializeCheckpointState()
+                )
+            }
+        }.isInstanceOf(OptimisticLockException::class.java)
+        database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
         }
     }
 
@@ -350,7 +376,7 @@ class DBCheckpointStorageTests {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
         }
         database.transaction {
-            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+            session.find(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
                 assertNotNull(it)
             }
         }
@@ -364,7 +390,7 @@ class DBCheckpointStorageTests {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
         }
         val metadata = database.transaction {
-            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+            session.find(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
                 assertNotNull(it)
             }
         }
@@ -377,7 +403,7 @@ class DBCheckpointStorageTests {
             checkpointStorage.updateCheckpoint(id, updatedCheckpoint, serializedFlowState, updatedCheckpoint.serializeCheckpointState())
         }
         val potentiallyUpdatedMetadata = database.transaction {
-            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString())
+            session.find(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString())
         }
         assertEquals(metadata, potentiallyUpdatedMetadata)
     }
@@ -427,7 +453,7 @@ class DBCheckpointStorageTests {
                 result,
                 checkpointStorage.getCheckpoint(id)!!.deserialize().result
             )
-            assertNotNull(session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).result)
+            assertNotNull(session.find(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).result)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
         }
     }
@@ -446,7 +472,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             // Checkpoint always returns clean error state when retrieved via [getCheckpoint]
             assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
-            val exceptionDetails = session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
+            val exceptionDetails = session.find(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
             assertNotNull(exceptionDetails)
             assertEquals(exception::class.java.name, exceptionDetails!!.type)
             assertEquals(exception.message, exceptionDetails.message)

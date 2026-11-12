@@ -2,11 +2,12 @@ package net.corda.core.schemas
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.MappedSuperclass
-import javax.persistence.Transient
+import jakarta.persistence.Column
+import jakarta.persistence.MappedSuperclass
+import jakarta.persistence.Transient
 
 /**
  * JPA representation of the common schema entities
@@ -35,7 +36,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            @Type(type = "uuid-char")
+            @JdbcTypeCode(SqlTypes.VARCHAR)
             var uuid: UUID
 
     ) : PersistentState() {
@@ -76,7 +77,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             var issuer: AbstractParty,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
-            @Type(type = "corda-wrapper-binary")
+            @JdbcTypeCode(SqlTypes.VARBINARY)
             var issuerRef: ByteArray
     ) : PersistentState()
 }

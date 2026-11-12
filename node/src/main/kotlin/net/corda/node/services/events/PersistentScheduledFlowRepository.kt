@@ -48,7 +48,7 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence) : Schedu
                 session.merge(toPersistentEntity(value.ref, value))
                 true
             } else {
-                session.save(toPersistentEntity(value.ref, value))
+                session.persist(toPersistentEntity(value.ref, value))
                 false
             }
         }

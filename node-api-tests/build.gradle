@@ -11,7 +11,7 @@ dependencies {
     testImplementation project(":core-test-utils")
     testImplementation project(path: ':node-api', configuration:'testArtifacts')
 
-    testImplementation "javax.persistence:javax.persistence-api:2.2"
+    testImplementation "jakarta.persistence:jakarta.persistence-api:$jakarta_persistence_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
@@ -19,6 +19,7 @@ dependencies {
     testImplementation "io.dropwizard.metrics:metrics-core:$metrics_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     testImplementation "io.netty:netty-transport-native-unix-common:$netty_version"
     testImplementation "io.netty:netty-handler-proxy:$netty_version"

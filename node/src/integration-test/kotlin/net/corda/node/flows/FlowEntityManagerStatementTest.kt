@@ -13,7 +13,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.Test
-import javax.persistence.PersistenceException
+import jakarta.persistence.PersistenceException
 import kotlin.test.assertEquals
 
 class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {

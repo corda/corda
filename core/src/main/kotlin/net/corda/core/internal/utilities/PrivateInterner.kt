@@ -63,10 +63,10 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
         }
     }
 
-    // Guava's Interner is null-marked (JSpecify) and only accepts non-null elements. T is unbounded here (and this source must
-    // also compile with Kotlin 1.2 for core-1.2, so `T & Any` is not available), hence type the interner on Any and cast back.
-    private val interner: Interner<Any> = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build()
+    private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<Any>()
 
-    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, uncheckedCast<Any?, T>(interner.intern(sample!!))))
+    // Guava's interners now carry nullability annotations, so this holds Any rather than T (which may be nullable).
+    @Suppress("UNCHECKED_CAST")
+    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample!!) as T))
 }
 

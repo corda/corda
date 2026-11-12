@@ -211,7 +211,7 @@ class RaftTransactionCommitLog<E, EK>(
             // Clean notarisation request log
             val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentUniquenessProvider.Request::class.java)
             deleteQuery.from(PersistentUniquenessProvider.Request::class.java)
-            session.createQuery(deleteQuery).executeUpdate()
+            session.createMutationQuery(deleteQuery).executeUpdate()
             // Load and populate request log
             for (i in 1..reader.readInt()) {
                 val bytes = ByteArray(reader.readUnsignedShort())

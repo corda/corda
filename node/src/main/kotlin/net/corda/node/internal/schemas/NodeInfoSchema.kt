@@ -10,7 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
-import javax.persistence.*
+import jakarta.persistence.*
 
 object NodeInfoSchema
 

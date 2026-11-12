@@ -44,6 +44,7 @@ dependencies {
     implementation project(':client:rpc')
 
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     implementation "io.reactivex:rxjava:$rxjava_version"
 
     // For caches rather than guava

@@ -44,7 +44,7 @@ import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import javax.persistence.PersistenceException
+import jakarta.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

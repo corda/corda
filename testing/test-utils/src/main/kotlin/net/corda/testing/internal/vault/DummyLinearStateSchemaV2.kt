@@ -4,7 +4,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import javax.persistence.*
+import jakarta.persistence.*
 
 /**
  * Second version of a cash contract ORM schema that extends the common

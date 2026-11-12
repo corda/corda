@@ -3,9 +3,9 @@ package net.corda.coretests.schemas;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.schemas.PersistentState;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Transient;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 import java.util.Arrays;
 
 public class PoliteSchemaJavaV1 extends MappedSchema {

@@ -4,7 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.OpaqueBytes
-import javax.persistence.*
+import jakarta.persistence.*
 
 /**
  * Second version of a cash contract ORM schema that extends the [CommonSchemaV1.FungibleState] abstract schema.

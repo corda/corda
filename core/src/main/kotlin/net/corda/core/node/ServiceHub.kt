@@ -24,7 +24,7 @@ import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
 import java.util.function.Consumer
-import javax.persistence.EntityManager
+import jakarta.persistence.EntityManager
 
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
@@ -308,7 +308,23 @@ interface ServiceHub : ServicesForResolution {
      * Any existing signatures on the builder will be preserved.
      * @return Returns a SignedTransaction with the new node signature attached.
      */
-    fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction = signInitialTransaction(builder, legalIdentityKey)
+    @Suppress("NestedBlockDepth")
+    fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction {
+
+        if(keyManagementService.hasRotatedKeys()) {
+            val requiredSigners = builder.commands().flatMap { it.signers }.toSet()
+            if (legalIdentityKey !in requiredSigners) {
+                // The node might have rotated its key but the CorDapp is still using the old one,
+                // so we need to check if any of the required keys is an old key that has been rotated and if so, sign with that key instead.
+                for (requiredSigner in requiredSigners) {
+                    if (keyManagementService.isKeyRotated(requiredSigner)) {
+                        return signInitialTransaction(builder, requiredSigner)
+                    }
+                }
+            }
+        }
+        return signInitialTransaction(builder, legalIdentityKey)
+    }
 
     /**
      * Helper method to construct an initial partially signed transaction from a [TransactionBuilder]

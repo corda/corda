@@ -2,8 +2,9 @@ package net.corda.nodeapi.internal.persistence.factory
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.toHexString
+import net.corda.nodeapi.internal.cordapp.CordappClassLoader
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.JavaxPersistenceTransformer
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
@@ -11,17 +12,18 @@ import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
-import org.hibernate.type.AbstractSingleColumnStandardBasicType
-import org.hibernate.type.MaterializedBlobType
-import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
-import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
-import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
-import javax.persistence.AttributeConverter
+import jakarta.persistence.AttributeConverter
 
 abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     companion object {
         private val logger = contextLogger()
     }
+
+    /** The JDBC type used for [java.util.UUID]s that have no explicit mapping. See "hibernate.type.preferred_uuid_jdbc_type". */
+    protected open val preferredUuidJdbcType: String = HibernateCompatibility.DEFAULT_UUID_JDBC_TYPE
+
+    /** The JDBC type used for [Boolean]s, or null for the dialect's default. See "hibernate.type.preferred_boolean_jdbc_type". */
+    protected open val preferredBooleanJdbcType: String? = null
 
     open fun buildHibernateConfig(metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
@@ -32,23 +34,24 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 }
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
-                .setProperty("javax.persistence.validation.mode", "none")
+                .setProperty("jakarta.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
+
+        // Retain the behaviour of Hibernate 5, so that existing databases continue to work without any changes.
+        HibernateCompatibility.settings(preferredUuidJdbcType, preferredBooleanJdbcType).forEach { (name, value) ->
+            config.setProperty(name, value)
+        }
+
+        return config
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
         return metadataBuilder.run {
             attributeConverters.forEach { applyAttributeConverter(it) }
-            // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
-            // to avoid OOM when large blobs might get logged.
-            applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
-            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-            applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
-
             build()
         }
     }
@@ -66,7 +69,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             allowOutOfTransactionUpdateOperations(true)
             applySecondLevelCacheSupport(false)
             applyQueryCacheSupport(false)
-            enableReleaseResourcesOnCloseEnabled(true)
             build()
         }
     }
@@ -90,7 +92,10 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
 
         val config = buildHibernateConfig(metadataSources, allowHibernateToMananageAppSchema)
         schemas.forEach { schema ->
-            schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
+            schema.mappedTypes.forEach {
+                checkConvertedIfBuiltForJavaxPersistence(schema, it)
+                config.addAnnotatedClass(it)
+            }
         }
         val sessionFactory = buildSessionFactory(config, metadataSources, attributeConverters)
         logger.info("Created session factory for schemas: $schemas")
@@ -101,44 +106,54 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         return null
     }
 
-    // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
-    object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
-        override fun getRegistrationKeys(): Array<String> {
-            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+    /**
+     * Hibernate 7 only understands the annotations of Jakarta Persistence. A class that was built against the `javax.persistence`
+     * annotations only (i.e. a CorDapp built for Corda 4.14 or earlier) is converted to `jakarta.persistence` by the node's CorDapp class
+     * loader as it is loaded ([JavaxPersistenceTransformer]), and the loader records it ([CordappClassLoader.convertedClassNames]). A class
+     * whose class file is built for `javax.persistence` but which the loader did not convert did not come through it, which happens
+     * when the CorDapp's classes are on the node's own classpath (MockNetwork, MockServices, in-process driver nodes, and CorDapps
+     * supplied from class directories); Hibernate would silently ignore such a class and then fail in obscure ways, so fail early with
+     * a message that explains what to do. The loader is asked first, because a mapped type need not carry a class-level annotation at all
+     * (Hibernate ignores such an entry, as it did on Corda 4.14); a class converted by other means (a class file transformer in a test
+     * JVM) shows its conversion in the `jakarta.persistence` annotations of the class or its members, which is accepted too.
+     *
+     * A class that carries both sets of annotations (a CorDapp built to run on Corda 4.14 and 4.15 alike) is left alone by the class
+     * loader and accepted here: Hibernate reads the `jakarta.persistence` annotations and the JVM ignores the `javax.persistence` ones,
+     * whose classes are not on the classpath.
+     */
+    private fun checkConvertedIfBuiltForJavaxPersistence(schema: MappedSchema, type: Class<*>) {
+        val classLoader = type.classLoader ?: return
+        val classBytes = classLoader
+                .getResourceAsStream(type.name.replace('.', '/') + ".class")
+                ?.use { it.readBytes() }
+                ?: return
+        if (!JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(classBytes)) return
+        val convertedByLoader = classLoader is CordappClassLoader && type.name in classLoader.convertedClassNames
+        check(convertedByLoader || hasJakartaPersistenceAnnotations(type)) {
+            "The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier, as it uses the " +
+                    "javax.persistence annotations, and was not loaded through the node's CorDapp class loader, which converts such " +
+                    "classes for Hibernate 7 (Corda 4.15). This happens when the CorDapp's classes are on the node's own classpath: in a " +
+                    "MockNetwork or MockServices test, on an in-process driver node, or when the CorDapp comes from a class directory " +
+                    "(cordappsForPackages) rather than a jar. Build the CorDapp for Corda 4.15 to test it there, or test the unported " +
+                    "jar on an out-of-process driver node or a real node, which convert it - see the \"Upgrading to Hibernate 7\" " +
+                    "documentation."
         }
-
-        override fun getName(): String {
-            return "corda-wrapper-binary"
-        }
+        logger.info("The class ${type.name} of the schema ${schema::class.java.name} was built for Corda 4.14 or earlier " +
+                "(javax.persistence) and has been converted for Hibernate 7" + if (convertedByLoader) " by the CorDapp class loader" else "")
     }
 
-    object MapBlobToNormalBlob : MaterializedBlobType() {
-        override fun getName(): String {
-            return "corda-blob"
-        }
-    }
-
-    // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
-    private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
-        private const val LOG_SIZE_LIMIT = 1024
-
-        override fun extractLoggableRepresentation(value: ByteArray?): String {
-            return if (value == null) {
-                super.extractLoggableRepresentation(value)
-            } else {
-                if (value.size <= LOG_SIZE_LIMIT) {
-                    "[size=${value.size}, value=${value.toHexString()}]"
-                } else {
-                    "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
-                }
-            }
-        }
-    }
-
-    // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
-    object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
-        override fun getName(): String {
-            return "materialized_blob"
-        }
+    /**
+     * Whether the loaded class, or any of its declared members, carries a `jakarta.persistence` annotation. Reflecting on an unconverted
+     * class can fail (a member typed on `javax.persistence`, which is not on the classpath); that counts as "no", so that the caller's
+     * message is the one reported.
+     */
+    private fun hasJakartaPersistenceAnnotations(type: Class<*>): Boolean {
+        return runCatching {
+            val annotated = sequenceOf(type.annotations.asSequence(),
+                    type.declaredFields.asSequence().flatMap { it.annotations.asSequence() },
+                    type.declaredMethods.asSequence().flatMap { it.annotations.asSequence() },
+                    type.declaredConstructors.asSequence().flatMap { it.annotations.asSequence() }).flatten()
+            annotated.any { it.annotationClass.java.name.startsWith("jakarta.persistence.") }
+        }.getOrDefault(false)
     }
 }

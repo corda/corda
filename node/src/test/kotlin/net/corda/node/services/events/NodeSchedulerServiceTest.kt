@@ -1,6 +1,7 @@
 package net.corda.node.services.events
 
 import org.mockito.kotlin.*
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
@@ -37,9 +38,11 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 private const val ASSERT_TIMEOUT_MS = 30_000L
@@ -152,7 +155,8 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             nodeProperties,
             Duration.ofSeconds(5),
             log,
-            schedulerRepo = MockScheduledFlowRepository()
+            schedulerRepo = MockScheduledFlowRepository(),
+            metricRegistry = MetricRegistry()
     ).apply { start() }
 
     // Runs before the rule below, and always, so that the scheduler never outlives the database it uses.
@@ -288,6 +292,27 @@ class NodeSchedulerServiceDatabaseFailureTest : NodeSchedulerServiceTestBase() {
         override fun delete(key: StateRef) = delegate.delete(key)
     }
 
+    /**
+     * Fails the first [failures] calls to [getLatest] the way a database connection timeout would, and records the
+     * value of the [Scheduler.ConsecutiveDatabaseFailures] gauge observed at the start of every call so that a test can
+     * assert how the gauge evolves while the outage is ongoing, not just its value once loading has recovered.
+     */
+    private class ConsecutiveFailureObservingRepository(private var failures: Int, private val metricRegistry: MetricRegistry) : ScheduledFlowRepository {
+        private val delegate = MockScheduledFlowRepository()
+        val observedConsecutiveFailures = CopyOnWriteArrayList<Int>()
+
+        override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
+            observedConsecutiveFailures += metricRegistry.gauges.getValue(NodeSchedulerService.CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME).value as Int
+            if (failures-- > 0) {
+                throw SQLTransientConnectionException("Connection is not available, request timed out")
+            }
+            return delegate.getLatest(lookahead)
+        }
+
+        override fun merge(value: ScheduledStateRef) = delegate.merge(value)
+        override fun delete(key: StateRef) = delegate.delete(key)
+    }
+
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
 
     @After
@@ -317,7 +342,8 @@ class NodeSchedulerServiceDatabaseFailureTest : NodeSchedulerServiceTestBase() {
                 nodeProperties,
                 Duration.ofSeconds(5),
                 log,
-                schedulerRepo = repo
+                schedulerRepo = repo,
+                metricRegistry = MetricRegistry()
         )
         try {
             scheduler.start()
@@ -340,6 +366,56 @@ class NodeSchedulerServiceDatabaseFailureTest : NodeSchedulerServiceTestBase() {
             scheduler.close()
         }
     }
+
+    @Test(timeout=300_000)
+    fun `scheduler exposes database failures and recovery through metrics`() {
+        val metricRegistry = MetricRegistry()
+        val repo = ConsecutiveFailureObservingRepository(failures = 3, metricRegistry = metricRegistry)
+        val event = Event(mark)
+        val logicRef = rigorousMock<FlowLogicRef>()
+        transactionStates[event.stateRef] = rigorousMock<TransactionState<SchedulableState>>().also {
+            doReturn(rigorousMock<SchedulableState>().also {
+                doReturn(ScheduledActivity(logicRef, mark)).whenever(it).nextScheduledActivity(same(event.stateRef), any())
+            }).whenever(it).data
+        }
+        flows[logicRef] = event.flowLogic
+        repo.merge(event.ssr)
+
+        val scheduler = NodeSchedulerService(
+                testClock,
+                database,
+                flowStarter,
+                servicesForResolution,
+                flowLogicRefFactory,
+                nodeProperties,
+                Duration.ofSeconds(5),
+                log,
+                schedulerRepo = repo,
+                metricRegistry = metricRegistry
+        )
+        try {
+            scheduler.start()
+            val deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30)
+            while (!mockingDetails(flowStarter).invocations.any { it.method.name == "startFlow" } && System.currentTimeMillis() < deadline) {
+                testClock.advanceBy(1.minutes)
+                Thread.sleep(50)
+            }
+            assertStarted(event)
+            // Sampled at the start of every load attempt, the ConsecutiveDatabaseFailures gauge climbs by one for each
+            // consecutive failure and drops straight back to zero once a load succeeds: zero before the first attempt,
+            // one, two and three after each of the three failures, so the fourth (successful) attempt still sees three.
+            assertEquals(listOf(0, 1, 2, 3), repo.observedConsecutiveFailures.take(4))
+            // Once loading has recovered the gauge reads zero again...
+            assertEquals(0, metricRegistry.gauges.getValue(NodeSchedulerService.CONSECUTIVE_DATABASE_FAILURES_METRIC_NAME).value)
+            // ...while every failure remains counted in the running DatabaseFailures total.
+            assertEquals(3L, metricRegistry.counter(NodeSchedulerService.DATABASE_FAILURES_METRIC_NAME).count)
+            // The stall gauge is registered and never reports a negative value (it is zero for a healthy scheduler).
+            val millisStalled = metricRegistry.gauges.getValue(NodeSchedulerService.MILLIS_STALLED_METRIC_NAME).value as Long
+            assertTrue(millisStalled >= 0)
+        } finally {
+            scheduler.close()
+        }
+    }
 }
 
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
@@ -354,7 +430,8 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
                 flowLogicRefFactory = flowLogicRefFactory,
                 nodeProperties = nodeProperties,
                 drainingModePollPeriod = Duration.ofSeconds(5),
-                log = log).apply { start() }
+                log = log,
+                metricRegistry = MetricRegistry()).apply { start() }
     }
 
     private fun transactionStateMock(logicRef: FlowLogicRef, time: Instant): TransactionState<*> {

@@ -25,7 +25,9 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.hibernate.annotations.Type
+import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.security.Principal
 import java.sql.Connection
 import java.sql.SQLException
@@ -33,12 +35,13 @@ import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.FetchType
-import javax.persistence.Id
-import javax.persistence.OneToOne
-import javax.persistence.PrimaryKeyJoinColumn
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.OneToOne
+import jakarta.persistence.OptimisticLockException
+import jakarta.persistence.PrimaryKeyJoinColumn
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -63,24 +66,6 @@ class DBCheckpointStorage(
         const val MAX_CLIENT_ID_LENGTH = 512
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
-
-        // This is a dummy [DBFlowMetadata] object which help us whenever we want to persist a [DBFlowCheckpoint], but not persist its [DBFlowMetadata].
-        // [DBFlowCheckpoint] needs to always reference a [DBFlowMetadata] ([DBFlowCheckpoint.flowMetadata] is not nullable).
-        // However, since we do not -hibernate- cascade, it does not get persisted into the database.
-        private val dummyDBFlowMetadata: DBFlowMetadata = DBFlowMetadata(
-                flowId = "dummyFlowId",
-                invocationId = "dummyInvocationId",
-                flowName = "dummyFlowName",
-                userSuppliedIdentifier = "dummyUserSuppliedIdentifier",
-                startType = StartReason.INITIATED,
-                initialParameters = ByteArray(0),
-                launchingCordapp = "dummyLaunchingCordapp",
-                platformVersion = -1,
-                startedBy = "dummyStartedBy",
-                invocationInstant = Instant.now(),
-                startInstant = Instant.now(),
-                finishInstant = null
-        )
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -111,7 +96,7 @@ class DBCheckpointStorage(
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     data class DBFlowCheckpoint(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
@@ -150,21 +135,21 @@ class DBCheckpointStorage(
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoint_blobs")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoint_blobs")
     data class DBFlowCheckpointBlob(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
         var flowId: String,
 
-        @Type(type = "corda-blob")
+        @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
         @Column(name = "checkpoint_value", nullable = false)
         var checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
 
-        @Type(type = "corda-blob")
+        @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
         @Column(name = "flow_state", nullable = true)
         var flowStack: ByteArray?,
 
-        @Type(type = "corda-wrapper-binary")
+        @JdbcTypeCode(SqlTypes.VARBINARY)
         @Column(name = "hmac")
         var hmac: ByteArray,
 
@@ -201,13 +186,13 @@ class DBCheckpointStorage(
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
     data class DBFlowResult(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
         var flow_id: String,
 
-        @Type(type = "corda-blob")
+        @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
         @Column(name = "result_value", nullable = true)
         var value: ByteArray? = null,
 
@@ -239,7 +224,7 @@ class DBCheckpointStorage(
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
     data class DBFlowException(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
@@ -254,7 +239,7 @@ class DBCheckpointStorage(
         @Column(name = "stack_trace", nullable = false)
         var stackTrace: String,
 
-        @Type(type = "corda-blob")
+        @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
         @Column(name = "exception_value")
         var value: ByteArray? = null,
 
@@ -291,7 +276,7 @@ class DBCheckpointStorage(
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
+    @jakarta.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
     data class DBFlowMetadata(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
@@ -309,7 +294,7 @@ class DBCheckpointStorage(
         @Column(name = "started_type", nullable = false)
         var startType: StartReason,
 
-        @Type(type = "corda-blob")
+        @JdbcTypeCode(CordaSqlTypes.CORDA_BLOB)
         @Column(name = "flow_parameters", nullable = false)
         var initialParameters: ByteArray = EMPTY_BYTE_ARRAY,
 
@@ -413,10 +398,10 @@ class DBCheckpointStorage(
             checkpointInstant = now
         )
 
-        currentDBSession().save(dbFlowCheckpoint)
-        currentDBSession().save(blob)
-        currentDBSession().save(metadata)
-        dbFlowException?.let { currentDBSession().save(it) }
+        currentDBSession().persist(dbFlowCheckpoint)
+        currentDBSession().persist(blob)
+        currentDBSession().persist(metadata)
+        dbFlowException?.let { currentDBSession().persist(it) }
     }
 
     @Suppress("ComplexMethod")
@@ -436,7 +421,7 @@ class DBCheckpointStorage(
             // We need to update only the 'flowState' to null, and we don't want to update the checkpoint state
             // because we want to retain the last clean checkpoint state, therefore just use a query for that update.
             currentDBSession()
-                .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoint_blobs set flow_state = null where flow_id = :flow_id")
+                .createNativeMutationQuery("Update ${NODE_DATABASE_PREFIX}checkpoint_blobs set flow_state = null where flow_id = :flow_id")
                 .setParameter("flow_id", flowId)
                 .executeUpdate()
             null
@@ -468,32 +453,68 @@ class DBCheckpointStorage(
             null
         }
 
-        // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
-        val dbFlowCheckpoint = DBFlowCheckpoint(
-            flowId = flowId,
-            blob = blob,
-            result = dbFlowResult,
-            exceptionDetails = dbFlowException,
-            flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
-            status = checkpoint.status,
-            compatible = checkpoint.compatible,
-            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
-            ioRequestType = checkpoint.flowIoRequest,
-            checkpointInstant = now
-        )
-
-        currentDBSession().update(dbFlowCheckpoint)
-        blob?.let { currentDBSession().update(it) }
-        dbFlowResult?.let { currentDBSession().save(it) }
-        dbFlowException?.let { currentDBSession().save(it) }
+        // The checkpoint and its blob are updated with queries rather than with Session.merge(). merge() has to load the existing
+        // row first, and with it every child entity (they share the checkpoint's primary key, so are always fetched eagerly),
+        // including the whole of the old blob, only to overwrite it. The queries issue just the two UPDATEs, as Session.update()
+        // did in Hibernate 5. [DBFlowMetadata] only has its 'finish_time' updated, when a checkpoint finishes.
+        updateDBFlowCheckpoint(flowId, checkpoint, now)
+        blob?.let { updateDBFlowCheckpointBlob(it) }
+        dbFlowResult?.let { currentDBSession().persist(it) }
+        dbFlowException?.let { currentDBSession().persist(it) }
         if (checkpoint.isFinished()) {
             setDBFlowMetadataFinishTime(flowId, now)
         }
     }
 
+    private fun updateDBFlowCheckpoint(flowId: String, checkpoint: Checkpoint, now: Instant) {
+        val rowsUpdated = currentDBSession()
+            .createMutationQuery("""update ${DBFlowCheckpoint::class.java.name} checkpoint
+                set checkpoint.${DBFlowCheckpoint::status.name} = :status,
+                    checkpoint.${DBFlowCheckpoint::compatible.name} = :compatible,
+                    checkpoint.${DBFlowCheckpoint::progressStep.name} = :progressStep,
+                    checkpoint.${DBFlowCheckpoint::ioRequestType.name} = :ioRequestType,
+                    checkpoint.${DBFlowCheckpoint::checkpointInstant.name} = :checkpointInstant
+                where checkpoint.${DBFlowCheckpoint::flowId.name} = :flowId""")
+            .setParameter("status", checkpoint.status)
+            .setParameter("compatible", checkpoint.compatible)
+            .setParameter("progressStep", checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH))
+            .setParameter("ioRequestType", checkpoint.flowIoRequest)
+            .setParameter("checkpointInstant", now)
+            .setParameter("flowId", flowId)
+            .executeUpdate()
+        checkRowUpdated(rowsUpdated, "checkpoint", flowId)
+    }
+
+    private fun updateDBFlowCheckpointBlob(blob: DBFlowCheckpointBlob) {
+        val rowsUpdated = currentDBSession()
+            .createMutationQuery("""update ${DBFlowCheckpointBlob::class.java.name} blob
+                set blob.${DBFlowCheckpointBlob::checkpoint.name} = :checkpoint,
+                    blob.${DBFlowCheckpointBlob::flowStack.name} = :flowStack,
+                    blob.${DBFlowCheckpointBlob::hmac.name} = :hmac,
+                    blob.${DBFlowCheckpointBlob::persistedInstant.name} = :persistedInstant
+                where blob.${DBFlowCheckpointBlob::flowId.name} = :flowId""")
+            .setParameter("checkpoint", blob.checkpoint)
+            .setParameter("flowStack", blob.flowStack)
+            .setParameter("hmac", blob.hmac)
+            .setParameter("persistedInstant", blob.persistedInstant)
+            .setParameter("flowId", blob.flowId)
+            .executeUpdate()
+        checkRowUpdated(rowsUpdated, "checkpoint blob", blob.flowId)
+    }
+
+    /**
+     * Fails in the same way that Session.update() did in Hibernate 5 if the row no longer exists, which happens if the flow was killed
+     * (and its checkpoint deleted) while this transition was being executed. [TransitionExecutorImpl] recognises this exception.
+     */
+    private fun checkRowUpdated(rowsUpdated: Int, entity: String, flowId: String) {
+        if (rowsUpdated == 0) {
+            throw OptimisticLockException("The $entity of flow $flowId could not be updated as it no longer exists")
+        }
+    }
+
     override fun markAllPaused() {
         currentDBSession()
-            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :paused_status where status in :runnable_statuses")
+            .createNativeMutationQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :paused_status where status in :runnable_statuses")
             .setParameter("paused_status", FlowStatus.PAUSED.ordinal)
             .setParameter("runnable_statuses", RUNNABLE_CHECKPOINTS.map { it.ordinal })
             .executeUpdate()
@@ -519,7 +540,7 @@ class DBCheckpointStorage(
         val delete = criteriaBuilder.createCriteriaDelete(clazz)
         val root = delete.from(clazz)
         delete.where(criteriaBuilder.equal(root.get<String>(pk), value))
-        return session.createQuery(delete).executeUpdate()
+        return session.createMutationQuery(delete).executeUpdate()
     }
 
     @Throws(SQLException::class)
@@ -561,8 +582,8 @@ class DBCheckpointStorage(
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
                 checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible, exception.id) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
-                join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id
-                left outer join ${DBFlowException::class.java.name} exception on checkpoint.exceptionDetails = exception.id
+                join checkpoint.${DBFlowCheckpoint::blob.name} blob
+                left outer join checkpoint.${DBFlowCheckpoint::exceptionDetails.name} exception
                 where checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
@@ -580,7 +601,7 @@ class DBCheckpointStorage(
                     metadata.startedBy
                 ) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
-                join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
+                join checkpoint.${DBFlowCheckpoint::flowMetadata.name} metadata
                 where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}
                 or checkpoint.status = ${FlowStatus.FAILED.ordinal}
                 or checkpoint.status = ${FlowStatus.KILLED.ordinal}""".trimIndent()
@@ -610,7 +631,7 @@ class DBCheckpointStorage(
     }
 
     override fun addFlowException(id: StateMachineRunId, exception: Throwable) {
-        currentDBSession().save(createDBFlowException(id.uuid.toString(), exception, clock.instant()))
+        currentDBSession().persist(createDBFlowException(id.uuid.toString(), exception, clock.instant()))
     }
 
     override fun removeFlowException(id: StateMachineRunId): Boolean {
@@ -619,7 +640,7 @@ class DBCheckpointStorage(
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
         currentDBSession()
-            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :status, timestamp = :timestamp where flow_id = :id")
+            .createNativeMutationQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :status, timestamp = :timestamp where flow_id = :id")
             .setParameter("status", flowStatus.ordinal)
             .setParameter("timestamp", clock.instant())
             .setParameter("id", runId.uuid.toString())
@@ -628,7 +649,7 @@ class DBCheckpointStorage(
 
     override fun updateCompatible(runId: StateMachineRunId, compatible: Boolean) {
         currentDBSession()
-            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set compatible = :compatible where flow_id = :flow_id")
+            .createNativeMutationQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set compatible = :compatible where flow_id = :flow_id")
             .setParameter("compatible", compatible)
             .setParameter("flow_id", runId.uuid.toString())
             .executeUpdate()
@@ -691,7 +712,7 @@ class DBCheckpointStorage(
 
     private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
         currentDBSession()
-            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = :finish_time where flow_id = :flow_id")
+            .createNativeMutationQuery("Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = :finish_time where flow_id = :flow_id")
             .setParameter("finish_time", now)
             .setParameter("flow_id", flowId)
             .executeUpdate()

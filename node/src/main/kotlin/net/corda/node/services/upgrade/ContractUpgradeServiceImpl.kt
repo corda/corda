@@ -7,10 +7,10 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 
 @Suppress("MagicNumber") // database column length
 class ContractUpgradeServiceImpl(cacheFactory: NamedCacheFactory) : ContractUpgradeService, SingletonSerializeAsToken() {

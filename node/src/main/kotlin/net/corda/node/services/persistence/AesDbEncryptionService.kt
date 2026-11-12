@@ -8,7 +8,8 @@ import net.corda.node.services.EncryptionService
 import net.corda.nodeapi.internal.crypto.AesEncryption
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.hibernate.annotations.Type
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.nio.ByteBuffer
 import java.security.Key
 import java.security.MessageDigest
@@ -16,10 +17,10 @@ import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 
 /**
  * [EncryptionService] which uses AES keys stored in the node database. A random key is chosen for encryption, and the resultant ciphertext
@@ -56,7 +57,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
                         init(Cipher.WRAP_MODE, createKEK(ourIdentity, keyId))
                         wrap(aesKey)
                     }
-                    session.save(EncryptionKeyRecord(keyId = keyId, keyMaterial = wrappedKey))
+                    session.persist(EncryptionKeyRecord(keyId = keyId, keyMaterial = wrappedKey))
                 }
             } else {
                 for (dbKeyRecord in dbKeyRecords) {
@@ -137,7 +138,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
     @Table(name = "${NODE_DATABASE_PREFIX}aes_encryption_keys")
     class EncryptionKeyRecord(
             @Id
-            @Type(type = "uuid-char")
+            @JdbcTypeCode(SqlTypes.VARCHAR)
             @Column(name = "key_id", nullable = false)
             val keyId: UUID,
 

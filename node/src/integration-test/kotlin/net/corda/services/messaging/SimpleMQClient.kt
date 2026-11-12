@@ -5,6 +5,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.coretesting.internal.configureTestSSL
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.*
 
@@ -22,7 +23,12 @@ class SimpleMQClient(val target: NetworkHostAndPort,
     lateinit var producer: ClientProducer
 
     fun start(username: String? = null, password: String? = null, enableSSL: Boolean = true) {
-        val tcpTransport = p2pConnectorTcpTransport(target, config, enableSSL = enableSSL, threadPoolName = "SimpleMQClient")
+        val tcpTransport = if (enableSSL) {
+            p2pConnectorTcpTransport(target, requireNotNull(config) { "An SSL configuration is required when SSL is enabled" }, threadPoolName = "SimpleMQClient")
+        } else {
+            // P2P transports are always TLS, so a plain-text connection (e.g. to a non-SSL RPC port) uses the RPC connector.
+            rpcConnectorTcpTransport(target, null)
+        }
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             isBlockOnNonDurableSend = true
             threadPoolMaxSize = 1

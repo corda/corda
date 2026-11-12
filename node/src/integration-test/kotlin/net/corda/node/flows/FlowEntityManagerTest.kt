@@ -39,7 +39,7 @@ import java.sql.Connection
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
-import javax.persistence.PersistenceException
+import jakarta.persistence.PersistenceException
 import kotlin.test.assertEquals
 
 @Suppress("TooGenericExceptionThrown")

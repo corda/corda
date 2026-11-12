@@ -58,6 +58,7 @@ dependencies {
 
     implementation group: "com.typesafe", name: "config", version: typesafe_config_version
     implementation "com.google.guava:guava:$guava_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     implementation "io.netty:netty-transport-native-unix-common:4.1.77.Final.jar"
 

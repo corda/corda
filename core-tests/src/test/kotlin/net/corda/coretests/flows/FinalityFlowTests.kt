@@ -263,7 +263,7 @@ class FinalityFlowTests : WithFinality {
     private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
         val fromDb = node.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", stxId.toString()).resultList
         }
@@ -492,7 +492,7 @@ class FinalityFlowTests : WithFinality {
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBSenderDistributionRecord::class.java.name} where transaction_id = :transactionId",
+                    "from ${DBSenderDistributionRecord::class.java.name} where compositeKey.txId = :transactionId",
                     DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList
         }
@@ -502,7 +502,7 @@ class FinalityFlowTests : WithFinality {
     private fun getReceiverRecoveryData(txId: SecureHash, receiver: TestStartedNode): ReceiverDistributionRecord? {
         return receiver.database.transaction {
             session.createQuery(
-                    "from ${DBReceiverDistributionRecord::class.java.name} where transaction_id = :transactionId",
+                    "from ${DBReceiverDistributionRecord::class.java.name} where compositeKey.txId = :transactionId",
                     DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", txId.toString()).resultList
         }.singleOrNull()?.toReceiverDistributionRecord()
