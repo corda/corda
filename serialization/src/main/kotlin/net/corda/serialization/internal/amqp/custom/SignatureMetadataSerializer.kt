@@ -53,7 +53,10 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
 
     // writeObject uses these descriptors rather than typeDescriptor: each is registered with a serializer of its own, so that
     // deserialization finds a serializer for the descriptor on the wire.
-    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(legacyDescriptor, extendedDescriptor).map(::WireFormSerializer)
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(
+            WireFormSerializer(legacyDescriptor),
+            WireFormSerializer(extendedDescriptor)
+    )
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         val metadata = obj as SignatureMetadata
