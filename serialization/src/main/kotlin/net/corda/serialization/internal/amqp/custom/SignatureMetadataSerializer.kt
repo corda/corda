@@ -51,11 +51,10 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
 
     override val schemaForDocumentation: Schema = Schema(listOf(extendedTypeNotation))
 
-    // writeObject uses these descriptors rather than typeDescriptor: each is registered with a serializer of its own, so that
-    // deserialization finds a serializer for the descriptor on the wire.
+    // Registered together with this serializer, one for each descriptor that writeObject uses. See SignatureMetadataDeserializer.
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(
-            WireFormSerializer(legacyDescriptor),
-            WireFormSerializer(extendedDescriptor)
+            SignatureMetadataDeserializer(legacyDescriptor),
+            SignatureMetadataDeserializer(extendedDescriptor)
     )
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
@@ -95,10 +94,18 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
     }
 
     /**
-     * Registers [SignatureMetadataSerializer] for one of the descriptors it writes: its type descriptor is that descriptor, and it
-     * reads and writes through [SignatureMetadataSerializer]. It is not the serializer of the class.
+     * Lets deserialization find a serializer for a [SignatureMetadata] by the descriptor it was written under.
+     *
+     * [SignatureMetadataSerializer] writes a [SignatureMetadata] under [legacyDescriptor] or [extendedDescriptor], never under its own
+     * [typeDescriptor]. Deserialization looks the descriptor up in a registry that holds each serializer under that serializer's
+     * [typeDescriptor], so it does not find [SignatureMetadataSerializer]. It then compares the type described in the schema with the
+     * local type and logs "Mismatch between type descriptors, but remote type is not evolvable to local type".
+     *
+     * An instance of this class has one of the two descriptors as its [typeDescriptor], which puts it in the registry under that
+     * descriptor, and reads through [SignatureMetadataSerializer]. It is never used to serialize: [isSerializerFor] returns false, so
+     * [SignatureMetadataSerializer] remains the only serializer of the class.
      */
-    private class WireFormSerializer(override val descriptor: Descriptor) : CustomSerializer<SignatureMetadata>() {
+    private class SignatureMetadataDeserializer(override val descriptor: Descriptor) : CustomSerializer<SignatureMetadata>() {
         override val type: Type get() = SignatureMetadata::class.java
         override val typeDescriptor: Symbol = requireNotNull(descriptor.name)
         override val schemaForDocumentation: Schema = Schema(emptyList())
