@@ -25,8 +25,8 @@ import java.lang.reflect.Type
 object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(SignatureMetadata::class.java) {
     private val legacyFieldTypes = listOf(Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
     private val extendedFieldTypes = legacyFieldTypes + KeyRotationProofChain::class.java
-    private val legacyDescriptor = Descriptor(Symbol.valueOf("net.corda:IzFt8cRKytsJq3vQ+yjsGg=="))
-    private val extendedDescriptor = Descriptor(Symbol.valueOf("net.corda:${AMQPTypeIdentifiers.nameForType(type)}:extended"))
+    internal val legacyDescriptor = Descriptor(Symbol.valueOf("net.corda:IzFt8cRKytsJq3vQ+yjsGg=="))
+    internal val extendedDescriptor = Descriptor(Symbol.valueOf("net.corda:${AMQPTypeIdentifiers.nameForType(type)}:extended"))
     private val legacyTypeNotation = CompositeType(
             AMQPTypeIdentifiers.nameForType(type),
             null,

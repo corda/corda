@@ -17,11 +17,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SignatureMetadataSerializerTest {
-    private companion object {
-        // The descriptors SignatureMetadataSerializer writes on the wire.
-        const val SIGNATURE_METADATA_LEGACY_DESCRIPTOR = "net.corda:IzFt8cRKytsJq3vQ+yjsGg=="
-        const val SIGNATURE_METADATA_EXTENDED_DESCRIPTOR = "net.corda:net.corda.core.crypto.SignatureMetadata:extended"
-    }
+    // The descriptors a serialized SignatureMetadata can have: the legacy one without a proof chain, the extended one with a proof chain.
+    private val signatureMetadataDescriptors = listOf(
+            SignatureMetadataSerializer.legacyDescriptor,
+            SignatureMetadataSerializer.extendedDescriptor
+    ).map { it.name.toString() }
 
     data class Wrapper(val metadata: SignatureMetadata)
 
@@ -45,7 +45,7 @@ class SignatureMetadataSerializerTest {
         val registry = TestDescriptorBasedSerializerRegistry()
         factory(registry)
 
-        listOf(SIGNATURE_METADATA_LEGACY_DESCRIPTOR, SIGNATURE_METADATA_EXTENDED_DESCRIPTOR).forEach { descriptor ->
+        signatureMetadataDescriptors.forEach { descriptor ->
             val serializer = registry.contents.getValue(descriptor)
             assertEquals(descriptor, serializer.typeDescriptor.toString())
             assertEquals(SignatureMetadata::class.java, serializer.type)
@@ -85,7 +85,7 @@ class SignatureMetadataSerializerTest {
             assertEquals(Wrapper(metadata), DeserializationInput(receiver).deserialize(TestSerializationOutput(false, factory()).serialize(Wrapper(metadata))))
         }
 
-        assertTrue(builtFor.none { it == SIGNATURE_METADATA_LEGACY_DESCRIPTOR || it == SIGNATURE_METADATA_EXTENDED_DESCRIPTOR },
+        assertTrue(builtFor.none { it in signatureMetadataDescriptors },
                 "A serializer was built for a SignatureMetadata descriptor: $builtFor")
     }
 
