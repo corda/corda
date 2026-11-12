@@ -1,9 +1,14 @@
 package net.corda.coretests.transactions
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.NotaryInstruction
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -14,12 +19,18 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.function.Predicate
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -65,6 +76,11 @@ class LedgerTransactionQueryTests {
         override val participants: List<AbstractParty> = emptyList()
     }
 
+    interface NotaryInstructions {
+        data class Instr1(val id: Int) : NotaryInstruction
+        data class Instr2(val id: Int) : NotaryInstruction
+    }
+
     private fun makeDummyState(data: Any): ContractState {
         return when (data) {
             is String -> StringTypeDummyState(data)
@@ -94,6 +110,8 @@ class LedgerTransactionQueryTests {
             tx.addOutputState(makeDummyState(i.toString()), DummyContract.PROGRAM_ID)
             tx.addCommand(Commands.Cmd1(i), listOf(identity.owningKey))
             tx.addCommand(Commands.Cmd2(i), listOf(identity.owningKey))
+            tx.addNotaryInstruction(NotaryInstructions.Instr1(i))
+            tx.addNotaryInstruction(NotaryInstructions.Instr2(i))
         }
         return tx.toLedgerTransaction(services)
     }
@@ -218,7 +236,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Filtered Input Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterInputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
+        val intStates = ltx.filterInputs(IntTypeDummyState::class.java) { it.data.rem(2) == 0 }
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.data })
         val stringStates: List<StringTypeDummyState> = ltx.filterInputs { it.data == "3" }
@@ -228,7 +246,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Filtered InRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterInRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
+        val intStates = ltx.filterInRefs(IntTypeDummyState::class.java) { it.data.rem(2) == 0 }
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.state.data.data })
         assertEquals(listOf(ltx.inputs[0], ltx.inputs[4], ltx.inputs[8]), intStates)
@@ -240,7 +258,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Filtered Output Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterOutputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
+        val intStates = ltx.filterOutputs(IntTypeDummyState::class.java) { it.data.rem(2) == 0 }
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.data })
         val stringStates: List<StringTypeDummyState> = ltx.filterOutputs { it.data == "3" }
@@ -250,7 +268,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Filtered OutRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intStates = ltx.filterOutRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
+        val intStates = ltx.filterOutRefs(IntTypeDummyState::class.java) { it.data.rem(2) == 0 }
         assertEquals(3, intStates.size)
         assertEquals(listOf(0, 2, 4), intStates.map { it.state.data.data })
         assertEquals(listOf(0, 4, 8), intStates.map { it.ref.index })
@@ -264,7 +282,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Filtered Commands Tests`() {
         val ltx = makeDummyTransaction()
-        val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java, Predicate { it.id.rem(2) == 0 })
+        val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java) { it.id.rem(2) == 0 }
         assertEquals(3, intCmds1.size)
         assertEquals(listOf(0, 2, 4), intCmds1.map { it.value.id })
         val intCmds2 = ltx.filterCommands<Commands.Cmd2> { it.id == 3 }
@@ -274,7 +292,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Find Input Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findInput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
+        val intState = ltx.findInput(IntTypeDummyState::class.java) { it.data == 4 }
         assertEquals(ltx.getInput(8), intState)
         val stringState: StringTypeDummyState = ltx.findInput { it.data == "3" }
         assertEquals(ltx.getInput(7), stringState)
@@ -283,7 +301,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Find InRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findInRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
+        val intState = ltx.findInRef(IntTypeDummyState::class.java) { it.data == 4 }
         assertEquals(ltx.inRef(8), intState)
         val stringState: StateAndRef<StringTypeDummyState> = ltx.findInRef { it.data == "3" }
         assertEquals(ltx.inRef(7), stringState)
@@ -292,7 +310,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Find Output Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findOutput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
+        val intState = ltx.findOutput(IntTypeDummyState::class.java) { it.data == 4 }
         assertEquals(ltx.getOutput(8), intState)
         val stringState: StringTypeDummyState = ltx.findOutput { it.data == "3" }
         assertEquals(ltx.getOutput(7), stringState)
@@ -301,7 +319,7 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Find OutRef Tests`() {
         val ltx = makeDummyTransaction()
-        val intState = ltx.findOutRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
+        val intState = ltx.findOutRef(IntTypeDummyState::class.java) { it.data == 4 }
         assertEquals(ltx.outRef(8), intState)
         val stringState: StateAndRef<StringTypeDummyState> = ltx.findOutRef { it.data == "3" }
         assertEquals(ltx.outRef(7), stringState)
@@ -310,9 +328,28 @@ class LedgerTransactionQueryTests {
     @Test(timeout=300_000)
 	fun `Find Commands Tests`() {
         val ltx = makeDummyTransaction()
-        val intCmd1 = ltx.findCommand(Commands.Cmd1::class.java, Predicate { it.id == 2 })
+        val intCmd1 = ltx.findCommand(Commands.Cmd1::class.java) { it.id == 2 }
         assertEquals(ltx.getCommand(4), intCmd1)
         val intCmd2 = ltx.findCommand<Commands.Cmd2> { it.id == 3 }
         assertEquals(ltx.getCommand(7), intCmd2)
+    }
+
+    @Test(timeout=300_000)
+    fun `find notary instructions`() {
+        val ltx = makeDummyTransaction()
+        val instr1 = ltx.findNotaryInstruction(NotaryInstructions.Instr1::class.java) { it.id == 2 }
+        assertEquals(ltx.getNotaryInstruction(4), instr1)
+        val instr2 = ltx.findNotaryInstruction<NotaryInstructions.Instr2> { it.id == 3 }
+        assertEquals(ltx.getNotaryInstruction(7), instr2)
+    }
+
+    @Test(timeout=300_000)
+    fun `filtered notary instructions`() {
+        val ltx = makeDummyTransaction()
+        val instrs1 = ltx.filterNotaryInstructions(NotaryInstructions.Instr1::class.java) { it.id.rem(2) == 0 }
+        assertEquals(3, instrs1.size)
+        assertEquals(listOf(0, 2, 4), instrs1.map { it.id })
+        val instrs2 = ltx.filterNotaryInstructions<NotaryInstructions.Instr2> { it.id == 3 }
+        assertEquals(3, instrs2.single().id)
     }
 }

@@ -35,6 +35,10 @@ shadowJar {
     version = null
     zip64 true
     exclude '**/Log4j2Plugins.dat'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.EC'
 }
 
 enum ImageVariant {

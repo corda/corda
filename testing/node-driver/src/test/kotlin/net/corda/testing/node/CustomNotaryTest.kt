@@ -35,7 +35,7 @@ class CustomNotaryTest {
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
                 notarySpecs = listOf(MockNetworkNotarySpec(
                         name = CordaX500Name("Custom Notary", "Amsterdam", "NL"),
-                        className = "net.corda.testing.node.CustomNotaryTest\$CustomNotaryService",
+                        className = CustomNotaryService::class.java.name,
                         validating = false // Can also be validating if preferred.
                 ))
         ))

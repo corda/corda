@@ -2,9 +2,11 @@ package net.corda.notary.jpa
 
 import com.google.common.collect.Queues
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -159,7 +161,9 @@ class JPAUniquenessProvider(
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            notaryInstructions: List<NotaryInstruction>,
+            transactionSignatures: List<TransactionSignature>
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),

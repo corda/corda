@@ -2,9 +2,31 @@ package net.corda.core.transactions
 
 import net.corda.core.CordaException
 import net.corda.core.CordaInternal
-import net.corda.core.contracts.*
-import net.corda.core.contracts.ComponentGroupEnum.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_INSTRUCTIONS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.values
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NotaryInstruction
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.PartialMerkleTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.algorithm
 import net.corda.core.identity.Party
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
@@ -91,6 +113,11 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     }
 
     /**
+     * Returns the list of [NotaryInstruction]s for the notary.
+     */
+    val notaryInstructions: List<NotaryInstruction> = deserialiseComponentGroup(componentGroups, NotaryInstruction::class, NOTARY_INSTRUCTIONS_GROUP)
+
+    /**
      * Returns a list of all the component groups that are present in the transaction, excluding the privacySalt,
      * in the following order (which is the same with the order in [ComponentGroupEnum]:
      * - list of each input that is present
@@ -102,6 +129,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - list of each reference input that is present
      * - network parameters hash if present
      * - list of each attachment that is present
+     * - list of each notary instruction that is present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
@@ -110,6 +138,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             timeWindow?.let { result += listOf(it) }
             networkParametersHash?.let { result += listOf(it) }
             result += nonLegacyAttachments
+            result += notaryInstructions
             return result
         }
 }
@@ -153,6 +182,7 @@ class FilteredTransaction internal constructor(
          * @param filtering filtering over the whole WireTransaction.
          * @return a list of [FilteredComponentGroup] used in PartialMerkleTree calculation and verification.
          */
+        @Suppress("ComplexMethod")
         private fun filterWithFun(wtx: WireTransaction, filtering: Predicate<Any>): List<FilteredComponentGroup> {
             val filteredSerialisedComponents: MutableMap<Int, MutableList<OpaqueBytes>> = hashMapOf()
             val filteredComponentNonces: MutableMap<Int, MutableList<SecureHash>> = hashMapOf()
@@ -204,6 +234,7 @@ class FilteredTransaction internal constructor(
                 // Similar situation is for network parameters hash and attachments, one should use wrapper [NetworkParametersHash] and not [SecureHash].
                 wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
                 wtx.networkParametersHash?.let { filter(NetworkParametersHash(it), PARAMETERS_GROUP.ordinal, 0) }
+                wtx.notaryInstructions.forEachIndexed { internalIndex, it -> filter(it, NOTARY_INSTRUCTIONS_GROUP.ordinal, internalIndex) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one
@@ -214,8 +245,11 @@ class FilteredTransaction internal constructor(
                 // An example would be to redact certain contract state types, but otherwise leave a transaction alone,
                 // including the unknown new components.
                 wtx.componentGroups
+                        .asSequence()
                         .filter { it.groupIndex >= values().size }
-                        .forEach { componentGroup -> componentGroup.components.forEachIndexed { internalIndex, component -> filter(component, componentGroup.groupIndex, internalIndex) } }
+                        .forEach {
+                            it.components.forEachIndexed { internalIndex, component -> filter(component, it.groupIndex, internalIndex) }
+                        }
             }
 
             fun createPartialMerkleTree(componentGroupIndex: Int): PartialMerkleTree {
@@ -310,7 +344,10 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }, digestService).hash
+            val groupFullRoot = MerkleTree.getMerkleTree(
+                    group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) },
+                    digestService
+            ).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
             visibilityCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
@@ -346,7 +383,7 @@ class FilteredTransaction internal constructor(
             try {
                 return SerializedBytes<List<PublicKey>>(opaqueBytes.bytes).deserialize()
             } catch (e: Exception) {
-                throw Exception("Malformed transaction, signers at index $internalIndex cannot be deserialised", e)
+                throw IllegalStateException("Malformed transaction, signers at index $internalIndex cannot be deserialised", e)
             }
         }
 
@@ -368,6 +405,9 @@ class FilteredTransaction internal constructor(
             throw ComponentVisibilityException(id, message.toString())
         }
     }
+
+    override val requiredSigningKeys: Set<PublicKey>
+        get() = throw NotImplementedError("A filtered transaction cannot reveal required signers.")
 }
 
 /**

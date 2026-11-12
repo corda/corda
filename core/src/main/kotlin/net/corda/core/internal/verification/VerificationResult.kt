@@ -1,5 +1,6 @@
 package net.corda.core.internal.verification
 
+import net.corda.core.transactions.FullTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.Try.Failure
@@ -9,28 +10,28 @@ sealed class VerificationResult {
     /**
      * The in-process result for the current version of the transcaction.
      */
-    abstract val inProcessResult: Try<LedgerTransaction?>?
+    abstract val inProcessResult: Try<FullTransaction?>?
 
     /**
      * The external verifier result for the legacy version of the transaction.
      */
     abstract val externalResult: Try<Unit>?
 
-    abstract fun enforceSuccess(): LedgerTransaction?
+    abstract fun enforceSuccess(): FullTransaction?
 
 
-    data class InProcess(override val inProcessResult: Try<LedgerTransaction?>) : VerificationResult() {
+    data class InProcess(override val inProcessResult: Try<FullTransaction?>) : VerificationResult() {
         override val externalResult: Try<Unit>?
             get() = null
 
-        override fun enforceSuccess(): LedgerTransaction? = inProcessResult.getOrThrow()
+        override fun enforceSuccess(): FullTransaction? = inProcessResult.getOrThrow()
     }
 
     data class External(override val externalResult: Try<Unit>) : VerificationResult() {
-        override val inProcessResult: Try<LedgerTransaction?>?
+        override val inProcessResult: Try<FullTransaction?>?
             get() = null
 
-        override fun enforceSuccess(): LedgerTransaction? {
+        override fun enforceSuccess(): FullTransaction? {
             externalResult.getOrThrow()
             // We could create a LedgerTransaction here, and except for calling `verify()`, it would be valid to use. However, it's best
             // we let the caller deal with that, since we can't prevent them from calling it.
@@ -42,7 +43,7 @@ sealed class VerificationResult {
             override val inProcessResult: Try<LedgerTransaction>,
             override val externalResult: Try<Unit>
     ) : VerificationResult() {
-        override fun enforceSuccess(): LedgerTransaction {
+        override fun enforceSuccess(): FullTransaction {
             return when (externalResult) {
                 is Success -> when (inProcessResult) {
                     is Success -> inProcessResult.value

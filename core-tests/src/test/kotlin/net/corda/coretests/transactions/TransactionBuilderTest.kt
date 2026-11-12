@@ -2,6 +2,7 @@ package net.corda.coretests.transactions
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -37,6 +38,7 @@ import java.time.Instant
 import kotlin.io.path.inputStream
 import kotlin.test.assertFailsWith
 
+@Suppress("INVISIBLE_MEMBER")
 class TransactionBuilderTest {
     @Rule
     @JvmField
@@ -51,7 +53,6 @@ class TransactionBuilderTest {
     private val contractAttachmentId = services.attachments.getLatestContractAttachments(DummyContract.PROGRAM_ID)[0]
 
     @Test(timeout=300_000)
-    @Suppress("INVISIBLE_MEMBER")
 	fun `bare minimum issuance tx`() {
         val outputState = TransactionState(
                 data = DummyState(),
@@ -69,6 +70,7 @@ class TransactionBuilderTest {
         // From 4.12 attachments are added to the new component group by default
         assertThat(wtx.nonLegacyAttachments).isNotEmpty
         assertThat(wtx.legacyAttachments).isEmpty()
+        assertThat(wtx.notaryInstructions).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -105,17 +107,31 @@ class TransactionBuilderTest {
     }
 
     @Test(timeout=300_000)
+    fun `notary instructions`() {
+        val notaryInstuction = FakeNotaryInstuction("1")
+        val builder = TransactionBuilder(notary)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addNotaryInstruction(notaryInstuction)
+        val wtx = builder.toWireTransaction(services)
+        assertThat(wtx.notaryInstructions).containsOnly(notaryInstuction)
+    }
+
+    @Test(timeout=300_000)
     fun `list accessors are mutable copies`() {
         val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
         val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
         val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
         val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
+        val notaryInstruction1 = FakeNotaryInstuction("1")
+        val notaryInstruction2 = FakeNotaryInstuction("2")
         val builder = TransactionBuilder(notary)
                 .addInputState(StateAndRef(inputState1, inputStateRef1))
                 .addAttachment(SecureHash.allOnesHash)
                 .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
                 .addCommand(DummyCommandData, notary.owningKey)
                 .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
+                .addNotaryInstruction(notaryInstruction1)
         val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
         val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
 
@@ -125,6 +141,7 @@ class TransactionBuilderTest {
         assertThat((builder.outputStates() as ArrayList).also { it.add(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)) }).hasSize(2)
         assertThat((builder.commands() as ArrayList).also { it.add(Command(DummyCommandData, notary.owningKey)) }).hasSize(2)
         assertThat((builder.referenceStates() as ArrayList).also { it.add(referenceStateRef2) }).hasSize(2)
+        assertThat((builder.notaryInstructions() as ArrayList).also { it.add(notaryInstruction2) }).hasSize(2)
 
         // List accessors are copies.
         assertThat(builder.inputStates()).hasSize(1)
@@ -132,6 +149,7 @@ class TransactionBuilderTest {
         assertThat(builder.outputStates()).hasSize(1)
         assertThat(builder.commands()).hasSize(1)
         assertThat(builder.referenceStates()).hasSize(1)
+        assertThat(builder.notaryInstructions()).hasSize(1)
     }
 
     @Test(timeout=300_000)
@@ -149,6 +167,7 @@ class TransactionBuilderTest {
                 .setTimeWindow(timeWindow)
                 .setPrivacySalt(PrivacySalt())
                 .addReferenceState(StateAndRef(referenceState, referenceStateRef).referenced())
+                .addNotaryInstruction(FakeNotaryInstuction("1"))
         val copy = builder.copy()
 
         assertThat(builder.notary).isEqualTo(copy.notary)
@@ -160,6 +179,7 @@ class TransactionBuilderTest {
 //        assertThat(builder.timeWindow()).isEqualTo(copy.timeWindow())
 //        assertThat(builder.privacySalt()).isEqualTo(copy.privacySalt())
         assertThat(builder.referenceStates()).isEqualTo(copy.referenceStates())
+        assertThat(builder.notaryInstructions()).isEqualTo(copy.notaryInstructions())
     }
 
     @Test(timeout=300_000)
@@ -286,4 +306,6 @@ class TransactionBuilderTest {
                 .isThrownBy { builder.toWireTransaction(services) }
                 .withMessageContaining("Multiple attachments specified for the same contract net.corda.testing.contracts.DummyContract")
     }
+
+    private data class FakeNotaryInstuction(val instruct: String) : NotaryInstruction
 }

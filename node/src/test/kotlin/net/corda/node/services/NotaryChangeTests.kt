@@ -256,7 +256,7 @@ class NotaryChangeTests {
 
         assertEquals(1, deserializedTx.inputs.size)
         assertEquals(stateRef, deserializedTx.inputs.first())
-
+        assertTrue(deserializedTx.requiredSigningKeys.isEmpty())
     }
 
     // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
@@ -280,6 +280,7 @@ class NotaryChangeTests {
 
         assertEquals(1, deserializedTx.inputs.size)
         assertEquals(stateRef, deserializedTx.inputs.first())
+        assertEquals(1, deserializedTx.requiredSigningKeys.size)
     }
 
     // Read in a serialized NotaryChangeWireTransaction from 4.13+, with requiredSigningKeys
@@ -303,6 +304,7 @@ class NotaryChangeTests {
 
         assertEquals(1, deserializedTx.inputs.size)
         assertEquals(stateRef, deserializedTx.inputs.first())
+        assertTrue(deserializedTx.requiredSigningKeys.isEmpty())
     }
 
 }

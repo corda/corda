@@ -98,14 +98,14 @@ class NotaryServiceTests {
                                         numberOfInputs: Int = 10_005): SignedTransaction {
             val txHash = SecureHash.randomSHA256()
             val inputs = (1..numberOfInputs).map { StateRef(txHash, it) }
-            val tx = if (paramsHash != null) {
-                NotaryChangeTransactionBuilder(inputs, notary, party, paramsHash).build()
-            } else {
-                NotaryChangeWireTransaction(listOf(inputs, notary, party).map { it.serialize() })
-            }
 
             return node.services.run {
                 val myKey = myInfo.legalIdentities.first().owningKey
+                val tx = if (paramsHash != null) {
+                    NotaryChangeTransactionBuilder(inputs, notary, party, paramsHash, setOf(myKey)).build()
+                } else {
+                    NotaryChangeWireTransaction(listOf(inputs, notary, party).map { it.serialize() }, DigestService.sha2_256, setOf(myKey))
+                }
                 val signableData = SignableData(tx.id, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
                 val mySignature = keyManagementService.sign(signableData, myKey)
                 SignedTransaction(tx, listOf(mySignature))

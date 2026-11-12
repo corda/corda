@@ -223,7 +223,8 @@ class NotaryWhitelistTests(
                 listOf(inputState.ref),
                 fakeNotaryParty,
                 oldNotary,
-                aliceNode.services.networkParametersService.currentHash
+                aliceNode.services.networkParametersService.currentHash,
+                inputState.state.data.participants.map{it.owningKey}.toSet()
         ).build()
 
         val notaryChangeAliceSig = getAliceSig(notaryChangeTx)

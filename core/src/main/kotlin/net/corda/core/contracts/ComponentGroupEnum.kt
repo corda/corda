@@ -14,5 +14,6 @@ enum class ComponentGroupEnum {
     SIGNERS_GROUP, // ordinal = 6.
     REFERENCES_GROUP, // ordinal = 7.
     PARAMETERS_GROUP, // ordinal = 8.
-    ATTACHMENTS_V2_GROUP // ordinal = 9. From 4.12+ this group is used for attachments.
+    ATTACHMENTS_V2_GROUP, // ordinal = 9. From 4.12+ this group is used for attachments.
+    NOTARY_INSTRUCTIONS_GROUP, // ordinal = 10.
 }

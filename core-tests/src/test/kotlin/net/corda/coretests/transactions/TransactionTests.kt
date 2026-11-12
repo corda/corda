@@ -170,6 +170,7 @@ class TransactionTests(private val digestService : DigestService) {
                 privacySalt,
                 testNetworkParameters(),
                 emptyList(),
+                emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
                 digestService = digestService
@@ -226,6 +227,7 @@ class TransactionTests(private val digestService : DigestService) {
                 timeWindow,
                 privacySalt,
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
+                emptyList(),
                 emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,

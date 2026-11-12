@@ -109,6 +109,7 @@ include 'testing:cordapps:missingmigration'
 include 'testing:cordapps:sleeping'
 include 'testing:cordapps:cashobservers'
 include 'testing:cordapps:4.11-workflows'
+include 'testing:cordapps:dummystateworkflows'
 
 // Common libraries - start
 include 'common-validation'

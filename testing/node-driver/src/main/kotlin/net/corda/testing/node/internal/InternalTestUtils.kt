@@ -25,6 +25,7 @@ import net.corda.coretesting.internal.inVMExecutors
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.testing.common.internal.isListening
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
@@ -38,8 +39,6 @@ import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
 import java.io.InputStream
-import java.net.Socket
-import java.net.SocketException
 import java.nio.file.Path
 import java.sql.DriverManager
 import java.time.Duration
@@ -134,7 +133,7 @@ private fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
     if (index == -1) return null
     return try {
         Class.forName(stackTrace[index + 1].className)
-    } catch (e: ClassNotFoundException) {
+    } catch (_: ClassNotFoundException) {
         null
     }
 }
@@ -167,11 +166,7 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
         if (listenProcess != null && !listenProcess.isAlive) {
             throw ListenProcessDeathException(hostAndPort, listenProcess)
         }
-        try {
-            Socket(hostAndPort.host, hostAndPort.port).close()
-        } catch (_: SocketException) {
-            null
-        }
+        if (hostAndPort.isListening()) Unit else null
     }
 }
 
@@ -213,10 +208,7 @@ fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort
 
 fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): CordaFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
-        try {
-            Socket(hostAndPort.host, hostAndPort.port).close()
-            null
-        } catch (_: SocketException) { }
+        if (hostAndPort.isListening()) null else Unit
     }
 }
 

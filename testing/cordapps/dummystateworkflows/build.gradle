@@ -1,0 +1,12 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+dependencies {
+    implementation project(":core")
+    implementation project(":core-test-utils")
+    implementation project(":confidential-identities")
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
+}
+
+jar {
+    baseName "dummystate-creation-cordapp"
+}

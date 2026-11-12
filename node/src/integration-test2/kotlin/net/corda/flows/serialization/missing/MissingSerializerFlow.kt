@@ -27,18 +27,20 @@ class MissingSerializerFlow(private val value: Long) : FlowLogic<SecureHash>() {
 
         val customDataState = CustomDataState(ourIdentity, CustomData(value))
         val wtx = WireTransaction(createComponentGroups(
-            inputs = emptyList(),
-            outputs = listOf(TransactionState(
-                data = customDataState,
+                inputs = emptyList(),
+                outputs = listOf(TransactionState(
+                        data = customDataState,
+                        notary = notary,
+                        constraint = AlwaysAcceptAttachmentConstraint
+                )),
                 notary = notary,
-                constraint = AlwaysAcceptAttachmentConstraint
-            )),
-            notary = notary,
-            commands = listOf(Command(Operate(), ourIdentity.owningKey)),
-            attachments = serviceHub.attachments.getLatestContractAttachments(customDataState.requiredContractClassName!!),
-            timeWindow = null,
-            references = emptyList(),
-            networkParametersHash = null
+                commands = listOf(Command(Operate(), ourIdentity.owningKey)),
+                attachments = serviceHub.attachments.getLatestContractAttachments(customDataState.requiredContractClassName!!),
+                timeWindow = null,
+                references = emptyList(),
+                networkParametersHash = null,
+                legacyAttachments = emptyList(),
+                notaryInstructions = emptyList()
         ))
         val signatureMetadata = SignatureMetadata(
             platformVersion = serviceHub.myInfo.platformVersion,

@@ -91,7 +91,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     /** Helper to access the network parameters hash for the contained transaction. */
     val networkParametersHash: SecureHash? get() = coreTransaction.networkParametersHash
 
-    override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
+    override val requiredSigningKeys: Set<PublicKey> get() = coreTransaction.requiredSigningKeys
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data.
@@ -192,7 +192,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      */
     @CordaInternal
     @JvmSynthetic
-    internal fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true): LedgerTransaction? {
+    internal fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true): FullTransaction? {
         resolveAndCheckNetworkParameters(verificationSupport)
         verifySignatures(verificationSupport, checkSufficientSignatures)
         val ctx = coreTransaction

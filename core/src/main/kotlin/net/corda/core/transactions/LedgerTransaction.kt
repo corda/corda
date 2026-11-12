@@ -8,6 +8,7 @@ import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.CordaRotatedKeys
+import net.corda.core.contracts.NotaryInstruction
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.RotatedKeys
 import net.corda.core.contracts.StateAndRef
@@ -88,6 +89,10 @@ private constructor(
         override val networkParameters: NetworkParameters?,
         /** Referenced states, which are like inputs but won't be consumed. */
         override val references: List<StateAndRef<ContractState>>,
+        /**
+         * List of notary instructions which provide additional directives to the notary when it notarises this transaction.
+         */
+        val notaryInstructions: List<NotaryInstruction>,
         //DOCEND 1
 
         private val componentGroups: List<ComponentGroup>?,
@@ -124,7 +129,7 @@ private constructor(
         attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
     ) : this(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
-            networkParameters, references, componentGroups, serializedInputs, serializedReferences,
+            networkParameters, references, emptyList(), componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
 
     companion object {
@@ -154,6 +159,7 @@ private constructor(
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters,
                 references: List<StateAndRef<ContractState>>,
+                notaryInstructions: List<NotaryInstruction>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
@@ -173,6 +179,7 @@ private constructor(
                     privacySalt = privacySalt,
                     networkParameters = networkParameters,
                     references = references,
+                    notaryInstructions = notaryInstructions,
                     componentGroups = protectOrNull(componentGroups),
                     serializedInputs = protectOrNull(serializedInputs),
                     serializedReferences = protectOrNull(serializedReferences),
@@ -200,29 +207,31 @@ private constructor(
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters?,
                 references: List<StateAndRef<ContractState>>,
+                notaryInstructions: List<NotaryInstruction>,
                 digestService: DigestService,
                 rotatedKeys: RotatedKeys): LedgerTransaction {
             return LedgerTransaction(
-                inputs = protect(inputs),
-                outputs = protect(outputs),
-                commands = protect(commands),
-                attachments = protect(attachments),
-                id = id,
-                notary = notary,
-                timeWindow = timeWindow,
-                privacySalt = privacySalt,
-                networkParameters = networkParameters,
-                references = protect(references),
-                componentGroups = null,
-                serializedInputs = null,
-                serializedReferences = null,
-                isAttachmentTrusted = { true },
-                verifierFactory = ::NoOpVerifier,
-                attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl(rotatedKeys),
-                digestService = digestService
-                // This check accesses input states and must run on the LedgerTransaction
-                // instance that is verified, not on the outer LedgerTransaction shell.
-                // All states must also deserialize using the correct SerializationContext.
+                    inputs = protect(inputs),
+                    outputs = protect(outputs),
+                    commands = protect(commands),
+                    attachments = protect(attachments),
+                    id = id,
+                    notary = notary,
+                    timeWindow = timeWindow,
+                    privacySalt = privacySalt,
+                    networkParameters = networkParameters,
+                    references = protect(references),
+                    notaryInstructions = protect(notaryInstructions),
+                    componentGroups = null,
+                    serializedInputs = null,
+                    serializedReferences = null,
+                    isAttachmentTrusted = { true },
+                    verifierFactory = ::NoOpVerifier,
+                    attachmentsClassLoaderCache = AttachmentsClassLoaderForRotatedKeysOnlyImpl(rotatedKeys),
+                    digestService = digestService
+                    // This check accesses input states and must run on the LedgerTransaction
+                    // instance that is verified, not on the outer LedgerTransaction shell.
+                    // All states must also deserialize using the correct SerializationContext.
             ).also(LedgerTransaction::checkBaseInvariants)
         }
     }
@@ -297,29 +306,32 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, SerializationContext) -> Verifier): LedgerTransaction = LedgerTransaction(
-        inputs = inputs,
-        outputs = outputs,
-        commands = commands,
-        attachments = attachments,
-        id = id,
-        notary = notary,
-        timeWindow = timeWindow,
-        privacySalt = privacySalt,
-        networkParameters = networkParameters,
-        references = references,
-        componentGroups = componentGroups,
-        serializedInputs = serializedInputs,
-        serializedReferences = serializedReferences,
-        isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = if (verifierFactory == ::NoOpVerifier) {
-            throw IllegalStateException("Cannot specialise transaction while verifying contracts")
-        } else {
-            alternateVerifier
-        },
-        attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-        digestService = digestService
-    )
+    fun specialise(alternateVerifier: (LedgerTransaction, SerializationContext) -> Verifier): LedgerTransaction {
+        return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references,
+                notaryInstructions = notaryInstructions,
+                componentGroups = componentGroups,
+                serializedInputs = serializedInputs,
+                serializedReferences = serializedReferences,
+                isAttachmentTrusted = isAttachmentTrusted,
+                verifierFactory = if (verifierFactory == ::NoOpVerifier) {
+                    throw IllegalStateException("Cannot specialise transaction while verifying contracts")
+                } else {
+                    alternateVerifier
+                },
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
+        )
+    }
 
     // Read network parameters with backwards compatibility goo.
     private fun getParamsWithGoo(): NetworkParameters {
@@ -661,6 +673,47 @@ private constructor(
      */
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 
+    /**
+     * Return the [NotaryInstruction] at the given index of the notary instructions list.
+     * @see notaryInstructions
+     */
+    fun getNotaryInstruction(index: Int): NotaryInstruction = notaryInstructions[index]
+
+    /**
+     * Return all the [NotaryInstruction]s of the given type.
+     * @see notaryInstructions
+     */
+    fun <T : NotaryInstruction> notaryInstructionsOfType(clazz: Class<T>): List<T> {
+        return notaryInstructions.mapNotNull { clazz.castIfPossible(it) }
+    }
+
+    inline fun <reified T : NotaryInstruction> notaryInstructionsOfType(): List<T> = notaryInstructionsOfType(T::class.java)
+
+    /**
+     * Return all the [NotaryInstruction]s of the given type and which statisfy the given predicate.
+     * @see notaryInstructions
+     */
+    fun <T : NotaryInstruction> filterNotaryInstructions(clazz: Class<T>, predicate: Predicate<T>): List<T> {
+        return notaryInstructionsOfType(clazz).filter(predicate::test)
+    }
+
+    inline fun <reified T : NotaryInstruction> filterNotaryInstructions(crossinline predicate: (T) -> Boolean): List<T> {
+        return filterNotaryInstructions(T::class.java, Predicate { predicate(it) })
+    }
+
+    /**
+     * Find the single matching [NotaryInstruction] of the given type and which satisfies the given predicate.
+     * @throws IllegalArgumentException If there are no matches or more than one match.
+     * @see notaryInstructions
+     */
+    fun <T : NotaryInstruction> findNotaryInstruction(clazz: Class<T>, predicate: Predicate<T>): T {
+        return notaryInstructionsOfType(clazz).single(predicate::test)
+    }
+
+    inline fun <reified T : NotaryInstruction> findNotaryInstruction(crossinline predicate: (T) -> Boolean): T {
+        return findNotaryInstruction(T::class.java, Predicate { predicate(it) })
+    }
+
     operator fun component1(): List<StateAndRef<ContractState>> = inputs
     operator fun component2(): List<TransactionState<ContractState>> = outputs
     operator fun component3(): List<CommandWithParties<CommandData>> = commands
@@ -773,6 +826,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
+                notaryInstructions = notaryInstructions,
                 componentGroups = componentGroups,
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
@@ -805,6 +859,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
+                notaryInstructions = notaryInstructions,
                 componentGroups = componentGroups,
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
@@ -868,18 +923,19 @@ private class DefaultVerifier(
                 }
 
                 LedgerTransaction.createForContractVerify(
-                    inputs = deserializedInputs,
-                    outputs = deserializedOutputs,
-                    commands = authenticatedDeserializedCommands,
-                    attachments = ltx.attachments,
-                    id = ltx.id,
-                    notary = ltx.notary,
-                    timeWindow = ltx.timeWindow,
-                    privacySalt = ltx.privacySalt,
-                    networkParameters = ltx.networkParameters,
-                    references = deserializedReferences,
-                    digestService = ltx.digestService,
-                    rotatedKeys = ltx.rotatedKeys
+                        inputs = deserializedInputs,
+                        outputs = deserializedOutputs,
+                        commands = authenticatedDeserializedCommands,
+                        attachments = ltx.attachments,
+                        id = ltx.id,
+                        notary = ltx.notary,
+                        timeWindow = ltx.timeWindow,
+                        privacySalt = ltx.privacySalt,
+                        networkParameters = ltx.networkParameters,
+                        references = deserializedReferences,
+                        notaryInstructions = ltx.notaryInstructions,
+                        digestService = ltx.digestService,
+                        rotatedKeys = ltx.rotatedKeys
                 )
             }
         }

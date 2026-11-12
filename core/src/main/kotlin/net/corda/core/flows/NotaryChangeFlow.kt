@@ -31,15 +31,17 @@ class NotaryChangeFlow<out T : ContractState>(
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
         val inputs = resolveEncumbrances(originalState)
 
+        val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
+
         val tx = NotaryChangeTransactionBuilder(
                 inputs.map { it.ref },
                 originalState.state.notary,
                 modification,
                 serviceHub.networkParametersService.currentHash,
+                participantKeys,
                 serviceHub.digestService
         ).build()
 
-        val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
         val signableData = SignableData(tx.id, SignatureMetadata(serviceHub.myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
