@@ -27,13 +27,6 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     open val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 
-    /**
-     * Descriptors other than [typeDescriptor] that this serializer writes on the wire, e.g. the fingerprint a type had
-     * before it was given a custom serializer. They are registered against this serializer so that deserialization
-     * resolves them directly, instead of comparing them with [typeDescriptor] and reporting a mismatch.
-     */
-    open val deserializationAliases: Set<Symbol> get() = emptySet()
-
     protected abstract val descriptor: Descriptor
     /**
      * This exists purely for documentation and cross-platform purposes. It is not used by our serialization / deserialization
