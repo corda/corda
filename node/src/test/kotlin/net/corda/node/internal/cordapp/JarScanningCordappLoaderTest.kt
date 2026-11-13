@@ -24,6 +24,7 @@ import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJarPair
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getJarSigners
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
@@ -43,6 +44,7 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.copyTo
 import kotlin.io.path.name
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
@@ -313,6 +315,37 @@ class JarScanningCordappLoaderTest {
         assertThatIllegalStateException()
                 .isThrownBy { loader.cordapps }
                 .withMessageContaining("${legacyFinanceContractsJar.name} is legacy contracts; please place it in the node's 'legacy-contracts' directory.")
+    }
+
+    @Test(timeout=300_000)
+    fun `contract class loaded when hierarchy spans multiple JARs`() {
+        val (abstractJar, concreteJar) = makeTestContractJarPair(
+                tempFolder.root.toPath(),
+                "com.example.AbstractBaseContract",
+                """
+                    package com.example;
+                    import net.corda.core.contracts.*;
+                    import net.corda.core.transactions.*;
+                    public abstract class AbstractBaseContract implements Contract {
+                        @Override public void verify(LedgerTransaction tx) {}
+                    }
+                """.trimIndent(),
+                "com.example.ConcreteContract",
+                """
+                    package com.example;
+                    import net.corda.core.transactions.*;
+                    public class ConcreteContract extends AbstractBaseContract {
+                        @Override public void verify(LedgerTransaction tx) {}
+                    }
+                """.trimIndent()
+        )
+
+        val loader = JarScanningCordappLoader(setOf(abstractJar, concreteJar))
+        val concreteCordapp = loader.cordapps.single { it.jarFile == concreteJar }
+        val abstractCordapp = loader.cordapps.single { it.jarFile == abstractJar }
+
+        assertThat(concreteCordapp.contractClassNames).contains("com.example.ConcreteContract")
+        assertTrue(abstractCordapp.contractClassNames.isEmpty(), "Abstract Cordapp should not contain contract classes because it is abstract")
     }
 
     private inline fun Path.duplicate(name: String = "duplicate.jar", modify: Path.() -> Unit = { }): Path {
