@@ -25,8 +25,8 @@ import java.lang.reflect.Type
 object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(SignatureMetadata::class.java) {
     private val legacyFieldTypes = listOf(Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
     private val extendedFieldTypes = legacyFieldTypes + KeyRotationProofChain::class.java
-    private val legacyDescriptor = Descriptor(Symbol.valueOf("net.corda:IzFt8cRKytsJq3vQ+yjsGg=="))
-    private val extendedDescriptor = Descriptor(Symbol.valueOf("net.corda:${AMQPTypeIdentifiers.nameForType(type)}:extended"))
+    internal val legacyDescriptor = Descriptor(Symbol.valueOf("net.corda:IzFt8cRKytsJq3vQ+yjsGg=="))
+    internal val extendedDescriptor = Descriptor(Symbol.valueOf("net.corda:${AMQPTypeIdentifiers.nameForType(type)}:extended"))
     private val legacyTypeNotation = CompositeType(
             AMQPTypeIdentifiers.nameForType(type),
             null,
@@ -50,6 +50,12 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
     )
 
     override val schemaForDocumentation: Schema = Schema(listOf(extendedTypeNotation))
+
+    // Registered together with this serializer, one for each descriptor that writeObject uses. See SignatureMetadataDeserializer.
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(
+            SignatureMetadataDeserializer(legacyDescriptor),
+            SignatureMetadataDeserializer(extendedDescriptor)
+    )
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         val metadata = obj as SignatureMetadata
@@ -85,5 +91,35 @@ object SignatureMetadataSerializer : CustomSerializer.Is<SignatureMetadata>(Sign
             null
         }
         return SignatureMetadata(platformVersion, schemeNumberID, proofChain)
+    }
+
+    /**
+     * Lets deserialization find a serializer for a [SignatureMetadata] by the descriptor it was written under.
+     *
+     * [SignatureMetadataSerializer] writes a [SignatureMetadata] under [legacyDescriptor] or [extendedDescriptor], never under its own
+     * [typeDescriptor]. Deserialization looks the descriptor up in a registry that holds each serializer under that serializer's
+     * [typeDescriptor], so it does not find [SignatureMetadataSerializer]. It then compares the type described in the schema with the
+     * local type and logs "Mismatch between type descriptors, but remote type is not evolvable to local type".
+     *
+     * An instance of this class has one of the two descriptors as its [typeDescriptor], which puts it in the registry under that
+     * descriptor, and reads through [SignatureMetadataSerializer]. It is never used to serialize: [isSerializerFor] returns false, so
+     * [SignatureMetadataSerializer] remains the only serializer of the class.
+     */
+    private class SignatureMetadataDeserializer(override val descriptor: Descriptor) : CustomSerializer<SignatureMetadata>() {
+        override val type: Type get() = SignatureMetadata::class.java
+        override val typeDescriptor: Symbol = requireNotNull(descriptor.name)
+        override val schemaForDocumentation: Schema = Schema(emptyList())
+
+        override fun isSerializerFor(clazz: Class<*>): Boolean = false
+
+        override fun writeClassInfo(output: SerializationOutput) {}
+
+        override fun writeDescribedObject(obj: SignatureMetadata, data: Data, type: Type, output: SerializationOutput, context: SerializationContext) {
+            SignatureMetadataSerializer.writeDescribedObject(obj, data, type, output, context)
+        }
+
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): SignatureMetadata {
+            return SignatureMetadataSerializer.readObject(obj, schemas, input, context)
+        }
     }
 }
