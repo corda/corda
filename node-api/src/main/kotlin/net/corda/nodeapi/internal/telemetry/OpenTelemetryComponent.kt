@@ -272,8 +272,11 @@ class OpenTelemetryComponent(serviceName: String, val spanStartEndEventsEnabled:
         else {
             // Copes with case where user has created their own span. So we just use the most
             // recent span we know about on the stack.
+            // There may be no span we know about in the trace. Spans are held only in memory, so a flow restored from a
+            // checkpoint (after a node restart, or a retry by the flow hospital) has none here, and no current span. In that
+            // case the start event goes under the current context, with no queue, as when the span we know has no queue.
             val altFilteredSpans = spans.filter { it.value.span.spanContext.traceId == parentSpan.spanContext.traceId }.toList()
-            val spanEventContexts = altFilteredSpans[0].second.spanEventContextQueue
+            val spanEventContexts = altFilteredSpans.firstOrNull()?.second?.spanEventContextQueue
             Pair(spanEventContexts?.peekLast()?.child ?: Context.current(), spanEventContexts)
         }
 
