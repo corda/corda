@@ -182,6 +182,10 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * This causes the flow to retry the [Event.StartErrorPropagation] event until it succeeds. This this scenario it is retried 3 times,
      * on the final retry the flow successfully propagates the error and completes exceptionally.
+     *
+     * The hospital backs off before each retry, picking a random delay of 10-17, 10-21 and then 10-26 seconds (it counts the first
+     * propagation as a resuscitation, as [StaffedFlowHospital.ResuscitationSpecialist] is among the staff on that record). The retries
+     * can therefore take up to 64 seconds, so the test waits longer than that for the flow to finish.
      */
     @Test(timeout = 300_000)
     fun `error during error propagation the flow is able to retry and recover`() {
@@ -209,7 +213,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules, port)
 
             assertFailsWith<CordaRuntimeException> {
-                alice.rpc.startFlow(StateMachineErrorHandlingTest::ThrowAnErrorFlow).returnValue.getOrThrow(60.seconds)
+                alice.rpc.startFlow(StateMachineErrorHandlingTest::ThrowAnErrorFlow).returnValue.getOrThrow(120.seconds)
             }
 
             alice.rpc.assertNumberOfCheckpointsAllZero()
