@@ -70,6 +70,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
+    testImplementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
     // OpenTelemetry SDK, so the tests can record the spans OpenTelemetryComponent creates.
     testImplementation "io.opentelemetry:opentelemetry-sdk:$open_telemetry_version"
 
