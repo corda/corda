@@ -44,14 +44,13 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
-    return getCheckpoints().use {
-        it.map { it.second }.toList()
+    return getCheckpoints().use { stream ->
+        stream.map { it.second }.toList()
     }
 }
 
@@ -454,9 +453,8 @@ class DBCheckpointStorageTests {
             val deserializedException = exceptionDetails.value?.let { SerializedBytes<Any>(it) }?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
             // IllegalStateException does not implement [CordaThrowable] therefore gets deserialized as a [CordaRuntimeException]
             assertTrue(deserializedException is CordaRuntimeException)
-            val cordaRuntimeException = deserializedException
-            assertEquals(IllegalStateException::class.java.name, cordaRuntimeException.originalExceptionClassName)
-            assertEquals("I am a naughty exception", cordaRuntimeException.originalMessage!!)
+            assertEquals(IllegalStateException::class.java.name, deserializedException.originalExceptionClassName)
+            assertEquals("I am a naughty exception", deserializedException.originalMessage!!)
         }
     }
 
@@ -624,12 +622,12 @@ class DBCheckpointStorageTests {
         }
     }
 
-    private fun iterationsBasedOnLineSeparatorLength() = when {
-        System.getProperty("line.separator").length == 1 -> // Linux or Mac
-            78
-        System.getProperty("line.separator").length == 2 -> // Windows
-            75
-        else -> throw IllegalStateException("Unknown line.separator")
+    private fun iterationsBasedOnLineSeparatorLength(): Int {
+        return when (System.lineSeparator().length) {
+            1 -> 78 // Linux or Mac
+            2 -> 75 // Windows
+            else -> throw IllegalStateException("Unknown line.separator")
+        }
     }
 
     @Test(timeout = 300_000)
@@ -720,7 +718,7 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             val dbFlowCheckpoint= checkpointStorage.getDBCheckpoint(id)
-            assert(dbFlowCheckpoint!!.blob != null)
+            assertThat(dbFlowCheckpoint!!.blob).isNotNull
         }
     }
 

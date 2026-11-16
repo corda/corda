@@ -409,14 +409,39 @@ class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -
  * @param customSerializers a set of [SerializationCustomSerializer]s to be used. If this parameter is specified, then no classpath scanning
  *  will be performed for custom serializers, the provided ones will be used instead. This parameter serves as a more user-friendly option
  *  to specify your serializers and disable the classpath scanning (e.g. for performance reasons).
- */
+ * @param useGlobalThreadPools If `true`, Artemis global thread pools are used for all RPC clients.
+ * This allows multiple connections to share a bounded set of scheduler and worker threads, rather
+ * than creating dedicated pools per client.
+ *
+ * The global pool sizes can be controlled in two ways:
+ *
+ * 1. **System properties** (evaluated when global executors are first created):
+ *    - `activemq.artemis.client.global.thread.pool.max.size` — maximum number of worker threads
+ *    - `activemq.artemis.client.global.scheduled.thread.pool.core.size` — core scheduled threads
+ *
+ * 2. **Programmatic configuration via static methods on
+ *    [org.apache.activemq.artemis.api.core.client.ActiveMQClient](https://activemq.apache.org/components/artemis/documentation/javadocs/javadoc-latest/org/apache/activemq/artemis/api/core/client/ActiveMQClient.html):**
+ *    - [ActiveMQClient.initializeGlobalThreadPoolProperties] — initialises the global thread pools
+ *      properties from System properties.
+ *    - [ActiveMQClient.setGlobalThreadPoolProperties] — allows programmatical configuration of
+ *      global thread pools properties, such as `globalThreadMaxPoolSize`.
+ *    - [ActiveMQClient.injectPools] — allows supplying custom `ExecutorService` and
+ *      `ScheduledExecutorService` instances to override the global pools entirely.
+ *
+ * To check or update the currently configured pools, follow the static methods in
+ * ActiveMQClient that manage the global executors. These are consulted whenever
+ * `useGlobalThreadPools = true` is set.
+ *
+ * Defaults to `false`, meaning each client creates and manages its own dedicated pools.
+*/
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort?,
         private val haAddressPool: List<NetworkHostAndPort>,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val classLoader: ClassLoader? = null,
-        private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null
+        private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null,
+        private val useGlobalThreadPools: Boolean = false
 ) {
 
     @JvmOverloads
@@ -497,6 +522,24 @@ class CordaRPCClient private constructor(
 
     @JvmOverloads
     constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?,
+            useGlobalThreadPools: Boolean
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers,
+            useGlobalThreadPools = useGlobalThreadPools
+    )
+
+    @JvmOverloads
+    constructor(
             haAddressPool: List<NetworkHostAndPort>,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             sslConfiguration: ClientRpcSslOptions? = null,
@@ -509,6 +552,24 @@ class CordaRPCClient private constructor(
             sslConfiguration = sslConfiguration,
             classLoader = classLoader,
             customSerializers = customSerializers
+    )
+
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?,
+            useGlobalThreadPools: Boolean
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers,
+            useGlobalThreadPools = useGlobalThreadPools
     )
 
     // Here to keep the keep ABI compatibility happy
@@ -532,12 +593,16 @@ class CordaRPCClient private constructor(
             haAddressPool.isEmpty() -> RPCClient(
                     rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
                     configuration,
-                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT,
+                     useGlobalThreadPools = useGlobalThreadPools
+            )
             else -> {
                 RPCClient(haAddressPool,
                         sslConfiguration,
                         configuration,
-                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT,
+                        useGlobalThreadPools
+                )
             }
         }
     }

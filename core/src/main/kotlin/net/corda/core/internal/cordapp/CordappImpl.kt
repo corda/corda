@@ -3,6 +3,7 @@ package net.corda.core.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.hash
@@ -41,7 +42,8 @@ data class CordappImpl(
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
         private val explicitCordappClasses: List<String> = emptyList(),
-        val isVirtual: Boolean = false
+        val isVirtual: Boolean = false,
+        override val flowSchedulerMappers: List<Class<out FlowSchedulerMapper>> = emptyList()
 ) : Cordapp {
     override val jarPath: URL
         get() = jarFile.toUri().toURL()

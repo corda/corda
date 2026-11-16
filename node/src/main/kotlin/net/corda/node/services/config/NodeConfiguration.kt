@@ -126,6 +126,19 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     }
 }
 
+fun NodeConfiguration.hasSecurityRateLimitConfigured(): Boolean {
+    val security = tryGetSecurity() ?: return false
+    return security.authService.options?.rateLimit != null
+}
+
+fun NodeConfiguration.tryGetSecurity(): SecurityConfiguration? {
+    return try {
+        this.security
+    } catch (_: Throwable) {
+        null
+    }
+}
+
 data class FlowOverrideConfig(val overrides: List<FlowOverride> = listOf())
 data class FlowOverride(val initiator: String, val responder: String)
 

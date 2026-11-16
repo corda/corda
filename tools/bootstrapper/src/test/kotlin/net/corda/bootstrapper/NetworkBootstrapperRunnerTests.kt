@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getPublicKey
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
@@ -251,7 +252,7 @@ class NetworkBootstrapperRunnerTests {
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         val output = errContent.toString()
-        assert(output.contains("Error parsing packageOwnership: Package namespaces must not overlap"))
+        assertThat(output).contains("Error parsing packageOwnership: Package namespaces must not overlap")
         assertEquals(1, exitCode)
     }
 
@@ -260,6 +261,6 @@ class NetworkBootstrapperRunnerTests {
         val (runner, _) = getRunner()
         runner.networkParametersFile = dirAlice / "filename-that-doesnt-exist"
         val exception = assertFailsWith<FileNotFoundException> { runner.runProgram() }
-        assert(exception.message!!.startsWith("Unable to find specified network parameters config file at"))
+        assertThat(exception.message).startsWith("Unable to find specified network parameters config file at")
     }
 }

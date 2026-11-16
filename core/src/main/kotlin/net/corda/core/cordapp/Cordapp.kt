@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.cordapp.Cordapp.Info.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.scheduler.mapper.FlowSchedulerMapper
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
@@ -38,6 +39,7 @@ import java.net.URL
  * @property jarHash Hash of the jar
  * @property minimumPlatformVersion The minimum platform version this CorDapp will run on.
  * @property targetPlatformVersion The target platform version this CorDapp was designed and tested on.
+ * @property flowSchedulerMappers List of [FlowSchedulerMapper]s classes
  */
 @DoNotImplement
 interface Cordapp {
@@ -60,6 +62,7 @@ interface Cordapp {
     val jarHash: SecureHash.SHA256
     val minimumPlatformVersion: Int
     val targetPlatformVersion: Int
+    val flowSchedulerMappers: List<Class<out FlowSchedulerMapper>>
 
     /**
      * Further information about the CorDapp extracted from its MANIFEST. The sub-types [Default], [Contract] and [Workflow] determine what

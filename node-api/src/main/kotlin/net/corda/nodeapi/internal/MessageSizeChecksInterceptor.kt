@@ -9,7 +9,7 @@ import org.apache.activemq.artemis.protocol.amqp.broker.AMQPMessage
 import org.apache.activemq.artemis.protocol.amqp.broker.AmqpInterceptor
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 
-class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<Packet>(maxMessageSize), Interceptor {
+class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int, port: Int? = null) : MessageSizeChecksInterceptor<Packet>(maxMessageSize, port), Interceptor {
     override fun getMessageSize(packet: Packet?): Long? {
         return when (packet) {
         // This is an estimate of how much memory a Message body takes up.
@@ -21,19 +21,25 @@ class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChec
     }
 }
 
-class AmqpMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<AMQPMessage>(maxMessageSize), AmqpInterceptor {
+class AmqpMessageSizeChecksInterceptor(maxMessageSize: Int, port: Int) : MessageSizeChecksInterceptor<AMQPMessage>(maxMessageSize, port), AmqpInterceptor {
     override fun getMessageSize(packet: AMQPMessage?): Long? = packet?.wholeMessageSize
 }
 
 /**
  *  Artemis message interceptor to enforce maxMessageSize on incoming messages.
  */
-sealed class MessageSizeChecksInterceptor<T : Any>(private val maxMessageSize: Int) : BaseInterceptor<T> {
+sealed class MessageSizeChecksInterceptor<T : Any>(private val maxMessageSize: Int, intPort: Int?) : BaseInterceptor<T> {
     companion object {
         private val logger = contextLogger()
     }
 
+    private val port = intPort?.toString()
+
     override fun intercept(packet: T, connection: RemotingConnection?): Boolean {
+        if (port != null) {
+            val localPort = connection?.transportLocalAddress?.substringAfterLast(':') ?: return true
+            if (localPort != port) return true
+        }
         val messageSize = getMessageSize(packet) ?: return true
         return if (messageSize > maxMessageSize) {
             logger.warn("Message size exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [$messageSize], " +

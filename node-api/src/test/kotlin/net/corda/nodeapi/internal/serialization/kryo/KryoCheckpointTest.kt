@@ -1,8 +1,11 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
+import com.codahale.metrics.MetricRegistry
+import com.esotericsoftware.kryo.KryoException
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import java.util.LinkedList
 import kotlin.test.assertEquals
 
@@ -167,5 +170,16 @@ class KryoCheckpointTest {
             it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
         }
         assertEquals(testSize, result)
+    }
+
+    /**
+     * This test just ensures that the checkpoints still work in light of [LinkedListItrSerializer].
+     */
+    @Test(timeout=300_000)
+    fun `MetricRegistry cannot checkpoint without error`() {
+        val metricRegistry = MetricRegistry()
+        assertThrows<KryoException>("Class com.codahale.metrics.MetricRegistry is not annotated or on the whitelist, so cannot be used in serialization") {
+            KryoCheckpointSerializer.deserialize(KryoCheckpointSerializer.serialize(metricRegistry, KRYO_CHECKPOINT_CONTEXT), MetricRegistry::class.java, KRYO_CHECKPOINT_CONTEXT)
+        }
     }
 }

@@ -1303,6 +1303,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
             this.networkParameters = networkParameters
         }
+
+        override fun <T> getMetricsRegistry(type: Class<T>): T {
+            if(type == MetricRegistry::class.java) {
+                @Suppress("UNCHECKED_CAST")
+                return this@AbstractNode.metricRegistry as T
+            } else {
+                throw IllegalArgumentException("Only ${MetricRegistry::class.java} is currently supported")
+            }
+        }
     }
 }
 

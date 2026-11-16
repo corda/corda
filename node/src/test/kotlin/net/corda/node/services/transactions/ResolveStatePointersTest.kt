@@ -1,6 +1,14 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.LinearPointer
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StatePointer
+import net.corda.core.contracts.StaticPointer
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
@@ -12,6 +20,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -79,7 +88,7 @@ class ResolveStatePointersTest {
         }
 
         // Check the StateRef for the pointed-to state is not added as a reference.
-        assert(tx.referenceStates().none { it == stateAndRef.ref })
+        assertThat(tx.referenceStates()).noneMatch { it == stateAndRef.ref }
 
         // Resolve the StateRef to the actual state.
         val ltx = tx.toLedgerTransaction(services)
@@ -119,7 +128,7 @@ class ResolveStatePointersTest {
         }
 
         // Check the StateRef for the pointed-to state is not added as a reference.
-        assert(tx.referenceStates().none { it == stateAndRef.ref })
+        assertThat(tx.referenceStates()).noneMatch { it == stateAndRef.ref }
 
         // Resolve the StateRef to the actual state.
         val ltx = tx.toLedgerTransaction(services)

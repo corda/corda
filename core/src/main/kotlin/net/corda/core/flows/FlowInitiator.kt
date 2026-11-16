@@ -4,6 +4,7 @@ import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.context.SystemContextType
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -45,6 +46,10 @@ sealed class FlowInitiator : Principal {
         override fun getName(): String = "Shell User"
     }
 
+    /** Started by the system. */
+    data class System(val systemContextType: SystemContextType) : FlowInitiator() {
+        override fun getName(): String = systemContextType.description
+    }
     /**
      * Returns an [InvocationContext], which is equivalent to this object but expressed using the successor to this
      * class hierarchy (which is now deprecated). The returned object has less information than it could have, so
@@ -64,6 +69,7 @@ sealed class FlowInitiator : Principal {
                 is FlowInitiator.Service -> origin = InvocationOrigin.Service(this.serviceClassName, unknownName)
                 FlowInitiator.Shell -> origin = InvocationOrigin.Shell
                 is FlowInitiator.Scheduled -> origin = InvocationOrigin.Scheduled(this.scheduledState)
+                is FlowInitiator.System -> origin = InvocationOrigin.System(this.systemContextType)
             }
             return InvocationContext.newInstance(origin = origin, actor = actor)
         }

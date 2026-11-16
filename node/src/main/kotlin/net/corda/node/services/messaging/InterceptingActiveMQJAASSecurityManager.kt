@@ -3,9 +3,14 @@ package net.corda.node.services.messaging
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
+import org.apache.activemq.artemis.spi.core.security.jaas.NoCacheLoginException
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
@@ -13,17 +18,36 @@ import java.util.Base64
 import java.util.concurrent.TimeUnit
 import javax.security.auth.Subject
 import kotlin.math.pow
-import net.corda.node.services.config.SecurityConfiguration.AuthService.Options.RateLimit
-import org.apache.activemq.artemis.spi.core.security.jaas.NoCacheLoginException
 
-class RateLimitingActiveMQJAASSecurityManager(
-        configurationName: String,
-        configuration: SecurityConfiguration,
-        rateLimitConfig: RateLimit?
-) : ActiveMQJAASSecurityManager(configurationName, configuration) {
-
+class InterceptingActiveMQJAASSecurityManager(configurationName: String, configuration: SecurityConfiguration, private val p2pPort: Int, private val rpcPort: Int, private val rpcAdminPort: Int, private val rateLimitConfig: RateLimit?) : ActiveMQJAASSecurityManager(configurationName, configuration) {
     companion object {
-        private val log = loggerFor<RateLimitingActiveMQJAASSecurityManager>()
+        private val log = loggerFor<InterceptingActiveMQJAASSecurityManager>()
+
+        enum class BrokerType {
+            RPC, P2P
+        }
+
+        fun RemotingConnection?.categorise(p2pPort: String, rpcPort: String, rpcAdminPort: String): BrokerType {
+            return if (this?.transportLocalAddress?.endsWith(":$p2pPort") ?: false) {
+                BrokerType.P2P
+            } else if (this?.transportLocalAddress?.endsWith(":$rpcPort") ?: false) {
+                BrokerType.RPC
+            } else if (this?.transportLocalAddress?.endsWith(":$rpcAdminPort") ?: false) {
+                BrokerType.RPC
+            } else throw IllegalStateException("Neither RPC port ($rpcPort), RPC admin port ($rpcAdminPort), nor P2P port ($p2pPort) for local connection ${this?.transportLocalAddress}")
+        }
+
+        fun categoriseUser(user: String?): BrokerType {
+            return if (user == null) {
+                BrokerType.RPC
+            } else if (user == PEER_USER || user == NODE_P2P_USER) {
+                BrokerType.P2P
+            } else if (user == NODE_RPC_USER) {
+                BrokerType.RPC
+            } else {
+                BrokerType.RPC
+            }
+        }
     }
 
     private data class Attempt(val count: Int, val nextAllowed: Instant) {
@@ -50,8 +74,26 @@ class RateLimitingActiveMQJAASSecurityManager(
                     .maximumSize(10_000)
                     .build<String, Attempt>()
 
-    @Suppress("ComplexMethod")
     override fun authenticate(user: String?, password: String?, remotingConnection: RemotingConnection?, securityDomain: String?): Subject? {
+        val userCategory = categoriseUser(user)
+        val connectionCategory = remotingConnection.categorise(p2pPort.toString(), rpcPort.toString(), rpcAdminPort.toString())
+        if (userCategory != connectionCategory) {
+            log.warn("Authenticate attempt user=$user, remotingConnection=$remotingConnection, securityDomain=$securityDomain connectionCategory=$connectionCategory userCategory=$userCategory")
+            return null
+        }
+        if (connectionCategory == BrokerType.RPC && rateLimitConfig != null) {
+            return authenticateWithRateLimit(user, password, remotingConnection, securityDomain)
+        }
+        return super.authenticate(user, password, remotingConnection, securityDomain)
+    }
+
+    @Suppress("ComplexMethod")
+    private fun authenticateWithRateLimit(
+            user: String?,
+            password: String?,
+            remotingConnection: RemotingConnection?,
+            securityDomain: String?
+    ): Subject? {
 
         val now = Instant.now()
         val ip = extractIp(remotingConnection)
@@ -63,7 +105,7 @@ class RateLimitingActiveMQJAASSecurityManager(
             userAttempts.getIfPresent(userKey)?.let { userAttempt ->
                 if (userAttempt.suspended(now)) {
                     val remaining = userAttempt.remainingSeconds(now)
-                    // additional logging because Artemis will swallow the FailedLoginExceptions thrown in this method
+                    // additional logging because Artemis will swallow the exceptions thrown in this method
                     // and wrap them into ActiveMQInternalErrorException without the cause
                     log.warn(printWarnMessage(user, remaining))
                     throw NoCacheLoginException(printWarnMessage(user, remaining))
