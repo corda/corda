@@ -1,9 +1,9 @@
-## Base image pinned by digest (NCC-E024817-XR6). To update, change the tag and replace the digest with the one
+## Base image pinned by digest. To update, change the tag and replace the digest with the one
 ## printed by: docker buildx imagetools inspect amazoncorretto:<tag>
 FROM amazoncorretto:17.0.21@sha256:8cdda475a507307ac53f51db9b5a99055ce0e6402f4e092d587b224aa2a08da5 AS runtime-base
 
 ## Upgrade OS packages (JDK held at the pinned version), install the tools the scripts need, and clean the package
-## manager caches in the same layer (NCC-E024817-XR6)
+## manager caches in the same layer
 RUN yum -y upgrade --refresh -x 'java-17-amazon-corretto*' && \
     yum -y install bash && \
     yum -y install curl && \
@@ -22,7 +22,7 @@ RUN groupadd -g 1000 corda && \
 ##Nothing from this stage reaches the image except the files copied from /dist below.
 FROM runtime-base AS assemble
 COPY corda.jar config-exporter.jar starting-node.conf run-corda.sh generate-config.sh healthcheck.sh /staging/
-##Jars and config 0444, scripts 0555 (NCC-E024817-XR6)
+##Jars and config 0444, scripts 0555
 RUN mkdir -p /dist/bin /dist/base && \
     cp /staging/corda.jar /dist/bin/ && \
     cp /staging/run-corda.sh /dist/bin/run-corda && \
@@ -49,7 +49,6 @@ FROM runtime-base
 
 ## Create dirs and change ownership. Node data, message journal and keys are readable by the corda user and group
 ## only, and the folder holding the Corda binaries is owned by root, so the corda user cannot change its contents
-## (NCC-E024817-XR6)
 RUN mkdir -p /opt/corda/cordapps && \
     mkdir -p /opt/corda/persistence && \
     mkdir -p /opt/corda/artemis && \

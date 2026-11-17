@@ -1,4 +1,4 @@
-## Base image pinned by digest (NCC-E024817-XR6). To update, change the tag and replace the digest with the one
+## Base image pinned by digest. To update, change the tag and replace the digest with the one
 ## printed by: docker buildx imagetools inspect azul/zulu-openjdk:<tag>
 FROM azul/zulu-openjdk:17.0.21@sha256:2f165b720a599db9ea51568656cfe455c483509871d8f03716bd0b25278a77f1 AS runtime-base
 
@@ -7,7 +7,6 @@ RUN rm -rf /etc/apt/sources.list.d/zulu.list
 
 ## Upgrade OS packages (JDK held at the pinned version), install the tools the scripts need, clean the apt cache,
 ## and remove setuid/setgid bits (su, passwd, mount, ...) so a non-root user cannot use them to become root
-## (NCC-E024817-XR6)
 RUN apt-get update && \
     apt-mark hold zulu17-jdk && \
     DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
@@ -26,7 +25,7 @@ RUN addgroup --gid 1000 corda && \
 ##Nothing from this stage reaches the image except the files copied from /dist below.
 FROM runtime-base AS assemble
 COPY corda.jar config-exporter.jar starting-node.conf run-corda.sh generate-config.sh healthcheck.sh /staging/
-##Jars and config 0444, scripts 0555 (NCC-E024817-XR6)
+##Jars and config 0444, scripts 0555
 RUN mkdir -p /dist/bin /dist/base && \
     cp /staging/corda.jar /dist/bin/ && \
     cp /staging/run-corda.sh /dist/bin/run-corda && \
@@ -53,7 +52,6 @@ FROM runtime-base
 
 ## Create dirs and change ownership. Node data, message journal and keys are readable by the corda user and group
 ## only, and the folder holding the Corda binaries is owned by root, so the corda user cannot change its contents
-## (NCC-E024817-XR6)
 RUN mkdir -p /opt/corda/cordapps && \
     mkdir -p /opt/corda/persistence && \
     mkdir -p /opt/corda/artemis && \
