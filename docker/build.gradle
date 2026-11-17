@@ -92,9 +92,11 @@ class BuildDockerFolderTask extends DefaultTask {
         return ImageVariant.toBeBuilt
     }
 
+    // Dockerfiles and the config template, so that editing either makes Gradle regenerate the build folder
+    // instead of reporting the task as UP-TO-DATE.
     @InputFiles
     FileCollection getDockerBuildFiles() {
-        return project.fileTree("${project.projectDir}/src/docker/build")
+        return project.files("${project.projectDir}/src/docker", "${project.projectDir}/src/config")
     }
 
     @InputFiles
@@ -138,7 +140,8 @@ class BuildDockerFolderTask extends DefaultTask {
 
         ["src/bash/run-corda.sh",
          "src/config/starting-node.conf",
-         "src/bash/generate-config.sh"].forEach {
+         "src/bash/generate-config.sh",
+         "src/bash/healthcheck.sh"].forEach {
             def source = project.file(it).toPath()
             Files.copy(source, dockerBuildDir.toPath().resolve(source.fileName), StandardCopyOption.REPLACE_EXISTING)
         }

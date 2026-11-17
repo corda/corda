@@ -53,6 +53,9 @@ function generateGenericCZConfig() {
       java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
   fi
 
+  # Unpack Corda from the read-only corda.jar on every start, so changes to the unpacked copy do not survive a restart
+  # Do not run this while a node is already running in the same container: it would delete files the running node still loads.
+  rm -rf "${CAPSULE_CACHE_DIR:-${HOME}/.capsule}"/apps/net.corda.node.Corda_*
   java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
     --initial-registration \
     --base-directory /opt/corda \
