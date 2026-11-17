@@ -55,9 +55,10 @@ import java.time.Instant
  * - `@Index` and `@ForeignKey`, which only affected the DDL Hibernate generated (a node's tables come from Liquibase), are dropped with a
  *   warning, and so is a `@Table` (or each `@Table` of a `@Tables`) that only sets such members; one that sets a member that changed how
  *   Hibernate read or wrote the table (custom SQL, `fetch`, `inverse`, `optional`) fails the conversion.
- * - Every other Hibernate annotation, `@TypeDef` included, is resolved against the node's Hibernate 7: a missing annotation, a member
- *   Hibernate 7 does not have or declares with another type, or a member Hibernate 7 requires that Hibernate 5 did not, fails the
- *   conversion. The JVM would otherwise drop the annotation or the member silently, and the mapping would change without a trace.
+ * - `@TypeDef` and `@TypeDefs` are refused outright, with a message naming the class: Hibernate 7 has no type definitions.
+ * - Every other Hibernate annotation is resolved against the node's Hibernate 7: a missing annotation, a member Hibernate 7 does not
+ *   have or declares with another type, or a member Hibernate 7 requires that Hibernate 5 did not, fails the conversion. The JVM would
+ *   otherwise drop the annotation or the member silently, and the mapping would change without a trace.
  *
  * Hibernate classes other than annotations (the `Session` API, the type classes) are not converted either, and many of them changed
  * between Hibernate 5 and 7. Given the class loader of the node's Hibernate, [transform] resolves every Hibernate class and member the
@@ -159,8 +160,9 @@ object JavaxPersistenceTransformer {
     /**
      * A Hibernate 5 basic type that was the default mapping of its Java type: by name and by type class name, with the member types it
      * was the default for. A `@Type` naming it on such a member is dropped, unless the type pins a [jdbcTypeCode] or a [converter]: an
-     * explicit character type opted the column out of nationalised character data on SQL Server (`varchar` where the default gives
-     * `nvarchar`), so `string` and `character` keep an explicit mapping, and `character` reads a padded column as Hibernate 5 did.
+     * explicit character type opted the column out of nationalised character data on Oracle and SQL Server under Corda Enterprise
+     * (`varchar` where the default gives `nvarchar`; open source nodes never nationalise), so `string` and `character` keep an explicit
+     * mapping, and `character` reads a padded column as Hibernate 5 did.
      */
     private class Hibernate5BasicType(
             val javaClass: Class<*>,
