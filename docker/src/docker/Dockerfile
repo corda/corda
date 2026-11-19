@@ -1,17 +1,8 @@
-FROM azul/zulu-openjdk:17.0.19
+## Azul Zulu 17.70+201 (JDK 17.0.21.1), which fixes CVE-2026-114938. Pinned by digest, so every build uses this image.
+FROM azul/zulu-openjdk:17.0.21.1@sha256:4a90876af5459eba762bf028926a84733ded1db6f57cf74e59ef3588c149e17b
 
-## Upgrade the JDK to Azul Zulu 17.70+201 (JDK 17.0.21.1), which fixes CVE-2026-114938. Azul has not yet published an
-## azul/zulu-openjdk image with this JDK, so it is installed from Azul's apt repository, which the base image configures
-## with Azul's signing key. The base image pins zulu17-* to its own JDK in /etc/apt/preferences, so the pin is moved to
-## the new version first. Once Azul publishes azul/zulu-openjdk:17.0.21.1 (or later), repin the base image and reduce
-## this step to removing the Azul repository.
-## The Azul repository is then removed, so the apt-get steps below use the Ubuntu repositories only.
-RUN printf 'Package: zulu17-*\nPin: version 17.0.21.1-1\nPin-Priority: 1001\n' > /etc/apt/preferences && \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends zulu17-jdk=17.0.21.1-1 && \
-    rm -f /etc/apt/sources.list.d/zulu.list && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+## Remove Azul Zulu repo, as it is gone by now
+RUN rm -rf /etc/apt/sources.list.d/zulu.list
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
