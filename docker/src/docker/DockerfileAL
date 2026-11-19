@@ -1,4 +1,6 @@
-FROM amazoncorretto:17.0.20
+## Corretto 17.0.21.1.2 (JDK 17.0.21.1), which fixes CVE-2026-114938. Amazon re-pushed the 17.0.21 tag with this JDK,
+## so the image is pinned by digest: a build host that still has the earlier 17.0.21 image cached would otherwise use it.
+FROM amazoncorretto:17.0.21@sha256:9f2fde515fa060e6218b680d0f5045940d915af43af266145586344bddb30320
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN yum -y install bash && \
@@ -65,4 +67,14 @@ COPY --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 USER "corda"
 EXPOSE ${MY_P2P_PORT} ${MY_RPC_PORT} ${MY_RPC_ADMIN_PORT}
 WORKDIR /opt/corda
+
+##LAUNCHER CHECK: start corda.jar once on this image's own JDK and fail the build if it cannot start.
+##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than four numbers: on a JDK such as
+##17.0.21.0.3 every start fails with "CAPSULE EXCEPTION: Could not parse version". Re-pinning a base image to such a
+##JDK would otherwise produce an image that builds fine but cannot start a node. The files the check writes (the
+##unpacked Capsule, logs, JVM temporary files) are removed in the same step, so nothing is added to the image.
+RUN java -XshowSettings:properties -version 2>&1 | grep "java.version =" && \
+    java -jar /opt/corda/bin/corda.jar --version && \
+    rm -rf /opt/corda/.capsule /opt/corda/.hawtjni /opt/corda/logs/* /tmp/hsperfdata_corda
+
 CMD ["run-corda"]
