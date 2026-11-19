@@ -81,7 +81,7 @@ converts or checks each one:
 | `pg-uuid`, `org.hibernate.type.PostgresUUIDType`                     | `@JdbcTypeCode(SqlTypes.UUID)`: PostgreSQL's native `uuid`                  |
 | `yes_no`, `true_false` (and their type classes)                      | `@Convert(converter = YesNoBooleanConverter / TrueFalseBooleanConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: Corda's converters store 'Y'/'N' and 'T'/'F' in a `CHAR` column and read it as Hibernate 5 did (padded or not, either case), so the column a 4.14 node used passes validation on every database |
 | `numeric_boolean` (and its type class)                               | `@Convert(converter = NumericBooleanConverter)`: Hibernate 7's own converter, 1/0 |
-| `string` (and `org.hibernate.type.StringType`), on a `String`      | `@JdbcTypeCode(SqlTypes.VARCHAR)`: the explicit type opted the column out of nationalised character data on SQL Server (`varchar`, not `nvarchar`), and the explicit JDBC type keeps it so |
+| `string` (and `org.hibernate.type.StringType`), on a `String`      | `@JdbcTypeCode(SqlTypes.VARCHAR)`: the explicit type opted the column out of nationalised character data on Oracle and SQL Server under Corda Enterprise (`varchar`, not `nvarchar`; open source nodes never nationalise), and the explicit JDBC type keeps it so |
 | `character` (and `org.hibernate.type.CharacterType`), on a `Character` or `char` | `@Convert(converter = SingleCharacterConverter)` with `@JdbcTypeCode(SqlTypes.CHAR)`: a `CHAR` column as before, read by its first character (the rest is padding, and a stored space is a space), so a `CHAR(255)` column that Hibernate 5's DDL made on H2 reads as it did |
 | `long`, `integer`, `short`, `byte`, `boolean`, `double`, `float`, `big_decimal`, `big_integer`, `timestamp`, `date`, `time`, `instant` (and their type classes) | Nothing, on a member of the Java type the name was the default mapping for (`@Type(type = "long")` on a `Long`): Hibernate 7's default mapping of the member is the same. For these, as for `string` and `character`, a `@Type` on a member of another type was a choice, and the class is refused |
 
@@ -439,6 +439,14 @@ from its `cordapps` directory, as a real node does. So, to test on 4.15: port yo
 rebuild), and run tests that need an unported third-party jar on out-of-process driver nodes or a real node until its vendor ships a
 4.15 build.
 
+The failure to recognise: a CorDapp built for 4.14 or earlier whose flow code binds its `withEntityManager` block to
+`javax.persistence.EntityManager` (or to any other `javax.persistence` type) fails in a 4.15 `MockNetwork`, `MockServices` or in-process
+driver node with `NoClassDefFoundError: javax/persistence/EntityManager` when the flow runs: the test JVM has no `javax.persistence`, and
+the class was not converted. The same jar runs on a real 4.15 node and on out-of-process driver nodes, where it is converted. A library
+CorDapp that is built once for both lines avoids the binding altogether, see
+[A CorDapp that must run on 4.14 and 4.15](#7-a-cordapp-that-must-run-on-414-and-415); token-sdk 1.3.5 does, and its earlier versions fail
+this way.
+
 ### 6. A CorDapp you cannot rebuild
 
 Nothing needs to be done: the node converts it as described above. If it uses a Hibernate `@Type` the node cannot substitute, the
@@ -456,11 +464,50 @@ A CorDapp that wants to be built for `jakarta.persistence` while still running o
 mapped class, with the same attributes on each twin, and declare both API jars as compile-only dependencies (`javax.persistence-api:2.2`
 and `jakarta.persistence-api:3.2.0`), bundling neither. Hibernate reads the set it understands, the JVM drops the annotations whose
 classes are not on the node's classpath, and the node leaves a class that refers to both packages alone (it converts only classes that
-refer to `javax.persistence` and not to `jakarta.persistence`; converting a dual class would duplicate its annotations). Code that calls
-`ServiceHub.withEntityManager` must then not bind to either `EntityManager` interface at compile time, as the node hands over whichever
-its Hibernate version implements: resolve the methods reflectively from the object you are given (both interfaces have the same method
-names and shapes), or use `ServiceHub.jdbcSession()` instead. `@Type(type = "...")` has no equivalent that works on both versions, so
-such a CorDapp replaces it by a JPA `AttributeConverter` (one implementation class per API).
+refer to `javax.persistence` and not to `jakarta.persistence`; converting a dual class would duplicate its annotations). token-sdk 1.3.5 is
+built this way. Such a CorDapp follows four rules.
+
+**The rule is per class, and "left alone" means left alone entirely.** None of the substitutions and checks of section 2 run on a class
+that refers to both packages: Hibernate 7 reads its Hibernate 5 annotations exactly as compiled. An annotation type Hibernate 7 no longer
+has (`@TypeDef`, `@Target`, `@Where`, `@WhereJoinTable`, `@OrderBy`, `@Index`, `@ForeignKey`, Hibernate's `@Table`) vanishes silently, so a
+`@Where` filter stops filtering on 4.15 unless `@SQLRestriction` is written next to it, and `@Index`, `@ForeignKey` and `@Table` are simply
+gone. A Hibernate 5 `@Type(type = "...")` left on such a class is read as Hibernate 7's `@Type` without its `value`, and Hibernate 7 fails
+loudly with an `IncompleteAnnotationException` when it builds the session factory. An enum constant Hibernate 7 removed from an annotation
+that still exists (`@Cascade(SAVE_UPDATE)`) fails when the annotation is read.
+
+**Do not bind to either `EntityManager`.** Code that calls `ServiceHub.withEntityManager` must not bind to either `EntityManager`
+interface at compile time, as the node hands over whichever its Hibernate version implements: take the object as `Any` and resolve the
+methods reflectively (both interfaces have the same method names and shapes; token-sdk 1.3.5's `DistributionUtilities.kt` and the accounts
+library's `PersistenceApi.kt` are reference implementations, with a per-class method cache), or use `ServiceHub.jdbcSession()` instead.
+Because the conversion is per class, the same applies to a `javax.persistence`-typed call into another CorDapp's API, such as the Archive
+Service's App Entity Manager (`withEntityManager(serviceHub) { ... }` typed on `javax.persistence.EntityManager`): a class that makes such a
+call must not also refer to `jakarta.persistence`, or the node leaves it unconverted and it fails with `NoClassDefFoundError`. Keep the call
+in a class of its own, which the node converts, or make it reflective too.
+
+**Map `uuid-char` and `string` columns with one annotation set per Hibernate version, not with an `AttributeConverter`.** A JPA
+`AttributeConverter` whose column side is `String` is the wrong replacement for `@Type(type = "uuid-char")` or `@Type(type = "string")`
+on Corda Enterprise: Enterprise nationalises character data on Oracle and SQL Server, so the converter's column maps to `NVARCHAR` where
+the named type had kept it `VARCHAR`. Hibernate 5 then refuses the existing column when the node starts on 4.12 to 4.14 (`wrong column type
+... expecting nvarchar2`), and Hibernate 7 binds `NVARCHAR` against the `VARCHAR` column on 4.15, which costs the column its index (an
+implicit conversion in every plan). Keep the attribute's Java type instead, and give each Hibernate its own mapping in annotations that
+only that Hibernate has, so the JVM drops the other set on the other node (Kotlin shown; `UUIDCharType.class` in Java):
+
+| Hibernate | Annotations | Mapping |
+|---|---|---|
+| 5 (Corda 4.12 to 4.14) | `@TypeDef(typeClass = UUIDCharType::class, defaultForType = LinearIdType::class)` on the entity class, `@Target(LinearIdType::class)` on the attribute; `LinearIdType` is an empty nested class used only as the key of the type definition | `uuid-char`: `VARCHAR`, 36 characters, as before |
+| 7 (Corda 4.15) | `@JdbcTypeCode(Types.VARCHAR)` on the attribute (`java.sql.Types`, the same value as `SqlTypes.VARCHAR`, without a second Hibernate 7 reference) | `VARCHAR`, the mapping the node substitutes for `uuid-char` in a converted jar |
+
+For a `String` attribute that was `@Type(type = "string")`, use `StringType` in place of `UUIDCharType`. Both Hibernate versions are then
+compile-only dependencies, neither bundled; Gradle refuses `org.hibernate:hibernate-core` 5.6.x and `org.hibernate.orm:hibernate-core`
+7.4.x in one configuration, so add one of them as a non-transitive file dependency, as token-sdk does. With both on the compile classpath, a
+reference to a class that exists in both (`@Type`, `Session`, `@Where`) silently binds to whichever Gradle lists first and fails at run time
+on the other version, so limit the Hibernate 5 references to `@TypeDef`, `@Target` and the type class, and the Hibernate 7 references to
+`@JdbcTypeCode`.
+
+**Test against both lines.** Build and run the tests against a 4.14 and a 4.15 Corda version. A unit test that builds Hibernate metadata for
+the entity with nationalised character data enabled and asserts the JDBC type of each character column catches a mapping regression on
+whichever Hibernate the build has (token-sdk's `DistributionRecordMappingTest` is one); the H2 tests of a `MockNetwork` do not, since H2 is
+never nationalised.
 
 ---
 
@@ -569,3 +616,8 @@ Load-time conversion of `javax.persistence` CorDapps (`CordappClassLoader`, `Jav
 maps some Java types differently on these databases, and it is where an unnoticed difference is most likely. These need to be run by QA, against
 a database created by a 4.14 node (not a fresh one) with a populated vault, **before release**. In particular check: startup in `validate` mode
 (no `HibernateSchemaChangeException`), `Instant` columns, `UUID` columns, and the checkpoint tables on each database.
+
+Since then (17 November 2026) the CorDapp follow-up work has validated Hibernate 7.4.12, with Corda Enterprise's nationalised character
+data and the node's `HibernateCompatibility` settings, against CorDapp tables created by Liquibase on real Oracle 26ai and SQL Server 2022
+(the token-sdk, accounts and bn-extension schemas: `hbm2ddl=validate`, inserts and reads, with Hibernate 5 run on the same tables for
+comparison). The node's own tables on those databases, and a database created by a 4.14 node, remain with QA.
