@@ -1,6 +1,6 @@
 ## Base image pinned by digest. To update, change the tag and replace the digest with the one
 ## printed by: docker buildx imagetools inspect azul/zulu-openjdk:<tag>
-FROM azul/zulu-openjdk:17.0.21@sha256:2f165b720a599db9ea51568656cfe455c483509871d8f03716bd0b25278a77f1 AS runtime-base
+FROM azul/zulu-openjdk:17.0.21.1@sha256:4a90876af5459eba762bf028926a84733ded1db6f57cf74e59ef3588c149e17b AS runtime-base
 
 ## Remove Azul Zulu repo, as it is gone by now
 RUN rm -rf /etc/apt/sources.list.d/zulu.list
@@ -40,7 +40,7 @@ RUN mkdir -p /dist/bin /dist/base && \
                /dist/bin/healthcheck
 
 ##LAUNCHER CHECK: start corda.jar once on this image's own JDK and fail the build if it cannot start.
-##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than three numbers: on a JDK such as
+##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than four numbers: on a JDK such as
 ##17.0.21.0.3 every start fails with "CAPSULE EXCEPTION: Could not parse version". Re-pinning a base image to such a
 ##JDK would otherwise produce an image that builds fine but cannot start a node. This runs in the assemble stage,
 ##so the files Capsule unpacks are discarded and nothing is added to the image. It adds a few seconds to the build.

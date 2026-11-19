@@ -1,6 +1,6 @@
 ## Base image pinned by digest. To update, change the tag and replace the digest with the one
 ## printed by: docker buildx imagetools inspect amazoncorretto:<tag>
-FROM amazoncorretto:17.0.21@sha256:8cdda475a507307ac53f51db9b5a99055ce0e6402f4e092d587b224aa2a08da5 AS runtime-base
+FROM amazoncorretto:17.0.21@sha256:9f2fde515fa060e6218b680d0f5045940d915af43af266145586344bddb30320 AS runtime-base
 
 ## Upgrade OS packages (JDK held at the pinned version), install the tools the scripts need, and clean the package
 ## manager caches in the same layer
@@ -37,7 +37,7 @@ RUN mkdir -p /dist/bin /dist/base && \
                /dist/bin/healthcheck
 
 ##LAUNCHER CHECK: start corda.jar once on this image's own JDK and fail the build if it cannot start.
-##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than three numbers: on a JDK such as
+##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than four numbers: on a JDK such as
 ##17.0.21.0.3 every start fails with "CAPSULE EXCEPTION: Could not parse version". Re-pinning a base image to such a
 ##JDK would otherwise produce an image that builds fine but cannot start a node. This runs in the assemble stage,
 ##so the files Capsule unpacks are discarded and nothing is added to the image. It adds a few seconds to the build.
