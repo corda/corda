@@ -1,22 +1,19 @@
 package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.CordaRuntimeException
+import net.corda.core.serialization.internal.JavaxPersistenceRenamer
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.persistence.factory.CordaSqlTypes
 import org.hibernate.type.SqlTypes
 import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.commons.ClassRemapper
-import org.objectweb.asm.commons.Remapper
 import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -33,6 +30,8 @@ import java.time.Instant
  *
  * The rename also covers the strings of a Kotlin class's `@kotlin.Metadata` (its `d2` string table), which name the types of its
  * members in the same form, so that Kotlin reflection on a converted class sees the renamed types too.
+ * The rename itself is [JavaxPersistenceRenamer]'s, in `core`, which the attachments class loader uses on its own for the classes of
+ * contract attachments; the conversion of the Hibernate annotations and the checks against Hibernate 7 described below are added here.
  *
  * Only a class that refers to `javax.persistence` and not to `jakarta.persistence` is converted (see [isBuiltForJavaxPersistenceOnly]).
  * A class that carries both sets of annotations, i.e. a CorDapp built to run on Corda 4.14 and 4.15 alike, must be left alone, as the
@@ -83,8 +82,8 @@ object JavaxPersistenceTransformer {
     const val REBUILD_ADVICE = "The CorDapp that contains the class needs to be rebuilt for Corda 4.15 - see the " +
             "\"Upgrading to Hibernate 7\" documentation."
 
-    private const val JAVAX_PERSISTENCE = "javax/persistence/"
-    private const val JAKARTA_PERSISTENCE = "jakarta/persistence/"
+    private const val JAVAX_PERSISTENCE = JavaxPersistenceRenamer.JAVAX_PERSISTENCE
+    private const val JAKARTA_PERSISTENCE = JavaxPersistenceRenamer.JAKARTA_PERSISTENCE
     private const val HIBERNATE = "org/hibernate/"
     private const val HIBERNATE_ANNOTATION_PREFIX = "Lorg/hibernate/annotations/"
     private const val HIBERNATE_TYPE = "Lorg/hibernate/annotations/Type;"
@@ -101,11 +100,9 @@ object JavaxPersistenceTransformer {
     private const val HIBERNATE_CACHE = "Lorg/hibernate/annotations/Cache;"
     private const val HIBERNATE_JDBC_TYPE_CODE = "Lorg/hibernate/annotations/JdbcTypeCode;"
     private const val JAKARTA_CONVERT = "Ljakarta/persistence/Convert;"
-    private const val KOTLIN_METADATA = "Lkotlin/Metadata;"
-    private const val KOTLIN_METADATA_STRINGS = "d2"
 
     /** The rename, for the places that compare a descriptor of the original class with one of Hibernate 7's. */
-    private val javaxToJakarta = PackageRemapper(JAVAX_PERSISTENCE, JAKARTA_PERSISTENCE)
+    private val javaxToJakarta = JavaxPersistenceRenamer.PackageRemapper(JAVAX_PERSISTENCE, JAKARTA_PERSISTENCE)
 
     /**
      * The Hibernate 5 type names the node substitutes by `@JdbcTypeCode`, with the JDBC type code of their Hibernate 7 mapping. The names
@@ -274,8 +271,7 @@ object JavaxPersistenceTransformer {
      * (constant pool entries are ASCII-compatible). A class that refers to both is annotated for both persistence APIs on purpose.
      */
     fun isBuiltForJavaxPersistenceOnly(classBytes: ByteArray): Boolean {
-        val text = String(classBytes, Charsets.ISO_8859_1)
-        return text.contains(JAVAX_PERSISTENCE) && !text.contains(JAKARTA_PERSISTENCE)
+        return JavaxPersistenceRenamer.isBuiltForJavaxPersistenceOnly(classBytes)
     }
 
     /**
@@ -327,11 +323,7 @@ object JavaxPersistenceTransformer {
             decorate: (ClassVisitor) -> ClassVisitor = { it },
             decorateOutput: (ClassVisitor) -> ClassVisitor = { it }
     ): ByteArray {
-        val reader = ClassReader(classBytes)
-        // A fresh writer, so that the constant pool of the result does not keep the entries of the original.
-        val writer = ClassWriter(0)
-        reader.accept(decorate(KotlinMetadataRenamer(from, to, ClassRemapper(decorateOutput(writer), PackageRemapper(from, to)))), 0)
-        return writer.toByteArray()
+        return JavaxPersistenceRenamer.rename(classBytes, from, to, decorate, decorateOutput)
     }
 
     private fun simpleName(descriptor: String) = "@" + descriptor.substringAfterLast('/').removeSuffix(";")
@@ -510,35 +502,6 @@ object JavaxPersistenceTransformer {
                     if (owner.startsWith("[")) return
                     resolver.checkType(Type.getMethodType(descriptor))
                     resolver.checkMethod(owner, name, descriptor)
-                }
-            }
-        }
-    }
-
-    private class PackageRemapper(private val from: String, private val to: String) : Remapper(Opcodes.ASM9) {
-        override fun map(internalName: String): String {
-            return if (internalName.startsWith(from)) to + internalName.substring(from.length) else internalName
-        }
-    }
-
-    /**
-     * Renames the package in the string table (`d2`) of a Kotlin class's `@kotlin.Metadata`, whose entries name the types of the
-     * class's members as JVM descriptors and internal names, which ASM's remapper does not see. The Kotlin compiler writes those
-     * entries whole (it does not use the substring form of the string table), so a plain replacement keeps them consistent.
-     */
-    private class KotlinMetadataRenamer(private val from: String, private val to: String, next: ClassVisitor) : ClassVisitor(Opcodes.ASM9, next) {
-        override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
-            val next = super.visitAnnotation(descriptor, visible) ?: return null
-            if (descriptor != KOTLIN_METADATA) return next
-            return object : AnnotationVisitor(Opcodes.ASM9, next) {
-                override fun visitArray(name: String?): AnnotationVisitor? {
-                    val array = super.visitArray(name) ?: return null
-                    if (name != KOTLIN_METADATA_STRINGS) return array
-                    return object : AnnotationVisitor(Opcodes.ASM9, array) {
-                        override fun visit(name: String?, value: Any?) {
-                            super.visit(name, if (value is String) value.replace(from, to) else value)
-                        }
-                    }
                 }
             }
         }
