@@ -3,15 +3,20 @@ package net.corda.coretests.transactions
 import jakarta.persistence.AttributeConverter
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
@@ -44,8 +49,10 @@ import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
+import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 import kotlin.io.path.readBytes
 import kotlin.reflect.full.memberFunctions
@@ -114,7 +121,8 @@ class AttachmentsClassLoaderJavaxPersistenceTests {
             @Suppress("OverridingDeprecatedMember")
             @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
             override val signers: List<Party> = emptyList()
-            override val signerKeys: List<PublicKey> = emptyList()
+            // What the node's attachment storage records: the keys that signed the jar as it is stored.
+            override val signerKeys: List<PublicKey> = JarInputStream(jar.inputStream()).use(JarSignatureCollector::collectSigners)
             override val size: Int = 1234
             override val id: SecureHash = SecureHash.sha256(attachmentData)
 
@@ -234,19 +242,39 @@ class AttachmentsClassLoaderJavaxPersistenceTests {
 
     @Test(timeout = 300_000)
     fun `a transaction whose contract uses javax persistence in its code verifies`() {
+        verify(attachment(fixtureJar()), AlwaysAcceptAttachmentConstraint)
+    }
+
+    @Test(timeout = 300_000)
+    fun `the hash and the signers of an attachment with converted classes are what its constraints expect`() {
+        val (signedJar, signer) = signContractJar(fixtureJar().toUri().toURL(), copyFirst = true)
+        val storedBytes = signedJar.readBytes()
+        val attachment = attachment(signedJar)
+        assertEquals(SecureHash.sha256(storedBytes), attachment.id)
+        assertThat(attachment.signerKeys).containsExactly(signer)
+
+        // The conversion is made on the bytes of a class as it is defined, never on the attachment, so the constraints of the states,
+        // which are checked against the hash and the signers of the attachment, hold as they did.
+        verify(attachment, HashAttachmentConstraint(attachment.id))
+        verify(attachment, SignatureAttachmentConstraint(signer))
+
+        assertThat(signedJar.readBytes()).isEqualTo(storedBytes)
+    }
+
+    private fun verify(attachment: Attachment, constraint: AttachmentConstraint) {
         val contractName = attachmentName(ContractFixture::class.java)
-        val output = TransactionState(DummyContract.SingleOwnerState(0, ALICE), contractName, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
+        val output = TransactionState(DummyContract.SingleOwnerState(0, ALICE), contractName, DUMMY_NOTARY, constraint = constraint)
         val cacheFactory = TestingNamedCacheFactory(1)
         val transaction = createLedgerTransaction(
                 emptyList<StateAndRef<*>>(),
                 listOf(output),
                 emptyList<CommandWithParties<CommandData>>(),
-                listOf(ContractAttachment(attachment(fixtureJar()), contractName)),
+                listOf(ContractAttachment.create(attachment, contractName, uploader = "app", signerKeys = attachment.signerKeys)),
                 SecureHash.randomSHA256(),
                 null,
                 null,
                 PrivacySalt(),
-                testNetworkParameters(),
+                testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION),
                 emptyList(),
                 emptyList(),
                 isAttachmentTrusted = { true },
