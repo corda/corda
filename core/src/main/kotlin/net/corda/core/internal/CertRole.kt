@@ -52,7 +52,9 @@ enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Bo
     NETWORK_PARAMETERS(NonEmptySet.of(null), false, false);
 
     companion object {
-        private val values by lazy(LazyThreadSafetyMode.NONE, CertRole::values)
+        // Read by many threads at once, for example by nodes starting in parallel in one JVM, so it must be thread safe.
+        // PUBLICATION is enough: if two threads both compute values(), they get equal arrays.
+        private val values by lazy(LazyThreadSafetyMode.PUBLICATION, CertRole::values)
 
         /**
          * Get a role from its ASN.1 encoded form.

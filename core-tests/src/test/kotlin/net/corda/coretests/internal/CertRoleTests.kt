@@ -6,6 +6,13 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.ASN1Integer
 import org.junit.Test
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
@@ -95,5 +102,84 @@ class CertRoleTests {
         assertFalse { tlsCertFromNodeCARole.isValidParent(legalIDCertFromNodeCARole) } // TLS cannot be signed by Legal Identity.
         assertFalse { confidentialCertRole.isValidParent(nodeCACertRole) } // Confidential key cert cannot be signed by NodeCA.
         assertFalse { confidentialCertRole.isValidParent(doormanCertRole) } // Confidential key cert cannot be signed by Doorman.
+    }
+
+    @Test(timeout=300_000)
+	fun `first lookups of a role from many threads at once all succeed`() {
+        // Nodes starting in parallel in one JVM, as the driver's in-process nodes do, can make the first CertRole lookup at the
+        // same moment. With a lazy value that is not thread safe, one of them then fails with a NullPointerException. That first
+        // lookup happens once per class loader, so each iteration loads CertRole afresh and starts several lookups together.
+        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
+        val legalIdentityId = CertRole.LEGAL_IDENTITY.toASN1Primitive() as ASN1Integer
+        val pool = Executors.newFixedThreadPool(threads)
+        try {
+            repeat(FIRST_LOOKUP_ITERATIONS) { iteration ->
+                val certRoleClass = Class.forName(CertRole::class.java.name, true, FreshCertRoleClassLoader())
+                assertNotSame(CertRole::class.java, certRoleClass)
+                val companion = certRoleClass.getField("Companion").get(null)
+                val getInstance = companion.javaClass.getMethod("getInstance", ASN1Integer::class.java)
+                val ready = AtomicInteger()
+                val go = AtomicBoolean()
+                val lookups = (1..threads).map {
+                    pool.submit(Callable {
+                        ready.incrementAndGet()
+                        while (!go.get()) Thread.onSpinWait()
+                        getInstance.invoke(companion, legalIdentityId)
+                    })
+                }
+                // Spin rather than wait on a barrier, so that the threads start within nanoseconds of each other.
+                while (ready.get() < threads) Thread.onSpinWait()
+                go.set(true)
+                lookups.forEach { lookup ->
+                    val role = try {
+                        lookup.get()
+                    } catch (e: ExecutionException) {
+                        val cause = (e.cause as? InvocationTargetException)?.targetException ?: e.cause
+                        throw AssertionError("A concurrent first lookup failed in iteration $iteration", cause)
+                    }
+                    assertEquals(CertRole.LEGAL_IDENTITY.name, (role as Enum<*>).name)
+                }
+            }
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    /**
+     * Gives each instance its own, uninitialised copy of [CertRole]. Other classes come from the test's class loader.
+     * core-tests/build.gradle excludes this class loader from Quasar instrumentation by name, so keep the two in step.
+     */
+    private class FreshCertRoleClassLoader : ClassLoader(CertRole::class.java.classLoader) {
+        override fun loadClass(name: String, resolve: Boolean): Class<*> {
+            if (freshClasses.none { name == it || name.startsWith("$it$") }) return super.loadClass(name, resolve)
+            return synchronized(getClassLoadingLock(name)) {
+                findLoadedClass(name) ?: classBytes.getOrPut(name) {
+                    val resource = name.replace('.', '/') + ".class"
+                    requireNotNull(parent.getResourceAsStream(resource)) { "$resource not found" }.use { it.readBytes() }
+                }.let { defineClass(name, it, 0, it.size) }
+            }
+        }
+    }
+
+    private companion object {
+        const val FIRST_LOOKUP_ITERATIONS = 2000
+
+        /**
+         * The classes [FreshCertRoleClassLoader] defines itself: [CertRole], and Kotlin's lazy implementations so that they
+         * run interpreted, as they do the first time a node starts. Once the JIT has compiled them, the race window is much
+         * smaller and the test would rarely catch a lazy value that is not thread safe.
+         */
+        val freshClasses = listOf(
+                CertRole::class.java.name,
+                "kotlin.LazyKt",
+                "kotlin.LazyKt__LazyJVMKt",
+                "kotlin.LazyKt__LazyKt",
+                "kotlin.UnsafeLazyImpl",
+                "kotlin.SafePublicationLazyImpl",
+                "kotlin.SynchronizedLazyImpl",
+                "kotlin.InitializedLazyImpl",
+                "kotlin.UNINITIALIZED_VALUE"
+        )
+        val classBytes = ConcurrentHashMap<String, ByteArray>()
     }
 }
