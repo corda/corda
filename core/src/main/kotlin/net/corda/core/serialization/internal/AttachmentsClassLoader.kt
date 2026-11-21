@@ -39,11 +39,13 @@ import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
+import java.net.JarURLConnection
 import java.net.URL
 import java.net.URLClassLoader
 import java.net.URLConnection
 import java.net.URLStreamHandler
 import java.net.URLStreamHandlerFactory
+import java.security.CodeSource
 import java.security.MessageDigest
 import java.security.Permission
 import java.util.Locale
@@ -51,6 +53,8 @@ import java.util.ServiceLoader
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -310,6 +314,93 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             throw ClassNotFoundException(name)
         }
         return super.loadClass(name, resolve)
+    }
+
+    /**
+     * A class of an attachment that was built against the `javax.persistence` API alone (a CorDapp built for Corda 4.14 or earlier) is
+     * defined with its references to that API renamed to `jakarta.persistence`, which is the one on the classpath since Corda 4.15 (see
+     * [JavaxPersistenceRenamer]). Without it such a class only loads as long as it uses the API in annotations alone, which the JVM drops
+     * when it cannot find their types: a class that names a `javax.persistence` type in its code or in the signatures of its members
+     * fails with a [NoClassDefFoundError], and the verification of every transaction that reaches it fails with it. The attachment is
+     * not touched, so its hash and its signers are what they were.
+     *
+     * Every other class is defined by [URLClassLoader] as before. A converted class is given what [URLClassLoader] would have given it:
+     * the code source (the attachment's URL and the signers of the class file) and the package, defined from the manifest of the
+     * attachment or checked against its sealing.
+     */
+    override fun findClass(name: String): Class<*> {
+        val converted = try {
+            convertedClass(name)
+        } catch (e: IOException) {
+            throw ClassNotFoundException(name, e)
+        }
+        if (converted == null) return super.findClass(name)
+        defineOrVerifyPackage(name, converted.manifest, converted.codeSource.location)
+        return defineClass(name, converted.bytes, 0, converted.bytes.size, converted.codeSource)
+    }
+
+    private class ConvertedClass(val bytes: ByteArray, val codeSource: CodeSource, val manifest: Manifest?)
+
+    /** The class [name] converted to `jakarta.persistence`, or null if it is not in the attachments or is not to be converted. */
+    private fun convertedClass(name: String): ConvertedClass? {
+        val resource = findResource(name.replace('.', '/') + ".class") ?: return null
+        // The location of the attachment as URLClassLoader has it. The class file is read through the "runtime" form of the URL, which
+        // is how URLClassLoader itself opens the attachment: the same cached jar file, and the same entry of a multi-release jar.
+        val attachmentUrl = (resource.openConnection() as? JarURLConnection)?.jarFileURL ?: return null
+        val connection = URL(resource, "#runtime").openConnection() as? JarURLConnection ?: return null
+        val originalBytes = connection.inputStream.use { it.readBytes() }
+        if (!JavaxPersistenceRenamer.isConverted(name, originalBytes)) return null
+        val bytes = try {
+            JavaxPersistenceRenamer.toJakartaPersistence(originalBytes)
+        } catch (e: RuntimeException) {
+            // Not a class file ASM can read; it is defined as it is, to succeed or fail as it would have.
+            log.warn("The class $name of the attachment $attachmentUrl refers to javax.persistence but cannot be converted to " +
+                    "jakarta.persistence; it is loaded as it is", e)
+            return null
+        }
+        log.debug { "Converted the class $name of the attachment $attachmentUrl from javax.persistence to jakarta.persistence" }
+        // The signers of a jar entry are only known once the entry has been read in full, which it has been above.
+        return ConvertedClass(bytes, CodeSource(attachmentUrl, connection.jarEntry?.codeSigners), connection.manifest)
+    }
+
+    /**
+     * Defines the package of [className] from the manifest of its attachment, as [URLClassLoader] does, or, if the package is already
+     * defined, verifies sealing the way [URLClassLoader] does: a sealed package accepts classes from its own attachment only, and a
+     * package first defined unsealed cannot be sealed by a later attachment.
+     */
+    private fun defineOrVerifyPackage(className: String, manifest: Manifest?, attachmentUrl: URL) {
+        if ('.' !in className) return
+        val packageName = className.substringBeforeLast('.')
+        val existing = getDefinedPackage(packageName)
+        if (existing != null) {
+            verifySealing(existing, manifest, attachmentUrl)
+            return
+        }
+        try {
+            if (manifest != null) {
+                definePackage(packageName, manifest, attachmentUrl)
+            } else {
+                definePackage(packageName, null, null, null, null, null, null, null)
+            }
+        } catch (e: IllegalArgumentException) {
+            // Defined concurrently by another thread; verify against what it defined.
+            verifySealing(getDefinedPackage(packageName) ?: throw e, manifest, attachmentUrl)
+        }
+    }
+
+    private fun verifySealing(pkg: Package, manifest: Manifest?, attachmentUrl: URL) {
+        if (pkg.isSealed) {
+            if (!pkg.isSealed(attachmentUrl)) throw SecurityException("sealing violation: package ${pkg.name} is sealed")
+        } else if (manifest != null && isSealed(pkg.name, manifest)) {
+            throw SecurityException("sealing violation: can't seal package ${pkg.name}: already loaded")
+        }
+    }
+
+    /** Whether [manifest] seals [packageName]: its own section, or else the main attributes, says `Sealed: true`. */
+    private fun isSealed(packageName: String, manifest: Manifest): Boolean {
+        val sealed = manifest.getAttributes(packageName.replace('.', '/') + "/")?.getValue(Attributes.Name.SEALED)
+                ?: manifest.mainAttributes.getValue(Attributes.Name.SEALED)
+        return "true".equals(sealed, ignoreCase = true)
     }
 }
 
