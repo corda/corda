@@ -1,4 +1,5 @@
-FROM azul/zulu-openjdk:17.0.19
+## Azul Zulu 17.70+201 (JDK 17.0.21.1), which fixes CVE-2026-114938. Pinned by digest, so every build uses this image.
+FROM azul/zulu-openjdk:17.0.21.1@sha256:4a90876af5459eba762bf028926a84733ded1db6f57cf74e59ef3588c149e17b
 
 ## Remove Azul Zulu repo, as it is gone by now
 RUN rm -rf /etc/apt/sources.list.d/zulu.list
@@ -67,4 +68,14 @@ COPY --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 USER "corda"
 EXPOSE ${MY_P2P_PORT} ${MY_RPC_PORT} ${MY_RPC_ADMIN_PORT}
 WORKDIR /opt/corda
+
+##LAUNCHER CHECK: start corda.jar once on this image's own JDK and fail the build if it cannot start.
+##corda.jar is a Capsule, and Capsule cannot parse Java versions with more than four numbers: on a JDK such as
+##17.0.21.0.3 every start fails with "CAPSULE EXCEPTION: Could not parse version". Re-pinning a base image to such a
+##JDK would otherwise produce an image that builds fine but cannot start a node. The files the check writes (the
+##unpacked Capsule, logs, JVM temporary files) are removed in the same step, so nothing is added to the image.
+RUN java -XshowSettings:properties -version 2>&1 | grep "java.version =" && \
+    java -jar /opt/corda/bin/corda.jar --version && \
+    rm -rf /opt/corda/.capsule /opt/corda/.hawtjni /opt/corda/logs/* /tmp/hsperfdata_corda
+
 CMD ["run-corda"]
