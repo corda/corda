@@ -62,8 +62,9 @@ object JavaxPersistenceRenamer {
             decorateOutput: (ClassVisitor) -> ClassVisitor = { it }
     ): ByteArray {
         val reader = ClassReader(classBytes)
-        // A fresh writer, so that the constant pool of the result does not keep the entries of the original. The rename does not change
-        // the code in length or in shape, so the frames and the maximums of the original still hold.
+        // A fresh writer, so that the constant pool of the result does not keep the entries of the original. The rename changes only the
+        // constant pool entries the instructions refer to, not the instructions. The rebuilt pool can turn an ldc into an ldc_w, but ASM
+        // recomputes the offsets, so the frames and the maximums of the original still hold.
         val writer = ClassWriter(0)
         reader.accept(decorate(KotlinMetadataRenamer(from, to, ClassRemapper(decorateOutput(writer), PackageRemapper(from, to)))), 0)
         return writer.toByteArray()

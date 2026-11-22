@@ -43,6 +43,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.InputStream
 import java.net.URLClassLoader
+import java.net.URLConnection
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.concurrent.Callable
@@ -226,6 +227,22 @@ class AttachmentsClassLoaderJavaxPersistenceTests {
                 assertEquals("CONVERTEDALL", call(classLoader, CodeFixture::class.java))
                 assertEquals("plain", call(classLoader, PlainFixture::class.java))
             }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `a converted class of an unsigned attachment loads when URL connections do not use caches`() {
+        // A JVM-wide setting that any code in the process can change. With it, closing the stream of a jar URL connection also closes
+        // its jar file, so everything the conversion needs has to be read before the stream is closed.
+        val previous = URLConnection.getDefaultUseCaches("jar")
+        URLConnection.setDefaultUseCaches("jar", false)
+        try {
+            classLoader(fixtureJar()).use { classLoader ->
+                assertEquals("CONVERTEDALL", call(classLoader, CodeFixture::class.java))
+                assertEquals("plain", call(classLoader, PlainFixture::class.java))
+            }
+        } finally {
+            URLConnection.setDefaultUseCaches("jar", previous)
         }
     }
 

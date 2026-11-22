@@ -348,8 +348,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // is how URLClassLoader itself opens the attachment: the same cached jar file, and the same entry of a multi-release jar.
         val attachmentUrl = (resource.openConnection() as? JarURLConnection)?.jarFileURL ?: return null
         val connection = URL(resource, "#runtime").openConnection() as? JarURLConnection ?: return null
-        val originalBytes = connection.inputStream.use { it.readBytes() }
-        if (!JavaxPersistenceRenamer.isConverted(name, originalBytes)) return null
+        // Everything is taken from the connection before its stream is closed. If URL connections do not use caches (a JVM-wide
+        // setting that any code in the process can change), closing the stream also closes the jar file, and the manifest of an
+        // unsigned attachment could no longer be read.
+        val (originalBytes, codeSigners, manifest) = connection.inputStream.use { input ->
+            val classBytes = input.readBytes()
+            if (!JavaxPersistenceRenamer.isConverted(name, classBytes)) return null
+            // The signers of a jar entry are only known once the entry has been read in full, which it has been above.
+            Triple(classBytes, connection.jarEntry?.codeSigners, connection.manifest)
+        }
         val bytes = try {
             JavaxPersistenceRenamer.toJakartaPersistence(originalBytes)
         } catch (e: RuntimeException) {
@@ -357,10 +364,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             log.warn("The class $name of the attachment $attachmentUrl refers to javax.persistence but cannot be converted to " +
                     "jakarta.persistence; it is loaded as it is", e)
             return null
+        } catch (e: LinkageError) {
+            // ASM is missing from the classpath or is an incompatible version. A class that refers to javax.persistence only in its
+            // annotations loaded before the conversion existed and must still load, so it is defined as it is here too.
+            log.warn("The class $name of the attachment $attachmentUrl refers to javax.persistence but cannot be converted to " +
+                    "jakarta.persistence, as ASM cannot be used; it is loaded as it is", e)
+            return null
         }
         log.debug { "Converted the class $name of the attachment $attachmentUrl from javax.persistence to jakarta.persistence" }
-        // The signers of a jar entry are only known once the entry has been read in full, which it has been above.
-        return ConvertedClass(bytes, CodeSource(attachmentUrl, connection.jarEntry?.codeSigners), connection.manifest)
+        return ConvertedClass(bytes, CodeSource(attachmentUrl, codeSigners), manifest)
     }
 
     /**
