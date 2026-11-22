@@ -223,6 +223,9 @@ quasar {
             "org.xml**",
             "org.yaml**",
             "rx**")
+    // CertRoleTests loads CertRole afresh 2000 times to test a race. Instrumenting every copy makes that test about ten times
+    // slower, and the classes this loader defines have nothing to suspend.
+    excludeClassLoaders.add('net.corda.coretests.internal.CertRoleTests$FreshCertRoleClassLoader')
 }
 
 artifacts {

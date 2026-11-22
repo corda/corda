@@ -22,6 +22,8 @@ dependencies {
     }
     cordaProvided configurations['quasar']
     cordaProvided "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    // AnotherDummyContractWithPersistence uses the persistence API of this version of Corda.
+    cordaProvided "jakarta.persistence:jakarta.persistence-api:$jakarta_persistence_version"
 }
 
 cordapp {

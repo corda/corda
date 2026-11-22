@@ -26,6 +26,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.legacy.workflows.LegacyIssuanceFlow
+import net.corda.legacy.workflows.LegacyIssuanceWithPersistenceFlow
 import net.corda.legacy.workflows.LegacyIssuanceWithSystemEnvVarFlow
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeParams
@@ -143,6 +144,15 @@ class ExternalVerificationSignedCordappsTest {
     @Test(timeout = 300_000)
     fun `validate external verifier started with system environment variable defined`() {
         val issuanceStateRef = checkSystemEnvVarDefined(currentNode)
+        currentNode.assertTransactionsWereVerified(BOTH, issuanceStateRef.txhash)
+    }
+
+    @Test(timeout = 300_000)
+    fun `transaction containing 4_11 contract that uses javax persistence in its code issued on new node`() {
+        // The 4.11 contract attachment is built for javax.persistence, which the external verifier does not have: its attachments
+        // class loader converts the contract's classes to jakarta.persistence as it defines them.
+        val issuerRpc = currentNode.connect(superUser).proxy
+        val issuanceStateRef = issuerRpc.startFlowDynamic(LegacyIssuanceWithPersistenceFlow::class.java, 2).returnValue.getOrThrow() as StateRef
         currentNode.assertTransactionsWereVerified(BOTH, issuanceStateRef.txhash)
     }
 

@@ -58,6 +58,13 @@ CorDapp /opt/corda/cordapps/my-cordapp-1.0.jar was built for Corda 4.14 or earli
 jakarta.persistence for Hibernate 7 as they are loaded
 ```
 
+The classes of contract attachments are converted too when a transaction is verified, both in the node and in the external verifier,
+which have `jakarta.persistence` on their classpath and not `javax.persistence`. A contract jar built for Corda 4.14 or earlier whose
+verification reaches a class that names a `javax.persistence` type in its code or in the signatures of its members (an
+`AttributeConverter` implementation, a `catch` of `PersistenceException`), rather than in annotations alone, therefore keeps verifying,
+and so do the transactions already on the ledger that use it. Only the package is renamed there: the Hibernate annotations of such a
+class are neither converted nor checked, as verification maps nothing to the database. The attachment itself is not touched.
+
 A CorDapp built for Corda 4.15 (`jakarta.persistence`), or built to run on both (both sets of annotations, see
 [A CorDapp that must run on 4.14 and 4.15](#7-a-cordapp-that-must-run-on-414-and-415)), is loaded as it is.
 
@@ -578,6 +585,12 @@ Verified by the engineer who made the change (branch `adel/ENT-15178`):
   PostgreSQL, with the JVM in a non-UTC time zone. `Instant` values are stored as UTC wall-clock `timestamp` values, `UUID` and `hibernate_sequence`
   behave as before.
 * The "built for Corda 4.14" start-up check was verified against the genuine Corda 4.12 `finance-contracts` jar.
+* The conversion of contract attachments is covered by `AttachmentsClassLoaderJavaxPersistenceTests` (`core-tests`): classes rewritten to
+  `javax.persistence` fail to load from a plain class loader and load, and verify in a transaction, from the attachments class loader,
+  with signed and sealed attachments too. In the external verifier process it is covered by `ExternalVerificationSignedCordappsTest`
+  (`core-tests` smoke tests): a node issues a transaction with a contract built for Corda 4.11 whose `verify` uses `javax.persistence` in
+  its code, and the external verifier verifies it. With the conversion switched off, that test fails with
+  `NoClassDefFoundError: javax/persistence/AttributeConverter` from the external verifier.
 * The migration script was run on unmodified Hibernate 5 sources and produced the same result as the hand conversion in this change.
 * The capability conflict and its fixes were reproduced with Gradle 7.6.4, using `net.corda:corda-core:4.11` next to Hibernate 7.4.12. The
   conflict, the `exclude` and the substitution behave as described above, and `selectHighestVersion()` does not resolve the conflict.
