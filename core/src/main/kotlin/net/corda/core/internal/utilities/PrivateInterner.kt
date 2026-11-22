@@ -1,5 +1,6 @@
 package net.corda.core.internal.utilities
 
+import com.google.common.collect.Interner
 import com.google.common.collect.Interners
 import net.corda.core.CordaInternal
 import net.corda.core.internal.packageNameOrNull
