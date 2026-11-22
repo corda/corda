@@ -24,12 +24,15 @@ ignore:
         reason: >-
           CVE-2026-92877: This vulnerability relates to XML External Entity
           (XXE) injection when JAXB unmarshals untrusted XML. jaxb-core reaches
-          Corda only through hibernate-core 7.4.12.Final. Corda has no JAXB code,
-          Hibernate reads its mapping and configuration XML through StAX, and the
-          only vulnerable path, Hibernate's JaxbXmlFormatMapper, is used only for
-          XML-typed columns, which Corda does not have. Corda is therefore not
-          susceptible to this vulnerability. No fixed version has been released
-          yet (expected in jaxb 4.0.10); upgrade and remove this entry when it is.
+          Corda only through hibernate-core 7.4.12.Final. Corda has no JAXB code
+          and bootstraps Hibernate from annotated classes without mapping XML;
+          Hibernate unmarshals any mapping XML from a StAX reader it configures
+          itself, so JAXB's own parser is never used, and the only path that lets
+          JAXB parse input directly, Hibernate's JaxbXmlFormatMapper, is used
+          only for XML-typed columns, which Corda does not have. Corda is
+          therefore not susceptible to this vulnerability. No fixed version has
+          been released yet (expected in jaxb 4.0.10); upgrade and remove this
+          entry when it is.
         expires: 2027-01-31T00:00:00.000Z
         created: 2026-11-22T14:00:00.000Z
   SNYK-JAVA-ORGJETBRAINSKOTLIN-2628385:
