@@ -212,7 +212,7 @@ class AttachmentsClassLoaderJavaxPersistenceTests {
             val converted = Class.forName(attachmentName(CodeFixture::class.java), true, classLoader)
             val signers = assertNotNull(plain.protectionDomain.codeSource.codeSigners)
             assertThat(signers).isNotEmpty
-            assertThat(converted.protectionDomain.codeSource.codeSigners).containsExactly(*signers)
+            assertEquals(signers.toList(), converted.protectionDomain.codeSource.codeSigners?.toList())
             assertEquals("CONVERTEDALL", call(classLoader, CodeFixture::class.java))
         }
     }
