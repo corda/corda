@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.cordapp
 
+import net.corda.core.serialization.internal.JavaxPersistenceRenamer
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordappConversionException
 import net.corda.nodeapi.internal.persistence.JavaxPersistenceConversionError
@@ -43,7 +44,6 @@ class CordappClassLoader(
 ) : URLClassLoader(urls, parent) {
     companion object {
         private val logger = contextLogger()
-        private const val JAVAX_PERSISTENCE_PACKAGE = "javax.persistence."
 
         init {
             registerAsParallelCapable()
@@ -83,7 +83,7 @@ class CordappClassLoader(
         for (jar in jars) {
             val entry = jar.file.getJarEntry(entryName) ?: continue
             val originalBytes = jar.file.getInputStream(entry).use { it.readBytes() }
-            val bytes = if (isConverted(name, originalBytes)) {
+            val bytes = if (JavaxPersistenceRenamer.isConverted(name, originalBytes)) {
                 announce(jar)
                 JavaxPersistenceTransformer.transform(originalBytes, name, hibernateClassLoader, options(quiet = checked), ::isBundled)
                         .also { _convertedClassNames += name }
@@ -125,7 +125,7 @@ class CordappClassLoader(
                 // Looked up by name so that a multi-release jar's versioned entry is read, as it is when the class is loaded.
                 val entry = unverified.getJarEntry(listed.name) ?: listed
                 val bytes = unverified.getInputStream(entry).use { it.readBytes() }
-                if (!isConverted(name, bytes)) continue
+                if (!JavaxPersistenceRenamer.isConverted(name, bytes)) continue
                 announce(jar)
                 conversionFailure(jar, name, bytes)?.let { failures += it }
             }
@@ -149,10 +149,6 @@ class CordappClassLoader(
     }
 
     private fun options(quiet: Boolean = false) = JavaxPersistenceTransformer.Options(refuseMissingReferences, quiet)
-
-    private fun isConverted(name: String, classBytes: ByteArray): Boolean {
-        return !name.startsWith(JAVAX_PERSISTENCE_PACKAGE) && JavaxPersistenceTransformer.isBuiltForJavaxPersistenceOnly(classBytes)
-    }
 
     /**
      * Whether a class (by internal name) comes with the CorDapps: a Hibernate library a CorDapp ships itself is not the node's to check.

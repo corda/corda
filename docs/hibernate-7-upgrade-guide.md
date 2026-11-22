@@ -587,8 +587,10 @@ Verified by the engineer who made the change (branch `adel/ENT-15178`):
 * The "built for Corda 4.14" start-up check was verified against the genuine Corda 4.12 `finance-contracts` jar.
 * The conversion of contract attachments is covered by `AttachmentsClassLoaderJavaxPersistenceTests` (`core-tests`): classes rewritten to
   `javax.persistence` fail to load from a plain class loader and load, and verify in a transaction, from the attachments class loader,
-  with signed and sealed attachments too. It was not run in the external verifier process, whose jar was only inspected (it contains
-  the converter and `jakarta.persistence`, and no `javax.persistence`).
+  with signed and sealed attachments too. In the external verifier process it is covered by `ExternalVerificationSignedCordappsTest`
+  (`core-tests` smoke tests): a node issues a transaction with a contract built for Corda 4.11 whose `verify` uses `javax.persistence` in
+  its code, and the external verifier verifies it. With the conversion switched off, that test fails with
+  `NoClassDefFoundError: javax/persistence/AttributeConverter` from the external verifier.
 * The migration script was run on unmodified Hibernate 5 sources and produced the same result as the hand conversion in this change.
 * The capability conflict and its fixes were reproduced with Gradle 7.6.4, using `net.corda:corda-core:4.11` next to Hibernate 7.4.12. The
   conflict, the `exclude` and the substitution behave as described above, and `selectHighestVersion()` does not resolve the conflict.
