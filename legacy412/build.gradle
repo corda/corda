@@ -16,6 +16,9 @@ dependencies {
         // 4.11 depends on Hibernate 5 under its old coordinate, which clashes with org.hibernate.orm:hibernate-core (same capability).
         // The test CorDapps do not use Hibernate themselves, and the platform provides it at runtime.
         exclude group: 'org.hibernate', module: 'hibernate-core'
+        // SNYK-JAVA-NETI2PCRYPTO-9402849 / CVE-2020-36843: 4.11 depends on eddsa 0.3.0, which has no fixed version. The test CorDapps
+        // do not use it, and the 4.11 node that runs them provides its own copy.
+        exclude group: 'net.i2p.crypto', module: 'eddsa'
     }
     cordaProvided configurations['quasar']
     cordaProvided "com.fasterxml.jackson.core:jackson-databind:$jackson_version"

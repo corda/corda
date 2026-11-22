@@ -76,6 +76,7 @@ buildscript {
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = constants.getProperty("fileuploadVersion")
     ext.kryo_version = constants.getProperty("kryoVersion")
+    ext.objenesis_version = constants.getProperty("objenesisVersion")
     ext.kryo_serializer_version = constants.getProperty("kryoSerializerVersion")
     ext.junit_version = constants.getProperty("junitVersion")
     ext.junit_vintage_version = constants.getProperty("junitVintageVersion")
@@ -454,6 +455,30 @@ allprojects {
                     // force-upgrade to latest json-smart@2.5.2
                     if (details.requested.group == 'net.minidev' && details.requested.name == 'json-smart') {
                         details.useVersion json_smart_version
+                    }
+
+                    // SNYK-JAVA-ORGOW2ASM-21715451 / CVE-2026-112046
+                    // vulnerability in org.ow2.asm:asm@9.11, fixed in asm@9.11.1
+                    // Corda depends on ASM directly (core, node-api, serialization), and other libraries bring older 9.x versions.
+                    // Keep every ASM 9 module at the version Corda uses.
+                    if (details.requested.group == 'org.ow2.asm' && details.requested.version?.startsWith('9.')) {
+                        details.useVersion asm_version
+                    }
+
+                    // SNYK-JAVA-ORGOBJENESIS-21755439 / CVE-2026-116486
+                    // vulnerability in org.objenesis:objenesis@3.3, fixed in objenesis@3.6
+                    // objenesis@3.3 is a transitive dependency via com.esotericsoftware:kryo@5.5.0 (quasar-core@0.9.3_r3)
+                    // force-upgrade to objenesis@3.6
+                    if (details.requested.group == 'org.objenesis' && details.requested.name == 'objenesis') {
+                        details.useVersion objenesis_version
+                    }
+
+                    // SNYK-JAVA-ORGAPACHECOMMONS-10734078 / CVE-2025-48924
+                    // vulnerability in org.apache.commons:commons-lang3@3.9, fixed in commons-lang3@3.18.0
+                    // commons-lang3@3.9 is a transitive dependency via net.corda:corda-core@4.11 (the legacy411 and legacy412 test CorDapps)
+                    // force-upgrade to the version the rest of Corda uses, as Corda Enterprise does
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-lang3') {
+                        details.useVersion commons_lang3_version
                     }
 
                     // SNYK-JAVA-ORGGLASSFISHJERSEYCORE-14049172 / CVE-2025-12383
