@@ -38,6 +38,8 @@ dokkaJavadoc {
 }
 
 [dokkaHtml, dokkaJavadoc].forEach {
+    // Module name sets the API docs path (kotlin/corda/...) that docs.r3.com links to; it defaults to the project name, 'docs'.
+    it.moduleName.set('corda')
     it.dokkaSourceSets {
         customSourceSet {
             sourceRoot(file('../core/src/main/kotlin'))
